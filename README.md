@@ -4,6 +4,7 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 
 - **Live site:** https://savage-registration-preview.justinaccordino546.chatgpt.site (hosted on ChatGPT Sites)
 - **Launch plan:** [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md)
+- **Publishing checklist:** [docs/GO_LIVE.md](docs/GO_LIVE.md)
 - **Work tracking:** [Issues](../../issues) grouped by [milestone](../../milestones)
 - **How we work together:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Original technical review from Justin:** [handoff/](handoff/README.md)
