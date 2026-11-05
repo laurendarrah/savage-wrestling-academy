@@ -12,7 +12,7 @@ Lauren and Justin both work in this repo, often with Claude Code. Everything goe
    - `chore/30-ci` for tooling and maintenance
    - `docs/12-launch-plan` for documentation
 4. **Commit small, clear steps.** First line says what changed, in plain words, under about 70 characters.
-5. **Open a pull request** with the template. Put `Closes #<issue>` in the description so the issue closes on merge.
+5. **Open a pull request** with the template. Put `Closes #<issue>` in the description so the issue closes on merge. If the issue's "Done when" needs a real-world check after merging (a Stripe test-card run, a live email), write `Part of #<issue>` instead, in the description and in commit messages, because GitHub also closes issues named with "Closes" in commit messages.
 6. **Checks must pass.** Tests, typecheck, build and the production audit run automatically.
 7. **The other person reviews.** Lauren reviews Justin's work and Justin reviews Lauren's. Nobody merges their own pull request without a review.
 8. **Squash and merge**, then delete the branch.

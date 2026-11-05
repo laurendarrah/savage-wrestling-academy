@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `source` text DEFAULT 'stripe' NOT NULL;
