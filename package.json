@@ -13,6 +13,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test": "node scripts/run-tests.mjs",
+    "crawl:demo": "node scripts/crawl-admin-demo.mjs",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
