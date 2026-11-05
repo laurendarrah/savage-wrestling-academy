@@ -4,7 +4,7 @@ For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps 
 
 ## 1. Before publishing
 
-- [ ] **Back up the live database.** Owner workspace → Run the academy → Backups → download an encrypted backup. Keep the file and passphrase outside the Sites project (#17).
+- [ ] **Back up the live database.** Owner workspace → Run the academy → Backups → download an encrypted backup. Keep the file and passphrase outside the Sites project (#17). The backup made by the current live code (version 2) can still be restored after publishing. Backups made after publishing (version 3) also include payments, attendance, signed waivers, waitlists, messages and every other new table (#78).
 - [ ] **Confirm nobody has edited in Sites since the handoff.** Main in GitHub is the source of truth (#8). If Sites has newer changes, stop and bring them into GitHub first.
 
 ## 2. Database migrations
