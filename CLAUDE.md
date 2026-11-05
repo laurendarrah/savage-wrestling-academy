@@ -1,7 +1,7 @@
 # Savage Wrestling Academy platform
 
 Registration, scheduling, scholarship, and coaching platform for Savage Wrestling Academy.
-Cloudflare Worker built with Vinext and Vite, Cloudflare D1 for business data, Supabase for sign-in only, Stripe in test mode only.
+Cloudflare Worker built with Vinext and Vite, Cloudflare D1 for business data, Supabase for sign-in only, Stripe for payments, in test mode unless deliberately switched.
 
 Read `handoff/README.md` and `handoff/docs/ARCHITECTURE.md` before larger changes.
 Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/ROADMAP.md`.
@@ -36,8 +36,15 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 
 - The owner workspace in `app/portal.html` runs mostly on sample data stored in one JSON document. Its rosters, attendance, messages, transfers, waitlists, and payouts are simulations.
 - Real family data lives in `family_accounts`, `program_approvals`, and `scholarship_awards`. These are not linked to the sample wrestlers in the workspace.
-- There is no checkout, webhook, order, or subscription code. Registration stops at a review step.
+- Online checkout exists but each purchase type stays closed until `CHECKOUT_KINDS` lists it. Never assume a purchase type is live.
 - Inline JavaScript in `.html` files is not typechecked. Passing `pnpm typecheck` says nothing about it. Add a test in `tests/` for any workspace function you change.
+
+## Payments
+
+- Prices come only from `lib/quotes.ts`. Review screens and checkout both use it. Never accept an amount from the browser.
+- An order becomes paid only in `lib/stripe-webhook.ts`, after the Stripe signature is verified. Never mark anything paid from a redirect or a browser call.
+- Every Stripe event id is stored once in `stripe_events`. Keep webhook handling idempotent and safe for late or out-of-order events.
+- Checkout opens per purchase type with `CHECKOUT_KINDS`. Do not open a type whose terms or refund policy is undecided.
 
 ## Domain rules
 
