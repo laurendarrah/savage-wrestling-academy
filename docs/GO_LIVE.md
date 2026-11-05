@@ -1,0 +1,82 @@
+# Publishing main to the live site
+
+For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps in order. The first publish can happen with online payments still closed: families can sign up and register, and the owner can record offline payments and run real rosters.
+
+## 1. Before publishing
+
+- [ ] **Back up the live database.** Owner workspace → Run the academy → Backups → download an encrypted backup. Keep the file and passphrase outside the Sites project (#17).
+- [ ] **Confirm nobody has edited in Sites since the handoff.** Main in GitHub is the source of truth (#8). If Sites has newer changes, stop and bring them into GitHub first.
+
+## 2. Database migrations
+
+Main adds four migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All four only add tables or one column; none change or delete existing data.
+
+| File | What it adds |
+|---|---|
+| `drizzle/0013_watery_wolf_cub.sql` | `orders` and `stripe_events` tables |
+| `drizzle/0014_adorable_rocket_raccoon.sql` | `attendance` table |
+| `drizzle/0015_stale_molten_man.sql` | `subscriptions` table |
+| `drizzle/0016_shallow_the_order.sql` | `source` column on `orders` |
+
+- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the four tables exist. If not, apply the four files with the platform's database tools.
+- [ ] Never re-run 0000 to 0012; they are already applied.
+
+If a migration is missing, the new pages (roster, payments, family purchases, checkout) return errors. Every page that existed before keeps working.
+
+## 3. Settings in the Sites environment
+
+| Setting | First publish | Notes |
+|---|---|---|
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Unchanged | Already set |
+| `STRIPE_CONFIG_ENCRYPTION_KEY` | Unchanged | Already set. Never change it, or the saved Stripe key cannot be decrypted |
+| `APP_ORIGIN` | Leave unset | Defaults to `https://savage-registration-preview.justinaccordino546.chatgpt.site`. Set only when moving to a custom domain |
+| `CHECKOUT_KINDS` | **Leave empty** | Online payment stays closed. Open it per purchase type later (section 6) |
+| `STRIPE_MODE` | Leave unset (test) | Set to `live` only on go-live day (#26) |
+| `STRIPE_TEST_WEBHOOK_SECRET` | Unchanged | Already set |
+| `STRIPE_LIVE_WEBHOOK_SECRET` | Leave unset | Needed only for live mode |
+| `STRIPE_ACCOUNT_ID` | Leave unset | Only if the live Stripe account differs from the current one (#4) |
+
+## 4. Supabase, before families sign up
+
+- [ ] Authentication → URL configuration: the Site URL and the redirect allowlist include `https://savage-registration-preview.justinaccordino546.chatgpt.site/auth/confirm` (#11). Without this, sign-up confirmation and password reset emails fail.
+- [ ] Turn on leaked-password protection (#11).
+
+## 5. Publish, then check each page
+
+Publish main. Then, signed in as the owner with the authenticator:
+
+- [ ] `/calendar` shows the published schedule
+- [ ] `/` owner dashboard shows the "Run the academy" panel
+- [ ] `/roster` loads for today, with no error
+- [ ] `/payments` loads and lists the family accounts in "Record an offline payment"
+- [ ] `/payment-setup` says test mode and that checkout is off
+- [ ] `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load
+
+With a test family account (not a real family):
+
+- [ ] Sign up with a new email, click the confirmation email, and land on the live site
+- [ ] `/family` saves a wrestler
+- [ ] `/register` reviews a walk-in and says payment is not open online yet
+
+Then, as the owner:
+
+- [ ] Record a $0 offline walk-in for the test wrestler on `/payments`, with a note "launch check"
+- [ ] The test wrestler appears on `/roster` for that practice; check in, then undo
+- [ ] Void the test payment on `/payments`
+
+## 6. Opening online payment later
+
+Only after the matching decision is recorded on its issue:
+
+1. Refund policy decided (#3): set `CHECKOUT_KINDS=walkin,event,live`.
+2. Membership terms approved (#2): add `annual`, and later `monthly`.
+3. Test with Stripe test cards first (#24), then follow the live steps on #26.
+
+The Stripe webhook endpoint must point at `/api/stripe-webhook` and send `checkout.session.*`, `charge.refunded`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted`.
+
+## Rolling back
+
+- **Online payment misbehaves:** clear `CHECKOUT_KINDS`. Checkout closes immediately; nothing else changes.
+- **Live charging misbehaves:** set `STRIPE_MODE=test`.
+- **A page breaks after publishing:** republish the previous Sites version. The four new tables can stay; the previous code ignores them.
+- **Data problem:** restore from the backup taken in step 1 (owner → Backups).
