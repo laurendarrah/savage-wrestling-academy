@@ -71,6 +71,7 @@ Then, as the owner:
 
 - [ ] Record a $0 offline walk-in for the test wrestler on `/payments`, with a note "launch check"
 - [ ] The test wrestler appears on `/roster` for that practice; check in, then undo
+- [ ] From `/family`, open **Wrestler view** for the test wrestler: the paid walk-in is listed under Coming up
 - [ ] Open the test wrestler's pass at `/pass` on a phone, tap **Scan passes** on `/roster` on another device, and scan it; then undo the check-in
 - [ ] Void the test payment on `/payments`
 
