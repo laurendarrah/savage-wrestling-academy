@@ -182,6 +182,7 @@ w = await deliver('checkout.session.completed', sessionFor(second), {id: paidEve
 assert.equal(w.body.duplicate, true, 'same event id is applied once');
 w = await deliver('checkout.session.expired', sessionFor(second));
 assert.equal(order(second.id).status, 'paid', 'a late expiry never un-pays an order');
+assert.equal(w.body.outcome, 'ignored:already-paid', 'the event log says nothing changed');
 assert.equal(sqlite.prepare("SELECT count(*) n FROM orders WHERE status='paid'").get().n, 1);
 
 // --- Cannot buy the same thing twice ---

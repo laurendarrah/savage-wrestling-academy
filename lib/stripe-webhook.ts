@@ -92,6 +92,8 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
       ]};
     }
     if (event.type === 'checkout.session.completed') return none('awaiting-payment', orderId);
+    if ((event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed') && order.status !== 'pending')
+      return none('ignored:already-' + order.status, orderId);
     if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.async_payment_failed')
       return {outcome: event.type === 'checkout.session.expired' ? 'expired' : 'payment-failed', orderId, writes: [
         env.DB!.prepare("UPDATE orders SET status='expired',updated_at=? WHERE id=? AND status='pending'").bind(at, orderId)
