@@ -44,3 +44,4 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 - Programs: SWA Development is grades K to 6. SWA Intermediate is grades 7 to 12. SWA Advance is grades 7 to 12 and every wrestler needs coach approval.
 - Server rules in `lib/program-approval.ts` are the source of truth. Sample workspace code must match them.
 - Kindergarten is stored as the string `"K"`. Other grades are numbers or numeric strings.
+- Email links use `appOrigin()` from `lib/account-auth.ts`. Never hard-code a hostname. Any new origin must also be added to the Supabase Auth redirect allowlist.

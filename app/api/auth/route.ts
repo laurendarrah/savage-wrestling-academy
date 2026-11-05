@@ -1,6 +1,6 @@
 import { rateLimited } from '../../../lib/rate-limit';
 import { accountRole,roleDestination } from '../../../lib/access-control';
-import { accountClient, accountReply, sameOrigin, verifiedOwner, APP_ORIGIN } from '../../../lib/account-auth';
+import { accountClient, accountReply, sameOrigin, verifiedOwner, appOrigin } from '../../../lib/account-auth';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=accountClient(request),{data:{user},error}=await auth.client.auth.getUser();
@@ -21,7 +21,7 @@ export async function POST(request:Request){
  try{
  if(action==='logout'){const {error}=await auth.client.auth.signOut({scope:'local'});if(error&&error.status!==403)return reply({error:'Sign-out could not finish. Try again.'},502);return reply({ok:true})}
  if(action==='signup'){
- const {error}=await auth.client.auth.signUp({email,password:input.password,options:{emailRedirectTo:APP_ORIGIN+'/auth/confirm'}});
+ const {error}=await auth.client.auth.signUp({email,password:input.password,options:{emailRedirectTo:appOrigin()+'/auth/confirm'}});
  if(error)return reply({error:error.code==='over_email_send_rate_limit'?'Email limit reached. Please wait before trying again.':'Account creation could not finish. Check your details or try signing in.'},400);
  return reply({message:'Check your email to confirm your account, then return here to sign in.'});
  }
@@ -39,12 +39,12 @@ export async function POST(request:Request){
  return reply({redirect:((role==='owner'||role==='coach'||hasFactor)&&level?.currentLevel!=='aal2')?'/security':roleDestination(role)});
  }
  if(action==='reset'){
- const {error}=await auth.client.auth.resetPasswordForEmail(email,{redirectTo:APP_ORIGIN+'/auth/confirm?next=change'});
+ const {error}=await auth.client.auth.resetPasswordForEmail(email,{redirectTo:appOrigin()+'/auth/confirm?next=change'});
  if(error)return reply({error:error.status===429||error.code==='over_email_send_rate_limit'?'Email sending is temporarily limited. Your reset email could not be sent. Please try again later; your current password still works.':'Unable to request a reset right now. Try again later.'},error.status===429||error.code==='over_email_send_rate_limit'?429:502);
  return reply({message:'If an account exists, you will receive a password reset email. Check your inbox and spam folder.'});
  }
  if(action==='resend'){
- const {error}=await auth.client.auth.resend({type:'signup',email,options:{emailRedirectTo:APP_ORIGIN+'/auth/confirm'}});
+ const {error}=await auth.client.auth.resend({type:'signup',email,options:{emailRedirectTo:appOrigin()+'/auth/confirm'}});
  if(error)return reply({error:error.status===429||error.code==='over_email_send_rate_limit'?'Email sending is temporarily limited. A new confirmation email could not be sent. Please try again later.':'Unable to request a confirmation email right now. Try again later.'},error.status===429||error.code==='over_email_send_rate_limit'?429:502);
  return reply({message:'If confirmation is needed, a confirmation email has been requested. Please check your inbox.'});
  }
