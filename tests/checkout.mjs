@@ -137,7 +137,9 @@ sqlite.exec("UPDATE orders SET status='canceled'");
 assert.equal((await post(checkoutRoute, {acceptTerms: true, ...camp}, 'https://evil.test')).status, 403, 'cross-origin refused');
 assert.equal((await pay({...camp, wrestlerId: 'someone-else'})).status, 404, 'cannot pay for another family');
 assert.equal((await pay({source: 'booking', type: 'lesson', format: 'one-on-one', wrestlerId: 'w-1'})).status, 400, 'lessons stay inquiries');
-assert.equal((await pay({source: 'membership', program: 'Intermediate', plan: 'monthly', wrestlerId: 'w-1'})).status, 403, 'monthly stays closed until issue #20 even if listed');
+env.CHECKOUT_KINDS = 'walkin,annual,event,live';
+assert.equal((await pay({source: 'membership', program: 'Intermediate', plan: 'monthly', wrestlerId: 'w-1'})).status, 403, 'monthly stays closed unless listed (issue #20 waits on approved terms)');
+env.CHECKOUT_KINDS = 'walkin,annual,event,live,monthly';
 
 // --- Camp checkout: server price, browser amount ignored ---
 let res = await pay({...camp, cents: 1, amountCents: 1, price: 1});

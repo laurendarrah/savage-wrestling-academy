@@ -1,9 +1,9 @@
 // Which purchase types can be paid online. Kept free of the Stripe SDK so review pages can read it cheaply.
 import {env} from 'cloudflare:workers';
 
-// Monthly memberships need Stripe subscriptions with a fixed 12-payment end and wait on the
-// membership terms decision (issue #20), so they are not listed here yet.
-export const ONLINE_KINDS = ['walkin', 'annual', 'event', 'live'] as const;
+// Monthly memberships charge 12 times through a Stripe subscription that cancels itself after the 12th
+// payment (issue #20). Only list "monthly" in CHECKOUT_KINDS once the membership terms are approved.
+export const ONLINE_KINDS = ['walkin', 'annual', 'monthly', 'event', 'live'] as const;
 
 type Env = Cloudflare.Env & {CHECKOUT_KINDS?: string; STRIPE_TEST_WEBHOOK_SECRET?: string; STRIPE_LIVE_WEBHOOK_SECRET?: string; STRIPE_MODE?: string};
 

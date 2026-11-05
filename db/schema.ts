@@ -89,3 +89,13 @@ export const attendance=sqliteTable("attendance",{
  userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),wrestlerName:text("wrestler_name").notNull(),
  source:text("source").notNull(),checkedInAt:text("checked_in_at").notNull(),checkedInBy:text("checked_in_by").notNull()
 },t=>[uniqueIndex("attendance_once").on(t.sessionKey,t.userId,t.wrestlerId),index("attendance_date").on(t.sessionDate)]);
+
+// Monthly memberships (issue #20). One row per monthly order. Stripe charges monthly and the subscription is
+// set to cancel exactly 12 months after it starts, so there is never a 13th charge. orders.term_end tracks
+// the paid-through date, so every existing access check (roster, member pricing, family page) follows payments.
+export const subscriptions=sqliteTable("subscriptions",{
+ orderId:text("order_id").primaryKey(),stripeSubscriptionId:text("stripe_subscription_id").notNull(),
+ status:text("status").notNull(),paymentsMade:integer("payments_made").notNull(),paymentsTotal:integer("payments_total").notNull(),
+ termStart:text("term_start").notNull(),termEnd:text("term_end").notNull(),paidThrough:text("paid_through").notNull(),
+ cancelAt:text("cancel_at").notNull(),updatedAt:text("updated_at").notNull()
+},t=>[uniqueIndex("subscriptions_stripe").on(t.stripeSubscriptionId),check("subscriptions_status",sql`${t.status} IN ('active','past_due','canceled','completed')`),check("subscriptions_payments",sql`${t.paymentsMade} >= 0 AND ${t.paymentsMade} <= ${t.paymentsTotal}`)]);
