@@ -64,8 +64,9 @@ Most of next week's code is already built and waiting for review. Each item is o
 | 10 | `fix/23-label-sample-screens` | Sample-data notices in the owner workspace | #23 |
 | 11 | `feat/26-live-stripe-mode` | Live Stripe mode behind a deliberate switch | #26 |
 | 12 | `feat/20-monthly-memberships` | 12-month memberships paid monthly, ending after the 12th payment. Off until terms are approved | #20 |
+| 13 | `feat/36-event-capacity` | Camps and events cannot be oversold online | #36 |
 
-All twelve merge together with no conflicts. Branches 7 to 12 form one line, each built on the one before. On the combined code, all 28 test scripts, the typecheck and the build pass, and the production security audit is clean. The payment webhook was also run in the real Cloudflare runtime against signed, forged, replayed, late and refund events.
+All thirteen merge together with no conflicts. Branches 7 to 13 form one line, each built on the one before. On the combined code, all 29 test scripts, the typecheck and the build pass, and the production security audit is clean. The payment webhook was also run in the real Cloudflare runtime against signed, forged, replayed, late and refund events.
 
 **What is left for Launch 1 is mostly not code:** the decisions (#1 to #8), access (#9 to #14), the test pass with Stripe test cards (#24), the restore drill (#25), and the live switch (#26). Monthly memberships are built and open once the terms are approved (#20).
 
