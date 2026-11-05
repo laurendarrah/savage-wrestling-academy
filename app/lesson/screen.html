@@ -14,7 +14,7 @@ function render(){
  $('formats').innerHTML=data.formats.map(f=>`<button type="button" class="choice" data-format="${esc(f.id)}" aria-pressed="${f.id===format}" ${f.cents===null?'disabled':''}><b>${esc(f.name)}</b><span class="muted">${esc(f.description)}</span><br><strong>${f.cents===null?'Not bookable online yet':money(f.cents)+' per lesson'}</strong></button>`).join('');
  document.querySelectorAll('[data-format]').forEach(b=>b.onclick=()=>{format=b.dataset.format;review=null;render();check()});
  $('partnersLabel').hidden=!(format==='partner'||format==='small-group');
- const coach=$('coach').value,list=data.openings.filter(o=>!coach||o.coachEmail===coach);
+ const coach=$('coach').value,list=data.openings.filter(o=>!coach||o.coachKey===coach);
  if(opening&&!list.some(o=>o.id===opening))opening='';
  const days=[...new Set(list.map(o=>o.date))];
  $('times').innerHTML=days.length?days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b>${esc(o.coach)}</button>`).join('')}</div>`).join(''):'<p class="muted">No open lesson times right now. Coaches add new times regularly; check back soon.</p>';
@@ -44,7 +44,7 @@ if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=$('sta
 (async()=>{try{
  const [l,f]=await Promise.all([call('/api/lessons'),call('/api/family')]);data=l;family=f.data;
  $('wrestler').innerHTML=(family.wrestlers||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
- const coaches=[...new Map(data.openings.map(o=>[o.coachEmail,o.coach])).entries()];
+ const coaches=[...new Map(data.openings.map(o=>[o.coachKey,o.coach])).entries()];
  $('coach').innerHTML='<option value="">Any coach</option>'+coaches.map(([e,n])=>`<option value="${esc(e)}">${esc(n)}</option>`).join('');
  const q=new URLSearchParams(location.search);if(q.get('format')&&data.formats.some(x=>x.id===q.get('format')&&x.cents!==null))format=q.get('format');
  render();

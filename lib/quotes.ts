@@ -84,7 +84,7 @@ export async function quoteMembership(userId: string, input: any, opts?: QuoteOp
   // Decision #67: no booking without a USA Wrestling card valid on the session date (membership: purchase date).
   const card = await cardProblem(userId, w, [input.plan === 'walkin' ? date : today]);
   if (card) return fail(403, card, {usawRequired: true});
-  const waiver = await waiverProblem(userId, w);
+  const waiver = await waiverProblem(userId, w, [input.plan === 'walkin' ? date : today]);
   if (waiver) return fail(403, waiver, {waiverRequired: true});
   const baseCents = input.plan === 'walkin' ? p.walkInCents : input.plan === 'annual' ? p.annualCents : p.monthlyCents;
   const pricing = teamCodeDiscount(state.teamCodes ?? [], input.teamCode, p.id, input.plan, baseCents);
@@ -129,7 +129,7 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     if (!session) return fail(409, 'This practice is no longer available on that date.');
     const card = await cardProblem(userId, w, [session.date]);
     if (card) return fail(403, card, {usawRequired: true});
-    const waiver = await waiverProblem(userId, w);
+    const waiver = await waiverProblem(userId, w, [session.date]);
     if (waiver) return fail(403, waiver, {waiverRequired: true});
     const cents = member ? session.memberCents : session.nonMemberCents;
     const review = {
@@ -152,7 +152,7 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     if (input.openingId === undefined || input.openingId === null || input.openingId === '') {
       const card = await cardProblem(userId, w, [today]);
       if (card) return fail(403, card, {usawRequired: true});
-      const waiver = await waiverProblem(userId, w);
+      const waiver = await waiverProblem(userId, w, [today]);
       if (waiver) return fail(403, waiver, {waiverRequired: true});
       return {ok: true, wrestler, charge: null, review: {type: 'lesson', title: format.name, wrestler: w.name, cents: null, status: 'inquiry_review', message: 'Coach, date, availability, and price need academy confirmation. No lesson is reserved and no payment is taken.'}};
     }
@@ -160,7 +160,7 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     if (!opening) return fail(409, 'This lesson time is no longer available. Choose another time.');
     const card = await cardProblem(userId, w, [opening.date]);
     if (card) return fail(403, card, {usawRequired: true});
-    const waiver = await waiverProblem(userId, w);
+    const waiver = await waiverProblem(userId, w, [opening.date]);
     if (waiver) return fail(403, waiver, {waiverRequired: true});
     const price = (await lessonSettings()).prices[format.id];
     if (typeof price !== 'number') return fail(409, `${format.name}s are not open for online booking yet. Contact the academy to arrange one.`);
@@ -181,16 +181,25 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   if (!event) return fail(409, 'This event is archived or no longer available.');
   // Waitlist (issue #73): a family holding an offer from the owner may book even though the event looks full.
   await settleOffers(event.id);
-  const offer = await activeOffer(event.id, userId, w.id);
+  const held = await activeOffer(event.id, userId, w.id);
   const fullError = () => fail(409, 'This event is full. Join the waitlist and the academy can offer you a seat if one opens.', {waitlist: true, eventId: event.id});
-  if (event.full && !offer) return fullError();
   const option = input.option || 'full';
   if (option !== 'full' && (event.type !== 'Camp' || event.dayCents === null || !event.dates.includes(option) || option < today)) return fail(400, 'Choose an available camp day.');
   if (option === 'full' && event.dates[0] < today) return fail(409, 'This event has already started. Choose a future single camp day if offered, or contact the academy.');
   const eventDates = option === 'full' ? event.dates : [option];
+  // An offer only covers the days it was made for (issue #97): an offer for one camp day cannot book the whole camp.
+  const offerDates: string[] = held ? JSON.parse(held.dates) : [];
+  const offer = held && eventDates.every((d: string) => offerDates.includes(d)) ? held : null;
+  if (event.full && !offer) return fullError();
+  if (offer) {
+    const since = new Date(Date.now() - 35 * 60000).toISOString();
+    const other = await env.DB!.prepare("SELECT 1 FROM orders WHERE user_id=? AND wrestler_id=? AND kind='event' AND item_id=? AND (status='paid' OR (status='pending' AND created_at>=?)) AND dedupe_key<>? LIMIT 1")
+      .bind(userId, w.id, event.id, since, [userId, w.id, 'event', event.id, option].join('|')).first();
+    if (other) return fail(409, 'This wrestler is already registered for this event, or a payment for it is in progress. Check your family account.');
+  }
   const card = await cardProblem(userId, w, eventDates);
   if (card) return fail(403, card, {usawRequired: true});
-  const waiver = await waiverProblem(userId, w);
+  const waiver = await waiverProblem(userId, w, eventDates);
   if (waiver) return fail(403, waiver, {waiverRequired: true});
   const slots = eventSlots(state, event.id);
   const left = slots === null ? null : await seatsLeft(event.id, eventDates, slots, 'event', {userId, wrestlerId: w.id});

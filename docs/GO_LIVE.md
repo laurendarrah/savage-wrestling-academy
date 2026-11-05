@@ -9,7 +9,7 @@ For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps 
 
 ## 2. Database migrations
 
-Main adds twelve migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
+Main adds thirteen migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
 
 | File | What it adds |
 |---|---|
@@ -25,8 +25,9 @@ Main adds twelve migrations to the 13 the live site already has. Apply them to t
 | `drizzle/0022_clean_loa.sql` | `membership_transfers` table |
 | `drizzle/0023_curvy_mac_gargan.sql` | `announcements`, `announcement_recipients` and `family_messages` tables |
 | `drizzle/0024_kind_wendigo.sql` | `booking_exceptions` table (owner exceptions to the card and waiver blocks) |
+| `drizzle/0025_graceful_karma.sql` | Waiver signatures unique per child name instead of per wrestler entry |
 
-- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the twelve files with the platform's database tools.
+- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the thirteen files with the platform's database tools.
 - [ ] Never re-run 0000 to 0012; they are already applied.
 
 If a migration is missing, the new pages (roster, payments, family purchases, checkout) return errors. Every page that existed before keeps working.

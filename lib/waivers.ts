@@ -25,16 +25,18 @@ export async function currentWaiver() {
   return w && !w.retired_at ? w : null;
 }
 
-export async function signatureFor(versionId: string, userId: string, wrestlerId: string) {
-  return await env.DB!.prepare('SELECT id,signer,signed_at FROM waiver_signatures WHERE version_id=? AND user_id=? AND wrestler_id=?')
-    .bind(versionId, userId, wrestlerId).first<{id: string; signer: string; signed_at: string}>();
+// A signature belongs to the wrestler it was signed for, by name as well as id (issue #97): renaming a signed entry
+// to another child does not carry the signature over.
+export async function signatureFor(versionId: string, userId: string, wrestlerId: string, name: string) {
+  return await env.DB!.prepare('SELECT id,signer,signed_at FROM waiver_signatures WHERE version_id=? AND user_id=? AND wrestler_id=? AND lower(trim(wrestler_name))=lower(trim(?))')
+    .bind(versionId, userId, wrestlerId, name).first<{id: string; signer: string; signed_at: string}>();
 }
 
 // The message a family sees when booking is refused, or null when no waiver is needed or it is signed.
-export async function waiverProblem(userId: string, w: {id: string; name: string}) {
+export async function waiverProblem(userId: string, w: {id: string; name: string}, dates: string[] = [academyToday()]) {
   const current = await currentWaiver();
-  if (!current || await signatureFor(current.id, userId, w.id)) return null;
-  if (await exceptionFor(userId, w.id, 'waiver', [academyToday()])) return null; // owner exception (issue #89)
+  if (!current || await signatureFor(current.id, userId, w.id, w.name)) return null;
+  if (await exceptionFor(userId, w.id, 'waiver', dates)) return null; // owner exception covering every booked date (issue #89)
   return `${w.name} needs a signed ${current.title} before booking. Sign it in your family account; it takes about a minute.`;
 }
 
@@ -74,7 +76,7 @@ export async function signWaiver(user: {id: string; email: string}, input: any) 
   if (input.accepted !== true || input.electronicConsent !== true) return {status: 400, error: 'Confirm that you have read the waiver and agree to sign electronically.'};
   const signature = cleanSignature(input.signature);
   if (!signature || signature.method !== 'drawn') return {status: 400, error: 'Draw your signature in the box.'};
-  if (await signatureFor(current.id, user.id, w.id)) return {status: 409, error: `${w.name}'s waiver is already signed.`};
+  if (await signatureFor(current.id, user.id, w.id, w.name)) return {status: 409, error: `${w.name}'s waiver is already signed.`};
   const at = new Date().toISOString(), id = crypto.randomUUID();
   const record: WaiverRecord = {version: 1, method: 'drawn', strokes: signature.strokes, waiverId: current.id, waiverSha256: current.sha256, signedAt: at, signer, accountEmail: user.email, consent: waiverConsent};
   try {
@@ -92,13 +94,15 @@ export async function signWaiver(user: {id: string; email: string}, input: any) 
 // Family view: the waiver in force and which wrestlers have signed it, plus every earlier signed copy.
 export async function familyWaivers(userId: string) {
   const current = await currentWaiver();
+  const names = new Map(((await familyProfile(userId))?.wrestlers ?? []).map(w => [w.id, w.name.trim().toLowerCase()]));
   const signed = (await env.DB!.prepare(`SELECT s.id,s.version_id,s.wrestler_id,s.wrestler_name,s.signer,s.signed_at,v.title FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id
     WHERE s.user_id=? ORDER BY s.signed_at DESC`).bind(userId).all<any>()).results;
   return {
     waiver: current ? {id: current.id, title: current.title, body: current.body, publishedAt: current.published_at} : null,
     // Wrestlers the owner is letting book without signing for now (issue #89).
     exceptions: Object.fromEntries((await env.DB!.prepare("SELECT wrestler_id,max(ends_on) AS ends FROM booking_exceptions WHERE user_id=? AND rule='waiver' AND revoked_at IS NULL AND starts_on<=? AND ends_on>=? GROUP BY wrestler_id").bind(userId, academyToday(), academyToday()).all<{wrestler_id: string; ends: string}>()).results.map(r => [r.wrestler_id, r.ends])),
-    signatures: signed.map(s => ({id: s.id, versionId: s.version_id, wrestlerId: s.wrestler_id, wrestler: s.wrestler_name, signer: s.signer, signedAt: s.signed_at, title: s.title, current: s.version_id === current?.id}))
+    signatures: signed.map(s => ({id: s.id, versionId: s.version_id, wrestlerId: s.wrestler_id, wrestler: s.wrestler_name, signer: s.signer, signedAt: s.signed_at, title: s.title,
+      current: s.version_id === current?.id && names.get(s.wrestler_id) === String(s.wrestler_name).trim().toLowerCase()}))
   };
 }
 
@@ -107,12 +111,12 @@ export async function ownerWaivers() {
   const versions = (await env.DB!.prepare('SELECT v.id,v.title,v.published_at,v.retired_at,(SELECT COUNT(*) FROM waiver_signatures s WHERE s.version_id=v.id) AS signed FROM waiver_versions v ORDER BY v.published_at DESC').all<any>()).results;
   const current = await currentWaiver();
   const families = (await env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts ORDER BY email LIMIT 2000').all<{user_id: string; email: string; payload: string}>()).results;
-  const sigs = current ? (await env.DB!.prepare('SELECT id,user_id,wrestler_id,signer,signed_at FROM waiver_signatures WHERE version_id=?').bind(current.id).all<any>()).results : [];
-  const byKey = new Map(sigs.map(s => [s.user_id + '/' + s.wrestler_id, s]));
+  const sigs = current ? (await env.DB!.prepare('SELECT id,user_id,wrestler_id,wrestler_name,signer,signed_at FROM waiver_signatures WHERE version_id=?').bind(current.id).all<any>()).results : [];
+  const byKey = new Map(sigs.map(s => [s.user_id + '/' + s.wrestler_id + '/' + String(s.wrestler_name).trim().toLowerCase(), s]));
   const wrestlers = families.flatMap(f => {
     const p = JSON.parse(f.payload || '{}');
     return (p.wrestlers || []).map((w: any) => {
-      const s = byKey.get(f.user_id + '/' + w.id);
+      const s = byKey.get(f.user_id + '/' + w.id + '/' + String(w.name).trim().toLowerCase());
       return {userId: f.user_id, email: f.email, parentName: p.parentName || '', wrestlerId: w.id, wrestler: w.name, grade: w.grade, signed: !!s, signatureId: s?.id ?? null, signer: s?.signer ?? null, signedAt: s?.signed_at ?? null};
     });
   });

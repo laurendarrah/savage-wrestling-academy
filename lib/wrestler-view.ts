@@ -58,7 +58,7 @@ export async function wrestlerView(userId: string, wrestlerId: string) {
     id: w.id, name: w.name, grade: w.grade, pass: pass?.code ?? null,
     upcoming: await upcomingFor(userId, wrestlerId, today),
     card: cardStatus(w, await reviewFor(userId, wrestlerId), today),
-    waiverNeeded: waiver ? !(await signatureFor(waiver.id, userId, wrestlerId)) : false,
+    waiverNeeded: waiver ? !(await signatureFor(waiver.id, userId, wrestlerId, w.name)) : false,
     checkInsThisMonth: attended?.n ?? 0
   };
 }

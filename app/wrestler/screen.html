@@ -10,7 +10,7 @@ const typeLabel={practice:'Practice',live:'Extra practice',event:'Camp / event',
 function render(v){
  document.title=v.name+' | Savage Wrestling Academy';$('name').textContent=v.name;$('grade').textContent=v.grade==='Adult'?'Adult':v.grade==='K'?'Kindergarten':'Grade '+v.grade;
  const alerts=[];
- if(['missing','expired','invalid'].includes(v.card.state))alerts.push('USA Wrestling card '+(v.card.state==='missing'?'missing':v.card.state==='expired'?'expired':'not verified')+'. New sessions cannot be booked until it is fixed. <a href="/family#summary">Update it</a>');
+ if(['missing','expired','invalid','recheck'].includes(v.card.state))alerts.push('USA Wrestling card '+(v.card.state==='missing'?'missing':v.card.state==='expired'?'expired':v.card.state==='recheck'?'waiting for the academy to check it':'not verified')+'. New sessions cannot be booked until it is fixed. <a href="/family#summary">Update it</a>');
  if(v.waiverNeeded)alerts.push('Waiver not signed. New sessions cannot be booked until it is. <a href="/waiver?wrestler='+encodeURIComponent(v.id)+'">Sign it</a>');
  $('alerts').innerHTML=alerts.map(a=>'<div class="alert">'+a+'</div>').join('');
  const n=v.upcoming[0];
