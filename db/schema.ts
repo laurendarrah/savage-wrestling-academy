@@ -53,3 +53,31 @@ export const scholarshipAwards=sqliteTable('scholarship_awards',{
  uniqueIndex('scholarship_active_wrestler').on(t.userId,t.wrestlerId).where(sql`${t.status} = 'active'`),
  check('scholarship_status',sql`${t.status} IN ('offered','active','revoked','ended')`),
  check('scholarship_ready',sql`${t.termsReady} IN (0,1)`)]);
+
+// Launch 1 payments (issues #18, #19). An order is created before Stripe Checkout and becomes
+// paid only through a verified Stripe webhook. Prices are computed on the server.
+export const orders=sqliteTable("orders",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),email:text("email").notNull(),
+ wrestlerId:text("wrestler_id").notNull(),wrestlerName:text("wrestler_name").notNull(),
+ kind:text("kind").notNull(),program:text("program"),itemId:text("item_id").notNull(),itemLabel:text("item_label").notNull(),
+ dates:text("dates").notNull(),baseCents:integer("base_cents").notNull(),discountCents:integer("discount_cents").notNull(),
+ amountCents:integer("amount_cents").notNull(),currency:text("currency").notNull(),pricing:text("pricing").notNull(),
+ termsAccepted:text("terms_accepted").notNull(),status:text("status").notNull(),dedupeKey:text("dedupe_key").notNull(),
+ stripeSessionId:text("stripe_session_id"),stripePaymentIntent:text("stripe_payment_intent"),livemode:integer("livemode").notNull(),
+ createdAt:text("created_at").notNull(),updatedAt:text("updated_at").notNull(),paidAt:text("paid_at"),
+ termStart:text("term_start"),termEnd:text("term_end")
+},t=>[
+ index("orders_user").on(t.userId),
+ index("orders_wrestler_status").on(t.userId,t.wrestlerId,t.status),
+ uniqueIndex("orders_stripe_session").on(t.stripeSessionId),
+ uniqueIndex("orders_open_dedupe").on(t.dedupeKey).where(sql`${t.status} IN ('pending','paid')`),
+ check("orders_kind",sql`${t.kind} IN ('walkin','annual','monthly','event','live')`),
+ check("orders_status",sql`${t.status} IN ('pending','paid','expired','canceled','refunded')`),
+ check("orders_amounts",sql`${t.amountCents} >= 0 AND ${t.baseCents} >= 0 AND ${t.discountCents} >= 0 AND ${t.amountCents} = ${t.baseCents} - ${t.discountCents}`),
+ check("orders_livemode",sql`${t.livemode} IN (0,1)`)
+]);
+
+// Every Stripe event id is recorded once, so a repeated delivery cannot be applied twice.
+export const stripeEvents=sqliteTable("stripe_events",{
+ id:text("id").primaryKey(),type:text("type").notNull(),orderId:text("order_id"),outcome:text("outcome").notNull(),receivedAt:text("received_at").notNull()
+});

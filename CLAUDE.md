@@ -31,6 +31,13 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 - There is no checkout, webhook, order, or subscription code. Registration stops at a review step.
 - Inline JavaScript in `.html` files is not typechecked. Passing `pnpm typecheck` says nothing about it. Add a test in `tests/` for any workspace function you change.
 
+## Payments
+
+- Prices come only from `lib/quotes.ts`. Review screens and checkout both use it. Never accept an amount from the browser.
+- An order becomes paid only in `lib/stripe-webhook.ts`, after the Stripe signature is verified. Never mark anything paid from a redirect or a browser call.
+- Every Stripe event id is stored once in `stripe_events`. Keep webhook handling idempotent and safe for late or out-of-order events.
+- Checkout opens per purchase type with `CHECKOUT_KINDS`. Do not open a type whose terms or refund policy is undecided.
+
 ## Domain rules
 
 - Programs: SWA Development is grades K to 6. SWA Intermediate is grades 7 to 12. SWA Advance is grades 7 to 12 and every wrestler needs coach approval.
