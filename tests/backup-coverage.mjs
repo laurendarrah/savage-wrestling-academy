@@ -29,7 +29,7 @@ const signature=JSON.stringify({version:1,signer:'Pat Parent',consent:true,terms
 function seed(sqlite){
   const run=(sql,...v)=>sqlite.prepare(sql).run(...v);
   run("INSERT INTO family_accounts(user_id,email,payload,revision,updated_at) VALUES (?,?,?,?,?)",'parent-1','pat@example.test',JSON.stringify({parentName:'Pat Parent',phone:'555-0100',wrestlers:[{id:'w-1',name:'Sam Example',grade:'8'}]}),1,now);
-  run("INSERT INTO coach_openings(id,user_id,date,start,end) VALUES (?,?,?,?,?)",'open-1','coach-1','2026-12-01','16:00','17:00');
+  run("INSERT INTO coach_openings(id,user_id,date,start,end,coach_email) VALUES (?,?,?,?,?,?)",'open-1','coach-1','2026-12-01','16:00','17:00','dana@example.test');
   run("INSERT INTO practice_curriculum_groups VALUES (?,?,?,?,?,?,?)",'grp-1','Advanced','Foundations','foundations',1,'owner',now);
   run("INSERT INTO practice_curricula(id,name,name_key,payload,revision,updated_by,updated_at,curriculum_id,lesson_order) VALUES (?,?,?,?,?,?,?,?,?)",'les-1','Lesson 1','lesson 1',JSON.stringify({title:'Stance',sections:[]}),1,'owner',now,'grp-1',1);
   run("INSERT INTO program_approvals VALUES (?,?,?,?,?,?,?,?,?,?)",'appr-1','parent-1','w-1','Advanced','Sam Example','8','approved',now,now,'owner');
@@ -40,15 +40,41 @@ function seed(sqlite){
   run("INSERT INTO staff_access VALUES (?,?,?,?,?)",'coach@example.test','Coach','["Advanced"]',1,now);
   run("INSERT INTO integration_secrets VALUES (?,?,?,?)",'stripe-test','ENCRYPTED-BLOB','owner',now);
   run("INSERT INTO security_events VALUES (?,?,?,?,?)",'evt-1','owner','scholarship_accepted','sch-1',now);
+  // Issue #78: payments, attendance and every feature table added since the first backup version.
+  run(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,stripe_session_id,stripe_payment_intent,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
+    VALUES ('ord-1','parent-1','pat@example.test','w-1','Sam Example','annual','Advanced','Advanced','Membership','[]',240000,0,240000,'usd','{"method":"check"}','{"offline":true}','paid','k1',NULL,NULL,0,?,?,?,'2026-11-05','2027-11-04','offline')`,now,now,now);
+  run("INSERT INTO stripe_events VALUES (?,?,?,?,?)",'evt_stripe_1','checkout.session.completed','ord-1','paid',now);
+  run("INSERT INTO subscriptions VALUES (?,?,?,?,?,?,?,?,?,?)",'ord-1','sub_1','active',1,12,'2026-11-05','2027-11-04','2026-12-04','2027-11-05',now);
+  run("INSERT INTO attendance VALUES (?,?,?,?,?,?,?,?,?)",'att-1','practice:Advanced:2026-11-05:18:00','2026-11-05','parent-1','w-1','Sam Example','Member',now,'owner');
+  run("INSERT INTO usaw_reviews VALUES (?,?,?,?,?,?,?,?)",'parent-1','w-1','AB1234','2027-08-31','valid','','owner',now);
+  run("INSERT INTO waiver_versions VALUES (?,?,?,?,?,?,?)",'wv-1','Waiver','Approved text.','c'.repeat(64),now,'owner',null);
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)",'ws-1','wv-1','parent-1','w-1','Sam Example','Pat Parent','pat@example.test','{"strokes":[]}',now);
+  run("INSERT INTO academy_settings VALUES (?,?,?,?)",'lessons','{"prices":{"one-on-one":6000}}',now,'owner');
+  run("INSERT INTO wrestler_passes VALUES (?,?,?,?,?,?,?)",'pass-1','parent-1','w-1','t'.repeat(32),now,null,null);
+  run("INSERT INTO waitlist_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",'wl-1','camp','full','["2026-12-20"]','parent-1','w-1','Sam Example','pat@example.test','waiting',now,null,null,null,0,null,null);
+  run("INSERT INTO membership_transfers VALUES (?,?,?,?,?,?,?,?)",'tr-1','ord-1','Intermediate','Advanced','2026-11-10','Moved up','owner',now);
+  run("INSERT INTO announcements VALUES (?,?,?,?,?,?,?,?)",'an-1','Practice moved','Six thirty tonight.','{"type":"all"}','All families','owner',now,1);
+  run("INSERT INTO announcement_recipients VALUES (?,?,?,?,?)",'an-1','parent-1','pat@example.test',null,'skipped');
+  run("INSERT INTO family_messages VALUES (?,?,?,?,?,?,?)",'fm-1','parent-1','owner','Great practice.',now,null,'skipped');
+  run("INSERT INTO booking_exceptions VALUES (?,?,?,?,?,?,?,?,?,?,?)",'ex-1','parent-1','w-1','usaw','2026-11-05','2026-12-05','Renewal pending','owner',now,null,null);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
-const restorable=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
+const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions'];
+// Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
+// table fails here until someone decides which.
+{
+  const db=freshDb().sqlite,tables=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%'").all().map(r=>r.name);
+  const core=['academy_state','family_accounts','coach_openings'],excluded=['staff_access','integration_secrets','auth_attempts','recovery_snapshots','restore_guard','security_events'];
+  const missing=tables.filter(t=>![...core,...excluded,...restorable].includes(t));
+  assert.deepEqual(missing,[],'tables neither backed up nor excluded: '+missing.join(', '));
+}
 
 // 1. Export covers every business table, and excludes grants, secrets and bookkeeping.
 const source=freshDb();seed(source.sqlite);
 const lib=loadBackups(source.DB);
 const backup=JSON.parse(JSON.stringify(await lib.readBackup()));
-assert.equal(backup.version,2);
+assert.equal(backup.version,3);
 assert.deepEqual(Object.keys(backup.records).sort(),[...restorable].sort());
 for(const t of restorable)assert.equal(backup.records[t].length,1,`${t} exported`);
 assert.equal(backup.records.scholarship_awards[0].signature_record,signature,'signature evidence exported byte for byte');
@@ -68,11 +94,12 @@ assert.ok(result,'restore accepted');
 for(const t of restorable){assert.equal(result.restored[t],1,`${t} restored count`);assert.deepEqual(dump(target.sqlite,t),dump(source.sqlite,t),`${t} identical after restore`)}
 assert.equal(dump(target.sqlite,'family_accounts').length,1);
 assert.equal(dump(target.sqlite,'coach_openings').length,1);
+assert.equal(dump(target.sqlite,'coach_openings')[0].coach_email,'dana@example.test','coach link restored');
 assert.equal(dump(target.sqlite,'staff_access').length,0,'restore never grants staff access');
 assert.equal(dump(target.sqlite,'integration_secrets').length,0);
 const events=dump(target.sqlite,'security_events');
 assert.equal(events.length,1,'archived audit events are not replayed; only the restore itself is logged');
-assert.equal(events[0].action,'backup_restored');assert.match(events[0].target,/^v2:.*scholarship_awards/);
+assert.equal(events[0].action,'backup_restored');assert.match(events[0].target,/^v3:.*scholarship_awards.*orders/);
 const snap=JSON.parse(dump(target.sqlite,'recovery_snapshots')[0].payload);
 assert.equal(snap.version,1,'recovery snapshot holds only the overwritable core sections');
 
@@ -100,7 +127,25 @@ bad=clone();bad.records.program_approvals[0].decided_by=undefined;assert.equal(l
 bad=clone();bad.records.practice_plans.push({...bad.records.practice_plans[0]});assert.equal(lib.validBackup(bad),false,'duplicate id');
 bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad),false,'bad archive row');
 
-// 6. Version 1 backups from before this change still validate and restore.
+// 6. Version 2 backups made before issue #78 (six tables) still validate and restore; a v3 file cannot drop a table.
+{
+  const v2={...JSON.parse(JSON.stringify(backup)),version:2,records:Object.fromEntries(legacy.map(t=>[t,backup.records[t]]))};
+  assert.equal(lib.validBackup(v2),true,'older v2 backup accepted');
+  assert.equal(lib.validBackup({...v2,records:backup.records}),false,'v2 cannot carry v3 tables');
+  const o2=freshDb(),o2Lib=loadBackups(o2.DB);
+  assert.ok(await o2Lib.restoreBackup(v2,await o2Lib.fingerprint(await o2Lib.metadata()),'owner'));
+  assert.equal(dump(o2.sqlite,'scholarship_awards').length,1);assert.equal(dump(o2.sqlite,'orders').length,0);
+  let b3=clone();delete b3.records.orders;assert.equal(lib.validBackup(b3),false,'v3 missing orders');
+  b3=clone();b3.records.usaw_reviews.push({...b3.records.usaw_reviews[0]});assert.equal(lib.validBackup(b3),false,'duplicate composite key');
+}
+// A backup never changes a payment that already exists.
+{
+  target.sqlite.prepare("UPDATE orders SET status='refunded' WHERE id='ord-1'").run();
+  await targetLib.restoreBackup(backup,await targetLib.fingerprint(await targetLib.metadata()),'owner');
+  assert.equal(dump(target.sqlite,'orders')[0].status,'refunded','restore does not overwrite an existing order');
+}
+
+// 7. Version 1 backups from before this change still validate and restore.
 const v1={version:1,project:backup.project,createdAt:backup.createdAt,academy:backup.academy,families:backup.families,openings:backup.openings};
 assert.equal(lib.validBackup(v1),true);
 assert.equal(lib.validBackup({...v1,records:backup.records}),false,'v1 cannot smuggle v2 sections');
@@ -108,4 +153,4 @@ const old=freshDb(),oldLib=loadBackups(old.DB);
 assert.ok(await oldLib.restoreBackup(v1,await oldLib.fingerprint(await oldLib.metadata()),'owner'));
 assert.equal(dump(old.sqlite,'family_accounts').length,1);assert.equal(dump(old.sqlite,'scholarship_awards').length,0);
 
-console.log('Passed: v2 backup covers scholarships and signatures, approvals and messages, plans and curricula; clean-database restore is exact; restore never overwrites, grants access, exports secrets, or replays audit events; v1 backups still restore.');
+console.log('Passed: v3 backup covers payments, attendance, waivers, passes, waitlists, transfers, messages and exceptions as well as scholarships and signatures, approvals and messages, plans and curricula; clean-database restore is exact; restore never overwrites, grants access, exports secrets, or replays audit events; v1 backups still restore.');
