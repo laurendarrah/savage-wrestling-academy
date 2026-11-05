@@ -143,3 +143,15 @@ export const membershipTransfers=sqliteTable("membership_transfers",{
  id:text("id").primaryKey(),orderId:text("order_id").notNull(),fromProgram:text("from_program").notNull(),toProgram:text("to_program").notNull(),
  effectiveDate:text("effective_date").notNull(),reason:text("reason").notNull(),transferredBy:text("transferred_by").notNull(),createdAt:text("created_at").notNull()
 },t=>[index("transfers_order").on(t.orderId,t.effectiveDate)]);
+// Announcements and family messages (issue #72). Recipients are fixed when an announcement is sent.
+export const announcements=sqliteTable("announcements",{
+ id:text("id").primaryKey(),subject:text("subject").notNull(),body:text("body").notNull(),audience:text("audience").notNull(),audienceLabel:text("audience_label").notNull(),
+ sentBy:text("sent_by").notNull(),sentAt:text("sent_at").notNull(),recipients:integer("recipients").notNull()
+},t=>[index("announcements_sent").on(t.sentAt)]);
+export const announcementRecipients=sqliteTable("announcement_recipients",{
+ announcementId:text("announcement_id").notNull(),userId:text("user_id").notNull(),email:text("email").notNull(),readAt:text("read_at"),emailStatus:text("email_status").notNull()
+},t=>[primaryKey({columns:[t.announcementId,t.userId]}),index("announcement_recipients_user").on(t.userId)]);
+export const familyMessages=sqliteTable("family_messages",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),senderRole:text("sender_role").notNull(),body:text("body").notNull(),createdAt:text("created_at").notNull(),
+ readAt:text("read_at"),emailStatus:text("email_status").notNull()
+},t=>[index("family_messages_thread").on(t.userId,t.createdAt),check("family_message_sender",sql`${t.senderRole} IN ('owner','family')`)]);

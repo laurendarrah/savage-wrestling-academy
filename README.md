@@ -28,7 +28,8 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 | Waitlists | Built. Families join full events; owner offers seats on `/waitlists` |
 | Program transfers | Built. Owner moves a paid membership between programs on `/transfers` |
 | Wrestler view | Built. `/wrestler?id=` shows the entry pass, what is coming up and anything blocking new bookings |
-| Rosters, messages, transfers, waitlists and payouts in the owner workspace | Sample data only |
+| Messages | Built. Announcements and private threads on `/messages` and `/inbox`; email after #87 |
+| Sample screens in the owner workspace (rosters, messages, transfers, waitlists, payouts) | Sample data only; each links to its real page |
 
 The owner workspace (`app/portal.html`) mixes real and sample records. Real family data lives in the `family_accounts`, `program_approvals` and `scholarship_awards` tables. The sample wrestlers in the workspace are not connected to them.
 

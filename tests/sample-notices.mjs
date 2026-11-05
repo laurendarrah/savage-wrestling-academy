@@ -13,7 +13,7 @@ const notice = (mode, page) => vm.runInContext(`mode=${JSON.stringify(mode)};pag
 
 const expectations = {
   Dashboard: /href="\/roster"/, Families: /href="\/accounts"/, Attendance: /href="\/roster"/, 'Events & waitlists': /publish to the public calendar/,
-  'Private lessons': /no money moves.*href="\/coach-pay"/, Messages: /not delivered/, 'Staff & settings': /href="\/staff"/
+  'Private lessons': /no money moves.*href="\/coach-pay"/, Messages: /not delivered.*href="\/messages"/, 'Staff & settings': /href="\/staff"/
 };
 for (const [page, pattern] of Object.entries(expectations)) {
   const text = notice('admin', page);
