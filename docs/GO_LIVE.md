@@ -9,7 +9,7 @@ For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps 
 
 ## 2. Database migrations
 
-Main adds eight migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
+Main adds nine migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
 
 | File | What it adds |
 |---|---|
@@ -21,8 +21,9 @@ Main adds eight migrations to the 13 the live site already has. Apply them to th
 | `drizzle/0018_curly_ken_ellis.sql` | `waiver_versions` and `waiver_signatures` tables |
 | `drizzle/0019_nostalgic_sheva_callister.sql` | `academy_settings` table, `coach_email` on `coach_openings`, and `orders` rebuilt to allow `lesson` |
 | `drizzle/0020_open_mister_fear.sql` | `wrestler_passes` table (QR entry passes) |
+| `drizzle/0021_mean_shen.sql` | `waitlist_entries` table |
 
-- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the eight files with the platform's database tools.
+- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the nine files with the platform's database tools.
 - [ ] Never re-run 0000 to 0012; they are already applied.
 
 If a migration is missing, the new pages (roster, payments, family purchases, checkout) return errors. Every page that existed before keeps working.
@@ -57,6 +58,7 @@ Publish main. Then, signed in as the owner with the authenticator:
 - [ ] `/cards` lists wrestlers and their USA Wrestling card status
 - [ ] `/waivers` says no waiver is in force
 - [ ] `/coach-pay` loads for this month
+- [ ] `/waitlists` loads
 - [ ] `/lesson-settings` loads; `/lesson` shows coach openings (each coach must open `/coach` once so older openings are linked to them)
 - [ ] `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load
 

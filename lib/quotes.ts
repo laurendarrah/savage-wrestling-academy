@@ -12,6 +12,7 @@ import {eventSlots, seatsLeft} from './capacity';
 import {cardProblem} from './usaw';
 import {waiverProblem} from './waivers';
 import {lessonOpening, lessonSettings} from './lessons';
+import {settleOffers, activeOffer} from './waitlist';
 
 export type ChargeKind = 'walkin' | 'annual' | 'monthly' | 'event' | 'live' | 'lesson';
 export type Charge = {
@@ -177,7 +178,11 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   }
   const event = catalog.events.find((e: any) => e.id === input.id);
   if (!event) return fail(409, 'This event is archived or no longer available.');
-  if (event.full) return fail(409, 'This event is full. Contact the academy about its waitlist.');
+  // Waitlist (issue #73): a family holding an offer from the owner may book even though the event looks full.
+  await settleOffers(event.id);
+  const offer = await activeOffer(event.id, userId, w.id);
+  const fullError = () => fail(409, 'This event is full. Join the waitlist and the academy can offer you a seat if one opens.', {waitlist: true, eventId: event.id});
+  if (event.full && !offer) return fullError();
   const option = input.option || 'full';
   if (option !== 'full' && (event.type !== 'Camp' || event.dayCents === null || !event.dates.includes(option) || option < today)) return fail(400, 'Choose an available camp day.');
   if (option === 'full' && event.dates[0] < today) return fail(409, 'This event has already started. Choose a future single camp day if offered, or contact the academy.');
@@ -187,19 +192,20 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   const waiver = await waiverProblem(userId, w);
   if (waiver) return fail(403, waiver, {waiverRequired: true});
   const slots = eventSlots(state, event.id);
-  const left = slots === null ? null : await seatsLeft(event.id, eventDates, slots);
-  if (left !== null && left <= 0) return fail(409, 'This event is full. Contact the academy about its waitlist.');
+  const left = slots === null ? null : await seatsLeft(event.id, eventDates, slots, 'event', {userId, wrestlerId: w.id});
+  if (left !== null && left <= 0 && !offer) return fullError();
   const baseCents = option === 'full' ? event.cents : event.dayCents;
   const memberDiscount = member && event.type === 'Camp' && baseCents !== null ? Math.round(baseCents * .1) : 0;
   const review = {
     type: 'event', title: event.name, wrestler: w.name, dates: option === 'full' ? event.dates : [option], baseCents,
-    cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, seatsLeft: left, status: 'registration_review',
+    cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, seatsLeft: left, status: 'registration_review', offerExpiresAt: offer?.offer_expires_at ?? null,
     message: (memberDiscount ? 'Active membership verified. A 10% camp member discount is applied.' : 'Price shown is the full price for this event.') + tail(opts, baseCents === null ? null : 'event')
   };
   const charge: Charge | null = baseCents === null ? null : {
     kind: 'event', program: null, itemId: String(event.id), itemLabel: option === 'full' ? String(event.name) : `${event.name} on ${option}`,
     dates: option === 'full' ? event.dates : [option], baseCents, discountCents: memberDiscount, amountCents: baseCents - memberDiscount,
-    pricing: {member, option, eventType: event.type, slots}, dedupeKey: [userId, w.id, 'event', event.id, option].join('|')
+    // A seat offered from the waitlist is the owner's decision, so it is not limited again at checkout.
+    pricing: {member, option, eventType: event.type, slots: offer ? null : slots, ...(offer ? {waitlistOffer: offer.id} : {})}, dedupeKey: [userId, w.id, 'event', event.id, option].join('|')
   };
   return {ok: true, review, charge, wrestler};
 }
