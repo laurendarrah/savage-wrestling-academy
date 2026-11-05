@@ -8,7 +8,7 @@ import {academyToday} from './public-schedule';
 import {withinCapacity} from './capacity';
 
 export const METHODS = ['cash', 'check', 'venmo', 'zelle', 'card-in-person', 'other'] as const;
-export const OFFLINE_KINDS = ['annual', 'walkin', 'event', 'live'] as const;
+export const OFFLINE_KINDS = ['annual', 'walkin', 'event', 'live', 'lesson'] as const;
 type Kind = typeof OFFLINE_KINDS[number];
 
 export type OfflineInput = {
@@ -16,6 +16,7 @@ export type OfflineInput = {
   program?: string; date?: string; practiceId?: string;   // annual, walkin
   eventId?: string; option?: string;                       // event
   liveId?: string;                                         // live (uses date)
+  openingId?: string; format?: string;                     // lesson
   amountCents?: number; method?: string; note?: string; paidOn?: string;
 };
 
@@ -31,6 +32,8 @@ export async function previewOffline(input: OfflineInput): Promise<Quote> {
     return quoteMembership(input.userId, {wrestlerId: input.wrestlerId, program: input.program, plan: input.kind, date: input.date, practiceId: input.practiceId});
   if (input.kind === 'event')
     return quoteBooking(input.userId, {type: 'event', wrestlerId: input.wrestlerId, id: input.eventId, option: input.option || 'full'});
+  if (input.kind === 'lesson')
+    return quoteBooking(input.userId, {type: 'lesson', wrestlerId: input.wrestlerId, format: input.format, openingId: input.openingId});
   return quoteBooking(input.userId, {type: 'live', wrestlerId: input.wrestlerId, id: input.liveId, date: input.date});
 }
 
@@ -60,10 +63,10 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
   } catch {
     return {status: 409, error: 'This wrestler already has a payment recorded for this item.'};
   }
-  const slots = charge.kind === 'event' ? charge.pricing.slots : null;
-  if (typeof slots === 'number' && slots > 0 && !(await withinCapacity(id, charge.itemId, charge.dates, slots))) {
+  const slots = charge.kind === 'event' || charge.kind === 'lesson' ? charge.pricing.slots : null;
+  if (typeof slots === 'number' && slots > 0 && !(await withinCapacity(id, charge.itemId, charge.dates, slots, charge.kind as 'event' | 'lesson'))) {
     await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=?").bind(at, id).run();
-    return {status: 409, error: 'This event just filled up. The payment was not recorded.'};
+    return {status: 409, error: charge.kind === 'lesson' ? 'This lesson time was just booked by another family. The payment was not recorded.' : 'This event just filled up. The payment was not recorded.'};
   }
   await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
     .bind(crypto.randomUUID(), ownerId, 'offline_payment_recorded', `${id} ${charge.kind} ${amount}`, at).run();
@@ -91,7 +94,7 @@ export async function listPayments(f: PaymentFilters) {
   if (validDate(f.from)) { where.push('substr(o.paid_at,1,10)>=?'); args.push(f.from); }
   if (validDate(f.to)) { where.push('substr(o.paid_at,1,10)<=?'); args.push(f.to); }
   if (['paid', 'refunded', 'canceled'].includes(String(f.status))) { where.push('o.status=?'); args.push(f.status); }
-  if (['annual', 'monthly', 'walkin', 'event', 'live'].includes(String(f.kind))) { where.push('o.kind=?'); args.push(f.kind); }
+  if (['annual', 'monthly', 'walkin', 'event', 'live', 'lesson'].includes(String(f.kind))) { where.push('o.kind=?'); args.push(f.kind); }
   if (['stripe', 'offline'].includes(String(f.source))) { where.push('o.source=?'); args.push(f.source); }
   const rows = (await env.DB!.prepare(
     `SELECT o.id,o.paid_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,f.payload AS family

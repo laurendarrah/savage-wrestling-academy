@@ -40,10 +40,10 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
     throw new CheckoutError(409, 'This is already paid or a payment for it is in progress. Check your family account.');
   }
   // Two families racing for the last seat: the earlier order keeps it, the later one is released before Stripe.
-  const slots = charge.kind === 'event' ? charge.pricing.slots : null;
-  if (typeof slots === 'number' && slots > 0 && !(await withinCapacity(id, charge.itemId, charge.dates, slots))) {
+  const slots = charge.kind === 'event' || charge.kind === 'lesson' ? charge.pricing.slots : null;
+  if (typeof slots === 'number' && slots > 0 && !(await withinCapacity(id, charge.itemId, charge.dates, slots, charge.kind as 'event' | 'lesson'))) {
     await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=? AND status='pending'").bind(now(), id).run();
-    throw new CheckoutError(409, 'This event just filled up. Nothing was charged. Contact the academy about its waitlist.');
+    throw new CheckoutError(409, charge.kind === 'lesson' ? 'Another family just booked this lesson time. Nothing was charged. Choose another time.' : 'This event just filled up. Nothing was charged. Contact the academy about its waitlist.');
   }
 
   let session;

@@ -11,8 +11,9 @@ import {publicSchedule, academyToday} from './public-schedule';
 import {eventSlots, seatsLeft} from './capacity';
 import {cardProblem} from './usaw';
 import {waiverProblem} from './waivers';
+import {lessonOpening, lessonSettings} from './lessons';
 
-export type ChargeKind = 'walkin' | 'annual' | 'monthly' | 'event' | 'live';
+export type ChargeKind = 'walkin' | 'annual' | 'monthly' | 'event' | 'live' | 'lesson';
 export type Charge = {
   kind: ChargeKind;
   program: string | null;
@@ -145,11 +146,34 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   if (input.type === 'lesson') {
     const format = catalog.privateFormats.find(p => p.id === input.format);
     if (!format) return fail(400, 'Choose an available lesson format.');
-    const card = await cardProblem(userId, w, [today]);
+    // Without a chosen opening this is an inquiry, as before. With one, it is a booking at the owner's price (issue #70).
+    if (input.openingId === undefined || input.openingId === null || input.openingId === '') {
+      const card = await cardProblem(userId, w, [today]);
+      if (card) return fail(403, card, {usawRequired: true});
+      const waiver = await waiverProblem(userId, w);
+      if (waiver) return fail(403, waiver, {waiverRequired: true});
+      return {ok: true, wrestler, charge: null, review: {type: 'lesson', title: format.name, wrestler: w.name, cents: null, status: 'inquiry_review', message: 'Coach, date, availability, and price need academy confirmation. No lesson is reserved and no payment is taken.'}};
+    }
+    const opening = await lessonOpening(input.openingId, today);
+    if (!opening) return fail(409, 'This lesson time is no longer available. Choose another time.');
+    const card = await cardProblem(userId, w, [opening.date]);
     if (card) return fail(403, card, {usawRequired: true});
     const waiver = await waiverProblem(userId, w);
     if (waiver) return fail(403, waiver, {waiverRequired: true});
-    return {ok: true, wrestler, charge: null, review: {type: 'lesson', title: format.name, wrestler: w.name, cents: null, status: 'inquiry_review', message: 'Coach, date, availability, and price need academy confirmation. No lesson is reserved and no payment is taken.'}};
+    const price = (await lessonSettings()).prices[format.id];
+    if (typeof price !== 'number') return fail(409, `${format.name}s are not open for online booking yet. Contact the academy to arrange one.`);
+    if ((await seatsLeft(opening.id, [opening.date], 1, 'lesson')) <= 0) return fail(409, 'Another family just booked this lesson time. Choose another time.');
+    const partners = typeof input.partners === 'string' ? input.partners.trim().slice(0, 200) : '';
+    const when = new Date(opening.date + 'T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric'});
+    const label = `${format.name} with ${opening.coach}, ${when} at ${opening.start}`;
+    const review = {type: 'lesson', title: format.name, wrestler: w.name, coach: opening.coach, dates: [opening.date], start: opening.start, end: opening.end, cents: price, partners, status: 'registration_review',
+      message: 'Once you continue to checkout, this time is held for you for 30 minutes while you pay.' + tail(opts, 'lesson')};
+    const charge: Charge = {
+      kind: 'lesson', program: null, itemId: opening.id, itemLabel: label, dates: [opening.date], baseCents: price, discountCents: 0, amountCents: price,
+      pricing: {format: format.id, formatName: format.name, coachEmail: opening.coachEmail, coachName: opening.coach, start: opening.start, end: opening.end, slots: 1, partners},
+      dedupeKey: [userId, w.id, 'lesson', opening.id].join('|')
+    };
+    return {ok: true, review, charge, wrestler};
   }
   const event = catalog.events.find((e: any) => e.id === input.id);
   if (!event) return fail(409, 'This event is archived or no longer available.');

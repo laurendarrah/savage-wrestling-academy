@@ -9,7 +9,7 @@ For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps 
 
 ## 2. Database migrations
 
-Main adds six migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All six only add tables or one column; none change or delete existing data.
+Main adds seven migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
 
 | File | What it adds |
 |---|---|
@@ -19,8 +19,9 @@ Main adds six migrations to the 13 the live site already has. Apply them to the 
 | `drizzle/0016_shallow_the_order.sql` | `source` column on `orders` |
 | `drizzle/0017_optimal_proteus.sql` | `usaw_reviews` table (owner checks of USA Wrestling cards) |
 | `drizzle/0018_curly_ken_ellis.sql` | `waiver_versions` and `waiver_signatures` tables |
+| `drizzle/0019_nostalgic_sheva_callister.sql` | `academy_settings` table, `coach_email` on `coach_openings`, and `orders` rebuilt to allow `lesson` |
 
-- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the six files with the platform's database tools.
+- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the seven files with the platform's database tools.
 - [ ] Never re-run 0000 to 0012; they are already applied.
 
 If a migration is missing, the new pages (roster, payments, family purchases, checkout) return errors. Every page that existed before keeps working.
@@ -54,6 +55,7 @@ Publish main. Then, signed in as the owner with the authenticator:
 - [ ] `/payment-setup` says test mode and that checkout is off
 - [ ] `/cards` lists wrestlers and their USA Wrestling card status
 - [ ] `/waivers` says no waiver is in force
+- [ ] `/lesson-settings` loads; `/lesson` shows coach openings (each coach must open `/coach` once so older openings are linked to them)
 - [ ] `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load
 
 With a test family account (not a real family):
@@ -83,7 +85,8 @@ Only after the matching decision is recorded on its issue:
 
 1. Refund policy decided (#3): set `CHECKOUT_KINDS=walkin,event,live`.
 2. Membership terms approved (#2): add `annual`, and later `monthly`.
-3. Test with Stripe test cards first (#24), then follow the live steps on #26.
+3. Lesson cancellation and refund policy decided (#80): add `lesson`. Until then, families can review a lesson time and the owner records cash or check lesson payments on `/payments`.
+4. Test with Stripe test cards first (#24), then follow the live steps on #26.
 
 The Stripe webhook endpoint must point at `/api/stripe-webhook` and send `checkout.session.*`, `charge.refunded`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted`.
 

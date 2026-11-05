@@ -12,23 +12,24 @@ export function eventSlots(state: any, eventId: string): number | null {
 }
 
 // Order ids holding a seat on each date, oldest first.
-export async function seatHolders(eventId: string, dates: string[], now = Date.now()) {
+export async function seatHolders(eventId: string, dates: string[], now = Date.now(), kind: 'event' | 'lesson' = 'event') {
   const since = new Date(now - HOLD_MINUTES * 60000).toISOString();
   const rows = (await env.DB!.prepare(
-    `SELECT id,dates FROM orders WHERE kind='event' AND item_id=? AND (status='paid' OR (status='pending' AND created_at>=?)) ORDER BY created_at,id`
-  ).bind(eventId, since).all<{id: string; dates: string}>()).results;
+    `SELECT id,dates FROM orders WHERE kind=? AND item_id=? AND (status='paid' OR (status='pending' AND created_at>=?)) ORDER BY created_at,id`
+  ).bind(kind, eventId, since).all<{id: string; dates: string}>()).results;
   const byDate = new Map<string, string[]>(dates.map(d => [d, []]));
   for (const r of rows) for (const d of JSON.parse(r.dates) as string[]) byDate.get(d)?.push(r.id);
   return byDate;
 }
 
-export async function seatsLeft(eventId: string, dates: string[], slots: number) {
-  const holders = await seatHolders(eventId, dates);
+export async function seatsLeft(eventId: string, dates: string[], slots: number, kind: 'event' | 'lesson' = 'event') {
+  const holders = await seatHolders(eventId, dates, Date.now(), kind);
   return Math.min(...dates.map(d => slots - (holders.get(d)?.length ?? 0)));
 }
 
 // After inserting a pending order: does it rank within the limit on every date it needs?
-export async function withinCapacity(orderId: string, eventId: string, dates: string[], slots: number) {
-  const holders = await seatHolders(eventId, dates);
+// Lessons use the same rule with one seat: the opening itself (issue #70).
+export async function withinCapacity(orderId: string, eventId: string, dates: string[], slots: number, kind: 'event' | 'lesson' = 'event') {
+  const holders = await seatHolders(eventId, dates, Date.now(), kind);
   return dates.every(d => { const i = holders.get(d)!.indexOf(orderId); return i >= 0 && i < slots; });
 }

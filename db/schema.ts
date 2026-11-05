@@ -11,7 +11,8 @@ export const familyAccounts=sqliteTable("family_accounts",{
 export const authAttempts=sqliteTable("auth_attempts",{id:text("id").primaryKey(),count:integer("count").notNull(),bucket:integer("bucket").notNull()});
 
 export const staffAccess=sqliteTable("staff_access",{email:text("email").primaryKey(),name:text("name").notNull(),programs:text("programs").notNull(),active:integer("active").notNull(),updatedAt:text("updated_at").notNull()});
-export const coachOpenings=sqliteTable("coach_openings",{id:text("id").primaryKey(),userId:text("user_id").notNull(),date:text("date").notNull(),start:text("start").notNull(),end:text("end").notNull()});
+// coach_email links an opening to the coach's staff record (name, active), so families can book it (issue #70).
+export const coachOpenings=sqliteTable("coach_openings",{id:text("id").primaryKey(),userId:text("user_id").notNull(),date:text("date").notNull(),start:text("start").notNull(),end:text("end").notNull(),coachEmail:text("coach_email")});
 export const securityEvents=sqliteTable("security_events",{id:text("id").primaryKey(),actor:text("actor").notNull(),action:text("action").notNull(),target:text("target").notNull(),createdAt:text("created_at").notNull()});
 export const recoverySnapshots=sqliteTable("recovery_snapshots",{id:text("id").primaryKey(),payload:text("payload").notNull(),createdAt:text("created_at").notNull()});
 export const restoreGuard=sqliteTable("restore_guard",{id:text("id").primaryKey(),valid:integer("valid").notNull()},t=>[check('valid_restore',sql`${t.valid} = 1`)]);
@@ -73,7 +74,7 @@ export const orders=sqliteTable("orders",{
  index("orders_wrestler_status").on(t.userId,t.wrestlerId,t.status),
  uniqueIndex("orders_stripe_session").on(t.stripeSessionId),
  uniqueIndex("orders_open_dedupe").on(t.dedupeKey).where(sql`${t.status} IN ('pending','paid')`),
- check("orders_kind",sql`${t.kind} IN ('walkin','annual','monthly','event','live')`),
+ check("orders_kind",sql`${t.kind} IN ('walkin','annual','monthly','event','live','lesson')`),
  check("orders_status",sql`${t.status} IN ('pending','paid','expired','canceled','refunded')`),
  check("orders_amounts",sql`${t.amountCents} >= 0 AND ${t.baseCents} >= 0 AND ${t.discountCents} >= 0 AND ${t.amountCents} = ${t.baseCents} - ${t.discountCents}`),
  check("orders_livemode",sql`${t.livemode} IN (0,1)`)
@@ -118,3 +119,8 @@ export const waiverSignatures=sqliteTable("waiver_signatures",{
  wrestlerName:text("wrestler_name").notNull(),signer:text("signer").notNull(),email:text("email").notNull(),
  signatureRecord:text("signature_record").notNull(),signedAt:text("signed_at").notNull()
 },t=>[uniqueIndex("waiver_signature_once").on(t.versionId,t.userId,t.wrestlerId),index("waiver_signatures_family").on(t.userId,t.wrestlerId)]);
+// Owner settings that are not part of the published academy state, as one JSON document per key (issue #70: lesson
+// prices and coach pay splits).
+export const academySettings=sqliteTable("academy_settings",{
+ id:text("id").primaryKey(),payload:text("payload").notNull(),updatedAt:text("updated_at").notNull(),updatedBy:text("updated_by").notNull()
+});
