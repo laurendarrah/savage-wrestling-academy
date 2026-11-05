@@ -61,12 +61,13 @@ Most of next week's code is already built and waiting for review. Each item is o
 | 7 | `feat/18-stripe-checkout` | Online payment and the signed Stripe webhook, off until switched on | #18, #19 |
 | 8 | `feat/21-family-purchases` | Real memberships and purchase history on the family page | #21 |
 | 9 | `feat/22-real-roster` | Roster and check-in from paid orders | #22 |
-| 10 | `feat/26-live-stripe-mode` | Live Stripe mode behind a deliberate switch | #26 |
-| 11 | `fix/23-label-sample-screens` | Sample-data notices in the owner workspace | #23 |
+| 10 | `fix/23-label-sample-screens` | Sample-data notices in the owner workspace | #23 |
+| 11 | `feat/26-live-stripe-mode` | Live Stripe mode behind a deliberate switch | #26 |
+| 12 | `feat/20-monthly-memberships` | 12-month memberships paid monthly, ending after the 12th payment. Off until terms are approved | #20 |
 
-All eleven merge together with no conflicts. On the combined code, all 27 test scripts, the typecheck and the build pass, and the production security audit is clean. The payment webhook was also run in the real Cloudflare runtime against signed, forged, replayed, late and refund events.
+All twelve merge together with no conflicts. Branches 7 to 12 form one line, each built on the one before. On the combined code, all 28 test scripts, the typecheck and the build pass, and the production security audit is clean. The payment webhook was also run in the real Cloudflare runtime against signed, forged, replayed, late and refund events.
 
-**What is left for Launch 1 is mostly not code:** the decisions (#1 to #8), access (#9 to #14), the test pass with Stripe test cards (#24), the restore drill (#25), the live switch (#26), and monthly memberships once terms are approved (#20).
+**What is left for Launch 1 is mostly not code:** the decisions (#1 to #8), access (#9 to #14), the test pass with Stripe test cards (#24), the restore drill (#25), and the live switch (#26). Monthly memberships are built and open once the terms are approved (#20).
 
 ## Day-by-day plan
 
@@ -92,7 +93,7 @@ Done when: a test family can sign up, receive the confirmation email, click the 
 
 Done when: test-card purchases of every one-time type create exactly one order each, and a replayed webhook changes nothing.
 
-### Tuesday, November 10: monthly memberships (waiting on terms; family page built)
+### Tuesday, November 10: monthly memberships (built, off until terms are approved)
 
 - 12-month membership paid monthly, ending automatically after the 12th payment, per decision 2.
 - A memberships table becomes the single record of who is paid, through what date, for which program.
