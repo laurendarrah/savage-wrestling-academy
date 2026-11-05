@@ -20,8 +20,9 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 | Scholarship offers, drawn signatures, signed copies | Live |
 | Coach access, openings, practice plans, curricula | Live |
 | Registration and booking review with server pricing | Live, stops before payment |
-| Online payment, memberships, orders | Not built yet. Launch 1 |
-| Real roster and check-in | Not built yet. Launch 1 and 2 |
+| Online payment, memberships, orders | Built, closed until `CHECKOUT_KINDS` opens each type. Offline payments recorded on `/payments` |
+| Real roster and check-in | Built. Owner and coaches check wrestlers in on `/roster` |
+| USA Wrestling cards | Built. Missing or expired cards block booking; owner verifies on `/cards` |
 | Rosters, messages, transfers, waitlists and payouts in the owner workspace | Sample data only |
 
 The owner workspace (`app/portal.html`) mixes real and sample records. Real family data lives in the `family_accounts`, `program_approvals` and `scholarship_awards` tables. The sample wrestlers in the workspace are not connected to them.

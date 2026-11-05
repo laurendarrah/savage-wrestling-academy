@@ -74,7 +74,7 @@ const state = {
   extraPractices: [{id: 'live-1', name: 'Friday Night Live', dates: [liveDate], enabled: true, start: '18:00', end: '19:00', memberCents: 1000, nonMemberCents: 2000}]
 };
 sqlite.prepare('INSERT INTO academy_state VALUES (?,?,?,?,?)').run('academy', JSON.stringify(state), 1, 'owner', day(0));
-sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('parent-1', 'pat@example.test', JSON.stringify({parentName: 'Pat Parent', phone: '', wrestlers: [{id: 'w-1', name: 'Sam Example', grade: '8'}]}), 1, day(0));
+sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('parent-1', 'pat@example.test', JSON.stringify({parentName: 'Pat Parent', phone: '', wrestlers: [{id: 'w-1', name: 'Sam Example', grade: '8', usawNumber: 'TEST-1234', usawExpires: '2099-12-31'}]}), 1, day(0));
 
 const vault = load(path.resolve('lib/stripe-test.ts'));
 sqlite.prepare('INSERT INTO integration_secrets VALUES (?,?,?,?)').run('stripe-test', await vault.sealStripeKey('rk_test_' + 'x'.repeat(24)), 'owner', day(0));
@@ -110,7 +110,7 @@ const camp = {source: 'booking', type: 'event', id: 'camp-1', wrestlerId: 'w-1',
   assert.equal(await verifyStripeSignature(raw + ' ', sign(raw), WEBHOOK_SECRET), false, 'tampered body');
   assert.equal(await verifyStripeSignature(raw, sign(raw, WEBHOOK_SECRET, now - 301), WEBHOOK_SECRET, now), false, 'too old');
   assert.equal(await verifyStripeSignature(raw, null, WEBHOOK_SECRET), false, 'missing header');
-  assert.equal(await verifyStripeSignature(raw, `t=${now},v1=deadbeef,` + sign(raw).split(',')[1], WEBHOOK_SECRET, now), true, 'any matching v1 passes, as Stripe rotates secrets');
+  assert.equal(await verifyStripeSignature(raw, `t=${now},v1=deadbeef,` + sign(raw, WEBHOOK_SECRET, now).split(',')[1], WEBHOOK_SECRET, now), true, 'any matching v1 passes, as Stripe rotates secrets');
 }
 
 // --- Membership term arithmetic ---

@@ -42,7 +42,7 @@ sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(J
   seasons: [{program: 'Intermediate', start: ny(-30), end: ny(60), weekly: all, excludedDates: []}],
   events: [{id: 'camp', name: 'Camp', type: 'Camp', dates: [ny(10)], price: 160, slots: 1}],
   extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [today], enabled: true, start: '17:00', end: '18:00', memberCents: 1000, nonMemberCents: 2000}]}));
-for (const [u, p] of [['p1', 'Pat One'], ['p2', 'Pat Two']]) sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(u, u + '@example.test', JSON.stringify({parentName: p, phone: '555', wrestlers: [{id: 'w-' + u, name: 'Wrestler ' + u, grade: '8'}]}), 1, 'x');
+for (const [u, p] of [['p1', 'Pat One'], ['p2', 'Pat Two']]) sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(u, u + '@example.test', JSON.stringify({parentName: p, phone: '555', wrestlers: [{id: 'w-' + u, name: 'Wrestler ' + u, grade: '8', usawNumber: 'TEST-1234', usawExpires: '2099-12-31'}]}), 1, 'x');
 
 const api = load(path.resolve('app/api/payments/route.ts'));
 const roster = load(path.resolve('lib/roster.ts'));

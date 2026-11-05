@@ -46,7 +46,7 @@ const day = k => new Date(Date.now() + k * 86400000).toLocaleDateString('en-CA',
 const d1 = day(10), d2 = day(11);
 const setEvents = events => sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x') ON CONFLICT(id) DO UPDATE SET payload=excluded.payload").run(JSON.stringify({programNamingVersion: 2, programs: [], events}));
 setEvents([{id: 'camp', name: 'Camp', type: 'Camp', dates: [d1, d2], price: 160, day: 90, slots: 2}, {id: 'open', name: 'Open Clinic', type: 'Clinic', dates: [d1], price: 50}]);
-for (const p of ['p1', 'p2', 'p3', 'p4', 'p5']) sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(p, p + '@example.test', JSON.stringify({parentName: p, phone: '', wrestlers: [{id: 'w-' + p, name: 'Wrestler ' + p, grade: '8'}]}), 1, 'x');
+for (const p of ['p1', 'p2', 'p3', 'p4', 'p5']) sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(p, p + '@example.test', JSON.stringify({parentName: p, phone: '', wrestlers: [{id: 'w-' + p, name: 'Wrestler ' + p, grade: '8', usawNumber: 'TEST-1234', usawExpires: '2099-12-31'}]}), 1, 'x');
 sqlite.prepare("INSERT INTO integration_secrets VALUES ('stripe-test',?,?,?)").run(await vault.sealStripeKey('rk_test_' + 'c'.repeat(24)), 'o', 'x');
 
 const req = (route, body) => route.POST(new Request('https://a.test/api/x', {method: 'POST', headers: {'content-type': 'application/json', origin: 'https://a.test'}, body: JSON.stringify(body)}));

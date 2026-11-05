@@ -58,7 +58,7 @@ assert.equal(lib.paidThroughAfter('2027-01-31', 2), '2027-03-30', 'then on Mar 3
 // --- Setup ---
 const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 sqlite.prepare('INSERT INTO academy_state VALUES (?,?,?,?,?)').run('academy', JSON.stringify({programNamingVersion: 2, programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000}], seasons: []}), 1, 'o', today);
-sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('p1', 'pat@example.test', JSON.stringify({parentName: 'Pat', phone: '', wrestlers: [{id: 'w1', name: 'Sam', grade: '8'}]}), 1, today);
+sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('p1', 'pat@example.test', JSON.stringify({parentName: 'Pat', phone: '', wrestlers: [{id: 'w1', name: 'Sam', grade: '8', usawNumber: 'TEST-1234', usawExpires: '2099-12-31'}]}), 1, today);
 sqlite.prepare("INSERT INTO integration_secrets VALUES ('stripe-test',?,?,?)").run(await vault.sealStripeKey('rk_test_' + 'm'.repeat(24)), 'o', today);
 
 // --- Checkout creates a monthly subscription for the server price ---
