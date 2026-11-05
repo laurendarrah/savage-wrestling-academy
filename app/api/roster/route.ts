@@ -3,6 +3,8 @@ import {ownerIdentity, strongAccount, accountReply, sameOrigin} from '../../../l
 import {accountRole} from '../../../lib/access-control';
 import {academyToday} from '../../../lib/public-schedule';
 import {rosterFor, checkIn, undoCheckIn, validDate, type Scope} from '../../../lib/roster';
+import {scanCheckIn} from '../../../lib/passes';
+import {academyMinutes} from '../../../lib/lessons';
 export const dynamic = 'force-dynamic';
 
 async function staff(request: Request): Promise<{scope: Scope | null; actor: string | null; headers: Headers; mfa: boolean}> {
@@ -34,6 +36,15 @@ export async function POST(request: Request) {
   if (raw.length > 1024) return reply({error: 'Request too large.'}, 413);
   let input: any;
   try { input = JSON.parse(raw); } catch { return reply({error: 'Invalid request.'}, 400); }
+  // QR pass scan (issue #71): same roster and permission rules as a manual check-in.
+  if (input?.action === 'scan') {
+    if (!validDate(input.date) || typeof input.code !== 'string' || input.code.length > 100) return reply({error: 'Scan a pass.'}, 400);
+    if (s.scope.role === 'coach' && input.date !== academyToday()) return reply({error: 'Coaches can check in for today only.'}, 403);
+    const r: any = await scanCheckIn(input.date, input.code, s.scope, s.actor, input.date === academyToday() ? academyMinutes() : 0, input.sessionKey);
+    if (r.status !== 200) return reply({error: r.error}, r.status);
+    const {status, ...result} = r;
+    return reply({ok: true, scan: result, sessions: await rosterFor(input.date, s.scope)});
+  }
   const ids = [input?.sessionKey, input?.userId, input?.wrestlerId];
   if (!['checkin', 'undo'].includes(input?.action) || !validDate(input?.date) || !ids.every(v => typeof v === 'string' && v.length > 0 && v.length <= 200))
     return reply({error: 'Choose a wrestler and session.'}, 400);
