@@ -136,7 +136,7 @@ Done when: the real purchase and refund appear correctly in Stripe, the database
 | Not live yet | Stand-in |
 |---|---|
 | QR check-in | Printed or on-screen roster with manual check-in |
-| Waivers | Paper or external waiver link |
+| Waivers | **Built (#69).** The owner publishes the approved waiver on `/waivers`; families sign per wrestler with a drawn signature on `/waiver`; unsigned wrestlers cannot book. Required only once a waiver is published |
 | USA Wrestling cards | **Built (#68).** Families enter the card number and expiration date; a missing, expired or rejected card blocks every booking type, including offline payments. The owner verifies cards on `/cards`. Rosters flag lapsed cards at the door |
 | Announcements and messages | Owner's email |
 | Waitlists | Owner emails the next family when a spot opens |

@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Waiver | Savage Wrestling Academy</title><style>*{box-sizing:border-box}body{font:16px Arial,sans-serif;line-height:1.55;background:#f5f5f6;color:#18191c;margin:0}main{max-width:860px;margin:auto;padding:20px 16px 60px}h1{line-height:1.15;margin:12px 0 4px}a{color:#a92330}section{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;margin:18px 0}.muted{color:#626672}label{display:flex;flex-direction:column;font-weight:bold;gap:4px;margin:12px 0}label.check{flex-direction:row;align-items:flex-start;font-weight:normal;gap:10px}input,select,button{font:inherit}input,select{padding:10px;border:1px solid #ccc;border-radius:6px;font-weight:normal}button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer}button.primary{background:#d72732;border-color:#d72732;color:#fff}button:disabled{opacity:.55}.terms{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;border:1px solid #ddd;border-radius:6px;padding:16px;background:#fafafa}.signature-canvas{display:block;width:100%;height:auto;aspect-ratio:4/1;border:1px solid #999;border-radius:6px;background:#fff;touch-action:none}.signature-panel{margin:20px 0;padding:18px;background:#fafafa;border:1px solid #ddd;border-radius:6px}.pill{display:inline-block;font-size:12px;font-weight:bold;padding:4px 9px;border-radius:5px;background:#f1f1f3}.pill.ok{background:#e8f4ed;color:#195b33}.pill.warn{background:#fff1dd;color:#8d5917}.who{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid #eee;padding:10px 0}#status{font-weight:bold;min-height:1.5em}[hidden]{display:none!important}</style><link rel="stylesheet" href="/responsive.css"></head><body><main><a href="/family">← Family account</a><h1 id="title">Waiver</h1><p id="status" role="status" aria-live="polite">Loading…</p>
+<section id="none" hidden><h2>No waiver needs signing</h2><p>The academy has not asked families to sign a waiver online. You can book without one.</p></section>
+<section id="wrestlers" hidden><h2>Your wrestlers</h2><div id="wrestlerList"></div></section>
+<section id="signSection" hidden><h2>Read and sign</h2><p class="muted">Published <span id="published"></span>. Sign once for each wrestler. If the academy publishes a new version, you will be asked to sign again.</p><div class="terms" id="terms" tabindex="0"></div>
+<form id="signForm"><label>Wrestler<select id="wrestler" required></select></label><label>Printed name of parent or guardian (or the adult wrestler)<input id="signer" maxlength="120" minlength="2" required autocomplete="name"></label>
+<div class="signature-panel"><h3 style="margin-top:0">Signature</h3><p>Use your finger, mouse, or stylus to sign in the box.</p><canvas id="signatureCanvas" width="800" height="200" class="signature-canvas" aria-label="Draw your signature here"></canvas><p><button type="button" id="clearSignature">Clear signature</button></p></div>
+<label class="check"><input type="checkbox" id="accepted" required> I am the parent or legal guardian of this wrestler (or the adult wrestler), and I have read and agree to the waiver above.</label>
+<label class="check"><input type="checkbox" id="electronicConsent" required> <span id="consentText"></span></label>
+<button class="primary" id="sign">Sign waiver</button></form></section>
+<section id="history" hidden><h2>Signed copies</h2><div id="historyList"></div></section></main><script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const when=d=>new Date(d).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'long',day:'numeric',year:'numeric'});
+let data=null,family=null,signatureStrokes=[],drawing=null,activePointer=null;
+$('consentText').textContent='I consent to use an electronic signature for this waiver and intend my drawn signature to record my agreement. I can save or print a copy of the signed waiver.';
+const canvas=$('signatureCanvas'),context=canvas.getContext('2d');
+function redraw(){context.clearRect(0,0,canvas.width,canvas.height);context.strokeStyle='#18191c';context.lineWidth=2.5;context.lineCap='round';context.lineJoin='round';for(const stroke of signatureStrokes){if(stroke.length<2)continue;context.beginPath();stroke.forEach(([x,y],i)=>i?context.lineTo(x*canvas.width,y*canvas.height):context.moveTo(x*canvas.width,y*canvas.height));context.stroke()}}
+function point(e){const box=canvas.getBoundingClientRect();return [Math.round(Math.max(0,Math.min(1,(e.clientX-box.left)/box.width))*1000)/1000,Math.round(Math.max(0,Math.min(1,(e.clientY-box.top)/box.height))*1000)/1000]}
+$('clearSignature').onclick=()=>{signatureStrokes=[];drawing=null;activePointer=null;redraw()};
+canvas.onpointerdown=e=>{if(e.isPrimary===false||drawing||signatureStrokes.length>=100)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);activePointer=e.pointerId;drawing=[point(e)];signatureStrokes.push(drawing)};
+canvas.onpointermove=e=>{if(!drawing||e.pointerId!==activePointer)return;e.preventDefault();if(signatureStrokes.reduce((n,s)=>n+s.length,0)>=2000)return;const p=point(e),last=drawing[drawing.length-1];if(Math.hypot(p[0]-last[0],p[1]-last[1])<.003)return;drawing.push(p);redraw()};
+canvas.onpointerup=e=>{if(e.pointerId!==activePointer)return;if(drawing?.length<2)signatureStrokes.pop();drawing=null;activePointer=null;redraw()};
+canvas.onpointercancel=e=>{if(e.pointerId!==activePointer)return;if(drawing)signatureStrokes.pop();drawing=null;activePointer=null;redraw()};
+function signedFor(id){return data.signatures.find(s=>s.current&&s.wrestlerId===id)}
+function render(){
+ const w=data.waiver,list=family.wrestlers||[];
+ $('none').hidden=!!w;$('wrestlers').hidden=!w;$('signSection').hidden=!w;
+ if(w){
+  $('title').textContent=w.title;$('published').textContent=when(w.publishedAt);$('terms').textContent=w.body;
+  $('wrestlerList').innerHTML=list.length?list.map(x=>{const s=signedFor(x.id);return '<div class="who"><strong>'+esc(x.name)+'</strong><span>'+(s?'<span class="pill ok">Signed '+esc(when(s.signedAt))+'</span> <a href="/waiver-copy?id='+encodeURIComponent(s.id)+'" target="_blank" rel="noopener">View copy</a>':'<span class="pill warn">Not signed · booking blocked</span>')+'</span></div>'}).join(''):'<p>Add a wrestler in your <a href="/family">family account</a> first.</p>';
+  const unsigned=list.filter(x=>!signedFor(x.id)),want=new URLSearchParams(location.search).get('wrestler');
+  $('wrestler').innerHTML=unsigned.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===want?' selected':'')+'>'+esc(x.name)+'</option>').join('');
+  $('signForm').hidden=!unsigned.length;
+  if(!$('signer').value)$('signer').value=family.parentName||'';
+ }
+ const past=data.signatures;
+ $('history').hidden=!past.length;
+ $('historyList').innerHTML=past.map(s=>'<div class="who"><span><strong>'+esc(s.wrestler)+'</strong> · '+esc(s.title)+(s.current?'':' <span class="muted">(earlier version)</span>')+'<br><span class="muted">Signed by '+esc(s.signer)+' on '+esc(when(s.signedAt))+'</span></span><a href="/waiver-copy?id='+encodeURIComponent(s.id)+'" target="_blank" rel="noopener">View / print</a></div>').join('');
+}
+async function load(msg){
+ try{
+  const [a,b]=await Promise.all([fetch('/api/waiver',{cache:'no-store'}),fetch('/api/family',{cache:'no-store'})]);
+  if(a.status===401||b.status===401){location.href='/login';return}
+  const d=await a.json(),f=await b.json();if(!a.ok)throw Error(d.error||'Could not load the waiver.');if(!b.ok)throw Error(f.error||'Could not load your family.');
+  data=d;family=f.data;render();
+  $('status').textContent=msg||(d.waiver?(family.wrestlers||[]).every(x=>signedFor(x.id))?'Every wrestler has signed the current waiver.':'Sign the waiver for each wrestler before booking.':'');
+ }catch(e){$('status').textContent=e.message}
+}
+$('signForm').onsubmit=async e=>{
+ e.preventDefault();if(!data?.waiver)return;
+ if(!signatureStrokes.length){$('status').textContent='Draw your signature in the box.';return}
+ $('sign').disabled=true;$('status').textContent='Saving your signature…';
+ try{
+  const name=$('wrestler').selectedOptions[0]?.textContent||'';
+  const r=await fetch('/api/waiver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({versionId:data.waiver.id,wrestlerId:$('wrestler').value,signer:$('signer').value,accepted:$('accepted').checked,electronicConsent:$('electronicConsent').checked,signature:{method:'drawn',strokes:signatureStrokes}})}),d=await r.json();
+  if(!r.ok)throw Error(d.error||'Could not save the signature.');
+  signatureStrokes=[];redraw();$('accepted').checked=false;$('electronicConsent').checked=false;
+  await load('Signed for '+name+'. A copy is saved below.');
+ }catch(e){$('status').textContent=e.message}finally{$('sign').disabled=false}
+};
+load();
+</script></body></html>

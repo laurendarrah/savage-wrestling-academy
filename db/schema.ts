@@ -108,3 +108,13 @@ export const usawReviews=sqliteTable("usaw_reviews",{
  userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),number:text("number").notNull(),expires:text("expires").notNull(),
  status:text("status").notNull(),note:text("note").notNull(),reviewedBy:text("reviewed_by").notNull(),reviewedAt:text("reviewed_at").notNull()
 },t=>[primaryKey({columns:[t.userId,t.wrestlerId]}),check("usaw_review_status",sql`${t.status} IN ('valid','invalid')`)]);
+// Waivers (issue #69). Each published text is a new, never-edited version; families sign per wrestler per version.
+export const waiverVersions=sqliteTable("waiver_versions",{
+ id:text("id").primaryKey(),title:text("title").notNull(),body:text("body").notNull(),sha256:text("sha256").notNull(),
+ publishedAt:text("published_at").notNull(),publishedBy:text("published_by").notNull(),retiredAt:text("retired_at")
+},t=>[index("waiver_versions_published").on(t.publishedAt)]);
+export const waiverSignatures=sqliteTable("waiver_signatures",{
+ id:text("id").primaryKey(),versionId:text("version_id").notNull(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),
+ wrestlerName:text("wrestler_name").notNull(),signer:text("signer").notNull(),email:text("email").notNull(),
+ signatureRecord:text("signature_record").notNull(),signedAt:text("signed_at").notNull()
+},t=>[uniqueIndex("waiver_signature_once").on(t.versionId,t.userId,t.wrestlerId),index("waiver_signatures_family").on(t.userId,t.wrestlerId)]);
