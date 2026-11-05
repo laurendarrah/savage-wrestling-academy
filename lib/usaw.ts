@@ -3,6 +3,7 @@
 // not valid after checking it; that review applies only while the number and expiration still match.
 import {env} from 'cloudflare:workers';
 import {USAW_NUMBER} from './family-records';
+import {exceptionFor} from './exceptions';
 
 export type CardWrestler = {id: string; name: string; usawNumber?: string; usawExpires?: string};
 export type Review = {number: string; expires: string; status: 'valid' | 'invalid'; note: string; reviewed_at: string} | null;
@@ -26,6 +27,8 @@ export async function reviewFor(userId: string, wrestlerId: string): Promise<Rev
 
 // The message a family sees when booking is refused, or null when the card covers every date.
 export async function cardProblem(userId: string, w: CardWrestler, dates: string[]): Promise<string | null> {
+  // The owner can allow bookings for set dates despite the card (issue #89).
+  if (await exceptionFor(userId, w.id, 'usaw', dates)) return null;
   const last = [...dates].sort().at(-1)!;
   const s = cardStatus(w, await reviewFor(userId, w.id), last);
   const fix = 'Update it in your family account before booking.';

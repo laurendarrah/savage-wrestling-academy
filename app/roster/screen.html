@@ -3,7 +3,7 @@ const cardBad=e=>['missing','expired','invalid'].includes(e.card)||e.waiverSigne
 // USA Wrestling card on the session date (issue #68). Check-in is allowed; staff follow up with the family.
 function cardBadge(e){const d=e.cardExpires?new Date(e.cardExpires+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}):'';
  return e.card==='missing'?'<span class="badge warn">No USA Wrestling card</span>':e.card==='expired'?'<span class="badge warn">USA Wrestling card expired '+esc(d)+'</span>':e.card==='invalid'?'<span class="badge warn">USA Wrestling card not valid'+(e.cardNote?': '+esc(e.cardNote):'')+'</span>':e.card==='verified'?'<span class="badge">Card verified</span>':''}
-const waiverBadge=e=>e.waiverSigned===false?'<span class="badge warn">Waiver not signed</span>':'';
+const waiverBadge=e=>(e.waiverSigned===false?'<span class="badge warn">Waiver not signed</span>':'')+((e.exceptions||[]).length?'<span class="badge">Owner exception: '+e.exceptions.map(x=>x==='usaw'?'card':'waiver').join(', ')+'</span>':'');
 
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{if(!t)return '';const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};

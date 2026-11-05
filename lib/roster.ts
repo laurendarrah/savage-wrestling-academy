@@ -4,9 +4,10 @@ import {publicSchedule} from './public-schedule';
 import {cardStatus, reviewFor, type CardStatus} from './usaw';
 import {currentWaiver, signatureFor} from './waivers';
 import {PROGRAM_ON} from './transfers';
+import {exceptionFor} from './exceptions';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
-export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null};
+export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]};
 export type Scope = {role: 'owner'} | {role: 'coach'; programs: string[]};
 
 export const validDate = (d: unknown): d is string =>
@@ -94,7 +95,8 @@ export async function rosterFor(date: string, scope: Scope) {
         parentName: f?.parentName || null, phone: f?.phone || null, email: scope.role === 'owner' ? f?.email ?? null : null,
         sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null,
         card: card.state, cardExpires: card.expires || null, cardNote: card.note,
-        waiverSigned: waiver ? !!(await signatureFor(waiver.id, r.userId, r.wrestlerId)) : null
+        waiverSigned: waiver ? !!(await signatureFor(waiver.id, r.userId, r.wrestlerId)) : null,
+        exceptions: [...(await exceptionFor(r.userId, r.wrestlerId, 'usaw', [date]) ? ['usaw'] : []), ...(await exceptionFor(r.userId, r.wrestlerId, 'waiver', [date]) ? ['waiver'] : [])]
       });
     }
     const entries = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));

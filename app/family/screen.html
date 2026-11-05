@@ -24,7 +24,7 @@ function cardState(w){
  return {state:expires<academyDay()?'expired':'current',number,expires,note:''};
 }
 function cardLine(w){
- const c=cardState(w),blocked=' <strong>Booking is blocked until this is fixed.</strong>',renew=' <a href="https://www.usawmembership.com" target="_blank" rel="noopener">Get or renew a card →</a>';
+ const c=cardState(w),server=cards[w.id],blocked=server&&server.exceptionUntil?' The academy is allowing bookings until '+esc(longDate(server.exceptionUntil))+' while this is sorted out.':' <strong>Booking is blocked until this is fixed.</strong>',renew=' <a href="https://www.usawmembership.com" target="_blank" rel="noopener">Get or renew a card →</a>';
  if(c.state==='missing')return '<span class="billing-pill warning">No USA Wrestling card</span> Add the card number and expiration date.'+blocked+renew;
  if(c.state==='expired')return '<span class="billing-pill warning">USA Wrestling card expired</span> Expired '+esc(longDate(c.expires))+'.'+blocked+renew;
  if(c.state==='invalid')return '<span class="billing-pill warning">Card not verified</span> The academy could not verify this card'+(c.note?': '+esc(c.note):'')+'. Check the number and date.'+blocked;
@@ -49,7 +49,7 @@ async function loadWaiver(){try{const r=await fetch('/api/waiver',{cache:'no-sto
 function waiverLine(w){
  if(!waiverInfo||!waiverInfo.waiver)return '';
  const s=waiverInfo.signatures.find(x=>x.current&&x.wrestlerId===w.id);
- return s?'<br><span class="billing-pill active">Waiver signed</span> <a href="/waiver-copy?id='+encodeURIComponent(s.id)+'" target="_blank" rel="noopener">View copy</a>':'<br><span class="billing-pill warning">Waiver not signed</span> <strong>Booking is blocked until it is signed.</strong> <a href="/waiver?wrestler='+encodeURIComponent(w.id)+'">Sign the waiver →</a>';
+ return s?'<br><span class="billing-pill active">Waiver signed</span> <a href="/waiver-copy?id='+encodeURIComponent(s.id)+'" target="_blank" rel="noopener">View copy</a>':'<br><span class="billing-pill warning">Waiver not signed</span> '+(waiverInfo.exceptions&&waiverInfo.exceptions[w.id]?'The academy is allowing bookings until '+esc(longDate(waiverInfo.exceptions[w.id]))+'.':'<strong>Booking is blocked until it is signed.</strong>')+' <a href="/waiver?wrestler='+encodeURIComponent(w.id)+'">Sign the waiver →</a>';
 }
 async function refreshCards(){try{const r=await fetch('/api/family',{cache:'no-store'}),d=await r.json();if(r.ok){cards=d.cards||{};if(!$('summary').hidden)showSummary()}}catch{}}
 let orders=[];
