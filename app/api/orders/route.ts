@@ -4,7 +4,9 @@ import {strongAccount, accountReply} from '../../../lib/account-auth';
 import {checkoutKinds} from '../../../lib/checkout-config';
 export const dynamic = 'force-dynamic';
 
-const FIELDS = 'id,kind,program,item_label,wrestler_id,wrestler_name,dates,base_cents,discount_cents,amount_cents,currency,status,created_at,paid_at,term_start,term_end';
+const FIELDS = 'o.id,o.kind,o.program,o.item_label,o.wrestler_id,o.wrestler_name,o.dates,o.base_cents,o.discount_cents,o.amount_cents,o.currency,o.status,o.created_at,o.paid_at,o.term_start,o.term_end,'
+  + 's.payments_made,s.payments_total,s.status AS subscription_status,s.term_end AS membership_end,s.paid_through';
+const FROM = 'FROM orders o LEFT JOIN subscriptions s ON s.order_id=o.id';
 
 export async function GET(request: Request) {
   const auth = await strongAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
@@ -13,9 +15,9 @@ export async function GET(request: Request) {
   const one = new URL(request.url).searchParams.get('order');
   if (one !== null) {
     if (!/^[0-9a-f-]{36}$/.test(one)) return reply({error: 'Order not found.'}, 404);
-    const row = await env.DB!.prepare(`SELECT ${FIELDS} FROM orders WHERE id=? AND user_id=?`).bind(one, auth.user.id).first<Record<string, unknown>>();
+    const row = await env.DB!.prepare(`SELECT ${FIELDS} ${FROM} WHERE o.id=? AND o.user_id=?`).bind(one, auth.user.id).first<Record<string, unknown>>();
     return row ? reply({order: {...row, dates: JSON.parse(String(row.dates))}}) : reply({error: 'Order not found.'}, 404);
   }
-  const rows = await env.DB!.prepare(`SELECT ${FIELDS} FROM orders WHERE user_id=? AND status IN ('pending','paid','refunded') ORDER BY created_at DESC LIMIT 200`).bind(auth.user.id).all<Record<string, unknown>>();
+  const rows = await env.DB!.prepare(`SELECT ${FIELDS} ${FROM} WHERE o.user_id=? AND o.status IN ('pending','paid','refunded') ORDER BY o.created_at DESC LIMIT 200`).bind(auth.user.id).all<Record<string, unknown>>();
   return reply({orders: rows.results.map(r => ({...r, dates: JSON.parse(String(r.dates))})), checkoutOpen: checkoutKinds().size > 0});
 }

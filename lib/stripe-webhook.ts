@@ -2,6 +2,7 @@
 // Each Stripe event id is stored once, so repeated, late or out-of-order deliveries cannot apply twice.
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
+import {storedStripeKeyFor, stripeClientFor} from './stripe-test';
 
 const encoder = new TextEncoder();
 export const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -37,6 +38,30 @@ export function membershipTerm(start: string) {
   const [y, m, d] = start.split('-').map(Number);
   const end = new Date(Date.UTC(y + 1, m - 1, d) - 86400000).toISOString().slice(0, 10);
   return {start, end};
+}
+
+// Last day covered after n monthly payments starting on `start` (n < 12). The 12th payment covers the full term.
+export function paidThroughAfter(start: string, n: number) {
+  const [y, m, d] = start.split('-').map(Number);
+  const last = new Date(Date.UTC(y, m - 1 + n + 1, 0)).getUTCDate();
+  const next = new Date(Date.UTC(y, m - 1 + n, Math.min(d, last)));
+  return new Date(next.getTime() - 86400000).toISOString().slice(0, 10);
+}
+const PAYMENTS = 12;
+
+// Set the subscription to end exactly 12 months after its billing anchor, so Stripe never sends a 13th invoice.
+async function setTwelvePaymentEnd(livemode: number, subscriptionId: string) {
+  const mode = livemode ? 'live' : 'test';
+  const key = await storedStripeKeyFor(mode);
+  if (!key) throw new Error('Stripe key missing; let Stripe retry this event.');
+  const stripe = stripeClientFor(mode, key);
+  const sub: any = await stripe.subscriptions.retrieve(subscriptionId);
+  const anchor = new Date((sub.billing_cycle_anchor ?? sub.start_date) * 1000);
+  const cancel = new Date(anchor);
+  cancel.setUTCFullYear(anchor.getUTCFullYear() + 1);
+  const cancelAt = Math.floor(cancel.getTime() / 1000);
+  await stripe.subscriptions.update(subscriptionId, {cancel_at: cancelAt, proration_behavior: 'none', metadata: {...(sub.metadata ?? {}), payments: String(PAYMENTS)}});
+  return new Date(cancelAt * 1000).toISOString();
 }
 
 export type Outcome = {outcome: string; orderId: string | null};
@@ -83,6 +108,20 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
       const other = await env.DB!.prepare("SELECT id FROM orders WHERE dedupe_key=? AND status='paid' AND id<>?").bind(order.dedupe_key, orderId).first<{id: string}>();
       if (other) return none('rejected:duplicate-payment-refund-needed', orderId);
       const paidDate = academyToday();
+      if (order.kind === 'monthly') {
+        const subscriptionId = typeof obj.subscription === 'string' ? obj.subscription : typeof obj.subscription?.id === 'string' ? obj.subscription.id : null;
+        if (!subscriptionId) return none('rejected:no-subscription', orderId);
+        const cancelAt = await setTwelvePaymentEnd(order.livemode, subscriptionId);
+        const full = membershipTerm(paidDate), paidThrough = paidThroughAfter(paidDate, 1);
+        return {outcome: 'paid', orderId, writes: [
+          env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE dedupe_key=? AND status='pending' AND id<>?").bind(at, order.dedupe_key, orderId),
+          env.DB!.prepare("UPDATE orders SET status='paid',paid_at=?,updated_at=?,stripe_session_id=?,term_start=?,term_end=? WHERE id=? AND status IN ('pending','expired','canceled')")
+            .bind(at, at, obj.id, full.start, paidThrough, orderId),
+          // The first of 12 payments is counted here; the matching subscription_create invoice is ignored.
+          env.DB!.prepare("INSERT INTO subscriptions(order_id,stripe_subscription_id,status,payments_made,payments_total,term_start,term_end,paid_through,cancel_at,updated_at) VALUES (?,?,'active',1,?,?,?,?,?,?)")
+            .bind(orderId, subscriptionId, PAYMENTS, full.start, full.end, paidThrough, cancelAt, at)
+        ]};
+      }
       const term = order.kind === 'annual' ? membershipTerm(paidDate) : null;
       return {outcome: 'paid', orderId, writes: [
         // If the family started a newer checkout for the same item, that newer one is canceled so the paid order wins.
@@ -99,6 +138,37 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
         env.DB!.prepare("UPDATE orders SET status='expired',updated_at=? WHERE id=? AND status='pending'").bind(at, orderId)
       ]};
     return none('ignored:' + event.type, orderId);
+  }
+
+  if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
+    const subscriptionId = typeof obj.subscription === 'string' ? obj.subscription : obj.parent?.subscription_details?.subscription ?? null;
+    if (typeof subscriptionId !== 'string') return none('ignored:no-subscription');
+    if (obj.billing_reason === 'subscription_create') return none('ignored:first-payment-counted-at-checkout');
+    const sub = await env.DB!.prepare('SELECT s.order_id,s.status,s.payments_made,s.payments_total,s.term_start,s.term_end,o.amount_cents FROM subscriptions s JOIN orders o ON o.id=s.order_id WHERE s.stripe_subscription_id=?')
+      .bind(subscriptionId).first<{order_id: string; status: string; payments_made: number; payments_total: number; term_start: string; term_end: string; amount_cents: number}>();
+    // A later invoice for a subscription we have not recorded yet: let Stripe retry once checkout completion arrives.
+    if (!sub) throw new Error('Unknown subscription; retry later.');
+    if (event.type === 'invoice.payment_failed')
+      return {outcome: 'installment-failed', orderId: sub.order_id, writes: [
+        env.DB!.prepare("UPDATE subscriptions SET status='past_due',updated_at=? WHERE order_id=? AND status IN ('active','past_due')").bind(at, sub.order_id)
+      ]};
+    if (obj.amount_paid !== sub.amount_cents) return none('rejected:amount-mismatch', sub.order_id);
+    if (sub.payments_made >= sub.payments_total) return none('rejected:payment-beyond-term-refund-needed', sub.order_id);
+    const made = sub.payments_made + 1;
+    const paidThrough = made >= sub.payments_total ? sub.term_end : paidThroughAfter(sub.term_start, made);
+    return {outcome: `installment-${made}-of-${sub.payments_total}`, orderId: sub.order_id, writes: [
+      env.DB!.prepare("UPDATE subscriptions SET payments_made=?,paid_through=?,status='active',updated_at=? WHERE order_id=? AND payments_made=?").bind(made, paidThrough, at, sub.order_id, sub.payments_made),
+      env.DB!.prepare('UPDATE orders SET term_end=?,updated_at=? WHERE id=?').bind(paidThrough, at, sub.order_id)
+    ]};
+  }
+
+  if (event.type === 'customer.subscription.deleted') {
+    const sub = await env.DB!.prepare('SELECT order_id,payments_made,payments_total FROM subscriptions WHERE stripe_subscription_id=?').bind(obj.id).first<{order_id: string; payments_made: number; payments_total: number}>();
+    if (!sub) return none('ignored:unknown-subscription');
+    const ended = sub.payments_made >= sub.payments_total ? 'completed' : 'canceled';
+    return {outcome: 'subscription-' + ended, orderId: sub.order_id, writes: [
+      env.DB!.prepare('UPDATE subscriptions SET status=?,updated_at=? WHERE order_id=?').bind(ended, at, sub.order_id)
+    ]};
   }
 
   if (event.type === 'charge.refunded') {

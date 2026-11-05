@@ -106,6 +106,13 @@
       "when": 1793909089816,
       "tag": "0014_adorable_rocket_raccoon",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1793910050699,
+      "tag": "0015_stale_molten_man",
+      "breakpoints": true
     }
   ]
 }

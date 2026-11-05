@@ -41,17 +41,22 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
 
   let session;
   try {
-    session = await stripe.checkout.sessions.create({
-      mode: 'payment',
+    const common = {
       client_reference_id: id,
       customer_email: buyer.email,
-      line_items: [{quantity: 1, price_data: {currency: 'usd', unit_amount: charge.amountCents, product_data: {name: charge.itemLabel, description: `For ${wrestler.name}`}}}],
       metadata: {order_id: id, kind: charge.kind, wrestler_id: wrestler.id},
-      payment_intent_data: {metadata: {order_id: id}},
       success_url: `${origin}/family?checkout=success&order=${id}`,
       cancel_url: `${origin}/family?checkout=canceled&order=${id}`,
       expires_at: Math.floor(Date.now() / 1000) + SESSION_MINUTES * 60
-    }, {idempotencyKey: `order-${id}`});
+    };
+    const product = {name: charge.itemLabel, description: `For ${wrestler.name}`};
+    session = await stripe.checkout.sessions.create(charge.kind === 'monthly'
+      // 12 monthly charges. The webhook sets the subscription to cancel 12 months after it starts.
+      ? {...common, mode: 'subscription', line_items: [{quantity: 1, price_data: {currency: 'usd', unit_amount: charge.amountCents, recurring: {interval: 'month'}, product_data: product}}],
+         subscription_data: {metadata: {order_id: id}, description: `${charge.itemLabel}, 12 monthly payments`}}
+      : {...common, mode: 'payment', line_items: [{quantity: 1, price_data: {currency: 'usd', unit_amount: charge.amountCents, product_data: product}}],
+         payment_intent_data: {metadata: {order_id: id}}},
+      {idempotencyKey: `order-${id}`});
   } catch {
     await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=? AND status='pending'").bind(now(), id).run();
     throw new CheckoutError(502, 'Could not start secure checkout. Nothing was charged. Please try again.');
