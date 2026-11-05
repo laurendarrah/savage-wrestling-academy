@@ -1,6 +1,7 @@
 function demoUUID(){return Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('')}
 // This is injected only in the public, network-blocked demo document.
 function startAdminDemo(){
+ liveWorkspace=false;
  const notes=new Map();
  const originalGo=go;go=p=>p==='Scholarships'?toast('Private scholarship offers are managed from the signed-in owner workspace.'):originalGo(p);
  document.querySelector('.owner-tools')?.remove();
