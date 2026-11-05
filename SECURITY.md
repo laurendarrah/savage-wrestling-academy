@@ -35,7 +35,7 @@ Production authentication email delivery and the end-to-end reset flow still nee
 
 ## Competition program approvals and conversations
 
-Grades 7–8 require an owner decision for Advanced/Competition Training monthly and walk-in registration review. Approval records use the verified parent account, wrestler ID, name, and grade; edited identity fields require renewed approval. Owner decisions require MFA and reject stale requests. Approval alone never grants a paid membership. Future checkout and payment activation must reuse the server approval check; no checkout is active yet.
+Every SWA Advance wrestler (grades 7–12) requires an owner approval decision before monthly or walk-in registration review. Approval records use the verified parent account, wrestler ID, name, and grade; edited identity fields require renewed approval. Owner decisions require MFA and reject stale requests. Approval alone never grants a paid membership. Future checkout and payment activation must reuse the server approval check; no checkout is active yet.
 
 Each approval conversation is accessible only to its verified parent account and the owner with MFA. Server-side sender roles, text-only rendering, bounded messages, CSRF checks, and rate limits protect the thread. Conversations are stored in D1; email/SMS notifications are not connected. The current manual backup export/restore covers academy settings, family profiles, and coach openings only; it does not yet include approval decisions or chat messages. Approval grants must not be restored through family-controlled backup content.
 

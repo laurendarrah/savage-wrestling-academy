@@ -1,0 +1,23 @@
+name: Decision needed
+description: A business decision the code depends on
+labels: ["needs-decision"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: The question
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options and recommendation
+  - type: input
+    id: who
+    attributes:
+      label: Who decides
+      placeholder: Owner
+  - type: textarea
+    id: blocks
+    attributes:
+      label: What it blocks

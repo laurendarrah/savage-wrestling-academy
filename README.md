@@ -1,138 +1,85 @@
-# vinext-starter
+# Savage Wrestling Academy platform
 
-A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
+Registration, scheduling, scholarships and coaching tools for Savage Wrestling Academy.
 
-## Prerequisites
+- **Live site:** https://savage-registration-preview.justinaccordino546.chatgpt.site (hosted on ChatGPT Sites)
+- **Launch plan:** [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md)
+- **Work tracking:** [Issues](../../issues) grouped by [milestone](../../milestones)
+- **How we work together:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Original technical review from Justin:** [handoff/](handoff/README.md)
 
-- Node.js `>=22.13.0`
-- Portable: Windows, macOS, or Linux; no Bash required
-- Managed Linux: managed Linux runtime with Bash, `flock`, `curl`, `sha256sum`, and GNU `timeout`
-- Git is required only for publishing
+## What works today
 
-## Sites Lifecycle
+| Area | Status |
+|---|---|
+| Public calendar and program cards | Live |
+| Family accounts, sign-in, MFA | Live |
+| Family profiles and wrestlers | Live |
+| SWA Advance approvals with private chat | Live |
+| Scholarship offers, drawn signatures, signed copies | Live |
+| Coach access, openings, practice plans, curricula | Live |
+| Registration and booking review with server pricing | Live, stops before payment |
+| Online payment, memberships, orders | Not built yet. Launch 1 |
+| Real roster and check-in | Not built yet. Launch 1 and 2 |
+| Rosters, messages, transfers, waitlists and payouts in the owner workspace | Sample data only |
 
-The Sites initializer copies the shared starter and selects managed-linux only when `SITES_MANAGED_LINUX_CONTAINER=1`; otherwise it selects portable. It saves the selection only in ignored `.sites-runtime/execution-profile.json`. Both profiles copy/configure first, then use the plugin's separate `install-dependencies.mjs` step to measure installation independently. Edit source under `app/` and follow the Sites skill for installation, preview, builds, and publishing.
+The owner workspace (`app/portal.html`) mixes real and sample records. Real family data lives in the `family_accounts`, `program_approvals` and `scholarship_awards` tables. The sample wrestlers in the workspace are not connected to them.
 
-Run `node <plugin-root>/scripts/configure-execution-profile.mjs` only when the profile is unknown for the current checkout and environment. Profile changes do not alter tracked source or require reinstalling otherwise-valid dependencies; restart an existing preview to use the new selection. Do not commit or upload `.sites-runtime/`.
+## Stack
 
-This starter does not use `wrangler.jsonc`.
+Cloudflare Worker built with [Vinext](https://github.com/cloudflare/vinext) and Vite. Cloudflare D1 (SQLite) holds business data. Supabase is used for sign-in only. Stripe is in test mode. Most pages are server-rendered HTML with inline JavaScript.
 
-`install:ci` runs `npm ci` once against the shared lockfile, disables parent-workspace discovery, and includes required dev/optional dependencies despite production/omit settings. Sharp defaults to prebuilt binaries unless explicitly configured otherwise. Do not overlap installers.
+## Getting started
 
-- **Portable:** Preserve host HOME, npm cache, registry, proxy, temporary paths, retry/concurrency settings, and lifecycle-script policy. Use `--prefer-offline --no-audit --no-fund`.
-- **Managed Linux:** Use the existing project-local HOME/cache/tmp setup and Linux install lock, tarball preflight, and timeout. Restore the image-seeded npm cache only when its lockfile hash matches; retain network fallback. Builds keep their existing timeout. These helpers are not invoked by the portable profile.
+Requires Node 22.13 or newer (Node 24 recommended) and Corepack.
 
-`scripts/sites-env.mjs` preserves the caller's HOME, npm cache, proxy, XDG, and temporary-directory configuration while defaulting Wrangler and Miniflare state to the checkout. If npm reports an unwritable cache, select a writable path with `npm_config_cache` for that install. The `dev` and `start` scripts also keep Wrangler logs inside the checkout. Generated `.sites-runtime/` and `.wrangler/` directories are disposable and ignored by Git.
-
-On portable, `npm run dev` uses `vinext dev` with HMR, starting at port 5173. Vinext records the running server in ignored `.vinext/` state, rejects an ordinary duplicate launch, and recovers stale state after a stopped process; exactly simultaneous starts can race. Pass `--port <port>` or `--hostname <host>` after `npm run dev --` when needed; keep portable previews on loopback.
-
-For browser QA on managed Linux, use `sites-preview start`. The project's dev script runs Vite and accepts the supervisor's `--host 0.0.0.0 --port 4173 --strictPort` arguments. The internal browser uses `http://terminal.local:4173/`; it is not a user-facing URL. The supervisor owns the preview lifecycle. The ignored local profile survives the supervisor's cleared process environment.
-
-The portable profile simulates ChatGPT sign-in only for loopback development requests. Visit `/signin-with-chatgpt?return_to=/` to sign in as `local_seedy` (`seedy@sites.test`, display name `Seedy`) and `/signout-with-chatgpt?return_to=/` to sign out. The development cookie preserves that identity across server restarts. Mock auth is disabled in the managed-linux profile and is not included in production builds; hosted authentication remains dispatch-owned.
-
-The Worker uses `vinext/server/fetch-handler`, including Vinext's config-aware image handling. After building, `npm start` runs that Worker locally through Wrangler on `127.0.0.1`, sharing `.wrangler/state` with dev preview and local D1 migrations; it does not deploy the site or simulate sign-in. Use the URL printed by the server. Pass `npm start -- --port <port>` to select a different built-preview port.
-
-Local previews use Miniflare's placeholder `Request.cf` metadata without a network lookup. Set `CLOUDFLARE_CF_FETCH_ENABLED=true` to opt into fetching preview metadata; this setting does not change hosted request metadata.
-
-Local tool usage metrics are disabled by default. Set `WRANGLER_SEND_METRICS=true` to opt in.
-
-## Included Shape
-
-- edit site code under `app/`
-- `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` starts intentionally empty
-- `@cloudflare/workers-types` provides Worker types; `cloudflare-env.d.ts` declares optional `DB`/`BUCKET` bindings—update these declarations if binding names change
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Use it as the durable user key; use email and name for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive `oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty `name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by `oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+cp .env.example .env.local   # then fill in a DEVELOPMENT Supabase project, never production
+pnpm test
+pnpm dev                     # http://127.0.0.1:5173
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+To run the built Worker against a local database:
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use the returned `userId` as the stable user key for user-owned records; do not use email as a durable identifier.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send anonymous visitors through Sign in with ChatGPT.
-- In a Server Component, start sign-in with `<a href={chatGPTSignInPath(returnTo)} target="_top">`. The auth helper module is server-only; do not import it into a Client Component.
-- Do not use `fetch`, XHR, a client-side router, or a framework link that can prefetch the sign-in route. SIWC must start as a top-level navigation.
-- Never request the AuthAPI authorization endpoint directly. The dispatch-owned `/signin-with-chatgpt` route must start the SIWC flow.
-- Use `chatGPTSignOutPath(returnTo)` for browser sign-out links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the OAuth cookies, and identity header injection. Do not implement app routes for those reserved paths. Routes that do not import and call the helper remain anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the Sites hosting platform's access policy controls for workspace-wide restrictions, or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Local D1 migrations
-
-For a D1-backed local preview, generate SQL with `npm run db:generate`. Build once through the Sites skill's build entrypoint (or `npm run build` for standalone use) to generate `dist/server/wrangler.json`, rebuilding if bindings change. From the project root, apply each pending migration in order:
-
-```sh
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_example.sql
+```bash
+pnpm build
+for f in drizzle/*.sql; do node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file "$f"; done
+pnpm start
 ```
 
-Replace the filename with the pending migration and `DB` with your D1 binding name if different. Use `.wrangler/state`, not `.wrangler/state/v3`; Wrangler adds the versioned directories. Do not replay migrations already applied locally. This updates only the preview database; publishing applies production migrations separately.
+Without Supabase settings, public pages work and every signed-in page refuses requests.
 
-## Diagnostic Commands
+## Commands
 
-- `npm run install:ci`: perform the one locked dependency install
-- `npm run dev`: start the Vite/Vinext development server
-- `npm run build`: build the deployable Sites artifact
-- `npm run start`: preview the built Worker locally with D1/R2 support
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+| Command | What it does |
+|---|---|
+| `pnpm test` | Runs every script in `tests/` |
+| `pnpm typecheck` | TypeScript check. It does not cover inline JavaScript in `.html` files |
+| `pnpm build` | Builds the Worker into `dist/` |
+| `pnpm dev` | Local dev server on port 5173 |
+| `pnpm start` | Runs the built Worker locally on port 8787 |
+| `pnpm audit --prod` | Security audit of production dependencies |
 
-When using the Sites plugin, follow its skill instructions for installation, builds, and publishing. These npm commands remain available for standalone use.
+## Where things are
 
-The portable build runs Vinext directly without a host `timeout` command. The managed-linux build uses `scripts/build-verified.sh` and its existing `SITES_BUILD_TIMEOUT` setting.
+| Path | Contents |
+|---|---|
+| `app/api/*/route.ts` | JSON API routes |
+| `app/*/route.ts` and `screen.html` | Server-rendered pages |
+| `app/portal.html` | Owner workspace, about 155 KB of HTML and inline JavaScript |
+| `lib/` | Shared server logic: auth, pricing, approvals, scholarships, backups |
+| `db/schema.ts`, `drizzle/` | Database schema and ordered migrations |
+| `tests/` | Node test scripts using VM sandboxes and in-memory SQLite |
+| `handoff/` | Justin's November 5 technical review, docs and evidence |
+| `docs/` | Launch plan and other working documents |
 
-## Learn More
+## Rules that protect the live site
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- Do not deploy from this repo. Publishing happens through the ChatGPT Sites project until hosting moves.
+- `.openai/hosting.json` here has no Sites project ID on purpose.
+- Never point local work at the production database or production Supabase project.
+- Never commit secrets.
 
-
-## Stripe test setup (not checkout-enabled)
-
-- Account: Savage Wrestling Academy LLC; test mode only. `config/stripe-test-catalog.json` contains test Product/Price IDs, never credentials. Three program products each have a $200 monthly and $40 one-time Price.
-- Owner-only `/payment-setup` and `/api/payment-setup` require the verified owner and MFA. The owner can enter a restricted test key on that page. Do not request API keys in chat or commit them.
-- `STRIPE_CONFIG_ENCRYPTION_KEY` is a hosted runtime secret: a cryptographically random 32-byte key encoded as 64 hex characters. It encrypts the restricted test credential in `integration_secrets` with AES-GCM. Preserve this wrapping key; changing it requires deliberate re-encryption. The secret is not included in source or owner profile exports.
-- Saving checks the expected account and rejects live and unrestricted secret keys. The API never returns a stored key.
-- **Not complete:** server checkout creation, signed webhook processing, customer/subscription/order mappings, idempotent fulfillment, renewals/payment failure/cancellation handling, family receipts and live billing history. The setup status explicitly returns `checkoutEnabled: false`. Adding a credential alone does not turn on purchases.
-- Before checkout testing, configure and verify the webhook signing secret; never fulfill from a success-page redirect. Customer amounts and eligibility must be recomputed from the server's saved catalog and approvals.
-- Before real payments, confirm tax obligations and active registrations before enabling Stripe Tax. Live charges are not authorized or enabled.
-- `node tests/stripe-setup.mjs` checks the credential boundary and encryption; external Stripe connection requires the owner's restricted test key.
+The full list is in [CLAUDE.md](CLAUDE.md), which Claude Code also follows.
