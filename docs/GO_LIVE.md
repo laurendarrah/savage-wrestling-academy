@@ -9,7 +9,7 @@ For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps 
 
 ## 2. Database migrations
 
-Main adds ten migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
+Main adds eleven migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
 
 | File | What it adds |
 |---|---|
@@ -23,8 +23,9 @@ Main adds ten migrations to the 13 the live site already has. Apply them to the 
 | `drizzle/0020_open_mister_fear.sql` | `wrestler_passes` table (QR entry passes) |
 | `drizzle/0021_mean_shen.sql` | `waitlist_entries` table |
 | `drizzle/0022_clean_loa.sql` | `membership_transfers` table |
+| `drizzle/0023_curvy_mac_gargan.sql` | `announcements`, `announcement_recipients` and `family_messages` tables |
 
-- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the ten files with the platform's database tools.
+- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the eleven files with the platform's database tools.
 - [ ] Never re-run 0000 to 0012; they are already applied.
 
 If a migration is missing, the new pages (roster, payments, family purchases, checkout) return errors. Every page that existed before keeps working.
@@ -41,6 +42,7 @@ If a migration is missing, the new pages (roster, payments, family purchases, ch
 | `STRIPE_TEST_WEBHOOK_SECRET` | Unchanged | Already set |
 | `STRIPE_LIVE_WEBHOOK_SECRET` | Leave unset | Needed only for live mode |
 | `STRIPE_ACCOUNT_ID` | Leave unset | Only if the live Stripe account differs from the current one (#4) |
+| `EMAIL_API_KEY`, `MAIL_FROM` | Leave unset | Set both after decision #87 to email announcements and message notices. Until then messages are in-app only |
 
 ## 4. Supabase, before families sign up
 
@@ -60,6 +62,7 @@ Publish main. Then, signed in as the owner with the authenticator:
 - [ ] `/waivers` says no waiver is in force
 - [ ] `/coach-pay` loads for this month
 - [ ] `/waitlists` and `/transfers` load
+- [ ] `/messages` loads and says email is not connected
 - [ ] `/lesson-settings` loads; `/lesson` shows coach openings (each coach must open `/coach` once so older openings are linked to them)
 - [ ] `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load
 
