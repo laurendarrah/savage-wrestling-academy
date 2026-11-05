@@ -8,10 +8,10 @@ export function GET(){
  const html=(portal.slice(0,at)+demo+'\nstartAdminDemo();'+portal.slice(at+boot.length))
   .replaceAll('crypto.randomUUID()','demoUUID()')
   .replace('<title>Savage | Owner Workspace</title>','<title>Savage Wrestling | Admin Demo</title>')
-  .replace('<strong>OWNER WORKSPACE</strong> · Online saving · Family views, payments, QR check-in and message delivery remain demonstrations','<strong>ADMIN DEMO</strong> · Fictional data · Changes stay in this tab and reset when you reload')
+  .replace('<strong>OWNER WORKSPACE</strong> · Online saving · The family and wrestler views here are previews with sample families','<strong>ADMIN DEMO</strong> · Fictional data · Changes stay in this tab and reset when you reload')
   .replace('Owner workspace · Check online save status above','Admin demo · Sample data only');
  return new Response(html,{headers:{
   'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',
-  'Content-Security-Policy':"sandbox allow-scripts allow-modals; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'"
+  'Content-Security-Policy':"sandbox allow-scripts allow-modals; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'"
  }});
 }
