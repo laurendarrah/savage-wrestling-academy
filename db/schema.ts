@@ -65,7 +65,9 @@ export const orders=sqliteTable("orders",{
  termsAccepted:text("terms_accepted").notNull(),status:text("status").notNull(),dedupeKey:text("dedupe_key").notNull(),
  stripeSessionId:text("stripe_session_id"),stripePaymentIntent:text("stripe_payment_intent"),livemode:integer("livemode").notNull(),
  createdAt:text("created_at").notNull(),updatedAt:text("updated_at").notNull(),paidAt:text("paid_at"),
- termStart:text("term_start"),termEnd:text("term_end")
+ termStart:text("term_start"),termEnd:text("term_end"),
+ // "stripe" for online checkout, "offline" for cash, check or other payments the owner records (issue #62).
+ source:text("source").notNull().default("stripe")
 },t=>[
  index("orders_user").on(t.userId),
  index("orders_wrestler_status").on(t.userId,t.wrestlerId,t.status),
