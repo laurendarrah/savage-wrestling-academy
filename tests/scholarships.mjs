@@ -15,7 +15,7 @@ const req=(body,origin='https://academy.test')=>new Request('https://academy.tes
 const setActor=(who)=>actor=who==='owner'?{id:'owner',email:'owner@example.test',email_confirmed_at:'yes',strong:true,owner:true}:who?{id:who,email:who+'@example.test',email_confirmed_at:'yes',strong:true}:null;
 const state={programNamingVersion:2,programs:[{id:'Intermediate',name:'SWA Intermediate',priceCents:20000}]};
 sqlite.prepare('INSERT INTO academy_state VALUES (?,?,?,?,?)').run('academy',JSON.stringify(state),1,'owner','2026-11-05');
-sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('alice','alice@example.test',JSON.stringify({wrestlers:[{id:'kid',name:'Alice Athlete',grade:'7'}]}),1,'2026-11-05');
+sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('alice','alice@example.test',JSON.stringify({wrestlers:[{id:'kid',name:'Alice Athlete',grade:'7', usawNumber: 'TEST-1234', usawExpires: '2099-12-31'}]}),1,'2026-11-05');
 setActor(null);assert.equal((await owner.GET(req({}))).status,403);setActor('alice');assert.equal((await owner.POST(req({action:'create'}))).status,403);
 setActor('owner');assert.equal((await owner.POST(req({action:'create'},'https://evil.test'))).status,403);
 const offer={action:'create',wrestlerName:'Alice Athlete',email:'alice@example.test',program:'Intermediate',referenceCents:1,termsReady:true};

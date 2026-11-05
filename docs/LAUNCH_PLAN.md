@@ -136,7 +136,8 @@ Done when: the real purchase and refund appear correctly in Stripe, the database
 | Not live yet | Stand-in |
 |---|---|
 | QR check-in | Printed or on-screen roster with manual check-in |
-| Waivers and USA Wrestling cards | Paper or external waiver link; staff check cards at the door |
+| Waivers | Paper or external waiver link |
+| USA Wrestling cards | **Built (#68).** Families enter the card number and expiration date; a missing, expired or rejected card blocks every booking type, including offline payments. The owner verifies cards on `/cards`. Rosters flag lapsed cards at the door |
 | Announcements and messages | Owner's email |
 | Waitlists | Owner emails the next family when a spot opens |
 | Private lessons | Families submit the existing inquiry form; coach confirms by email and family pays at the lesson or by a Stripe payment link |

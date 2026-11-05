@@ -98,7 +98,7 @@ assert.equal(status.mode, 'live'); assert.equal(status.liveConfigured, true); as
 // --- Live checkout uses the live key and records a live order ---
 const day = k => new Date(Date.now() + k * 86400000).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 sqlite.prepare('INSERT INTO academy_state VALUES (?,?,?,?,?)').run('academy', JSON.stringify({programNamingVersion: 2, programs: [], events: [{id: 'camp-1', name: 'Camp', type: 'Camp', dates: [day(10)], price: 100, slots: 10}]}), 1, 'o', day(0));
-sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('parent-1', 'pat@example.test', JSON.stringify({parentName: 'Pat', phone: '', wrestlers: [{id: 'w-1', name: 'Sam', grade: '8'}]}), 1, day(0));
+sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('parent-1', 'pat@example.test', JSON.stringify({parentName: 'Pat', phone: '', wrestlers: [{id: 'w-1', name: 'Sam', grade: '8', usawNumber: 'TEST-1234', usawExpires: '2099-12-31'}]}), 1, day(0));
 clientsMade.length = 0;
 r = await checkout.POST(new Request('https://a.test/api/checkout', {method: 'POST', headers: {'content-type': 'application/json', origin: 'https://a.test'}, body: JSON.stringify({source: 'booking', type: 'event', id: 'camp-1', wrestlerId: 'w-1', acceptTerms: true})}));
 const body = await r.json();

@@ -1,5 +1,5 @@
 import {sql} from "drizzle-orm";
-import { sqliteTable, text, integer, check, uniqueIndex, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, check, uniqueIndex, index, primaryKey } from "drizzle-orm/sqlite-core";
 export const academyState = sqliteTable("academy_state", {
  id: text("id").primaryKey(), payload: text("payload").notNull(),
  revision: integer("revision").notNull(), updatedBy: text("updated_by").notNull(), updatedAt: text("updated_at").notNull()
@@ -101,3 +101,10 @@ export const subscriptions=sqliteTable("subscriptions",{
  termStart:text("term_start").notNull(),termEnd:text("term_end").notNull(),paidThrough:text("paid_through").notNull(),
  cancelAt:text("cancel_at").notNull(),updatedAt:text("updated_at").notNull()
 },t=>[uniqueIndex("subscriptions_stripe").on(t.stripeSubscriptionId),check("subscriptions_status",sql`${t.status} IN ('active','past_due','canceled','completed')`),check("subscriptions_payments",sql`${t.paymentsMade} >= 0 AND ${t.paymentsMade} <= ${t.paymentsTotal}`)]);
+
+// Owner review of a wrestler's USA Wrestling card (issue #68). Applies only while the number and expiration on
+// the family profile still match what was reviewed, so a family edit clears an earlier review.
+export const usawReviews=sqliteTable("usaw_reviews",{
+ userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),number:text("number").notNull(),expires:text("expires").notNull(),
+ status:text("status").notNull(),note:text("note").notNull(),reviewedBy:text("reviewed_by").notNull(),reviewedAt:text("reviewed_at").notNull()
+},t=>[primaryKey({columns:[t.userId,t.wrestlerId]}),check("usaw_review_status",sql`${t.status} IN ('valid','invalid')`)]);

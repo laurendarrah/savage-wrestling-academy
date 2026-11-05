@@ -1,9 +1,10 @@
 // Real rosters from paid orders and active scholarships (issue #22). No sample workspace data is used.
 import {env} from 'cloudflare:workers';
 import {publicSchedule} from './public-schedule';
+import {cardStatus, reviewFor, type CardStatus} from './usaw';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
-export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null};
+export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string};
 export type Scope = {role: 'owner'} | {role: 'coach'; programs: string[]};
 
 export const validDate = (d: unknown): d is string =>
@@ -82,10 +83,13 @@ export async function rosterFor(date: string, scope: Scope) {
       if (merged.has(k)) { const e = merged.get(k)!; if (!e.sources.includes(r.source)) e.sources.push(r.source); continue; }
       const f = await family(r.userId), w = f?.wrestlers?.find((x: any) => x.id === r.wrestlerId);
       const c = checked.get(`${session.key}|${k}`);
+      // Card status on the session date. Check-in still works; staff see the warning and follow up (issue #68).
+      const card = w ? cardStatus(w, await reviewFor(r.userId, r.wrestlerId), date) : {state: 'missing' as const, expires: '', note: ''};
       merged.set(k, {
         userId: r.userId, wrestlerId: r.wrestlerId, name: w?.name ?? r.name, grade: w?.grade ?? null,
         parentName: f?.parentName || null, phone: f?.phone || null, email: scope.role === 'owner' ? f?.email ?? null : null,
-        sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null
+        sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null,
+        card: card.state, cardExpires: card.expires || null, cardNote: card.note
       });
     }
     const entries = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));

@@ -9,7 +9,7 @@ For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps 
 
 ## 2. Database migrations
 
-Main adds four migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All four only add tables or one column; none change or delete existing data.
+Main adds five migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All five only add tables or one column; none change or delete existing data.
 
 | File | What it adds |
 |---|---|
@@ -17,8 +17,9 @@ Main adds four migrations to the 13 the live site already has. Apply them to the
 | `drizzle/0014_adorable_rocket_raccoon.sql` | `attendance` table |
 | `drizzle/0015_stale_molten_man.sql` | `subscriptions` table |
 | `drizzle/0016_shallow_the_order.sql` | `source` column on `orders` |
+| `drizzle/0017_optimal_proteus.sql` | `usaw_reviews` table (owner checks of USA Wrestling cards) |
 
-- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the four tables exist. If not, apply the four files with the platform's database tools.
+- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the five files with the platform's database tools.
 - [ ] Never re-run 0000 to 0012; they are already applied.
 
 If a migration is missing, the new pages (roster, payments, family purchases, checkout) return errors. Every page that existed before keeps working.
@@ -50,19 +51,25 @@ Publish main. Then, signed in as the owner with the authenticator:
 - [ ] `/roster` loads for today, with no error
 - [ ] `/payments` loads and lists the family accounts in "Record an offline payment"
 - [ ] `/payment-setup` says test mode and that checkout is off
+- [ ] `/cards` lists wrestlers and their USA Wrestling card status
 - [ ] `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load
 
 With a test family account (not a real family):
 
 - [ ] Sign up with a new email, click the confirmation email, and land on the live site
-- [ ] `/family` saves a wrestler
-- [ ] `/register` reviews a walk-in and says payment is not open online yet
+- [ ] `/family` saves a wrestler without a USA Wrestling card, and shows "No USA Wrestling card · booking is blocked"
+- [ ] `/register` refuses a walk-in for that wrestler and links to the family account
+- [ ] Add a card number and a future expiration date; `/register` now reviews the walk-in and says payment is not open online yet
 
 Then, as the owner:
 
 - [ ] Record a $0 offline walk-in for the test wrestler on `/payments`, with a note "launch check"
 - [ ] The test wrestler appears on `/roster` for that practice; check in, then undo
 - [ ] Void the test payment on `/payments`
+
+## Tell families before publishing
+
+After this publish, **no wrestler can book or be recorded for a payment without a current USA Wrestling card on file** (decision #67). Existing members stay on rosters; the roster flags any card that is missing or lapsed. Email families beforehand asking them to add each wrestler's card number and expiration date in their family account.
 
 ## 6. Opening online payment later
 
@@ -78,5 +85,5 @@ The Stripe webhook endpoint must point at `/api/stripe-webhook` and send `checko
 
 - **Online payment misbehaves:** clear `CHECKOUT_KINDS`. Checkout closes immediately; nothing else changes.
 - **Live charging misbehaves:** set `STRIPE_MODE=test`.
-- **A page breaks after publishing:** republish the previous Sites version. The four new tables can stay; the previous code ignores them.
+- **A page breaks after publishing:** republish the previous Sites version. The new tables can stay; the previous code ignores them.
 - **Data problem:** restore from the backup taken in step 1 (owner → Backups).
