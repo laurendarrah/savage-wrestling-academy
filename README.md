@@ -69,6 +69,7 @@ Without Supabase settings, public pages work and every signed-in page refuses re
 | `pnpm dev` | Local dev server on port 5173 |
 | `pnpm start` | Runs the built Worker locally on port 8787 |
 | `pnpm audit --prod` | Security audit of production dependencies |
+| `pnpm crawl:demo [url]` | Clicks every control in `/admin-demo` with a real browser and reports page errors. Needs Playwright; run it against `pnpm start` |
 
 ## Where things are
 
