@@ -155,3 +155,9 @@ export const familyMessages=sqliteTable("family_messages",{
  id:text("id").primaryKey(),userId:text("user_id").notNull(),senderRole:text("sender_role").notNull(),body:text("body").notNull(),createdAt:text("created_at").notNull(),
  readAt:text("read_at"),emailStatus:text("email_status").notNull()
 },t=>[index("family_messages_thread").on(t.userId,t.createdAt),check("family_message_sender",sql`${t.senderRole} IN ('owner','family')`)]);
+// Owner exceptions to the card and waiver booking blocks (issue #89). Each has a reason and an end date.
+export const bookingExceptions=sqliteTable("booking_exceptions",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),rule:text("rule").notNull(),
+ startsOn:text("starts_on").notNull(),endsOn:text("ends_on").notNull(),reason:text("reason").notNull(),
+ createdBy:text("created_by").notNull(),createdAt:text("created_at").notNull(),revokedAt:text("revoked_at"),revokedBy:text("revoked_by")
+},t=>[index("booking_exceptions_wrestler").on(t.userId,t.wrestlerId,t.rule),check("booking_exception_rule",sql`${t.rule} IN ('usaw','waiver')`)]);

@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
 import { validFamily, cleanFamily, emptyFamily } from '../../../lib/family-records';
 import { cardStatus, reviewFor } from '../../../lib/usaw';
+import { exceptionFor } from '../../../lib/exceptions';
 import { academyToday } from '../../../lib/public-schedule';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
@@ -10,7 +11,7 @@ export async function GET(request:Request){
  const row=await env.DB!.prepare('SELECT payload,revision,updated_at FROM family_accounts WHERE user_id=?').bind(auth.user.id).first<{payload:string;revision:number;updated_at:string}>();
  const data=row?JSON.parse(row.payload):emptyFamily(),today=academyToday(),cards:Record<string,unknown>={};
  // USA Wrestling card status per wrestler, including the owner's review, so the family sees what blocks booking.
- for(const w of data.wrestlers)cards[w.id]=cardStatus(w,await reviewFor(auth.user.id,w.id),today);
+ for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]);cards[w.id]={...cardStatus(w,await reviewFor(auth.user.id,w.id),today),exceptionUntil:x?.endsOn??null}}
  return accountReply({email:auth.user.email,data,cards,revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
 }
 export async function PUT(request:Request){

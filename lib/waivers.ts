@@ -5,6 +5,8 @@
 import {env} from 'cloudflare:workers';
 import {cleanSignature, type Point} from './scholarship-signatures';
 import {familyProfile} from './program-approval';
+import {exceptionFor} from './exceptions';
+import {academyToday} from './public-schedule';
 
 export const waiverConsent = 'I consent to use an electronic signature for this waiver and intend my drawn signature to record my agreement. I can save or print a copy of the signed waiver.';
 export type WaiverVersion = {id: string; title: string; body: string; sha256: string; published_at: string; published_by: string; retired_at: string | null};
@@ -32,6 +34,7 @@ export async function signatureFor(versionId: string, userId: string, wrestlerId
 export async function waiverProblem(userId: string, w: {id: string; name: string}) {
   const current = await currentWaiver();
   if (!current || await signatureFor(current.id, userId, w.id)) return null;
+  if (await exceptionFor(userId, w.id, 'waiver', [academyToday()])) return null; // owner exception (issue #89)
   return `${w.name} needs a signed ${current.title} before booking. Sign it in your family account; it takes about a minute.`;
 }
 
@@ -93,6 +96,8 @@ export async function familyWaivers(userId: string) {
     WHERE s.user_id=? ORDER BY s.signed_at DESC`).bind(userId).all<any>()).results;
   return {
     waiver: current ? {id: current.id, title: current.title, body: current.body, publishedAt: current.published_at} : null,
+    // Wrestlers the owner is letting book without signing for now (issue #89).
+    exceptions: Object.fromEntries((await env.DB!.prepare("SELECT wrestler_id,max(ends_on) AS ends FROM booking_exceptions WHERE user_id=? AND rule='waiver' AND revoked_at IS NULL AND starts_on<=? AND ends_on>=? GROUP BY wrestler_id").bind(userId, academyToday(), academyToday()).all<{wrestler_id: string; ends: string}>()).results.map(r => [r.wrestler_id, r.ends])),
     signatures: signed.map(s => ({id: s.id, versionId: s.version_id, wrestlerId: s.wrestler_id, wrestler: s.wrestler_name, signer: s.signer, signedAt: s.signed_at, title: s.title, current: s.version_id === current?.id}))
   };
 }
