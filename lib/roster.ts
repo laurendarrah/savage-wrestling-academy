@@ -13,7 +13,7 @@ export const validDate = (d: unknown): d is string =>
 
 const programNames: Record<string, string> = {Elementary: 'SWA Development', Intermediate: 'SWA Intermediate', Advanced: 'SWA Advance'};
 
-async function academyState(): Promise<any> {
+export async function academyState(): Promise<any> {
   const row = await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload: string}>();
   return row ? JSON.parse(row.payload) : {};
 }
