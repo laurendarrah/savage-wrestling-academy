@@ -12,7 +12,7 @@ const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; 
 let actor = {id: 'parent-1', email_confirmed_at: 'yes', strong: true};
 const mod = {exports: {}};
 vm.runInNewContext(ts.transpileModule(readFileSync('app/api/orders/route.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
-  {module: mod, exports: mod.exports, URL, JSON, String, Response, Headers, require: n => n === 'cloudflare:workers' ? {env: {DB}} : n.endsWith('/account-auth') ? {strongAccount: async () => ({user: actor, strong: actor?.strong, headers: new Headers()}), accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})} : (() => { throw Error(n); })()});
+  {module: mod, exports: mod.exports, URL, JSON, String, Response, Headers, require: n => n === 'cloudflare:workers' ? {env: {DB}} : n.endsWith('/checkout-config') ? {checkoutKinds: () => new Set(['event'])} : n.endsWith('/account-auth') ? {strongAccount: async () => ({user: actor, strong: actor?.strong, headers: new Headers()}), accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})} : (() => { throw Error(n); })()});
 const ins = (id, user, status, extra = {}) => sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end)
   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'usd','{}','{}',?,?,0,?,?,?,?,?)`).run(id, user, 'x@example.test', extra.w ?? 'w-1', 'Sam Example', extra.kind ?? 'event', extra.program ?? null, 'item', extra.label ?? 'Takedown Camp', JSON.stringify(extra.dates ?? []), extra.base ?? 16000, extra.disc ?? 0, (extra.base ?? 16000) - (extra.disc ?? 0), status, id, extra.created ?? '2026-11-05T12:00:00Z', '2026-11-05T12:00:00Z', extra.paid ?? null, extra.start ?? null, extra.end ?? null);
 const uuid = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -26,6 +26,7 @@ let r = await get('');
 assert.equal(r.status, 200);
 assert.deepEqual(r.body.orders.map(o => o.id).sort(), [uuid(1), uuid(4)], 'own paid and refunded orders only; abandoned and canceled hidden');
 assert.ok(Array.isArray(r.body.orders[0].dates));
+assert.equal(r.body.checkoutOpen, true, 'the page learns whether online payment is open');
 assert.equal((await get('?order=' + uuid(1))).body.order.status, 'paid');
 assert.equal((await get('?order=' + uuid(5))).status, 404, 'cannot read another family\'s order');
 assert.equal((await get('?order=not-a-uuid')).status, 404);
@@ -48,7 +49,7 @@ async function openFamily({search = '', orderStatuses = ['paid']}) {
     document: {getElementById: el, querySelector: () => null, querySelectorAll: () => [], createElement: () => ({}), addEventListener() {}}, window: {addEventListener() {}},
     fetch: async url => {
       if (url.startsWith('/api/orders?order=')) { const status = orderStatuses[Math.min(polls++, orderStatuses.length - 1)]; return {ok: true, json: async () => ({order: {...screenOrders[1], status}})}; }
-      if (url === '/api/orders') return {ok: true, json: async () => ({orders: screenOrders})};
+      if (url === '/api/orders') return {ok: true, json: async () => ({orders: screenOrders, checkoutOpen: true})};
       if (url === '/api/scholarship') return {ok: true, json: async () => ({awards: []})};
       return {ok: true, status: 200, json: async () => ({email: 'pat@example.test', data: {parentName: 'Pat', phone: '', wrestlers: [{id: 'w-1', name: 'Sam Example', grade: '8'}, {id: 'w-2', name: 'Alex Example', grade: '4'}]}, revision: 1, updatedAt: '2026-11-05T12:00:00Z'})};
     }});
@@ -62,13 +63,16 @@ async function openFamily({search = '', orderStatuses = ['paid']}) {
   const {el} = await openFamily({});
   const cards = el('membershipCards').innerHTML;
   assert.match(cards, /Active membership/);
-  assert.match(cards, /\$2400\.00 paid upfront/);
+  assert.match(cards, /\$2,400\.00 paid upfront/);
   assert.match(cards, /12-month term ends/);
   assert.match(cards, /Not enrolled/, 'the second wrestler without a membership is still offered one');
   const list = el('purchaseList').innerHTML;
   assert.match(list, /Takedown Camp/); assert.match(list, /\$144\.00/); assert.match(list, /Includes \$16\.00 discount/);
   assert.match(list, /Checkout not finished/); assert.match(list, /Nothing has been charged/);
   assert.equal(el('paymentsPill').textContent, 'Paid online');
+  assert.equal(el('notEnrolledNote').hidden, true, 'no "nothing has been paid" notice for a family that has paid');
+  assert.match(el('readyNote').textContent, /pay securely online/);
+  assert.doesNotMatch(el('editorNotice').textContent, /still being connected/);
 }
 {
   const {el} = await openFamily({search: `?checkout=success&order=${uuid(11)}`, orderStatuses: ['pending', 'pending', 'paid']});
