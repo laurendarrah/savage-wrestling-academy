@@ -142,7 +142,7 @@ Done when: the real purchase and refund appear correctly in Stripe, the database
 | Waitlists | Owner emails the next family when a spot opens |
 | Private lessons | **Built (#70).** Families pick a coach's open time on `/lesson` at owner prices set on `/lesson-settings`; a paid lesson takes the time and shows on the coach page. Online payment opens after the refund policy (#80); until then the owner records lesson payments on `/payments` |
 | Program transfers | Owner refunds and re-registers in Stripe |
-| Coach payouts and accounting | Stripe dashboard export into the bookkeeping system |
+| Coach payouts and accounting | **Coach pay report built (#75):** `/coach-pay` totals each coach's paid lessons for a period at the share set on `/lesson-settings`, with CSV export. Paying coaches and bookkeeping stay outside the app |
 
 ## Risks to watch
 
