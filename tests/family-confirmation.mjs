@@ -7,7 +7,7 @@ const nodes=new Map();
 function element(id){if(!nodes.has(id))nodes.set(id,{hidden:id==='summary',value:'',textContent:'',innerHTML:'',focus(){this.focused=true},scrollIntoView(){},elements:{parentName:{value:'',focus(){}},phone:{value:''}}});return nodes.get(id)}
 let stored={parentName:'Test Parent',phone:'555-0100',wrestlers:[{id:'test-id',name:'Test Wrestler',grade:'5'}]},revision=1;
 let rejectSave=false;
-const context=vm.createContext({document:{getElementById:element},location:{},crypto:{randomUUID:()=> 'new-id'},fetch:async(path,options)=>{if(options?.method==='PUT'){if(rejectSave)return{ok:false,json:async()=>({error:'Connection failed.'})};const body=JSON.parse(options.body);stored=body.data;revision++}return{ok:true,status:200,json:async()=>({email:'test@example.test',data:structuredClone(stored),revision,updatedAt:'2026-10-16T12:30:00Z'})}}});
+const context=vm.createContext({document:{getElementById:element},location:{},URLSearchParams,crypto:{randomUUID:()=> 'new-id'},fetch:async(path,options)=>{if(options?.method==='PUT'){if(rejectSave)return{ok:false,json:async()=>({error:'Connection failed.'})};const body=JSON.parse(options.body);stored=body.data;revision++}return{ok:true,status:200,json:async()=>({email:'test@example.test',data:structuredClone(stored),revision,updatedAt:'2026-10-16T12:30:00Z'})}}});
 vm.runInContext(script,context);
 const settle=()=>new Promise(resolve=>setImmediate(resolve));await settle();
 assert.equal(element('editor').hidden,true);assert.equal(element('summary').hidden,false);assert.match(element('savedDetails').innerHTML,/Test Wrestler/);
