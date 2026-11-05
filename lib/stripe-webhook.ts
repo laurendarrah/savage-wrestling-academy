@@ -56,8 +56,8 @@ async function overLimit(order: OrderRow): Promise<string | null> {
   const slots = Number(JSON.parse(order.pricing || '{}').slots);
   if (!Number.isInteger(slots) || slots <= 0) return null;
   for (const d of JSON.parse(order.dates) as string[]) {
-    const row = await env.DB!.prepare("SELECT count(*) n FROM orders WHERE kind='event' AND item_id=? AND status='paid' AND id<>? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)")
-      .bind(order.item_id, order.id, d).first<{n: number}>();
+    const row = await env.DB!.prepare("SELECT count(*) n FROM orders WHERE kind=? AND item_id=? AND status='paid' AND id<>? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)")
+      .bind(order.kind, order.item_id, order.id, d).first<{n: number}>();
     if ((row?.n ?? 0) >= slots) return `${d}: ${(row?.n ?? 0) + 1} paid for ${slots} seats`;
   }
   return null;
@@ -124,9 +124,10 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
       const term = order.kind === 'annual' ? membershipTerm(paidDate) : null;
       // A payment that completes after its seat hold lapsed can push an event over its limit. The payment stands
       // (money was taken), and the owner is warned so they can add a seat or refund.
-      const overCapacity = order.kind === 'event' ? await overLimit(order) : null;
+      // A lesson paid this way is double-booked; the owner refunds one or moves it to another opening.
+      const overCapacity = order.kind === 'event' || order.kind === 'lesson' ? await overLimit(order) : null;
       const warn = overCapacity ? [env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
-        .bind(crypto.randomUUID(), 'stripe', 'event_over_capacity', `${orderId} ${overCapacity}`, at)] : [];
+        .bind(crypto.randomUUID(), 'stripe', order.kind === 'lesson' ? 'lesson_double_booked' : 'event_over_capacity', `${orderId} ${overCapacity}`, at)] : [];
       return {outcome: overCapacity ? 'paid-over-capacity' : 'paid', orderId, writes: [...warn,
         // If the family started a newer checkout for the same item, that newer one is canceled so the paid order wins.
         env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE dedupe_key=? AND status='pending' AND id<>?").bind(at, order.dedupe_key, orderId),
