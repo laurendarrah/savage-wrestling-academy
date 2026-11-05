@@ -1,10 +1,9 @@
 // Real rosters from paid orders and active scholarships (issue #22). No sample workspace data is used.
 import {env} from 'cloudflare:workers';
 import {publicSchedule} from './public-schedule';
-import {cardStatus, reviewFor, type CardStatus} from './usaw';
-import {currentWaiver, signatureFor} from './waivers';
+import {cardStatus, type CardStatus} from './usaw';
+import {currentWaiver} from './waivers';
 import {PROGRAM_ON} from './transfers';
-import {exceptionFor} from './exceptions';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
 export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]};
@@ -67,41 +66,48 @@ async function entitled(session: Session): Promise<Raw[]> {
 export async function rosterFor(date: string, scope: Scope) {
   const state = await academyState();
   const sessions = sessionsOn(state, date).filter(s => canSee(scope, s));
-  const families = new Map<string, any>();
-  const family = async (userId: string) => {
-    if (!families.has(userId)) {
-      const row = await env.DB!.prepare('SELECT email,payload FROM family_accounts WHERE user_id=?').bind(userId).first<{email: string; payload: string}>();
-      families.set(userId, row ? {email: row.email, ...JSON.parse(row.payload)} : null);
-    }
-    return families.get(userId);
-  };
+  const lists: Raw[][] = [];
+  for (const session of sessions) lists.push(await entitled(session));
+  const userIds = [...new Set(lists.flat().map(r => r.userId))];
+  // Everything per wrestler is loaded once for the whole day (issue #92), not queried entry by entry.
+  const ids = JSON.stringify(userIds), waiver = await currentWaiver();
+  const [fams, reviews, signed, exceptions, attendance] = await env.DB!.batch([
+    env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
+    env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
+    env.DB!.prepare('SELECT user_id,wrestler_id FROM waiver_signatures WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?))').bind(waiver?.id ?? '', ids),
+    env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
+    env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date)
+  ]);
+  const families = new Map<string, any>((fams.results as any[]).map(r => [r.user_id, {email: r.email, ...JSON.parse(r.payload)}]));
+  const review = new Map<string, any>((reviews.results as any[]).map(r => [`${r.user_id}|${r.wrestler_id}`, r]));
+  const signedSet = new Set((signed.results as any[]).map(r => `${r.user_id}|${r.wrestler_id}`));
+  const excepted = new Map<string, string[]>();
+  for (const r of exceptions.results as any[]) { const k = `${r.user_id}|${r.wrestler_id}`; if (!excepted.has(k)) excepted.set(k, []); if (!excepted.get(k)!.includes(r.rule)) excepted.get(k)!.push(r.rule); }
   const checked = new Map<string, {checked_in_at: string; checked_in_by: string}>();
-  for (const r of (await env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date).all<any>()).results)
-    checked.set(`${r.session_key}|${r.user_id}|${r.wrestler_id}`, r);
+  for (const r of attendance.results as any[]) checked.set(`${r.session_key}|${r.user_id}|${r.wrestler_id}`, r);
 
-  const waiver = await currentWaiver();
-  const result = [];
-  for (const session of sessions) {
+  const result: (Session & {entries: Entry[]; checkedIn: number})[] = [];
+  sessions.forEach((session, i) => {
     const merged = new Map<string, Entry>();
-    for (const r of await entitled(session)) {
+    for (const r of lists[i]) {
       const k = `${r.userId}|${r.wrestlerId}`;
       if (merged.has(k)) { const e = merged.get(k)!; if (!e.sources.includes(r.source)) e.sources.push(r.source); continue; }
-      const f = await family(r.userId), w = f?.wrestlers?.find((x: any) => x.id === r.wrestlerId);
+      const f = families.get(r.userId) ?? null, w = f?.wrestlers?.find((x: any) => x.id === r.wrestlerId);
       const c = checked.get(`${session.key}|${k}`);
       // Card status on the session date. Check-in still works; staff see the warning and follow up (issue #68).
-      const card = w ? cardStatus(w, await reviewFor(r.userId, r.wrestlerId), date) : {state: 'missing' as const, expires: '', note: ''};
+      const card = w ? cardStatus(w, review.get(k) ?? null, date) : {state: 'missing' as const, expires: '', note: ''};
       merged.set(k, {
         userId: r.userId, wrestlerId: r.wrestlerId, name: w?.name ?? r.name, grade: w?.grade ?? null,
         parentName: f?.parentName || null, phone: f?.phone || null, email: scope.role === 'owner' ? f?.email ?? null : null,
         sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null,
         card: card.state, cardExpires: card.expires || null, cardNote: card.note,
-        waiverSigned: waiver ? !!(await signatureFor(waiver.id, r.userId, r.wrestlerId)) : null,
-        exceptions: [...(await exceptionFor(r.userId, r.wrestlerId, 'usaw', [date]) ? ['usaw'] : []), ...(await exceptionFor(r.userId, r.wrestlerId, 'waiver', [date]) ? ['waiver'] : [])]
+        waiverSigned: waiver ? signedSet.has(k) : null,
+        exceptions: ['usaw', 'waiver'].filter(x => excepted.get(k)?.includes(x))
       });
     }
     const entries = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
     result.push({...session, entries, checkedIn: entries.filter(e => e.checkedInAt).length});
-  }
+  });
   return result;
 }
 
