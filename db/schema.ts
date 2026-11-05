@@ -81,3 +81,11 @@ export const orders=sqliteTable("orders",{
 export const stripeEvents=sqliteTable("stripe_events",{
  id:text("id").primaryKey(),type:text("type").notNull(),orderId:text("order_id"),outcome:text("outcome").notNull(),receivedAt:text("received_at").notNull()
 });
+
+// Real attendance (issue #22). One row per wrestler per session; the unique index makes check-in idempotent.
+// session_key: practice:<program>:<date>:<start>, live:<id>:<date> or event:<id>:<date>.
+export const attendance=sqliteTable("attendance",{
+ id:text("id").primaryKey(),sessionKey:text("session_key").notNull(),sessionDate:text("session_date").notNull(),
+ userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),wrestlerName:text("wrestler_name").notNull(),
+ source:text("source").notNull(),checkedInAt:text("checked_in_at").notNull(),checkedInBy:text("checked_in_by").notNull()
+},t=>[uniqueIndex("attendance_once").on(t.sessionKey,t.userId,t.wrestlerId),index("attendance_date").on(t.sessionDate)]);
