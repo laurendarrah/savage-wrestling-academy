@@ -1,0 +1,23 @@
+name: Task
+description: Something to build, change or set up
+labels: []
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+      description: What needs to happen, and why it matters to families, staff or the launch.
+    validations:
+      required: true
+  - type: input
+    id: who
+    attributes:
+      label: Who
+      placeholder: Lauren, Justin, Owner, or Claude Code with Lauren
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: A check anyone can verify.
+    validations:
+      required: true

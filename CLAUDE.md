@@ -24,6 +24,14 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 - Do not run `pnpm audit --fix` or broad dependency upgrades. Upgrade one package at a time on a branch and rerun tests and build.
 - Work on a branch and open a pull request. Do not push directly to `main`.
 
+## Workflow
+
+- Every change starts from a GitHub issue. Name branches `<type>/<issue>-<short-name>`, for example `feat/18-stripe-checkout`. Types: feat, fix, chore, docs.
+- Put `Closes #<issue>` in the pull request description and fill in the template.
+- Decisions live in issues labeled `needs-decision`. Never encode a business policy that is not decided there.
+- When a plan changes, update `docs/LAUNCH_PLAN.md` in the same pull request.
+- Full process: `CONTRIBUTING.md`.
+
 ## Things that look real but are not
 
 - The owner workspace in `app/portal.html` runs mostly on sample data stored in one JSON document. Its rosters, attendance, messages, transfers, waitlists, and payouts are simulations.
