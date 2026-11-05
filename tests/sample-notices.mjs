@@ -28,4 +28,10 @@ assert.equal(notice('public', 'Calendar'), '');
 vm.runInContext(`hydratePrograms();mode='admin';page='Attendance';render()`, ctx);
 assert.ok(node('#main').innerHTML.startsWith('<div class="sample-notice"'), 'notice is the first thing on the page');
 
-console.log('Passed: every sample-driven owner screen and the family and wrestler previews carry a sample-data notice linking to the real record; real settings screens are not labeled.');
+// The dashboard links every real owner tool, and the real settings screens.
+const dash = vm.runInContext(`mode='admin';page='Dashboard';dashboard()`, ctx);
+for (const href of ['/roster', '/payments', '/accounts', '/approvals', '/scholarships', '/staff', '/practice-plans', '/curricula', '/payment-setup', '/backups', '/security-log'])
+  assert.ok(dash.includes(`href="${href}"`), `dashboard links ${href}`);
+for (const pg of ['Schedules', 'Programs & pricing', 'Events & waitlists']) assert.ok(dash.includes(`go('${pg}')`), `dashboard opens ${pg}`);
+
+console.log('Passed: every sample-driven owner screen and the family and wrestler previews carry a sample-data notice linking to the real record; real settings screens are not labeled; the dashboard links every real owner tool.');
