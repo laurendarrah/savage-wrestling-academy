@@ -1,0 +1,65 @@
+/* Shared layouts for Safari, Android, tablets, and desktop. */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+[hidden]{display:none!important}
+input,select,textarea{max-width:100%;min-width:0}
+fieldset{min-width:0}
+img,video,svg{max-width:100%}
+.mobile-menu-button,.mobile-calendar{display:none}
+.owner-tools{margin-top:8px}.owner-tools summary{cursor:pointer;font-weight:600;padding:10px 0}.owner-tools>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.owner-tools a{display:inline-flex;align-items:center;min-height:44px;padding:6px 8px}
+/* Calendar colors use stable program IDs, including previously saved programs. */
+.event.cal-advanced,.mobile-practice.cal-advanced,.calendar-key .cal-advanced,.program-color.cal-advanced{background:#000;color:#fff;border:1px solid #000}
+.event.cal-intermediate,.mobile-practice.cal-intermediate,.calendar-key .cal-intermediate,.program-color.cal-intermediate{background:#686868;color:#fff;border:1px solid #686868}
+.event.cal-elementary,.mobile-practice.cal-elementary,.calendar-key .cal-elementary,.program-color.cal-elementary{background:#fff;color:#18191c;border:1px solid #999}
+.event.cal-special,.mobile-practice.cal-special,.calendar-key .cal-special,.program-color.cal-special{background:#d72732;color:#fff;border:1px solid #d72732}
+.calendar-key{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}.calendar-key span{border-radius:5px;padding:6px 10px;font-size:12px;font-weight:600}
+.event:hover,.mobile-practice:hover{box-shadow:0 0 0 2px #71747d}.event:focus-visible,.mobile-practice:focus-visible{outline:3px solid #1769aa;outline-offset:2px}
+@media screen and (max-width:1024px){
+ input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important}
+ input:not([type=checkbox]):not([type=radio]),select,button{min-height:44px}
+ button{white-space:normal;touch-action:manipulation}
+ input[type=checkbox],input[type=radio]{min-width:20px;min-height:20px}
+ .desktop-calendar{display:none}.mobile-calendar{display:block}
+ .mobile-calendar-day{margin:12px 0;background:white;border:1px solid #ddd;border-radius:9px;padding:16px}
+ .mobile-calendar-day h3{font-size:17px;line-height:1.5;margin:0 0 10px}
+ .mobile-practice{display:block;text-align:left;width:100%;margin:10px 0;border-left:4px solid #d72732;padding:14px;font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+ .mobile-practice.el{border-left-color:#777}.mobile-practice.mid{border-left-color:#6c7384}
+ .mobile-practice span,.mobile-practice strong{display:block}.mobile-practice .plan-state{font-size:14px;margin-top:5px}
+ .tablewrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+@media screen and (max-width:650px){
+ body{padding-bottom:env(safe-area-inset-bottom)}
+ main{width:100%;max-width:100%;padding:20px 16px}
+ main>*,section,article,.card,.grow,.workspace,.inbox-grid>*{min-width:0}
+ section,article{padding:18px}h1{font-size:30px;overflow-wrap:anywhere}h2,h3,p,a,summary{overflow-wrap:anywhere}
+ input,select,textarea{width:100%;box-sizing:border-box}
+ input[type=checkbox],input[type=radio]{width:20px}
+ button{max-width:100%;padding:11px 14px;font-size:16px}
+ .row{flex-wrap:wrap;align-items:stretch}.row>label{min-width:0;flex:1 1 100%;width:100%}
+ .row>button{min-width:0;white-space:normal}.grid{min-width:0}
+ header{flex-wrap:wrap;gap:12px;padding:14px 16px}header>div{min-width:0;max-width:100%}header .switch{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}header .switch button{font-size:14px;min-height:44px}
+ .owner-tools-wrap{width:100%}.owner-tools>div{align-items:stretch}.owner-tools a,.owner-tools button{flex:1 1 45%;font-size:14px;line-height:1.5}.owner-tools summary{min-height:44px}
+ .mobile-menu-button{display:inline-flex;width:100%;justify-content:space-between;align-items:center;margin-top:14px;background:#292a2f;color:white;border-color:#494a50}
+ aside .nav{display:none;overflow:visible;margin-top:10px}aside .nav.is-open{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ aside .nav button{width:100%;min-width:0;min-height:44px;white-space:normal;font-size:14px;line-height:1.4;margin:0;padding:12px}
+ .toolbar{gap:8px;align-items:center}.toolbar select{width:100%;flex:1 1 100%}.calendar-month{width:auto;flex:1;min-width:0}
+ .modalback{padding:12px;align-items:flex-start;overflow:auto}.modal{width:100%;max-width:100%;max-height:calc(100dvh - 24px);padding:20px;overflow:auto;-webkit-overflow-scrolling:touch}
+ .day-times{grid-template-columns:repeat(2,minmax(0,1fr))}.holiday-grid,.availability-grid{min-width:0;grid-template-columns:repeat(7,minmax(0,1fr))}.holiday-date,.availability-day{min-width:0;padding:5px 2px}
+ .block{padding:14px}.block-head>strong{flex-basis:100%;overflow-wrap:anywhere}.block-head button{flex:1;font-size:14px;min-height:44px;padding:10px 8px}.block input,.block textarea{min-width:0}
+ #chat article{padding:14px;margin:12px 0}.message-log{max-height:55dvh;overflow:auto}
+}
+
+.program-color .muted,.program-color .price small{color:inherit}.program-color input,.program-color textarea,.program-color select{background:#fff;color:#18191c}.program-color button:not(.primary){background:#fff;color:#18191c}
+
+/* One Savage program design, with each program retaining its calendar color. */
+.program-color:not(.cal-special){border-top:4px solid #d72732;border-radius:10px;box-shadow:0 4px 16px #0000000a}
+.program-color h2{font-family:'Barlow Condensed',Impact,Arial,sans-serif;font-size:30px;font-weight:700;line-height:1.15;letter-spacing:.3px}
+.program-color:not(.cal-special) h2::after{content:'';display:block;width:32px;height:3px;background:#d72732;margin-top:14px}
+.program-color .eyebrow{font-weight:700;line-height:1.6}.program-color p{line-height:1.7}
+.program-color .schedule{border-top:1px solid currentColor;padding-top:16px;margin-top:4px}
+.program-color .primary{background:#d72732;color:#fff;border:1px solid #d72732;min-height:44px;font-weight:700;letter-spacing:.2px}
+.program-color .primary:hover{background:#b91f29;border-color:#b91f29}
+.program-color .primary:focus-visible{outline:3px solid #1769aa;outline-offset:3px}
+
+/* Align lesson actions across cards with different description lengths. */
+.card.lesson{display:flex;flex-direction:column;align-self:stretch}.card.lesson>button{margin-top:auto}

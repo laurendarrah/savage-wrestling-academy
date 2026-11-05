@@ -1,0 +1,14 @@
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import ts from 'typescript';
+const module={exports:{}},files={'../portal.html?raw':'app/portal.html','./demo.js?raw':'app/admin-demo/demo.js'};
+const js=ts.transpileModule(readFileSync('app/admin-demo/route.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+vm.runInNewContext(js,{module,exports:module.exports,Response,require:name=>({default:readFileSync(files[name],'utf8')})});
+const response=module.exports.GET();assert.equal(response.status,200);assert.match(response.headers.get('content-security-policy'),/connect-src 'none'/);assert.match(response.headers.get('content-security-policy'),/sandbox allow-scripts allow-modals;/);
+const html=await response.text();assert.match(html,/Fictional data/);
+const elements=new Map();const el=k=>{if(!elements.has(k))elements.set(k,{style:{},remove(){}});return elements.get(k)};
+let requests=0;const ctx=vm.createContext({structuredClone,crypto,URL,Intl,Date,JSON,Set,FormData,location:{hash:''},document:{querySelector:el,getElementById:id=>id==='semesterForm'?null:el(id),addEventListener(){}},window:{addEventListener(){}},fetch(){requests++;throw Error('Network must not be used')},setTimeout(){},confirm:()=>true});
+const run=s=>vm.runInContext(s,ctx);
+run(html.match(/<script>([\s\S]*)<\/script>/)[1]);assert.match(el('#main').innerHTML,/KEEP THE ACADEMY MOVING/);assert.equal(run('data.extraPractices[0].name'),'Friday Night Live');run("attendanceDate='2026-10-19';go('Attendance')");assert.equal(run('attendanceDate'),run('academyToday()'));assert.match(el('#main').innerHTML,/Search wrestler by name/);assert.match(el('#main').innerHTML,/Scan QR code/);run("go('Schedules')");assert.match(el('#main').innerHTML,/Add a practice/);run("go('Calendar')");assert.match(el('#main').innerHTML,/PLAN FROM YOUR CALENDAR/);run("data.extraPractices=[];save()");assert.equal(el('#syncStatus').textContent,'Saved for this demo tab');await run('reloadAcademy()');assert.equal(run('data.extraPractices.length'),1);assert.equal(requests,0);
+console.log('Passed: public demo renders fictional admin data, local changes and reset, without calling owner APIs.');

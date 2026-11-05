@@ -1,0 +1,55 @@
+import {sql} from "drizzle-orm";
+import { sqliteTable, text, integer, check, uniqueIndex, index } from "drizzle-orm/sqlite-core";
+export const academyState = sqliteTable("academy_state", {
+ id: text("id").primaryKey(), payload: text("payload").notNull(),
+ revision: integer("revision").notNull(), updatedBy: text("updated_by").notNull(), updatedAt: text("updated_at").notNull()
+});
+
+export const familyAccounts=sqliteTable("family_accounts",{
+ userId:text("user_id").primaryKey(),email:text("email").notNull(),payload:text("payload").notNull(),revision:integer("revision").notNull(),updatedAt:text("updated_at").notNull()
+});
+export const authAttempts=sqliteTable("auth_attempts",{id:text("id").primaryKey(),count:integer("count").notNull(),bucket:integer("bucket").notNull()});
+
+export const staffAccess=sqliteTable("staff_access",{email:text("email").primaryKey(),name:text("name").notNull(),programs:text("programs").notNull(),active:integer("active").notNull(),updatedAt:text("updated_at").notNull()});
+export const coachOpenings=sqliteTable("coach_openings",{id:text("id").primaryKey(),userId:text("user_id").notNull(),date:text("date").notNull(),start:text("start").notNull(),end:text("end").notNull()});
+export const securityEvents=sqliteTable("security_events",{id:text("id").primaryKey(),actor:text("actor").notNull(),action:text("action").notNull(),target:text("target").notNull(),createdAt:text("created_at").notNull()});
+export const recoverySnapshots=sqliteTable("recovery_snapshots",{id:text("id").primaryKey(),payload:text("payload").notNull(),createdAt:text("created_at").notNull()});
+export const restoreGuard=sqliteTable("restore_guard",{id:text("id").primaryKey(),valid:integer("valid").notNull()},t=>[check('valid_restore',sql`${t.valid} = 1`)]);
+
+export const programApprovals=sqliteTable("program_approvals",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),program:text("program").notNull(),
+ wrestlerName:text("wrestler_name").notNull(),grade:text("grade").notNull(),status:text("status").notNull(),
+ createdAt:text("created_at").notNull(),updatedAt:text("updated_at").notNull(),decidedBy:text("decided_by")
+},t=>[uniqueIndex("approval_family_wrestler_program").on(t.userId,t.wrestlerId,t.program),check("approval_status",sql`${t.status} IN ('pending','approved','declined')`)]);
+
+export const approvalMessages=sqliteTable("approval_messages",{
+ id:text("id").primaryKey(),approvalId:text("approval_id").notNull(),senderId:text("sender_id").notNull(),senderRole:text("sender_role").notNull(),body:text("body").notNull(),createdAt:text("created_at").notNull()
+},t=>[index("approval_messages_thread_order").on(t.approvalId,t.createdAt,t.id),check("approval_sender_role",sql`${t.senderRole} IN ('owner','parent')`)]);
+
+export const practicePlans=sqliteTable("practice_plans",{
+ id:text("id").primaryKey(),program:text("program").notNull(),date:text("date").notNull(),payload:text("payload").notNull(),published:integer("published").notNull(),revision:integer("revision").notNull(),updatedBy:text("updated_by").notNull(),updatedAt:text("updated_at").notNull()
+},t=>[uniqueIndex("practice_plan_program_date").on(t.program,t.date),check("practice_plan_published",sql`${t.published} IN (0,1)`)]);
+
+export const practiceCurricula=sqliteTable("practice_curricula",{
+ id:text("id").primaryKey(),curriculumId:text("curriculum_id"),lessonOrder:integer("lesson_order").notNull().default(0),name:text("name").notNull(),nameKey:text("name_key").notNull(),payload:text("payload").notNull(),revision:integer("revision").notNull(),updatedBy:text("updated_by").notNull(),updatedAt:text("updated_at").notNull()
+},t=>[uniqueIndex("practice_curriculum_lesson_name").on(t.curriculumId,t.nameKey)]);
+
+export const practiceCurriculumGroups=sqliteTable("practice_curriculum_groups",{
+ id:text("id").primaryKey(),program:text("program").notNull(),name:text("name").notNull(),nameKey:text("name_key").notNull(),revision:integer("revision").notNull(),updatedBy:text("updated_by").notNull(),updatedAt:text("updated_at").notNull()
+},t=>[uniqueIndex("curriculum_program_name").on(t.program,t.nameKey)]);
+
+// Owner-managed integration credentials are encrypted before storage; never included in family exports.
+export const integrationSecrets=sqliteTable('integration_secrets',{
+ id:text('id').primaryKey(),encrypted:text('encrypted').notNull(),updatedBy:text('updated_by').notNull(),updatedAt:text('updated_at').notNull()
+});
+
+export const scholarshipAwards=sqliteTable('scholarship_awards',{
+ id:text('id').primaryKey(),tokenHash:text('token_hash').notNull(),recipientEmail:text('recipient_email').notNull(),
+ wrestlerName:text('wrestler_name').notNull(),program:text('program').notNull(),referenceCents:integer('reference_cents').notNull(),
+ termsText:text('terms_text').notNull(),termsReady:integer('terms_ready').notNull().default(0),revision:integer('revision').notNull().default(1),
+ status:text('status').notNull().default('offered'),userId:text('user_id'),wrestlerId:text('wrestler_id'),signer:text('signer'),
+ acceptedAt:text('accepted_at'),signatureRecord:text('signature_record'),endedAt:text('ended_at'),expiresAt:text('expires_at').notNull(),createdAt:text('created_at').notNull(),createdBy:text('created_by').notNull()
+},t=>[uniqueIndex('scholarship_invite_hash').on(t.tokenHash),
+ uniqueIndex('scholarship_active_wrestler').on(t.userId,t.wrestlerId).where(sql`${t.status} = 'active'`),
+ check('scholarship_status',sql`${t.status} IN ('offered','active','revoked','ended')`),
+ check('scholarship_ready',sql`${t.termsReady} IN (0,1)`)]);

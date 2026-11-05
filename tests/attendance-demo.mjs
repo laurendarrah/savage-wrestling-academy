@@ -1,0 +1,21 @@
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+const nodes=new Map();
+const el=id=>{if(!nodes.has(id))nodes.set(id,{hidden:false,textContent:'',disabled:false});return nodes.get(id)};
+Object.assign(el('video'),{videoWidth:0,videoHeight:0,pause(){},async play(){}});
+const window={addEventListener(){}},ctx=vm.createContext({window,URLSearchParams,location:{search:'?pass=1'},document:{getElementById:el,createElement:()=>({getContext:()=>({drawImage(){},getImageData:()=>pixels})}),addEventListener(){}},navigator:{mediaDevices:{getUserMedia:async options=>{assert.equal(options.audio,false);return {getTracks:()=>[{stop(){stops++}}]}}}},setTimeout:()=>1,clearTimeout(){}});
+vm.runInContext(readFileSync('public/qr-preview.js','utf8'),ctx);
+vm.runInContext(readFileSync('public/jsqr-1.4.0.js','utf8'),ctx);
+let stops=0,pixels;
+vm.runInContext(readFileSync('public/attendance-demo.js','utf8'),ctx);
+const svg=el('code').innerHTML;
+assert.equal(el('pass').hidden,false);assert.equal(el('scanner').hidden,true);
+const size=Number(svg.match(/viewBox="0 0 (\d+) /)[1]),zoom=6,w=size*zoom,rgba=new Uint8ClampedArray(w*w*4).fill(255);
+for(const [,x,y] of svg.matchAll(/M(\d+),(\d+)h1v1h-1z/g))for(let dy=0;dy<zoom;dy++)for(let dx=0;dx<zoom;dx++){const i=((Number(y)*zoom+dy)*w+Number(x)*zoom+dx)*4;rgba[i]=rgba[i+1]=rgba[i+2]=0}
+assert.equal(ctx.jsQR(rgba,w,w).data,'SWA-ATTENDANCE-DEMO:ALEX');
+window.jsQR=ctx.jsQR;pixels={data:rgba,width:w,height:w};Object.assign(el('video'),{videoWidth:w,videoHeight:w});
+await el('start').onclick();assert.equal(el('attendance').textContent,'Checked in');assert.equal(stops,1);assert.equal(el('video').hidden,true);
+await el('start').onclick();assert.match(el('status').textContent,/already checked in/);assert.equal(stops,2);
+el('reset').onclick();assert.equal(el('attendance').textContent,'Not checked in');
+console.log('Passed: generated sample QR decodes with the bundled reader; sample check-in, duplicate detection, reset and camera shutdown.');

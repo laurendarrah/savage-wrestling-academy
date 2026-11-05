@@ -1,0 +1,1 @@
+ALTER TABLE `scholarship_awards` ADD `signature_record` text;

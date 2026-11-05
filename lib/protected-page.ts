@@ -1,0 +1,4 @@
+import {ownerIdentity,strongAccount} from './account-auth';
+import {accountRole} from './access-control';
+export async function ownerPage(request:Request,html:string){const auth=await ownerIdentity(request);if(!auth.owner){auth.headers.set('Location',auth.mfaRequired?'/security':'/login');return new Response(null,{status:303,headers:auth.headers})}auth.headers.set('Content-Type','text/html; charset=utf-8');return new Response(html,{headers:auth.headers})}
+export async function coachPage(request:Request,html:string){const auth=await strongAccount(request),access=await accountRole(auth.user);if(access.role!=='coach')return new Response('Coach access required.',{status:403,headers:auth.headers});if(!auth.strong){auth.headers.set('Location','/security');return new Response(null,{status:303,headers:auth.headers})}auth.headers.set('Content-Type','text/html; charset=utf-8');return new Response(html,{headers:auth.headers})}

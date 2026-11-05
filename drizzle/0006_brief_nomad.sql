@@ -1,0 +1,1 @@
+CREATE INDEX `approval_messages_thread_order` ON `approval_messages` (`approval_id`,`created_at`,`id`);

@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+let owner={userId:'owner-test'},originAllowed=true,limited=false,stripeAccount='acct_1U8nF9PkPTNkVQBz',stripeFailure=false,stored=null,events=0;
+const env={STRIPE_CONFIG_ENCRYPTION_KEY:'11'.repeat(32),DB:{prepare(sql){let args=[];return {bind(...v){args=v;return this},async first(){return stored?(sql.includes('updated_at')?{updated_at:stored.at}:{encrypted:stored.encrypted}):null},async run(){stored={encrypted:args[0],actor:args[1],at:args[2]};return {success:true}}}}}};
+class StripeMock{constructor(key){assert(key.startsWith('rk_test_'));this.accounts={retrieve:async()=>{if(stripeFailure)throw Error('PRIVATE_KEY_DATA_MUST_NOT_ESCAPE');return{id:stripeAccount}}}}static createFetchHttpClient(){return {}}}
+const modules=new Map();function load(file){if(modules.has(file))return modules.get(file);const m={exports:{}};modules.set(file,m.exports);vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{module:m,exports:m.exports,crypto,TextEncoder,TextDecoder,Uint8Array,JSON,Array,Date,Response,Request,Headers,require(name){if(name==='cloudflare:workers')return {env};if(name==='stripe')return StripeMock;if(name.endsWith('/account-auth'))return {ownerIdentity:async()=>({owner,headers:new Headers()}),sameOrigin:()=>originAllowed,accountReply:(b,s=200,h)=>Response.json(b,{status:s,headers:h})};if(name.endsWith('/rate-limit'))return {rateLimited:async()=>limited};if(name.endsWith('/security-events'))return {securityEvent:async()=>events++};if(name.endsWith('/stripe-test'))return load('lib/stripe-test.ts');throw Error(name)}});return m.exports}
+const api=load('app/api/payment-setup/route.ts'),vault=load('lib/stripe-test.ts');
+const key='rk_'+'test_'+'a'.repeat(32),req=(k=key)=>new Request('https://academy.test/api/payment-setup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({testKey:k})});
+owner=null;assert.equal((await api.GET(new Request('https://academy.test/api/payment-setup'))).status,403);assert.equal((await api.POST(req())).status,403);owner={userId:'owner-test'};
+originAllowed=false;assert.equal((await api.POST(req())).status,403);originAllowed=true;
+for(const k of ['rk_'+'live_'+'a'.repeat(32),'sk_'+'test_'+'a'.repeat(32),'not-a-key'])assert.equal((await api.POST(req(k))).status,400);assert.equal(stored,null);
+stripeAccount='acct_other';assert.equal((await api.POST(req())).status,400);assert.equal(stored,null);stripeAccount='acct_1U8nF9PkPTNkVQBz';
+limited=true;assert.equal((await api.POST(req())).status,429);limited=false;
+stripeFailure=true;const failed=await api.POST(req());assert.equal(failed.status,502);assert(!JSON.stringify(await failed.json()).includes('PRIVATE_KEY'));stripeFailure=false;
+const saved=await api.POST(req());assert.equal(saved.status,200);const body=await saved.json();assert.equal(body.mode,'test');assert.equal(body.checkoutEnabled,false);assert(!JSON.stringify(body).includes(key));assert(!stored.encrypted.includes(key));assert.equal(await vault.storedStripeKey(),key);assert.equal(events,1);
+const status=await (await api.GET(new Request('https://academy.test/api/payment-setup'))).json();assert.equal(status.configured,true);assert.equal(status.checkoutEnabled,false);assert.equal(status.encrypted,undefined);assert.equal(status.testKey,undefined);
+env.STRIPE_CONFIG_ENCRYPTION_KEY='22'.repeat(32);await assert.rejects(()=>vault.storedStripeKey());env.STRIPE_CONFIG_ENCRYPTION_KEY='11'.repeat(32);
+const tampered=JSON.parse(stored.encrypted);tampered.data[0]^=1;stored.encrypted=JSON.stringify(tampered);await assert.rejects(()=>vault.storedStripeKey());
+const html=readFileSync('app/payment-setup/screen.html','utf8');assert.match(html,/type="password"/);assert.match(html,/Checkout remains disabled/);assert.match(html,/No live charges/);new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]);
+const catalog=JSON.parse(readFileSync('config/stripe-test-catalog.json','utf8'));assert.equal(catalog.livemode,false);assert.equal(Object.keys(catalog.programs).length,3);for(const p of Object.values(catalog.programs)){assert.equal(p.monthlyCents,20000);assert.equal(p.walkInCents,4000);assert(p.monthlyPrice.startsWith('price_'));assert(p.walkInPrice.startsWith('price_'))}
+console.log('Passed: owner/MFA boundary, CSRF, live/unrestricted key rejection, Stripe account mismatch, rate limiting, safe errors, encrypted credential roundtrip, key/tamper rejection, no secret response leakage, checkout disabled and test catalog.');
