@@ -3,7 +3,19 @@ import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@s
 import type { User } from '@supabase/supabase-js';
 
 export const OWNER_EMAIL = 'savagewrestlingclub@gmail.com';
-export const APP_ORIGIN = 'https://savage-registration-preview.wellrose34.chatgpt.site';
+// Origin used in sign-up, resend and password-reset email links.
+// Set APP_ORIGIN per environment (for example http://127.0.0.1:5173 locally, or a custom domain later).
+// Every origin used here must also be in the Supabase Auth redirect allowlist.
+export const DEFAULT_APP_ORIGIN = 'https://savage-registration-preview.justinaccordino546.chatgpt.site';
+export function appOrigin(): string {
+ const configured = (env as {APP_ORIGIN?: string}).APP_ORIGIN?.trim();
+ if (!configured) return DEFAULT_APP_ORIGIN;
+ let url: URL;
+ try { url = new URL(configured); } catch { throw new Error('APP_ORIGIN must be an absolute URL.'); }
+ const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+ if (url.protocol !== 'https:' && !(loopback && url.protocol === 'http:')) throw new Error('APP_ORIGIN must use https outside local development.');
+ return url.origin;
+}
 export function accountClient(request: Request) {
  const headers = new Headers({'Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Content-Security-Policy':"frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"});
  const config=env as Cloudflare.Env & {SUPABASE_URL?:string;SUPABASE_PUBLISHABLE_KEY?:string};
