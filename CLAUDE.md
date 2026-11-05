@@ -37,6 +37,7 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 - An order becomes paid only in `lib/stripe-webhook.ts`, after the Stripe signature is verified. Never mark anything paid from a redirect or a browser call.
 - Every Stripe event id is stored once in `stripe_events`. Keep webhook handling idempotent and safe for late or out-of-order events.
 - Checkout opens per purchase type with `CHECKOUT_KINDS`. Do not open a type whose terms or refund policy is undecided.
+- Live charging requires `STRIPE_MODE=live`, a live webhook secret, and a restricted `rk_live_` key saved on the owner Payment setup page. Never weaken the separation between test and live keys or secrets.
 
 ## Domain rules
 

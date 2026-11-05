@@ -1,7 +1,7 @@
 // Stripe Checkout for one-time purchases (issue #18).
 // Orders are created as 'pending' here and only become 'paid' through a verified webhook (lib/stripe-webhook.ts).
 import {env} from 'cloudflare:workers';
-import {storedStripeKey, stripeTestClient} from './stripe-test';
+import {storedStripeKeyFor, stripeClientFor, stripeMode} from './stripe-test';
 import {academyToday} from './public-schedule';
 import type {Charge} from './quotes';
 
@@ -20,9 +20,10 @@ const now = () => new Date().toISOString();
 
 export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Charge, origin: string, termsUrl: string): Promise<{orderId: string; url: string}> {
   if (charge.amountCents < MIN_CHARGE_CENTS) throw new CheckoutError(400, 'This item has no amount to pay online. Contact the academy.');
-  const key = await storedStripeKey();
+  const mode = stripeMode();
+  const key = await storedStripeKeyFor(mode);
   if (!key) throw new CheckoutError(503, 'Online payment is not set up yet.');
-  const stripe = stripeTestClient(key);
+  const stripe = stripeClientFor(mode, key);
 
   await releaseStalePending(stripe, charge.dedupeKey);
 
@@ -31,9 +32,9 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
   try {
     await env.DB!.prepare(
       `INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'usd',?,?,'pending',?,0,?,?)`
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'usd',?,?,'pending',?,?,?,?)`
     ).bind(id, buyer.id, buyer.email, wrestler.id, wrestler.name, charge.kind, charge.program, charge.itemId, charge.itemLabel,
-      JSON.stringify(charge.dates), charge.baseCents, charge.discountCents, charge.amountCents, JSON.stringify(charge.pricing), terms, charge.dedupeKey, at, at).run();
+      JSON.stringify(charge.dates), charge.baseCents, charge.discountCents, charge.amountCents, JSON.stringify(charge.pricing), terms, charge.dedupeKey, mode === 'live' ? 1 : 0, at, at).run();
   } catch {
     throw new CheckoutError(409, 'This is already paid or a payment for it is in progress. Check your family account.');
   }
@@ -62,7 +63,7 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
 
 // A family who abandons checkout and tries again gets a fresh session. The old session is expired at Stripe
 // first. If Stripe refuses because it was already paid, the new checkout is refused instead of charging twice.
-async function releaseStalePending(stripe: ReturnType<typeof stripeTestClient>, dedupeKey: string) {
+async function releaseStalePending(stripe: ReturnType<typeof stripeClientFor>, dedupeKey: string) {
   const open = await env.DB!.prepare("SELECT id,status,stripe_session_id FROM orders WHERE dedupe_key=? AND status IN ('pending','paid')")
     .bind(dedupeKey).first<{id: string; status: string; stripe_session_id: string | null}>();
   if (!open) return;
