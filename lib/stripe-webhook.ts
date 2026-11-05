@@ -30,7 +30,7 @@ export async function verifyStripeSignature(raw: string, header: string | null, 
   return signatures.some(s => sameString(s, expected));
 }
 
-type OrderRow = {id: string; status: string; kind: string; amount_cents: number; currency: string; livemode: number; stripe_session_id: string | null; dedupe_key: string};
+type OrderRow = {id: string; status: string; kind: string; amount_cents: number; currency: string; livemode: number; stripe_session_id: string | null; dedupe_key: string; item_id: string; dates: string; pricing: string};
 
 // A 12-month term runs through the day before the same calendar date a year later.
 // A February 29 start ends on February 28, because March 1 of the next year is "the same date" rolled over.
@@ -64,6 +64,17 @@ async function setTwelvePaymentEnd(livemode: number, subscriptionId: string) {
   return new Date(cancelAt * 1000).toISOString();
 }
 
+async function overLimit(order: OrderRow): Promise<string | null> {
+  const slots = Number(JSON.parse(order.pricing || '{}').slots);
+  if (!Number.isInteger(slots) || slots <= 0) return null;
+  for (const d of JSON.parse(order.dates) as string[]) {
+    const row = await env.DB!.prepare("SELECT count(*) n FROM orders WHERE kind='event' AND item_id=? AND status='paid' AND id<>? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)")
+      .bind(order.item_id, order.id, d).first<{n: number}>();
+    if ((row?.n ?? 0) >= slots) return `${d}: ${(row?.n ?? 0) + 1} paid for ${slots} seats`;
+  }
+  return null;
+}
+
 export type Outcome = {outcome: string; orderId: string | null};
 
 export async function applyStripeEvent(event: any): Promise<Outcome & {duplicate: boolean}> {
@@ -95,7 +106,7 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
   if (event.type.startsWith('checkout.session.')) {
     const orderId = typeof obj.client_reference_id === 'string' ? obj.client_reference_id : typeof obj.metadata?.order_id === 'string' ? obj.metadata.order_id : null;
     if (!orderId) return none('ignored:no-order');
-    const order = await env.DB!.prepare('SELECT id,status,kind,amount_cents,currency,livemode,stripe_session_id,dedupe_key FROM orders WHERE id=?').bind(orderId).first<OrderRow>();
+    const order = await env.DB!.prepare('SELECT id,status,kind,amount_cents,currency,livemode,stripe_session_id,dedupe_key,item_id,dates,pricing FROM orders WHERE id=?').bind(orderId).first<OrderRow>();
     if (!order) return none('rejected:unknown-order', orderId);
     if (order.stripe_session_id && order.stripe_session_id !== obj.id) return none('rejected:session-mismatch', orderId);
     if (Boolean(obj.livemode) !== Boolean(order.livemode)) return none('rejected:mode-mismatch', orderId);
@@ -123,7 +134,12 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
         ]};
       }
       const term = order.kind === 'annual' ? membershipTerm(paidDate) : null;
-      return {outcome: 'paid', orderId, writes: [
+      // A payment that completes after its seat hold lapsed can push an event over its limit. The payment stands
+      // (money was taken), and the owner is warned so they can add a seat or refund.
+      const overCapacity = order.kind === 'event' ? await overLimit(order) : null;
+      const warn = overCapacity ? [env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
+        .bind(crypto.randomUUID(), 'stripe', 'event_over_capacity', `${orderId} ${overCapacity}`, at)] : [];
+      return {outcome: overCapacity ? 'paid-over-capacity' : 'paid', orderId, writes: [...warn,
         // If the family started a newer checkout for the same item, that newer one is canceled so the paid order wins.
         env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE dedupe_key=? AND status='pending' AND id<>?").bind(at, order.dedupe_key, orderId),
         env.DB!.prepare("UPDATE orders SET status='paid',paid_at=?,updated_at=?,stripe_session_id=?,stripe_payment_intent=?,term_start=?,term_end=? WHERE id=? AND status IN ('pending','expired','canceled')")

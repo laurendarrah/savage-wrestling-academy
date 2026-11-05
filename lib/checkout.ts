@@ -4,6 +4,7 @@ import {env} from 'cloudflare:workers';
 import {storedStripeKeyFor, stripeClientFor, stripeMode} from './stripe-test';
 import {academyToday} from './public-schedule';
 import type {Charge} from './quotes';
+import {withinCapacity} from './capacity';
 
 export {ONLINE_KINDS, checkoutKinds} from './checkout-config';
 export const MIN_CHARGE_CENTS = 50;
@@ -37,6 +38,12 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
       JSON.stringify(charge.dates), charge.baseCents, charge.discountCents, charge.amountCents, JSON.stringify(charge.pricing), terms, charge.dedupeKey, mode === 'live' ? 1 : 0, at, at).run();
   } catch {
     throw new CheckoutError(409, 'This is already paid or a payment for it is in progress. Check your family account.');
+  }
+  // Two families racing for the last seat: the earlier order keeps it, the later one is released before Stripe.
+  const slots = charge.kind === 'event' ? charge.pricing.slots : null;
+  if (typeof slots === 'number' && slots > 0 && !(await withinCapacity(id, charge.itemId, charge.dates, slots))) {
+    await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=? AND status='pending'").bind(now(), id).run();
+    throw new CheckoutError(409, 'This event just filled up. Nothing was charged. Contact the academy about its waitlist.');
   }
 
   let session;
