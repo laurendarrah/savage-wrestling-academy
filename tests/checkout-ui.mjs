@@ -35,6 +35,7 @@ async function openScreen({paymentsEnabled, checkout = {ok: true, body: {url: 'h
   assert.equal(el('payBox').hidden, true);
   assert.equal(el('payPending').hidden, false);
   assert.equal(el('reviewHeading').textContent, 'Review only — not booked');
+  assert.equal(el('status').textContent, 'Selection reviewed. Registration has not been completed.');
   assert.match(el('details').innerHTML, /\$20\.00 \(non-member price\)/, 'the wrestler sees their own price');
 }
 
@@ -44,6 +45,7 @@ async function openScreen({paymentsEnabled, checkout = {ok: true, body: {url: 'h
   assert.equal(el('payBox').hidden, false);
   assert.equal(el('payPending').hidden, true);
   assert.equal(el('reviewHeading').textContent, 'Review and pay');
+  assert.match(el('status').textContent, /pay securely to register/, 'no review-only wording while checkout is open');
   assert.equal(el('payButton').disabled, true, 'pay is disabled until terms are accepted');
   await el('payButton').onclick();
   assert.equal(calls.filter(c => c.url === '/api/checkout').length, 0, 'clicking without accepting terms does nothing');
