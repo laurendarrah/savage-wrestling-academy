@@ -7,16 +7,19 @@ import {familyPasses} from './passes';
 import {cardStatus, reviewFor} from './usaw';
 import {currentWaiver, signatureFor} from './waivers';
 import {academyToday} from './public-schedule';
+import {programOn} from './transfers';
 
 type Upcoming = {date: string; start: string | null; end: string | null; title: string; type: string; why: string};
 const addDays = (d: string, n: number) => new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 
 export async function upcomingFor(userId: string, wrestlerId: string, from: string, days = 21): Promise<Upcoming[]> {
   const to = addDays(from, days - 1);
-  const orders = (await env.DB!.prepare("SELECT kind,program,item_id,dates,term_start,term_end,pricing FROM orders WHERE user_id=? AND wrestler_id=? AND status='paid'")
+  const orders = (await env.DB!.prepare("SELECT id,kind,program,item_id,dates,term_start,term_end,pricing FROM orders WHERE user_id=? AND wrestler_id=? AND status='paid'")
     .bind(userId, wrestlerId).all<any>()).results.map(o => ({...o, dates: JSON.parse(o.dates || '[]') as string[]}));
   const scholarships = (await env.DB!.prepare("SELECT program,accepted_at FROM scholarship_awards WHERE status='active' AND user_id=? AND wrestler_id=? AND accepted_at IS NOT NULL")
     .bind(userId, wrestlerId).all<{program: string; accepted_at: string}>()).results;
+  const transfers = (await env.DB!.prepare('SELECT t.order_id,t.from_program,t.effective_date,t.created_at FROM membership_transfers t JOIN orders o ON o.id=t.order_id WHERE o.user_id=? AND o.wrestler_id=?')
+    .bind(userId, wrestlerId).all<any>()).results;
   const nothing = !orders.length && !scholarships.length;
   const out: Upcoming[] = [];
   if (!nothing) {
@@ -25,7 +28,7 @@ export async function upcomingFor(userId: string, wrestlerId: string, from: stri
       for (const s of sessionsOn(state, d)) {
         let why = '';
         if (s.type === 'practice') {
-          if (orders.some(o => (o.kind === 'annual' || o.kind === 'monthly') && o.program === s.program && o.term_start <= d && o.term_end >= d)) why = 'Membership';
+          if (orders.some(o => (o.kind === 'annual' || o.kind === 'monthly') && programOn(o, transfers, d) === s.program && o.term_start <= d && o.term_end >= d)) why = 'Membership';
           else if (orders.some(o => o.kind === 'walkin' && o.program === s.program && o.item_id === `${s.program}:${d}:${s.start}` && o.dates.includes(d))) why = 'Walk-in';
           else if (scholarships.some(a => a.program === s.program && a.accepted_at.slice(0, 10) <= d)) why = 'Scholarship';
         } else {

@@ -13,6 +13,7 @@ import {cardProblem} from './usaw';
 import {waiverProblem} from './waivers';
 import {lessonOpening, lessonSettings} from './lessons';
 import {settleOffers, activeOffer} from './waitlist';
+import {PROGRAM_ON} from './transfers';
 
 export type ChargeKind = 'walkin' | 'annual' | 'monthly' | 'event' | 'live' | 'lesson';
 export type Charge = {
@@ -49,9 +50,9 @@ export async function paidMembership(userId: string, wrestlerId: string, today: 
   const row = await env.DB!.prepare(
     `SELECT id, kind, program, term_start, term_end FROM orders
      WHERE user_id=? AND wrestler_id=? AND status='paid' AND kind IN ('annual','monthly')
-       AND term_start<=? AND term_end>=? ${program ? 'AND program=?' : ''}
+       AND term_start<=? AND term_end>=? ${program ? `AND ${PROGRAM_ON}=?` : ''}
      ORDER BY term_end DESC LIMIT 1`
-  ).bind(...[userId, wrestlerId, today, today, ...(program ? [program] : [])]).first<{id: string; kind: string; program: string; term_start: string; term_end: string}>();
+  ).bind(...[userId, wrestlerId, today, today, ...(program ? [today, program] : [])]).first<{id: string; kind: string; program: string; term_start: string; term_end: string}>();
   return row ?? null;
 }
 export async function isMember(userId: string, wrestlerId: string, today: string) {

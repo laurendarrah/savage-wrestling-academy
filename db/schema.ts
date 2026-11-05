@@ -137,3 +137,9 @@ export const waitlistEntries=sqliteTable("waitlist_entries",{
  offerHours:integer("offer_hours"),autoNext:integer("auto_next").notNull().default(0),offeredBy:text("offered_by"),closedAt:text("closed_at")
 },t=>[index("waitlist_event").on(t.eventId,t.status,t.createdAt),uniqueIndex("waitlist_once").on(t.eventId,t.userId,t.wrestlerId).where(sql`${t.status} IN ('waiting','offered')`),
  check("waitlist_status",sql`${t.status} IN ('waiting','offered','accepted','expired','withdrawn','removed')`)]);
+// Program transfers (issue #74). orders.program holds the latest program; each row records the program before a
+// transfer took effect, so rosters for earlier dates still show the program the wrestler was in then.
+export const membershipTransfers=sqliteTable("membership_transfers",{
+ id:text("id").primaryKey(),orderId:text("order_id").notNull(),fromProgram:text("from_program").notNull(),toProgram:text("to_program").notNull(),
+ effectiveDate:text("effective_date").notNull(),reason:text("reason").notNull(),transferredBy:text("transferred_by").notNull(),createdAt:text("created_at").notNull()
+},t=>[index("transfers_order").on(t.orderId,t.effectiveDate)]);
