@@ -124,3 +124,8 @@ export const waiverSignatures=sqliteTable("waiver_signatures",{
 export const academySettings=sqliteTable("academy_settings",{
  id:text("id").primaryKey(),payload:text("payload").notNull(),updatedAt:text("updated_at").notNull(),updatedBy:text("updated_by").notNull()
 });
+// QR entry passes (issue #71). One active pass per wrestler; replacing one revokes the old code at once.
+export const wrestlerPasses=sqliteTable("wrestler_passes",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),token:text("token").notNull(),
+ createdAt:text("created_at").notNull(),revokedAt:text("revoked_at"),revokedBy:text("revoked_by")
+},t=>[uniqueIndex("wrestler_pass_token").on(t.token),uniqueIndex("wrestler_pass_active").on(t.userId,t.wrestlerId).where(sql`${t.revokedAt} IS NULL`)]);

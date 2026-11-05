@@ -21,7 +21,7 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 | Coach access, openings, practice plans, curricula | Live |
 | Registration and booking review with server pricing | Live, stops before payment |
 | Online payment, memberships, orders | Built, closed until `CHECKOUT_KINDS` opens each type. Offline payments recorded on `/payments` |
-| Real roster and check-in | Built. Owner and coaches check wrestlers in on `/roster` |
+| Real roster and check-in | Built. Owner and coaches check wrestlers in on `/roster`, by hand or by scanning QR passes |
 | USA Wrestling cards | Built. Missing or expired cards block booking; owner verifies on `/cards` |
 | Waivers | Built. Owner publishes on `/waivers`; families sign on `/waiver`; unsigned wrestlers cannot book |
 | Private lessons | Built. Families book coach openings on `/lesson`; online payment waits for the refund policy (#80) |
