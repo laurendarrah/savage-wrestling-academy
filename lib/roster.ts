@@ -74,13 +74,13 @@ export async function rosterFor(date: string, scope: Scope) {
   const [fams, reviews, signed, exceptions, attendance] = await env.DB!.batch([
     env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
-    env.DB!.prepare('SELECT user_id,wrestler_id FROM waiver_signatures WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?))').bind(waiver?.id ?? '', ids),
+    env.DB!.prepare('SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?))').bind(waiver?.id ?? '', ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
     env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date)
   ]);
   const families = new Map<string, any>((fams.results as any[]).map(r => [r.user_id, {email: r.email, ...JSON.parse(r.payload)}]));
   const review = new Map<string, any>((reviews.results as any[]).map(r => [`${r.user_id}|${r.wrestler_id}`, r]));
-  const signedSet = new Set((signed.results as any[]).map(r => `${r.user_id}|${r.wrestler_id}`));
+  const signedSet = new Set((signed.results as any[]).map(r => `${r.user_id}|${r.wrestler_id}|${String(r.wrestler_name).trim().toLowerCase()}`));
   const excepted = new Map<string, string[]>();
   for (const r of exceptions.results as any[]) { const k = `${r.user_id}|${r.wrestler_id}`; if (!excepted.has(k)) excepted.set(k, []); if (!excepted.get(k)!.includes(r.rule)) excepted.get(k)!.push(r.rule); }
   const checked = new Map<string, {checked_in_at: string; checked_in_by: string}>();
@@ -101,7 +101,7 @@ export async function rosterFor(date: string, scope: Scope) {
         parentName: f?.parentName || null, phone: f?.phone || null, email: scope.role === 'owner' ? f?.email ?? null : null,
         sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null,
         card: card.state, cardExpires: card.expires || null, cardNote: card.note,
-        waiverSigned: waiver ? signedSet.has(k) : null,
+        waiverSigned: waiver ? signedSet.has(`${k}|${String(w?.name ?? r.name).trim().toLowerCase()}`) : null,
         exceptions: ['usaw', 'waiver'].filter(x => excepted.get(k)?.includes(x))
       });
     }

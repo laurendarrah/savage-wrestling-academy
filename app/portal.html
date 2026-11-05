@@ -181,7 +181,7 @@ async function loadToday(){
  const tile=(href,label,value,note,warn)=>`<a class="tool" href="${href}"><span class="muted">${esc(label)}</span><b style="font-size:28px${warn?';color:#b12c38':''}">${esc(value)}</b><span class="muted small">${esc(note)}</span></a>`;
  const t=[];
  if(roster){const s=roster.sessions||[],all=s.reduce((n,x)=>n+x.entries.length,0),inn=s.reduce((n,x)=>n+x.checkedIn,0);t.push(tile('/roster','Sessions today',s.length,s.length?inn+' of '+all+' wrestlers checked in':'Nothing scheduled today'))}
- if(cards){const b=(cards.cards||[]).filter(c=>['missing','expired','invalid'].includes(c.state)).length;t.push(tile('/cards','Blocked by USA Wrestling card',b,b?'Missing, expired or not valid':'Every card is current',b>0))}
+ if(cards){const b=(cards.cards||[]).filter(c=>['missing','expired','invalid','recheck'].includes(c.state)).length;t.push(tile('/cards','Blocked by USA Wrestling card',b,b?'Missing, expired or not valid':'Every card is current',b>0))}
  if(waivers&&waivers.current){const n=(waivers.wrestlers||[]).filter(w=>!w.signed).length;t.push(tile('/waivers','Waiver not signed',n,n?'Cannot book until signed':'Everyone has signed',n>0))}
  if(messages){const n=(messages.families||[]).reduce((a,f)=>a+(f.unread||0),0);t.push(tile('/messages','Unread family messages',n,n?'Families are waiting for a reply':'All caught up',n>0))}
  if(waitlists){const e=(waitlists.events||[]).flatMap(x=>x.entries),w=e.filter(x=>x.status==='waiting').length,o=e.filter(x=>x.status==='offered').length;t.push(tile('/waitlists','On waitlists',w,o?o+' seat'+(o===1?'':'s')+' offered':'No seats offered'))}

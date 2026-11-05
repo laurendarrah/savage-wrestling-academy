@@ -7,15 +7,18 @@ import {exceptionFor} from './exceptions';
 
 export type CardWrestler = {id: string; name: string; usawNumber?: string; usawExpires?: string};
 export type Review = {number: string; expires: string; status: 'valid' | 'invalid'; note: string; reviewed_at: string} | null;
-export type CardStatus = {state: 'missing' | 'expired' | 'invalid' | 'current' | 'verified'; number: string; expires: string; note: string};
+export type CardStatus = {state: 'missing' | 'expired' | 'invalid' | 'recheck' | 'current' | 'verified'; number: string; expires: string; note: string};
 
 const longDate = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric'});
 
 export function cardStatus(w: CardWrestler, review: Review, onDate: string): CardStatus {
   const number = (w.usawNumber || '').trim().toUpperCase(), expires = w.usawExpires || '';
   if (!number || !USAW_NUMBER.test(number) || !/^\d{4}-\d{2}-\d{2}$/.test(expires)) return {state: 'missing', number, expires, note: ''};
-  const matches = !!review && review.number === number && review.expires === expires;
+  const same = (a: string, b: string) => a.replace(/[\s-]/g, '') === b.replace(/[\s-]/g, '');
+  const matches = !!review && same(review.number, number) && review.expires === expires;
   if (matches && review!.status === 'invalid') return {state: 'invalid', number, expires, note: review!.note};
+  // After the academy rejects a card, any change waits for the academy to check it again (issue #97).
+  if (review && review.status === 'invalid') return {state: 'recheck', number, expires, note: review.note};
   if (expires < onDate) return {state: 'expired', number, expires, note: ''};
   return {state: matches && review!.status === 'valid' ? 'verified' : 'current', number, expires, note: ''};
 }
@@ -34,6 +37,7 @@ export async function cardProblem(userId: string, w: CardWrestler, dates: string
   const fix = 'Update it in your family account before booking.';
   if (s.state === 'missing') return `${w.name} needs a current USA Wrestling card on file to book. Add the card number and expiration date in your family account.`;
   if (s.state === 'invalid') return `The academy could not verify ${w.name}'s USA Wrestling card${s.note ? ` (${s.note})` : ''}. ${fix}`;
+  if (s.state === 'recheck') return `${w.name}'s updated USA Wrestling card is waiting for the academy to check it. Booking opens once it is verified.`;
   if (s.state === 'expired') return dates.length > 1 || last !== dates[0]
     ? `${w.name}'s USA Wrestling card expires ${longDate(s.expires)}, before this session ends on ${longDate(last)}. ${fix}`
     : `${w.name}'s USA Wrestling card expired on ${longDate(s.expires)}. ${fix}`;

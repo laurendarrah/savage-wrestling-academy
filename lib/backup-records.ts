@@ -41,6 +41,9 @@ export const RECORD_TABLES:Record<string,Col[]>={
 // Tables whose primary key is not a single id column.
 export const RECORD_KEYS:Record<string,string[]>={subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
 const keysOf=(t:string)=>RECORD_KEYS[t]??['id'];
+// JSON columns must parse to the expected shape, so a damaged or tampered file cannot store data that crashes a page.
+const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={orders:[['dates','array'],['pricing','object'],['terms_accepted','object']],waitlist_entries:[['dates','array']],academy_settings:[['payload','object']],waiver_signatures:[['signature_record','object']],announcements:[['audience','object']]};
+const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
 const V2_TABLES=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
 const ARCHIVE_COLS:Col[]=[['id','text'],['actor','text'],['action','text'],['target','text',false,2000],['created_at','text']];
 const ROW_LIMIT=20000,ARCHIVE_LIMIT=20000,EXPORT_LIMIT=12000000;
@@ -87,7 +90,7 @@ function validExtra(d:any){
  // a section for its version, or carrying one it should not, is refused.
  const expected=d.version===2?V2_TABLES:Object.keys(RECORD_TABLES);
  if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).sort().join()!==[...expected].sort().join())return false;
- for(const [t,spec] of Object.entries(RECORD_TABLES)){if(!expected.includes(t))continue;const rows=r[t],key=(x:any)=>JSON.stringify(keysOf(t).map(k=>x?.[k]));if(!Array.isArray(rows)||rows.length>ROW_LIMIT||new Set(rows.map(key)).size!==rows.length||!rows.every((x:any)=>validRow(x,spec)))return false}
+ for(const [t,spec] of Object.entries(RECORD_TABLES)){if(!expected.includes(t))continue;const rows=r[t],key=(x:any)=>JSON.stringify(keysOf(t).map(k=>x?.[k]));if(!Array.isArray(rows)||rows.length>ROW_LIMIT||new Set(rows.map(key)).size!==rows.length||!rows.every((x:any)=>validRow(x,spec)&&(JSON_COLUMNS[t]??[]).every(([c,shape])=>jsonShape(x[c],shape))))return false}
  return !!a&&typeof a==='object'&&typeof a.truncated==='boolean'&&Array.isArray(a.security_events)&&a.security_events.length<=ARCHIVE_LIMIT&&a.security_events.every((x:any)=>validRow(x,ARCHIVE_COLS));
 }
 export async function restoreBackup(backup:Backup,expectedFingerprint:string,actor:string){

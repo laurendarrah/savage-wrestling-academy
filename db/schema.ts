@@ -118,7 +118,7 @@ export const waiverSignatures=sqliteTable("waiver_signatures",{
  id:text("id").primaryKey(),versionId:text("version_id").notNull(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),
  wrestlerName:text("wrestler_name").notNull(),signer:text("signer").notNull(),email:text("email").notNull(),
  signatureRecord:text("signature_record").notNull(),signedAt:text("signed_at").notNull()
-},t=>[uniqueIndex("waiver_signature_once").on(t.versionId,t.userId,t.wrestlerId),index("waiver_signatures_family").on(t.userId,t.wrestlerId)]);
+},t=>[uniqueIndex("waiver_signature_per_child").on(t.versionId,t.userId,t.wrestlerId,t.wrestlerName),index("waiver_signatures_family").on(t.userId,t.wrestlerId)]);
 // Owner settings that are not part of the published academy state, as one JSON document per key (issue #70: lesson
 // prices and coach pay splits).
 export const academySettings=sqliteTable("academy_settings",{

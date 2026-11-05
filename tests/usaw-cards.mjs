@@ -69,7 +69,9 @@ assert.equal(usaw.cardStatus({...W, usawNumber: 'AB12', usawExpires: ny(-1)}, nu
 assert.equal(usaw.cardStatus({...W, usawNumber: 'AB12', usawExpires: today}, null, today).state, 'current', 'valid through its expiration date');
 const review = {number: 'AB12', expires: ny(30), status: 'invalid', note: 'number not found', reviewed_at: 'x'};
 assert.equal(usaw.cardStatus({...W, usawNumber: 'ab12', usawExpires: ny(30)}, review, today).state, 'invalid', 'numbers compare case-insensitively');
-assert.equal(usaw.cardStatus({...W, usawNumber: 'AB13', usawExpires: ny(30)}, review, today).state, 'current', 'an edited card clears the review');
+assert.equal(usaw.cardStatus({...W, usawNumber: 'AB13', usawExpires: ny(30)}, review, today).state, 'recheck', 'after a rejection, an edited card waits for the academy (issue #97)');
+assert.equal(usaw.cardStatus({...W, usawNumber: 'A-B12', usawExpires: ny(30)}, review, today).state, 'invalid', 'a dash does not get around a rejection');
+assert.equal(usaw.cardStatus({...W, usawNumber: 'AB13', usawExpires: ny(30)}, {...review, status: 'valid'}, today).state, 'current', 'editing a verified card just needs a fresh check');
 assert.equal(usaw.cardStatus({...W, usawNumber: 'AB12', usawExpires: ny(30)}, {...review, status: 'valid'}, today).state, 'verified');
 
 // --- Family profile validation ---
@@ -121,10 +123,12 @@ blockedBy(await walkin(), /could not verify Sam's USA Wrestling card \(Number no
 actor = {owner: false, id: 'p1'};
 r = await call(familyApi, 'GET');
 assert.equal(r.body.cards.w1.state, 'invalid', 'the family sees the review'); assert.equal(r.body.cards.w1.note, 'Number not found');
-// The family corrects the number; the old review no longer applies and booking works again.
+// The family corrects the number: booking stays blocked until the academy checks the new card (issue #97).
+setCard('AB-1234', ny(200));
+blockedBy(await walkin(), /could not verify/);
 setCard('AB1235', ny(200));
-assert.equal((await walkin()).ok, true);
-assert.equal((await call(familyApi, 'GET')).body.cards.w1.state, 'current');
+blockedBy(await walkin(), /waiting for the academy to check it/);
+assert.equal((await call(familyApi, 'GET')).body.cards.w1.state, 'recheck');
 actor = {owner: true, id: 'owner-id'};
 assert.equal((await call(cardsApi, 'POST', {userId: 'p1', wrestlerId: 'w1', status: 'valid', number: 'AB1235', expires: ny(200)})).status, 200);
 list = (await call(cardsApi, 'GET')).body.cards; assert.equal(list[0].state, 'verified'); assert.ok(list[0].reviewedAt);

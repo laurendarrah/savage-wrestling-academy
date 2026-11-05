@@ -27,6 +27,7 @@ function cardLine(w){
  const c=cardState(w),server=cards[w.id],blocked=server&&server.exceptionUntil?' The academy is allowing bookings until '+esc(longDate(server.exceptionUntil))+' while this is sorted out.':' <strong>Booking is blocked until this is fixed.</strong>',renew=' <a href="https://www.usawmembership.com" target="_blank" rel="noopener">Get or renew a card →</a>';
  if(c.state==='missing')return '<span class="billing-pill warning">No USA Wrestling card</span> Add the card number and expiration date.'+blocked+renew;
  if(c.state==='expired')return '<span class="billing-pill warning">USA Wrestling card expired</span> Expired '+esc(longDate(c.expires))+'.'+blocked+renew;
+ if(c.state==='recheck')return '<span class="billing-pill warning">Waiting for the academy</span> The academy will check your updated card.'+blocked;
  if(c.state==='invalid')return '<span class="billing-pill warning">Card not verified</span> The academy could not verify this card'+(c.note?': '+esc(c.note):'')+'. Check the number and date.'+blocked;
  const soon=c.expires<=new Date(Date.now()+30*864e5).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
  return '<span class="billing-pill '+(soon?'warning':'active')+'">USA Wrestling card '+(c.state==='verified'?'verified':'on file')+'</span> Current through '+esc(longDate(c.expires))+'.'+(soon?' Renew soon. Sessions after that date cannot be booked.'+renew:'');

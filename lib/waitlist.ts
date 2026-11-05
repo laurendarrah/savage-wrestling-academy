@@ -35,8 +35,8 @@ export async function settleOffers(eventId?: string) {
 }
 
 export async function activeOffer(eventId: string, userId: string, wrestlerId: string) {
-  return await env.DB!.prepare("SELECT id,option,offer_expires_at FROM waitlist_entries WHERE event_id=? AND user_id=? AND wrestler_id=? AND status='offered' AND offer_expires_at>?")
-    .bind(eventId, userId, wrestlerId, nowIso()).first<{id: string; option: string; offer_expires_at: string}>();
+  return await env.DB!.prepare("SELECT id,option,dates,offer_expires_at FROM waitlist_entries WHERE event_id=? AND user_id=? AND wrestler_id=? AND status='offered' AND offer_expires_at>?")
+    .bind(eventId, userId, wrestlerId, nowIso()).first<{id: string; option: string; dates: string; offer_expires_at: string}>();
 }
 
 // Called when a family pays for an event (online or recorded by the owner): their offer or waiting entry is done.
