@@ -46,16 +46,27 @@ Recommendation for 6 and 7: launch on the current address and current hosting. C
 | Read access to the live database, or an export | Justin | Know how many real families and scholarships exist before changing anything |
 | The four files dropped from the Drive upload | Justin | `.gitignore`, `.npmrc`, `.openai/hosting.json`, `.env.example` |
 
-## Already done (on GitHub, ready to review)
+## Status as of Thursday, November 5, evening
 
-| Branch | Change |
-|---|---|
-| `fix/sample-workspace-bugs` | Camp review crash fixed, drop-in grade rules match the server, Kindergarten selectable |
-| `chore/patch-dependency-advisories` | All 8 production security advisories fixed, including 2 critical |
-| `fix/auth-callback-origin` | Sign-up and password-reset emails link to the live site instead of a retired address |
-| `fix/complete-backup-coverage` | Backups include every business record, including signed scholarship agreements |
+Most of next week's code is already built and waiting for review. Each item is on its own branch with tests. Merge in this order (also on issue #15):
 
-All four merge together cleanly, and the 21 test scripts, typecheck and build pass on the combined result.
+| Order | Branch | What it does | Issue |
+|---|---|---|---|
+| 1 | `chore/patch-dependency-advisories` | Fixes all 8 production security advisories | SEC-01 |
+| 2 | `chore/30-collaboration-setup` | Templates, automatic checks, README, contributing guide | #30 |
+| 3 | `fix/sample-workspace-bugs` | Camp review crash, drop-in grade rules, Kindergarten | DEMO-01, DEMO-02 |
+| 4 | `fix/auth-callback-origin` | Sign-up and reset emails link to the live site | AUTH-01 |
+| 5 | `fix/complete-backup-coverage` | Backups include every business record | DATA-02 |
+| 6 | `docs/launch-plan` | This plan | |
+| 7 | `feat/18-stripe-checkout` | Online payment and the signed Stripe webhook, off until switched on | #18, #19 |
+| 8 | `feat/21-family-purchases` | Real memberships and purchase history on the family page | #21 |
+| 9 | `feat/22-real-roster` | Roster and check-in from paid orders | #22 |
+| 10 | `feat/26-live-stripe-mode` | Live Stripe mode behind a deliberate switch | #26 |
+| 11 | `fix/23-label-sample-screens` | Sample-data notices in the owner workspace | #23 |
+
+All eleven merge together with no conflicts. On the combined code, all 27 test scripts, the typecheck and the build pass, and the production security audit is clean. The payment webhook was also run in the real Cloudflare runtime against signed, forged, replayed, late and refund events.
+
+**What is left for Launch 1 is mostly not code:** the decisions (#1 to #8), access (#9 to #14), the test pass with Stripe test cards (#24), the restore drill (#25), the live switch (#26), and monthly memberships once terms are approved (#20).
 
 ## Day-by-day plan
 
@@ -71,7 +82,7 @@ All four merge together cleanly, and the 21 test scripts, typecheck and build pa
 
 Done when: a test family can sign up, receive the confirmation email, click the link, and land on the live site.
 
-### Monday, November 9: one-time payments in test mode
+### Monday, November 9: one-time payments in test mode (built, needs test-card pass)
 
 - New tables: orders and payments, keyed to the real family account and wrestler.
 - Stripe Checkout for one-time purchases: walk-in, upfront 12-month membership, camps, clinics, Friday Night Live.
@@ -81,7 +92,7 @@ Done when: a test family can sign up, receive the confirmation email, click the 
 
 Done when: test-card purchases of every one-time type create exactly one order each, and a replayed webhook changes nothing.
 
-### Tuesday, November 10: monthly memberships
+### Tuesday, November 10: monthly memberships (waiting on terms; family page built)
 
 - 12-month membership paid monthly, ending automatically after the 12th payment, per decision 2.
 - A memberships table becomes the single record of who is paid, through what date, for which program.
@@ -90,7 +101,7 @@ Done when: test-card purchases of every one-time type create exactly one order e
 
 Done when: Stripe test clocks show 12 charges then a stop, a failed card marks the membership past due, and a refund is reflected on the family page.
 
-### Wednesday, November 11: the real roster
+### Wednesday, November 11: the real roster (built)
 
 - Owner roster page built from paid memberships and walk-ins for a given practice date. This replaces the sample roster for daily operations.
 - Simple manual check-in on that roster, saved to a real attendance table.
