@@ -8,6 +8,7 @@ import {registrationCatalog} from './registration-catalog';
 import {hasScholarship} from './scholarships';
 import {fridayLiveSchedule} from './friday-live';
 import {publicSchedule, academyToday} from './public-schedule';
+import {eventSlots, seatsLeft} from './capacity';
 
 export type ChargeKind = 'walkin' | 'annual' | 'monthly' | 'event' | 'live';
 export type Charge = {
@@ -141,17 +142,21 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   const option = input.option || 'full';
   if (option !== 'full' && (event.type !== 'Camp' || event.dayCents === null || !event.dates.includes(option) || option < today)) return fail(400, 'Choose an available camp day.');
   if (option === 'full' && event.dates[0] < today) return fail(409, 'This event has already started. Choose a future single camp day if offered, or contact the academy.');
+  const eventDates = option === 'full' ? event.dates : [option];
+  const slots = eventSlots(state, event.id);
+  const left = slots === null ? null : await seatsLeft(event.id, eventDates, slots);
+  if (left !== null && left <= 0) return fail(409, 'This event is full. Contact the academy about its waitlist.');
   const baseCents = option === 'full' ? event.cents : event.dayCents;
   const memberDiscount = member && event.type === 'Camp' && baseCents !== null ? Math.round(baseCents * .1) : 0;
   const review = {
     type: 'event', title: event.name, wrestler: w.name, dates: option === 'full' ? event.dates : [option], baseCents,
-    cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, status: 'registration_review',
+    cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, seatsLeft: left, status: 'registration_review',
     message: (memberDiscount ? 'Active membership verified. A 10% camp member discount is applied.' : 'Price shown is the full price for this event.') + tail(opts, baseCents === null ? null : 'event')
   };
   const charge: Charge | null = baseCents === null ? null : {
     kind: 'event', program: null, itemId: String(event.id), itemLabel: option === 'full' ? String(event.name) : `${event.name} on ${option}`,
     dates: option === 'full' ? event.dates : [option], baseCents, discountCents: memberDiscount, amountCents: baseCents - memberDiscount,
-    pricing: {member, option, eventType: event.type}, dedupeKey: [userId, w.id, 'event', event.id, option].join('|')
+    pricing: {member, option, eventType: event.type, slots}, dedupeKey: [userId, w.id, 'event', event.id, option].join('|')
   };
   return {ok: true, review, charge, wrestler};
 }
