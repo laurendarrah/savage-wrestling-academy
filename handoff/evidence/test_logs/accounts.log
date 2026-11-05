@@ -1,0 +1,1 @@
+Passed: verified owner authorization, family isolation, forged IDs/roles rejected, private cookies, CSRF checks, validation, stale-write protection, auth rate limits, reset URL, password change protection, existing owner access.

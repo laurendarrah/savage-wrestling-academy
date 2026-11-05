@@ -1,0 +1,197 @@
+{
+  "review_date": "2026-11-05",
+  "time_zone": "America/New_York",
+  "sites": {
+    "project_id": "appgprj_6ad13665e8c881918c12b096132b4cae",
+    "version": 70,
+    "commit": "bf444860637d6fc94fbd0342bf7ba0963ed0f178",
+    "deployment_id": "appgdep_6aecaa1b0cc0819193f8caca414abd26",
+    "status": "succeeded",
+    "url": "https://savage-registration-preview.justinaccordino546.chatgpt.site",
+    "audience": "public",
+    "environment": {
+      "revision": 3,
+      "entries": [
+        {
+          "key": "STRIPE_CONFIG_ENCRYPTION_KEY",
+          "is_secret": true,
+          "value_present": false
+        },
+        {
+          "key": "STRIPE_TEST_WEBHOOK_SECRET",
+          "is_secret": true,
+          "value_present": false
+        },
+        {
+          "key": "SUPABASE_PUBLISHABLE_KEY",
+          "is_secret": true,
+          "value_present": false
+        },
+        {
+          "key": "SUPABASE_URL",
+          "is_secret": false,
+          "value_present": true
+        }
+      ]
+    }
+  },
+  "supabase": {
+    "name": "Savage Wrestling Academy LLC",
+    "project_ref": "mdxyylvdgntkjfuiovxi",
+    "region": "us-east-1",
+    "status": "ACTIVE_HEALTHY",
+    "postgres_major": 17,
+    "security_warning": "Leaked password protection disabled",
+    "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+  },
+  "stripe": {
+    "accounts": {
+      "accounts": [
+        {
+          "stripe_context": "acct_1U8nF9PkPTNkVQBz",
+          "livemode": false,
+          "name": "Savage Wrestling Academy LLC"
+        }
+      ]
+    },
+    "prices": [
+      {
+        "id": "price_1UYSTIPkPTNkVQBzRCInKQJg",
+        "unit_amount": 240000,
+        "currency": "usd",
+        "type": "one_time",
+        "recurring": null,
+        "product": {
+          "id": "prod_VX2AV2aVVgqXrr",
+          "name": "SWA Advance"
+        }
+      },
+      {
+        "id": "price_1UYSTEPkPTNkVQBzaP3EhgHL",
+        "unit_amount": 240000,
+        "currency": "usd",
+        "type": "one_time",
+        "recurring": null,
+        "product": {
+          "id": "prod_VX2AcyhLcrSHaP",
+          "name": "SWA Intermediate"
+        }
+      },
+      {
+        "id": "price_1UYST9PkPTNkVQBzhCiXi8OV",
+        "unit_amount": 240000,
+        "currency": "usd",
+        "type": "one_time",
+        "recurring": null,
+        "product": {
+          "id": "prod_VX2Av9pgfUZcmx",
+          "name": "SWA Development"
+        }
+      },
+      {
+        "id": "price_1UVy6zPkPTNkVQBzTYjHFrxN",
+        "unit_amount": 4000,
+        "currency": "usd",
+        "type": "one_time",
+        "recurring": null,
+        "product": {
+          "id": "prod_VX2AV2aVVgqXrr",
+          "name": "SWA Advance"
+        }
+      },
+      {
+        "id": "price_1UVy6wPkPTNkVQBz2fPu6D5j",
+        "unit_amount": 4000,
+        "currency": "usd",
+        "type": "one_time",
+        "recurring": null,
+        "product": {
+          "id": "prod_VX2AcyhLcrSHaP",
+          "name": "SWA Intermediate"
+        }
+      },
+      {
+        "id": "price_1UVy6hPkPTNkVQBzDPN2COI2",
+        "unit_amount": 4000,
+        "currency": "usd",
+        "type": "one_time",
+        "recurring": null,
+        "product": {
+          "id": "prod_VX2Av9pgfUZcmx",
+          "name": "SWA Development"
+        }
+      },
+      {
+        "id": "price_1UVy6UPkPTNkVQBzydeCWnD9",
+        "unit_amount": 20000,
+        "currency": "usd",
+        "type": "recurring",
+        "recurring": {
+          "interval": "month",
+          "interval_count": 1,
+          "meter": null,
+          "trial_period_days": null,
+          "usage_type": "licensed"
+        },
+        "product": {
+          "id": "prod_VX2AV2aVVgqXrr",
+          "name": "SWA Advance"
+        }
+      },
+      {
+        "id": "price_1UVy62PkPTNkVQBzl4wFalmz",
+        "unit_amount": 20000,
+        "currency": "usd",
+        "type": "recurring",
+        "recurring": {
+          "interval": "month",
+          "interval_count": 1,
+          "meter": null,
+          "trial_period_days": null,
+          "usage_type": "licensed"
+        },
+        "product": {
+          "id": "prod_VX2AcyhLcrSHaP",
+          "name": "SWA Intermediate"
+        }
+      },
+      {
+        "id": "price_1UVy5oPkPTNkVQBzhoyNjVv0",
+        "unit_amount": 20000,
+        "currency": "usd",
+        "type": "recurring",
+        "recurring": {
+          "interval": "month",
+          "interval_count": 1,
+          "meter": null,
+          "trial_period_days": null,
+          "usage_type": "licensed"
+        },
+        "product": {
+          "id": "prod_VX2Av9pgfUZcmx",
+          "name": "SWA Development"
+        }
+      }
+    ],
+    "webhooks": [
+      {
+        "id": "we_1UYSJFPkPTNkVQBzW5ip6dkK",
+        "url": "https://savage-registration-preview.justinaccordino546.chatgpt.site/api/stripe-webhook",
+        "status": "disabled",
+        "api_version": "2026-09-30.endive",
+        "enabled_events": [
+          "checkout.session.completed",
+          "checkout.session.async_payment_succeeded",
+          "customer.subscription.created",
+          "customer.subscription.updated",
+          "customer.subscription.deleted",
+          "invoice.paid",
+          "invoice.payment_failed",
+          "charge.refunded",
+          "charge.dispute.created",
+          "radar.early_fraud_warning.created"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+Passed: verified owner authorization, family isolation, forged IDs/roles rejected, private cookies, CSRF checks, validation, stale-write protection, auth rate limits, reset URL, password change protection, existing owner access.
+Passed: owner MFA required, no ChatGPT bypass, MFA setup and challenge, optional family MFA enforced, coach assignment/revocation/isolation, encrypted backups, wrong passphrase/tamper rejection, restore rollback and recovery snapshot, concurrent-change protection.

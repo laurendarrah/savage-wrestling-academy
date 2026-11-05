@@ -1,0 +1,6 @@
+Passed: catalog privacy, prices, scheduled practices, holiday exclusions, no sample fallback, auth and MFA, monthly and walk-in review.
+Passed: existing program names, grade guidance and descriptions upgrade once; IDs and schedules preserved; requested prices applied once and later owner edits preserved.
+Passed: customer grade messages block wrong program selections and show editable program descriptions.
+Passed: customer team code submission and server-confirmed discount breakdown in registration review.
+Passed: calendar days, unavailable/past/holiday dates, explicit time selection, selection clearing, monthly schedule browsing, walk-in switch, loading state and unpublished schedule empty state.
+Passed: annual customer selection, correct upfront price, 12-month total and stale team-code clearing.

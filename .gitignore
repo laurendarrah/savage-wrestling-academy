@@ -1,0 +1,26 @@
+# Reconstructed 2026-11-05. The original .gitignore was dropped by the Drive upload.
+# Replace with Justin's original if it differs.
+
+# Dependencies and package-manager state
+node_modules/
+.sites-runtime/
+
+# Build output and caches
+dist/
+.next/
+.vinext/
+.wrangler/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secrets. Never commit real credentials.
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+
+# OS and editor noise
+.DS_Store
+*.log
+!handoff/**/*.log

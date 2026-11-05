@@ -1,0 +1,92 @@
+[
+  {
+    "test": "accounts.mjs",
+    "exit_code": 0,
+    "seconds": 0.6
+  },
+  {
+    "test": "admin-demo.mjs",
+    "exit_code": 0,
+    "seconds": 0.42
+  },
+  {
+    "test": "attendance-demo.mjs",
+    "exit_code": 0,
+    "seconds": 0.27
+  },
+  {
+    "test": "competition-access.mjs",
+    "exit_code": 0,
+    "seconds": 0.63
+  },
+  {
+    "test": "events.mjs",
+    "exit_code": 0,
+    "seconds": 0.43
+  },
+  {
+    "test": "family-confirmation.mjs",
+    "exit_code": 0,
+    "seconds": 0.09
+  },
+  {
+    "test": "friday-live.mjs",
+    "exit_code": 0,
+    "seconds": 0.5
+  },
+  {
+    "test": "owner-workspace.mjs",
+    "exit_code": 0,
+    "seconds": 0.52
+  },
+  {
+    "test": "planning-calendar.mjs",
+    "exit_code": 0,
+    "seconds": 0.28
+  },
+  {
+    "test": "practice-curricula.mjs",
+    "exit_code": 0,
+    "seconds": 0.53
+  },
+  {
+    "test": "practice-plan-ui.mjs",
+    "exit_code": 0,
+    "seconds": 0.09
+  },
+  {
+    "test": "practice-plans.mjs",
+    "exit_code": 0,
+    "seconds": 0.52
+  },
+  {
+    "test": "registration-return.mjs",
+    "exit_code": 0,
+    "seconds": 0.06
+  },
+  {
+    "test": "registration.mjs",
+    "exit_code": 0,
+    "seconds": 0.49
+  },
+  {
+    "test": "scholarships.mjs",
+    "exit_code": 0,
+    "seconds": 0.69
+  },
+  {
+    "test": "security-hardening.mjs",
+    "exit_code": 0,
+    "seconds": 1.05
+  },
+  {
+    "test": "stripe-setup.mjs",
+    "exit_code": 0,
+    "seconds": 0.4
+  },
+  {
+    "test": "team-codes.mjs",
+    "exit_code": 0,
+    "seconds": 0.4
+  }
+]

@@ -1,0 +1,7 @@
+Passed: owner authorization, request origin, durable writes, second-session reads, stale-write rejection, invalid prices, schedule exclusions, editable prices and checkout, save queue and conflict warning.
+Passed: team codes persist across sessions and invalid discounts cannot overwrite saved codes.
+Passed: first-click holiday navigation, year rollover, full month labels and days off retained.
+Passed: named practice owner persistence, date validation, multi-date calendar selection across months, prices, editing selected dates, removal and Schedules integration.
+Passed: scanner messages update the selected day’s demo roster once and leave saved attendance unchanged.
+Passed: program transfers require Advance approval and preserve earlier placement and attendance.
+Passed: upcoming schedule includes saved special sessions, removes days off, archived/disabled/past sessions, and has no sample fallback.

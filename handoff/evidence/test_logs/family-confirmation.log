@@ -1,0 +1,3 @@
+Passed: saved-profile landing, save confirmation, edit, cancel, and visible save errors.
+Passed: unpaid account membership cards, wrestler-specific registration link, no client-forged billing state, separated examples, renewal/cancelled/failed payment displays, purchase filters, example receipt and empty family.
+Passed: accepted free scholarships render as membership cards and ended awards do not grant active membership.

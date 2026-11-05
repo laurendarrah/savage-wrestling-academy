@@ -1,0 +1,48 @@
+{
+  "commit": "bf444860637d6fc94fbd0342bf7ba0963ed0f178",
+  "tracked_files": 252,
+  "tracked_bytes": 2433614,
+  "largest": [
+    [
+      626207,
+      "tsconfig.tsbuildinfo"
+    ],
+    [
+      349788,
+      "pnpm-lock.yaml"
+    ],
+    [
+      256885,
+      "public/jsqr-1.4.0.js"
+    ],
+    [
+      154724,
+      "app/portal.html"
+    ],
+    [
+      29840,
+      "app/practice-plans/screen.html"
+    ],
+    [
+      29281,
+      "public/qr-preview.js"
+    ],
+    [
+      23736,
+      "drizzle/meta/0012_snapshot.json"
+    ],
+    [
+      23727,
+      "app/register/screen.html"
+    ],
+    [
+      23539,
+      "drizzle/meta/0011_snapshot.json"
+    ],
+    [
+      22210,
+      "tests/competition-access.mjs"
+    ]
+  ],
+  "secret_pattern_findings": []
+}

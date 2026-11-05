@@ -1,0 +1,1 @@
+Passed: owner/MFA boundary, CSRF, live/unrestricted key rejection, Stripe account mismatch, rate limiting, safe errors, encrypted credential roundtrip, key/tamper rejection, no secret response leakage, checkout disabled and test catalog.

@@ -1,0 +1,933 @@
+[
+  {
+    "table": "academy_state",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "payload",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_by",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_academy_state_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "approval_messages",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "approval_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "sender_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "sender_role",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "body",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "approval_messages_thread_order",
+        "unique": 0,
+        "origin": "c",
+        "partial": 0
+      },
+      {
+        "sequence": 1,
+        "name": "sqlite_autoindex_approval_messages_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "auth_attempts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "count",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "bucket",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_auth_attempts_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "coach_openings",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "user_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "date",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "start",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "end",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_coach_openings_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "family_accounts",
+    "columns": [
+      {
+        "name": "user_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "email",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "payload",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_family_accounts_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "integration_secrets",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "encrypted",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_by",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_integration_secrets_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "practice_curricula",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "name_key",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "payload",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_by",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "curriculum_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "lesson_order",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0",
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "practice_curriculum_lesson_name",
+        "unique": 1,
+        "origin": "c",
+        "partial": 0
+      },
+      {
+        "sequence": 1,
+        "name": "sqlite_autoindex_practice_curricula_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "practice_curriculum_groups",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "program",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "name_key",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_by",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "curriculum_program_name",
+        "unique": 1,
+        "origin": "c",
+        "partial": 0
+      },
+      {
+        "sequence": 1,
+        "name": "sqlite_autoindex_practice_curriculum_groups_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "practice_plans",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "program",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "date",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "payload",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "published",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_by",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "practice_plan_program_date",
+        "unique": 1,
+        "origin": "c",
+        "partial": 0
+      },
+      {
+        "sequence": 1,
+        "name": "sqlite_autoindex_practice_plans_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "program_approvals",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "user_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "wrestler_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "program",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "wrestler_name",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "grade",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "status",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "decided_by",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "approval_family_wrestler_program",
+        "unique": 1,
+        "origin": "c",
+        "partial": 0
+      },
+      {
+        "sequence": 1,
+        "name": "sqlite_autoindex_program_approvals_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "recovery_snapshots",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "payload",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_recovery_snapshots_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "restore_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "valid",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_restore_guard_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "scholarship_awards",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "token_hash",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "recipient_email",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "wrestler_name",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "program",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "reference_cents",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "terms_text",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "terms_ready",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0",
+        "primary_key": false
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "1",
+        "primary_key": false
+      },
+      {
+        "name": "status",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'offered'",
+        "primary_key": false
+      },
+      {
+        "name": "user_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "wrestler_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "signer",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "accepted_at",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "ended_at",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "expires_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "created_by",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "signature_record",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "scholarship_active_wrestler",
+        "unique": 1,
+        "origin": "c",
+        "partial": 1
+      },
+      {
+        "sequence": 1,
+        "name": "scholarship_invite_hash",
+        "unique": 1,
+        "origin": "c",
+        "partial": 0
+      },
+      {
+        "sequence": 2,
+        "name": "sqlite_autoindex_scholarship_awards_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "security_events",
+    "columns": [
+      {
+        "name": "id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "actor",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "action",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "target",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_security_events_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  },
+  {
+    "table": "staff_access",
+    "columns": [
+      {
+        "name": "email",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": true
+      },
+      {
+        "name": "name",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "programs",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "active",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null,
+        "primary_key": false
+      }
+    ],
+    "indexes": [
+      {
+        "sequence": 0,
+        "name": "sqlite_autoindex_staff_access_1",
+        "unique": 1,
+        "origin": "pk",
+        "partial": 0
+      }
+    ]
+  }
+]

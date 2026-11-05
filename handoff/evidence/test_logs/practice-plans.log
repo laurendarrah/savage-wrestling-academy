@@ -1,0 +1,4 @@
+Passed: owner-only editing, assigned-coach read scope, drafts, share/unshare, live role revocation, MFA, CSRF, stale saves, scheduled dates/holidays, retained owner history and sanitized plan payloads.
+Passed: independent saved section order per practice date and invalid duration/duplicate-section rejection.
+Passed: calendar summaries include plan state without section content.
+Passed: server rejects total above 90, missing and fractional minutes without saving; accepts exactly 90.

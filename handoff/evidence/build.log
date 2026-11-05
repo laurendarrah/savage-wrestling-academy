@@ -1,0 +1,79 @@
+
+  vinext build  (Vite 8.0.13)
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+[1/5] analyze client references...
+[2Ktransforming...✓ 558 modules transformed.
+rendering chunks...
+✓ built in 937ms
+[2/5] analyze server references...
+[2Ktransforming...✓ 78 modules transformed.
+rendering chunks...
+✓ built in 119ms
+[3/5] build rsc environment...
+[2Ktransforming...✓ 555 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 797ms
+[4/5] build client environment...
+[2Ktransforming...✓ 124 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 647ms
+[5/5] build ssr environment...
+[2Ktransforming...✓ 84 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 389ms
+[0m
+  Route (app)
+  ┌ λ /                             
+  ├ λ /account-setup                
+  ├ λ /accounts                     
+  ├ λ /admin-demo                   
+  ├ λ /api/academy                  
+  ├ λ /api/approval-chat            
+  ├ λ /api/auth                     
+  ├ λ /api/backups                  
+  ├ λ /api/booking-review           
+  ├ λ /api/coach                    
+  ├ λ /api/family                   
+  ├ λ /api/owner-approvals          
+  ├ λ /api/payment-setup            
+  ├ λ /api/practice-curricula       
+  ├ λ /api/practice-plans           
+  ├ λ /api/program-approvals        
+  ├ λ /api/public-schedule          
+  ├ λ /api/registration             
+  ├ λ /api/scholarship              
+  ├ λ /api/scholarships             
+  ├ λ /api/security                 
+  ├ λ /api/staff                    
+  ├ λ /approvals                    
+  ├ λ /attendance-demo              
+  ├ λ /auth/confirm                 
+  ├ λ /backups                      
+  ├ λ /booking                      
+  ├ λ /calendar                     
+  ├ λ /coach                        
+  ├ λ /curricula                    
+  ├ λ /family                       
+  ├ λ /login                        
+  ├ λ /membership-terms             
+  ├ λ /payment-setup                
+  ├ λ /practice-plans               
+  ├ λ /register                     
+  ├ λ /scholarship                  
+  ├ λ /scholarship-agreement        
+  ├ λ /scholarship-signature-preview
+  ├ λ /scholarships                 
+  ├ λ /security                     
+  ├ λ /security-log                 
+  └ λ /staff                        
+
+  λ API
+
+  Build complete. Run `vinext start` to start the production server.
+

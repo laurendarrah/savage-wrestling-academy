@@ -1,0 +1,6 @@
+Passed: grade gates, forged approval rejection, parent request isolation, owner decisions and revocation, stale profile/decision protection, private chat isolation, sender-role enforcement, MFA, validation and CSRF.
+Passed: Elementary and Development lower/upper grade boundaries, kindergarten acceptance, adult rejection, saved-profile checks, forged grade rejection and walk-in gates.
+Passed: real registration review uses saved team code percentage, rejects forged prices/inactive/wrong-program/walk-in codes and keeps codes out of customer catalogs.
+Passed: anonymous public calendar projection and CORS without family data/codes; archived events omitted; family-isolated booking reviews, server prices, camp days, full events, unavailable lessons, MFA/CSRF and no reservations/payments.
+Passed: named practice/date lookup, same-day offerings use their own prices, forged membership/amount ignored, saved wrestler isolation, unselected dates, hide and removal.
+Passed: annual upfront price, 12 installment total, term/renewal controls, forged-price rejection, draft/payment gate and annual approval/account isolation.
