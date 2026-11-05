@@ -129,3 +129,11 @@ export const wrestlerPasses=sqliteTable("wrestler_passes",{
  id:text("id").primaryKey(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),token:text("token").notNull(),
  createdAt:text("created_at").notNull(),revokedAt:text("revoked_at"),revokedBy:text("revoked_by")
 },t=>[uniqueIndex("wrestler_pass_token").on(t.token),uniqueIndex("wrestler_pass_active").on(t.userId,t.wrestlerId).where(sql`${t.revokedAt} IS NULL`)]);
+// Waitlists for full camps and events (issue #73). An offer holds a seat for one family until it expires.
+export const waitlistEntries=sqliteTable("waitlist_entries",{
+ id:text("id").primaryKey(),eventId:text("event_id").notNull(),option:text("option").notNull(),dates:text("dates").notNull(),
+ userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),wrestlerName:text("wrestler_name").notNull(),email:text("email").notNull(),
+ status:text("status").notNull(),createdAt:text("created_at").notNull(),offeredAt:text("offered_at"),offerExpiresAt:text("offer_expires_at"),
+ offerHours:integer("offer_hours"),autoNext:integer("auto_next").notNull().default(0),offeredBy:text("offered_by"),closedAt:text("closed_at")
+},t=>[index("waitlist_event").on(t.eventId,t.status,t.createdAt),uniqueIndex("waitlist_once").on(t.eventId,t.userId,t.wrestlerId).where(sql`${t.status} IN ('waiting','offered')`),
+ check("waitlist_status",sql`${t.status} IN ('waiting','offered','accepted','expired','withdrawn','removed')`)]);

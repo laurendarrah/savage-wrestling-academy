@@ -139,7 +139,7 @@ Done when: the real purchase and refund appear correctly in Stripe, the database
 | Waivers | **Built (#69).** The owner publishes the approved waiver on `/waivers`; families sign per wrestler with a drawn signature on `/waiver`; unsigned wrestlers cannot book. Required only once a waiver is published |
 | USA Wrestling cards | **Built (#68).** Families enter the card number and expiration date; a missing, expired or rejected card blocks every booking type, including offline payments. The owner verifies cards on `/cards`. Rosters flag lapsed cards at the door |
 | Announcements and messages | Owner's email |
-| Waitlists | Owner emails the next family when a spot opens |
+| Waitlists | **Built (#73).** Families join a full camp or event from the booking page; the owner offers a freed seat on `/waitlists`, held for a set time and optionally passed on automatically. Families see offers in their account; the owner emails them until messaging (#72) is connected |
 | Private lessons | **Built (#70).** Families pick a coach's open time on `/lesson` at owner prices set on `/lesson-settings`; a paid lesson takes the time and shows on the coach page. Online payment opens after the refund policy (#80); until then the owner records lesson payments on `/payments` |
 | Program transfers | Owner refunds and re-registers in Stripe |
 | Coach payouts and accounting | **Coach pay report built (#75):** `/coach-pay` totals each coach's paid lessons for a period at the share set on `/lesson-settings`, with CSV export. Paying coaches and bookkeeping stay outside the app |

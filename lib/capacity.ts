@@ -22,14 +22,35 @@ export async function seatHolders(eventId: string, dates: string[], now = Date.n
   return byDate;
 }
 
-export async function seatsLeft(eventId: string, dates: string[], slots: number, kind: 'event' | 'lesson' = 'event') {
+type Family = {userId: string; wrestlerId: string};
+// Seats held by waitlist offers that have not expired (issue #73), per date. A family's own offer is not counted
+// against them: the offer is their seat.
+export async function offerHolds(eventId: string, dates: string[], except?: Family | null, now = Date.now()) {
+  const rows = (await env.DB!.prepare("SELECT dates,user_id,wrestler_id FROM waitlist_entries WHERE event_id=? AND status='offered' AND offer_expires_at>?")
+    .bind(eventId, new Date(now).toISOString()).all<{dates: string; user_id: string; wrestler_id: string}>()).results;
+  const held = new Map<string, number>(dates.map(d => [d, 0]));
+  for (const r of rows) {
+    if (except && r.user_id === except.userId && r.wrestler_id === except.wrestlerId) continue;
+    for (const d of JSON.parse(r.dates) as string[]) if (held.has(d)) held.set(d, held.get(d)! + 1);
+  }
+  return held;
+}
+
+export async function seatsLeft(eventId: string, dates: string[], slots: number, kind: 'event' | 'lesson' = 'event', family?: Family | null) {
   const holders = await seatHolders(eventId, dates, Date.now(), kind);
-  return Math.min(...dates.map(d => slots - (holders.get(d)?.length ?? 0)));
+  const offers = kind === 'event' ? await offerHolds(eventId, dates, family) : null;
+  return Math.min(...dates.map(d => slots - (holders.get(d)?.length ?? 0) - (offers?.get(d) ?? 0)));
 }
 
 // After inserting a pending order: does it rank within the limit on every date it needs?
-// Lessons use the same rule with one seat: the opening itself (issue #70).
+// Lessons use the same rule with one seat: the opening itself (issue #70). Seats offered to other families
+// from the waitlist are reserved for them.
 export async function withinCapacity(orderId: string, eventId: string, dates: string[], slots: number, kind: 'event' | 'lesson' = 'event') {
   const holders = await seatHolders(eventId, dates, Date.now(), kind);
-  return dates.every(d => { const i = holders.get(d)!.indexOf(orderId); return i >= 0 && i < slots; });
+  let offers: Map<string, number> | null = null;
+  if (kind === 'event') {
+    const own = await env.DB!.prepare('SELECT user_id AS userId,wrestler_id AS wrestlerId FROM orders WHERE id=?').bind(orderId).first<Family>();
+    offers = await offerHolds(eventId, dates, own);
+  }
+  return dates.every(d => { const i = holders.get(d)!.indexOf(orderId); return i >= 0 && i < slots - (offers?.get(d) ?? 0); });
 }
