@@ -10,6 +10,7 @@ import {fridayLiveSchedule} from './friday-live';
 import {publicSchedule, academyToday} from './public-schedule';
 import {eventSlots, seatsLeft} from './capacity';
 import {cardProblem} from './usaw';
+import {waiverProblem} from './waivers';
 
 export type ChargeKind = 'walkin' | 'annual' | 'monthly' | 'event' | 'live';
 export type Charge = {
@@ -80,6 +81,8 @@ export async function quoteMembership(userId: string, input: any, opts?: QuoteOp
   // Decision #67: no booking without a USA Wrestling card valid on the session date (membership: purchase date).
   const card = await cardProblem(userId, w, [input.plan === 'walkin' ? date : today]);
   if (card) return fail(403, card, {usawRequired: true});
+  const waiver = await waiverProblem(userId, w);
+  if (waiver) return fail(403, waiver, {waiverRequired: true});
   const baseCents = input.plan === 'walkin' ? p.walkInCents : input.plan === 'annual' ? p.annualCents : p.monthlyCents;
   const pricing = teamCodeDiscount(state.teamCodes ?? [], input.teamCode, p.id, input.plan, baseCents);
   if ('error' in pricing) return fail(400, pricing.error);
@@ -123,6 +126,8 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     if (!session) return fail(409, 'This practice is no longer available on that date.');
     const card = await cardProblem(userId, w, [session.date]);
     if (card) return fail(403, card, {usawRequired: true});
+    const waiver = await waiverProblem(userId, w);
+    if (waiver) return fail(403, waiver, {waiverRequired: true});
     const cents = member ? session.memberCents : session.nonMemberCents;
     const review = {
       type: 'live', title: session.name, wrestler: w.name, dates: [session.date], start: session.start, end: session.end,
@@ -142,6 +147,8 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     if (!format) return fail(400, 'Choose an available lesson format.');
     const card = await cardProblem(userId, w, [today]);
     if (card) return fail(403, card, {usawRequired: true});
+    const waiver = await waiverProblem(userId, w);
+    if (waiver) return fail(403, waiver, {waiverRequired: true});
     return {ok: true, wrestler, charge: null, review: {type: 'lesson', title: format.name, wrestler: w.name, cents: null, status: 'inquiry_review', message: 'Coach, date, availability, and price need academy confirmation. No lesson is reserved and no payment is taken.'}};
   }
   const event = catalog.events.find((e: any) => e.id === input.id);
@@ -153,6 +160,8 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   const eventDates = option === 'full' ? event.dates : [option];
   const card = await cardProblem(userId, w, eventDates);
   if (card) return fail(403, card, {usawRequired: true});
+  const waiver = await waiverProblem(userId, w);
+  if (waiver) return fail(403, waiver, {waiverRequired: true});
   const slots = eventSlots(state, event.id);
   const left = slots === null ? null : await seatsLeft(event.id, eventDates, slots);
   if (left !== null && left <= 0) return fail(409, 'This event is full. Contact the academy about its waitlist.');

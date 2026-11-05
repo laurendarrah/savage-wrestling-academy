@@ -9,7 +9,7 @@ For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps 
 
 ## 2. Database migrations
 
-Main adds five migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All five only add tables or one column; none change or delete existing data.
+Main adds six migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All six only add tables or one column; none change or delete existing data.
 
 | File | What it adds |
 |---|---|
@@ -18,8 +18,9 @@ Main adds five migrations to the 13 the live site already has. Apply them to the
 | `drizzle/0015_stale_molten_man.sql` | `subscriptions` table |
 | `drizzle/0016_shallow_the_order.sql` | `source` column on `orders` |
 | `drizzle/0017_optimal_proteus.sql` | `usaw_reviews` table (owner checks of USA Wrestling cards) |
+| `drizzle/0018_curly_ken_ellis.sql` | `waiver_versions` and `waiver_signatures` tables |
 
-- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the five files with the platform's database tools.
+- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the six files with the platform's database tools.
 - [ ] Never re-run 0000 to 0012; they are already applied.
 
 If a migration is missing, the new pages (roster, payments, family purchases, checkout) return errors. Every page that existed before keeps working.
@@ -52,6 +53,7 @@ Publish main. Then, signed in as the owner with the authenticator:
 - [ ] `/payments` loads and lists the family accounts in "Record an offline payment"
 - [ ] `/payment-setup` says test mode and that checkout is off
 - [ ] `/cards` lists wrestlers and their USA Wrestling card status
+- [ ] `/waivers` says no waiver is in force
 - [ ] `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load
 
 With a test family account (not a real family):
@@ -70,6 +72,10 @@ Then, as the owner:
 ## Tell families before publishing
 
 After this publish, **no wrestler can book or be recorded for a payment without a current USA Wrestling card on file** (decision #67). Existing members stay on rosters; the roster flags any card that is missing or lapsed. Email families beforehand asking them to add each wrestler's card number and expiration date in their family account.
+
+## Waivers
+
+No waiver is required until the owner publishes one on `/waivers`. Publish only attorney-approved text, and email families first: from that moment, every wrestler needs a signature before booking. If something goes wrong, **Stop requiring this waiver** on the same page lifts the requirement at once.
 
 ## 6. Opening online payment later
 

@@ -127,6 +127,13 @@
       "when": 1793915244791,
       "tag": "0017_optimal_proteus",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1793916143750,
+      "tag": "0018_curly_ken_ellis",
+      "breakpoints": true
     }
   ]
 }
