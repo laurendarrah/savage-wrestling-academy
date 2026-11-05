@@ -3,6 +3,7 @@ import {env} from 'cloudflare:workers';
 import {publicSchedule} from './public-schedule';
 import {cardStatus, reviewFor, type CardStatus} from './usaw';
 import {currentWaiver, signatureFor} from './waivers';
+import {PROGRAM_ON} from './transfers';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
 export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null};
@@ -47,8 +48,9 @@ async function entitled(session: Session): Promise<Raw[]> {
     list.forEach(r => rows.push({userId: r.user_id, wrestlerId: r.wrestler_id, name: r.wrestler_name, source}));
   if (session.type === 'practice') {
     const practiceId = `${session.program}:${d}:${session.start}`;
-    add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind IN ('annual','monthly') AND program=? AND term_start<=? AND term_end>=?`)
-      .bind(session.program, d, d).all<any>()).results, 'Member');
+    // The program on that date, so a transfer (issue #74) does not rewrite earlier rosters.
+    add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind IN ('annual','monthly') AND ${PROGRAM_ON}=? AND term_start<=? AND term_end>=?`)
+      .bind(d, session.program, d, d).all<any>()).results, 'Member');
     add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind='walkin' AND program=? AND item_id=? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)`)
       .bind(session.program, practiceId, d).all<any>()).results, 'Walk-in paid');
     add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM scholarship_awards WHERE status='active' AND program=? AND user_id IS NOT NULL AND wrestler_id IS NOT NULL AND accepted_at IS NOT NULL AND substr(accepted_at,1,10)<=?`)

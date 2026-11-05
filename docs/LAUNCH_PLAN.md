@@ -141,7 +141,7 @@ Done when: the real purchase and refund appear correctly in Stripe, the database
 | Announcements and messages | Owner's email |
 | Waitlists | **Built (#73).** Families join a full camp or event from the booking page; the owner offers a freed seat on `/waitlists`, held for a set time and optionally passed on automatically. Families see offers in their account; the owner emails them until messaging (#72) is connected |
 | Private lessons | **Built (#70).** Families pick a coach's open time on `/lesson` at owner prices set on `/lesson-settings`; a paid lesson takes the time and shows on the coach page. Online payment opens after the refund policy (#80); until then the owner records lesson payments on `/payments` |
-| Program transfers | Owner refunds and re-registers in Stripe |
+| Program transfers | **Built (#74).** `/transfers` moves a paid membership to another program from a chosen date, with eligibility checks and history. Price differences are settled separately on `/payments` or in Stripe |
 | Coach payouts and accounting | **Coach pay report built (#75):** `/coach-pay` totals each coach's paid lessons for a period at the share set on `/lesson-settings`, with CSV export. Paying coaches and bookkeeping stay outside the app |
 
 ## Risks to watch

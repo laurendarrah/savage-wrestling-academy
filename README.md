@@ -26,6 +26,7 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 | Waivers | Built. Owner publishes on `/waivers`; families sign on `/waiver`; unsigned wrestlers cannot book |
 | Private lessons | Built. Families book coach openings on `/lesson`; online payment waits for the refund policy (#80) |
 | Waitlists | Built. Families join full events; owner offers seats on `/waitlists` |
+| Program transfers | Built. Owner moves a paid membership between programs on `/transfers` |
 | Wrestler view | Built. `/wrestler?id=` shows the entry pass, what is coming up and anything blocking new bookings |
 | Rosters, messages, transfers, waitlists and payouts in the owner workspace | Sample data only |
 
