@@ -55,6 +55,7 @@ Publish main. Then, signed in as the owner with the authenticator:
 - [ ] `/payment-setup` says test mode and that checkout is off
 - [ ] `/cards` lists wrestlers and their USA Wrestling card status
 - [ ] `/waivers` says no waiver is in force
+- [ ] `/coach-pay` loads for this month
 - [ ] `/lesson-settings` loads; `/lesson` shows coach openings (each coach must open `/coach` once so older openings are linked to them)
 - [ ] `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load
 
