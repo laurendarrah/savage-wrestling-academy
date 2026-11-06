@@ -9,7 +9,7 @@ import ts from 'typescript';
 import path from 'node:path';
 
 const sqlite = new DatabaseSync(':memory:');
-for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
+for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
 const stmt = (sql, args) => sqlite.prepare(sql);
 const DB = {
   prepare(sql) {

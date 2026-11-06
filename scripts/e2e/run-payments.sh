@@ -11,6 +11,8 @@ SECRET=whsec_rehearsal_$(date +%s)
 pnpm build >/dev/null
 rm -rf .wrangler/e2e-pay
 for f in drizzle/*.sql; do node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/e2e-pay --file "$f" >/dev/null; done
+# The walkthrough starts from a brand-new site, so remove the starter programs and schedule (issue #178).
+node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/e2e-pay --command "DELETE FROM academy_state WHERE updated_by='setup:issue-178'" >/dev/null
 "$MOCK" -http-port 12111 >.wrangler/stripe-mock.log 2>&1 &
 MOCK_PID=$!
 node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --persist-to .wrangler/e2e-pay --port $PORT --local \

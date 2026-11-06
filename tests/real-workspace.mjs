@@ -9,7 +9,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 const sqlite = new DatabaseSync(':memory:');
-for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
+for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
 const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }}; }};
 const owner = {userId: 'owner-1', displayName: 'savagewrestlingclub@gmail.com'};
 const modules = new Map();
