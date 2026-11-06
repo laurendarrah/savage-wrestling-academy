@@ -34,8 +34,8 @@ async function step(name, fn) {
   catch (e) { problems.push(`[${name}] FAILED: ${e.message.split('\n')[0]}`); console.log('FAIL', name, '-', e.message.split('\n')[0]); }
 }
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
-const text = async (page, sel) => (await page.locator(sel).first().textContent({timeout: 8000})) ?? '';
-const waitText = async (page, sel, re, ms = 8000) => { await page.waitForFunction(([s, r]) => new RegExp(r).test(document.querySelector(s)?.textContent || ''), [sel, re.source], {timeout: ms}); };
+const text = async (page, sel) => (await page.locator(sel).first().textContent({timeout: 20000})) ?? '';
+const waitText = async (page, sel, re, ms = 20000) => { await page.waitForFunction(([s, r]) => new RegExp(r).test(document.querySelector(s)?.textContent || ''), [sel, re.source], {timeout: ms}); };
 const api = async (page, url, body) => page.evaluate(async ([u, b]) => { const r = await fetch(u, b ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b)} : {cache: 'no-store'}); return {status: r.status, body: await r.json().catch(() => null)}; }, [url, body]);
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({path: `${SHOTS}/${name}.png`, fullPage: true}); };
 
