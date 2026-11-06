@@ -41,7 +41,7 @@ Recommendation for 6 and 7: launch on the current address and current hosting. C
 |---|---|---|
 | A way to publish GitHub changes to the live Site | Justin | Fixes and new features only reach families once published |
 | A separate development Supabase project | Justin or owner | Test sign-up, email links and MFA without touching real accounts |
-| Supabase production settings access | Justin | Fix email redirect addresses, turn on leaked-password protection |
+| Supabase production project | Lauren (done) | The old project can't be reached, so a new academy-owned project replaces it; Justin is invited as Owner (#139) |
 | Stripe test-mode team access | Owner | Build and test checkout |
 | Read access to the live database, or an export | Justin | Know how many real families and scholarships exist before changing anything |
 | The four files dropped from the Drive upload | Justin | `.gitignore`, `.npmrc`, `.openai/hosting.json`, `.env.example` |
