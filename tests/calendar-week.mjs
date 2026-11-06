@@ -36,4 +36,10 @@ filters[2].onclick(); assert.equal(filters[2].pressed, 'true'); assert.equal(fil
 assert.match(el('calendar').innerHTML, /SWA Intermediate/); assert.doesNotMatch(el('calendar').innerHTML, /SWA Development<\/strong>|Winter camp/);
 filters[4].onclick(); assert.match(el('calendar').innerHTML, /Winter camp/); assert.doesNotMatch(el('calendar').innerHTML, /SWA Intermediate<\/strong>/);
 filters[0].onclick(); assert.match(el('calendar').innerHTML, /SWA Development<\/strong>/);
+// Issue #182: opening on an empty week moves to the next week with practices; This week still shows this week.
+vm.runInContext("state.today='2026-11-17';week=null;pendingWeek=null;render()", ctx);
+assert.match(list(), /Mon, Nov 23 – Sun, Nov 29/); assert.match(list(), /next week with practices/); assert.match(list(), /Nov 24, 2026/);
+vm.runInContext('thisWeek()', ctx); await settle(); assert.match(list(), /Mon, Nov 16 – Sun, Nov 22/); assert.match(list(), /Nothing is scheduled this week/);
+// Program buttons choose a plan; they don't promise online payment.
+assert.match(html, /'Choose the monthly plan →','button primary'/); assert.doesNotMatch(html, /Pay monthly for 12 months|Pay for the year upfront/);
 console.log('Calendar: one week at a time on phones, week paging across months, program filters');
