@@ -1,0 +1,16 @@
+body.owner-embedded { background:transparent; }
+body.owner-embedded > .shell,
+body.owner-embedded > .owner-shell { display:block; min-height:0; }
+body.owner-embedded > .shell > aside,
+body.owner-embedded > .owner-shell > aside { display:none; }
+body.owner-embedded main { max-width:none; margin:0; padding:0 4px 20px; }
+body.owner-embedded main > a:first-child[href^="/#"],
+body.owner-embedded main > p:has(> #back),
+body.owner-embedded main > nav.directory-links { display:none; }
+
+body.owner-embedded #ownerParentNotice { display:block; }
+body.owner-embedded main:has(> #ownerParentNotice) > header,
+body.owner-embedded #billingExample { display:none; }
+
+body.owner-embedded #ownerLinks,
+body.owner-embedded #coachSignout { display:none; }

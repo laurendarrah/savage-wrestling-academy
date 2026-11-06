@@ -4,14 +4,29 @@ const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',tex
 class FormFields{constructor(f){this.fields=f.fields}*[Symbol.iterator](){yield* this.fields}getAll(name){return this.fields.filter(([k])=>k===name).map(([,v])=>v)}}
 const ctx=vm.createContext({console,structuredClone,crypto,Intl,Date,JSON,Set,FormData:FormFields,location:{hash:''},document:{querySelector:node,addEventListener(){}},window:{addEventListener(){}},setTimeout(){},confirm:()=>true});vm.runInContext(code,ctx);const run=s=>vm.runInContext(s,ctx);run('hydratePrograms();mode="admin";save=()=>{};render=()=>{};');
 assert.doesNotMatch(run('events()'),/Fall Technique Camp|Neutral Position Clinic|Savage Community Fundraiser/);assert.doesNotMatch(run('announcementView()'),/Camp roster|Clinic roster/);assert.match(run('events()'),/No events added yet/);
-ctx.form={fields:[['name',"Justin's Technique Camp"],['type','Camp'],['campDate','2026-12-12'],['price','100.50'],['slots','20']]};run('saveEvent(-1,form)');assert.equal(run('data.events.length'),0);assert.match(node('#eventError').textContent,/two different dates/);
-ctx.form.fields.push(['campDate','2026-12-14'],['singleDays','on'],['day','60.25']);run('saveEvent(-1,form)');assert.equal(run('data.events.length'),1);assert.equal(run('data.events[0].day'),60.25);assert.match(run('announcementView()'),/Camp: Justin&#39;s Technique Camp/);assert.doesNotMatch(run('announcementView()'),/name="email"|name="sms"/);
+ctx.form={fields:[['name',"Justin's Technique Camp"],['type','Camp'],['eventDate','2026-12-12'],['eventStart','09:00'],['eventEnd','14:00'],['price','100.50'],['slots','20']]};run('saveEvent(-1,form)');assert.equal(run('data.events.length'),0);assert.match(node('#eventError').textContent,/two different dates/);
+ctx.form.fields.push(['eventDate','2026-12-14'],['eventStart','12:00'],['eventEnd','16:00'],['singleDays','on'],['day','60.25']);run('saveEvent(-1,form)');assert.equal(run('data.events.length'),1);assert.equal(run('data.events[0].day'),60.25);assert.equal(run('data.events[0].schedule[1].start'),'12:00');assert.match(run('events()'),/12:00 PM–4:00 PM/);assert.match(run('announcementView()'),/Camp: Justin&#39;s Technique Camp/);assert.doesNotMatch(run('announcementView()'),/name="email"|name="sms"/);
 run('eventBook(0)');assert.match(node('#overlay').innerHTML,/2026-12-12/);assert.match(node('#overlay').innerHTML,/2026-12-14/);assert.match(node('#overlay').innerHTML,/\$100.50/);assert.match(node('#overlay').innerHTML,/\$60.25/);assert.doesNotMatch(node('#overlay').innerHTML,/Nov 6|\$300.00|\$110.00/);
-ctx.form={fields:[['name','One-Day Clinic'],['type','Clinic'],['singleDate','2026-12-15'],['price','40.50'],['slots','25']]};run('saveEvent(-1,form)');assert.equal(run('data.events[1].dates.length'),1);assert.equal(run('data.events[1].day'),null);assert.match(run('announcementView()'),/Clinic: One-Day Clinic/);
+ctx.form={fields:[['name','One-Day Clinic'],['type','Clinic'],['eventDate','2026-12-15'],['eventStart','18:00'],['eventEnd','19:30'],['price','40.50'],['slots','25']]};run('saveEvent(-1,form)');assert.equal(run('data.events[1].dates.length'),1);assert.equal(run('data.events[1].day'),null);assert.match(run('announcementView()'),/Clinic: One-Day Clinic/);
 run('removeEvent(0)');assert.doesNotMatch(run('announcementView()'),/Justin&#39;s Technique Camp/);
-const liveModule={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync('lib/friday-live.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:liveModule,exports:liveModule.exports});const module={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync('lib/academy-validation.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,require:()=>liveModule.exports});const valid=module.exports.validState,state=JSON.parse(run('JSON.stringify(data)'));assert.equal(valid(state),true);
-state.events[0].dates.push('2026-12-16');assert.equal(valid(state),false);state.events[0].type='Camp';assert.equal(valid(state),true);state.events[0].dates=['2026-12-15'];assert.equal(valid(state),false);state.events[0].dates=['2026-02-30','2026-03-02'];assert.equal(valid(state),false);state.events[0].dates=['2026-12-15','2026-12-15'];assert.equal(valid(state),false);
-console.log('Passed: no sample events, saved event announcement groups, multi-day camp and one-day clinic creation, real dates and cents, removed event groups, server event validation.');
+function compile(file,deps={}){
+ const module={exports:{}};
+ vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,
+  {module,exports:module.exports,require:name=>deps[name]});
+ return module.exports;
+}
+const {validState:valid}=compile('lib/academy-validation.ts',{'./friday-live':compile('lib/friday-live.ts'),'./event-schedule':compile('lib/event-schedule.ts')});
+const state=JSON.parse(run('JSON.stringify(data)')),clinic=state.events[0];
+assert.equal(valid(state),true);
+clinic.dates.push('2026-12-16');assert.equal(valid(state),false);
+clinic.schedule.push({date:'2026-12-16',start:'17:30',end:'18:45'});assert.equal(valid(state),true);
+clinic.schedule[1].end='17:00';assert.equal(valid(state),false);
+clinic.schedule[1].end='18:45';clinic.schedule[1].date=clinic.schedule[0].date;assert.equal(valid(state),false);
+delete clinic.schedule;assert.equal(valid(state),true);
+clinic.type='Camp';clinic.dates=['2026-12-15'];assert.equal(valid(state),false);
+clinic.dates=['2026-02-30','2026-03-02'];assert.equal(valid(state),false);
+clinic.dates=['2026-12-15','2026-12-15'];assert.equal(valid(state),false);
+console.log('Passed: per-day hours, camp and clinic scheduling, legacy dates, server time validation and announcement groups.');
 
 // Automatic archive follows the last camp day in New York, not UTC midnight.
 let now='2026-12-16T04:59:59Z';ctx.Date=class extends Date{constructor(...args){super(...(args.length?args:[now]))}static now(){return new Date(now).getTime()}};
@@ -23,5 +38,11 @@ assert.doesNotMatch(run('announcementView()'),/Camp details/);run('announcementA
 run('archiveEvent(1,true)');assert.equal(run('isEventArchived(data.events[1])'),true);run('archiveEvent(1,false)');assert.equal(run('isEventArchived(data.events[1])'),false);
 run('archiveAnnouncement(1,true)');assert.equal(run('isMessageArchived(data.messages[1])'),true);run('archiveAnnouncement(1,false)');assert.equal(run('isMessageArchived(data.messages[1])'),false);
 assert.equal(run('data.events.length'),2);assert.equal(run('data.messages.length'),2);
+run('eventArchiveView=false;data.events[1].slots=0;closeModal()');
+assert.match(run('events()'),/December Clinic[\s\S]*Full/);
+assert.doesNotMatch(run('events()'),/waitlist|Preview registration/i);
+run('eventBook(1)');assert.equal(node('#overlay').innerHTML,'');
+assert.equal(run("canonicalWorkspacePage('Events & waitlists')"),'Camps & Events');
+
 assert.equal(run("academyToday(new Date('2026-10-17T03:59:59Z'))"),'2026-10-16');
 console.log('Passed: New York midnight and DST boundaries, final camp day, archive views, linked announcements, correct filtered event actions, manual archive/restore, retained history.');

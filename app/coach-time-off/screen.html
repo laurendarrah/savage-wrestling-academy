@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coach time off | Savage Wrestling Academy</title>
+<link rel="stylesheet" href="/responsive.css"><script defer src="/navigation.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f5f6;color:#18191c;font:15px/1.55 Arial,sans-serif}
+main{max-width:900px;margin:auto;padding:24px}
+a{color:#a92330}
+h1{font-size:clamp(1.9rem,5vw,2.7rem);margin:12px 0 4px}
+h2,h3,p{margin-block:0 .65rem}
+.card{background:white;border:1px solid #dedee2;border-radius:10px;padding:20px;margin:16px 0}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.row,.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row{justify-content:space-between}
+label{display:block;font-weight:bold}
+select,input,textarea,button{font:inherit;padding:9px 12px;border:1px solid #aaa;border-radius:6px;min-height:44px}
+select,input,textarea{width:100%;display:block;margin:5px 0 12px}
+button{background:white;color:#18191c;cursor:pointer}
+button:disabled{opacity:.55;cursor:default}
+.primary{background:#b72332;border-color:#b72332;color:white}
+.muted{color:#62656e}
+.request{border-top:1px solid #e5e5e7;padding:14px 0;overflow-wrap:anywhere}
+.request h3{font-size:1rem;margin:0}
+.request p{margin:.35rem 0 0}
+.note{white-space:pre-wrap}
+.pill{display:inline-block;padding:2px 8px;border-radius:4px;background:#ececf0;font-size:.85rem;font-weight:bold}
+.pill.approved{background:#e3f2e8;color:#17552f}
+.pill.declined,.pill.cancelled{background:#fbe8eb;color:#962031}
+.pill.pending{background:#fff0d2;color:#654100}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid #227ab0;outline-offset:2px}
+@media(max-width:520px){main{padding:16px}.fields{grid-template-columns:1fr}.card{padding:16px}}
+</style></head>
+<body><main>
+<a id="back" href="/coach">← Coach Workspace</a>
+<h1 id="heading">My time off</h1>
+<p class="muted" id="intro">Request a day or a range of dates and check the status here.</p>
+<section class="card" id="formCard">
+ <h2>Request time off</h2>
+ <form id="requestForm">
+  <label>Type<select name="category"><option value="sick">Sick day</option><option value="personal">Personal day</option><option value="vacation">Vacation</option><option value="other">Other time off</option></select></label>
+  <div class="fields">
+   <label>First day<input name="startDate" id="startDate" type="date" min="1900-01-01" required></label>
+   <label>Last day (optional for one day)<input name="endDate" id="endDate" type="date" min="1900-01-01"></label>
+  </div>
+  <label>Scheduling note (optional)<textarea name="note" maxlength="240" rows="2" placeholder="For example, the practice that needs coverage" aria-describedby="noteHelp"></textarea></label>
+  <p class="muted" id="noteHelp">Keep this to scheduling details. Medical information isn’t needed.</p>
+  <button id="submitRequest" type="submit" class="primary">Submit request</button>
+ </form>
+</section>
+<section class="card">
+ <div class="row"><h2 id="requestHeading">My requests</h2><label>Status<select id="filter"><option value="all">All requests</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="declined">Declined</option><option value="withdrawn">Withdrawn</option><option value="cancelled">Cancelled</option></select></label></div>
+ <p id="status" role="status" aria-live="polite">Loading requests…</p>
+ <div id="requests"></div>
+ <div class="row"><button id="previous" type="button" hidden>Previous page</button><button id="next" type="button" hidden>Next page</button></div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const review=new URLSearchParams(location.search).get('review')==='1';
+const types={sick:'Sick day',personal:'Personal day',vacation:'Vacation',other:'Other time off'};
+const states={pending:'Pending',approved:'Approved',declined:'Declined',withdrawn:'Withdrawn',cancelled:'Cancelled'};
+const pageSize=40;
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const date=value=>new Date(value+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'long',day:'numeric',year:'numeric'});
+const timestamp=value=>new Date(value).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'});
+let filter=review?'pending':'all',offset=0,sequence=0,rows=[],busy=false;
+if(review){
+ $('formCard').hidden=true;
+ $('back').href='/#workspace=Coaches';$('back').textContent='← Owner workspace';
+ $('heading').textContent='Coach Time Off';$('requestHeading').textContent='Coach requests';
+ $('intro').textContent='Review time-off requests and plan practice coverage.';
+}
+async function call(query='',body){
+ const response=await fetch('/api/coach-time-off'+query,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});
+ const data=await response.json();
+ if(!response.ok)throw Error(data.error||'Unable to load time-off requests.');
+ return data;
+}
+function actions(row,index){
+ const button=(action,label,primary=false)=>`<button type="button" data-action="${action}" data-index="${index}"${primary?' class="primary"':''}>${label}</button>`;
+ if(review&&row.status==='pending')return button('approve','Approve',true)+button('decline','Decline');
+ if(review&&row.status==='approved')return button('cancel','Cancel approved time off');
+ if(!review&&row.status==='pending')return button('withdraw','Withdraw request');
+ return '';
+}
+function render(){
+ $('requests').innerHTML=rows.map((row,index)=>{
+  const range=date(row.start_date)+(row.end_date===row.start_date?'':' to '+date(row.end_date));
+  const available=actions(row,index);
+  return `<article class="request"><div class="row"><h3>${esc(review?row.coach_name+' · ':'')}${esc(types[row.category])}</h3><span class="pill ${esc(row.status)}">${esc(states[row.status])}</span></div>
+   <p>${esc(range)}</p>${row.note?`<p class="note">${esc(row.note)}</p>`:''}
+   <p class="muted">Requested ${esc(timestamp(row.submitted_at))}${row.reviewed_at?' · Updated '+esc(timestamp(row.reviewed_at)):''}</p>
+   ${available?`<p class="actions">${available}</p>`:''}</article>`;
+ }).join('')||'<p class="muted">No requests match this status.</p>';
+}
+async function load(message=''){
+ const version=++sequence;
+ $('filter').value=filter;
+ $('status').textContent='Loading requests…';
+ $('requests').textContent='';$('previous').hidden=$('next').hidden=true;
+ try{
+  const data=await call('?status='+filter+'&offset='+offset+(review?'&review=1':''));
+  if(version!==sequence)return;
+  rows=data.requests;
+  render();
+  $('previous').hidden=!offset;$('next').hidden=!data.hasMore;
+  $('status').textContent=message||'';
+ }catch(error){if(version===sequence)$('status').textContent=error.message}
+}
+async function save(body,message,button){
+ if(busy)return false;
+ busy=true;button.disabled=true;
+ try{
+  await call('',body);
+  if(body.action==='request')filter='all';
+  offset=0;await load(message);return true;
+ }catch(error){$('status').textContent=error.message;return false}
+ finally{busy=false;button.disabled=false}
+}
+$('startDate').onchange=()=>{$('endDate').min=$('startDate').value||'1900-01-01'};
+$('requestForm').onsubmit=async event=>{
+ event.preventDefault();
+ if(review)return;
+ const form=event.currentTarget,fields=new FormData(form),startDate=fields.get('startDate');
+ const saved=await save({action:'request',category:fields.get('category'),startDate,endDate:fields.get('endDate')||startDate,note:fields.get('note')},'Time-off request submitted.',$('submitRequest'));
+ if(saved){form.reset();$('endDate').min='1900-01-01'}
+};
+$('requests').onclick=event=>{
+ const button=event.target.closest('[data-action]');
+ if(!button||busy)return;
+ const row=rows[Number(button.dataset.index)],action=button.dataset.action;
+ if(!row)return;
+ const verbs={approve:'Approve',decline:'Decline',cancel:'Cancel',withdraw:'Withdraw'};
+ if(!confirm(verbs[action]+' this request for '+date(row.start_date)+'?'))return;
+ save({action,id:row.id,revision:row.revision},'Request '+({approve:'approved',decline:'declined',cancel:'cancelled',withdraw:'withdrawn'})[action]+'.',button);
+};
+$('filter').onchange=()=>{filter=$('filter').value;offset=0;load()};
+$('previous').onclick=()=>{offset=Math.max(0,offset-pageSize);load()};
+$('next').onclick=()=>{offset+=pageSize;load()};
+globalThis.SavagePageNavigation={
+ snapshot:()=>({filter,offset}),
+ restore(value){if(!value)return;if(value.filter==='all'||Object.hasOwn(states,value.filter))filter=value.filter;if(Number.isSafeInteger(value.offset)&&value.offset>=0&&value.offset<=100000)offset=value.offset;load()}
+};
+load();
+</script></body></html>

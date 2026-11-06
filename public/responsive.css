@@ -8,10 +8,12 @@ img,video,svg{max-width:100%}
 .mobile-menu-button,.mobile-calendar{display:none}
 .owner-tools{margin-top:8px}.owner-tools summary{cursor:pointer;font-weight:600;padding:10px 0}.owner-tools>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.owner-tools a{display:inline-flex;align-items:center;min-height:44px;padding:6px 8px}
 /* Calendar colors use stable program IDs, including previously saved programs. */
-.event.cal-advanced,.mobile-practice.cal-advanced,.calendar-key .cal-advanced,.program-color.cal-advanced{background:#000;color:#fff;border:1px solid #000}
-.event.cal-intermediate,.mobile-practice.cal-intermediate,.calendar-key .cal-intermediate,.program-color.cal-intermediate{background:#686868;color:#fff;border:1px solid #686868}
-.event.cal-elementary,.mobile-practice.cal-elementary,.calendar-key .cal-elementary,.program-color.cal-elementary{background:#fff;color:#18191c;border:1px solid #999}
-.event.cal-special,.mobile-practice.cal-special,.calendar-key .cal-special,.program-color.cal-special{background:#d72732;color:#fff;border:1px solid #d72732}
+.calendar-item.cal-advanced,.slot.cal-advanced,.event.cal-advanced,.mobile-practice.cal-advanced,.calendar-key .cal-advanced,.program-color.cal-advanced{background:#000;color:#fff;border:1px solid #000}
+.calendar-item.cal-intermediate,.slot.cal-intermediate,.event.cal-intermediate,.mobile-practice.cal-intermediate,.calendar-key .cal-intermediate,.program-color.cal-intermediate{background:#686868;color:#fff;border:1px solid #686868}
+.calendar-item.cal-elementary,.slot.cal-elementary,.event.cal-elementary,.mobile-practice.cal-elementary,.calendar-key .cal-elementary,.program-color.cal-elementary{background:#fff;color:#18191c;border:1px solid #999}
+.calendar-item.cal-special,.slot.cal-special,.event.cal-special,.mobile-practice.cal-special,.calendar-key .cal-special,.program-color.cal-special{background:#d72732;color:#fff;border:1px solid #d72732}
+.calendar-item[aria-pressed="true"]{outline:2px solid #b72332;outline-offset:2px}
+.calendar-item.cal-special[aria-pressed="true"]{outline-color:#18191c}
 .calendar-key{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}.calendar-key span{border-radius:5px;padding:6px 10px;font-size:12px;font-weight:600}
 .event:hover,.mobile-practice:hover{box-shadow:0 0 0 2px #71747d}.event:focus-visible,.mobile-practice:focus-visible{outline:3px solid #1769aa;outline-offset:2px}
 @media screen and (max-width:1024px){
@@ -37,7 +39,7 @@ img,video,svg{max-width:100%}
  button{max-width:100%;padding:11px 14px;font-size:16px}
  .row{flex-wrap:wrap;align-items:stretch}.row>label{min-width:0;flex:1 1 100%;width:100%}
  .row>button{min-width:0;white-space:normal}.grid{min-width:0}
- header{flex-wrap:wrap;gap:12px;padding:14px 16px}header>div{min-width:0;max-width:100%}header .switch{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}header .switch button{font-size:14px;min-height:44px}
+ header{flex-wrap:wrap;gap:12px;padding:14px 16px}header>div{min-width:0;max-width:100%}header .switch{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}header .switch button,header .switch a{font-size:14px;min-height:44px}
  .owner-tools-wrap{width:100%}.owner-tools>div{align-items:stretch}.owner-tools a,.owner-tools button{flex:1 1 45%;font-size:14px;line-height:1.5}.owner-tools summary{min-height:44px}
  .mobile-menu-button{display:inline-flex;width:100%;justify-content:space-between;align-items:center;margin-top:14px;background:#292a2f;color:white;border-color:#494a50}
  aside .nav{display:none;overflow:visible;margin-top:10px}aside .nav.is-open{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
@@ -63,3 +65,20 @@ img,video,svg{max-width:100%}
 
 /* Align lesson actions across cards with different description lengths. */
 .card.lesson{display:flex;flex-direction:column;align-self:stretch}.card.lesson>button{margin-top:auto}
+
+/* Named month controls used by the owner, coach and family calendars. */
+.swa-month-switch{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
+.swa-month-switch select{min-width:0;flex:1;width:auto;margin:0;font:inherit}
+.swa-month-switch button{flex:0 0 auto;min-width:44px;min-height:44px;background:#fff;color:#18191c;border:1px solid #d3d3d7;border-radius:7px;font:inherit;cursor:pointer}
+.swa-month-switch button:disabled{opacity:.5;cursor:default}
+
+.calendar-holiday,.calendar-key .calendar-holiday{border:1px solid #999;background:#fff;color:#18191c}
+div.calendar-holiday{margin-top:6px;padding:6px;border-radius:5px;font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.calendar-holiday strong,.calendar-holiday span{display:block}
+
+/* Keep program and event fills intact while marking the current calendar date. */
+[aria-current="date"]{box-shadow:inset 0 0 0 2px #ce5660}
+[aria-current="date"]:not(.calendar-item):not(.is-excluded):not(.selected){background-color:#fff0f1}
+button[aria-current="date"]:disabled{opacity:1}
+button[aria-current="date"]:disabled:not(.calendar-item){color:#811925}
+[aria-current="date"] .swa-today-label{display:inline-block;vertical-align:middle;margin:2px;padding:1px 3px;border-radius:4px;background:#ffdce0;color:#811925;font-size:10px;font-weight:700;line-height:1.3;letter-spacing:normal}

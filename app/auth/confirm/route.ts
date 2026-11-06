@@ -7,7 +7,7 @@ export async function GET(request:Request){
  if(code){const {error}=await auth.client.auth.exchangeCodeForSession(code);valid=!error}
  else if(hash&&(type==='email'||type==='signup'||type==='recovery')){const {error}=await auth.client.auth.verifyOtp({token_hash:hash,type});valid=!error}
  const requested=url.searchParams.get('next');
- const path=valid?(requested==='change'||type==='recovery'?'/login?mode=change':'/login?confirmed=1'):'/login?confirmation=failed';
+ const path=valid?(requested==='change'||type==='recovery'?'/login?mode=change'+(url.searchParams.get('coach')==='1'?'&coach=1':''):requested==='coach'?'/login?confirmed=1&coach=1':'/login?confirmed=1'):'/login?confirmation=failed';
  auth.headers.set('Location',new URL(path,url.origin).href);
  return new Response(null,{status:303,headers:auth.headers});
 }

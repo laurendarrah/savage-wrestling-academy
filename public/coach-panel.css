@@ -1,0 +1,5 @@
+body.coach-embedded { background:transparent; }
+body.coach-embedded main { max-width:none; margin:0; padding:0 1px 2px; display:flow-root; }
+body.coach-embedded main > #back,
+body.coach-embedded main > p:has(> #back),
+body.coach-embedded main > #home { display:none; }

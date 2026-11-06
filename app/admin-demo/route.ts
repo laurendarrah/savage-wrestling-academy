@@ -8,7 +8,7 @@ export function GET(){
  const html=(portal.slice(0,at)+demo+'\nstartAdminDemo();'+portal.slice(at+boot.length))
   .replaceAll('crypto.randomUUID()','demoUUID()')
   .replace('<title>Savage | Owner Workspace</title>','<title>Savage Wrestling | Admin Demo</title>')
-  .replace('<strong>OWNER WORKSPACE</strong> · Online saving · Family views, payments, QR check-in and message delivery remain demonstrations','<strong>ADMIN DEMO</strong> · Fictional data · Changes stay in this tab and reset when you reload')
+  .replace('<strong>OWNER WORKSPACE</strong> · Online saving · Sample views and payment previews are labeled in the workspace','<strong>ADMIN DEMO</strong> · Fictional data · Changes stay in this tab and reset when you reload')
   .replace('Owner workspace · Check online save status above','Admin demo · Sample data only');
  return new Response(html,{headers:{
   'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',

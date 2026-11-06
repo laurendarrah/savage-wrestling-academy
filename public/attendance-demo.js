@@ -10,12 +10,16 @@
   $('start').disabled=false;$('stop').disabled=true;
  }
  function accept(data){
-  const name=data===payload||data==='SWA-PREVIEW:athlete-1'?'Alex Demo':data==='SWA-PREVIEW:athlete-2'?'Sam Demo':null;
-  if(!name){status('This demo accepts the sample QR pass or Alex and Sam’s sample Wrestler View codes.');return false}
+  const sample=data===payload?'athlete-1':data.replace(/^SWA-PREVIEW:/,'');
+  const roster={'athlete-1':['Alex Demo','alex'],'athlete-2':['Sam Demo','sam'],'athlete-3':['Morgan Demo','morgan']};
+  if(!(data===payload||data.startsWith('SWA-PREVIEW:'))||!Object.hasOwn(roster,sample)){
+   status('This demo accepts the sample QR pass or the Demo wrestlers’ Wrestler View codes.');return false;
+  }
+  const [name,wrestler]=roster[sample];
   stop();
   if(new URLSearchParams(location.search).get('embedded')==='1'&&window.parent&&window.parent!==window){
    status('QR read. Checking the selected day’s roster…');
-   window.parent.postMessage({type:'swa-demo-checkin',wrestler:name==='Alex Demo'?'alex':'sam'},location.origin);
+   window.parent.postMessage({type:'swa-demo-checkin',wrestler},location.origin);
    return true;
   }
   $('attendanceName').textContent=name+':';

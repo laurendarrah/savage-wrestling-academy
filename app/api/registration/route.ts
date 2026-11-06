@@ -3,6 +3,7 @@ import {env} from 'cloudflare:workers';
 import {strongAccount,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {familyProfile,checkCompetitionAccess,requiresApproval} from '../../../lib/program-approval';
 import {registrationCatalog} from '../../../lib/registration-catalog';
+import {isTestWrestler} from '../../../lib/test-family';
 import {hasScholarship} from '../../../lib/scholarships';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
@@ -24,8 +25,9 @@ export async function POST(request:Request){
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large.'},413);let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}
- if(!input||typeof input.wrestlerId!=='string'||!['Elementary','Intermediate','Advanced'].includes(input.program)||!['monthly','annual','walkin'].includes(input.plan))return reply({error:'Choose a saved wrestler, program, and plan.'},400);
+ if(!input||typeof input.wrestlerId!=='string'||!['Elementary','Intermediate','Advanced'].includes(input.program)||!['monthly','walkin'].includes(input.plan))return reply({error:'Choose a saved wrestler, program, and plan.'},400);
  const profile=await familyProfile(auth.user.id),w=profile?.wrestlers.find(w=>w.id===input.wrestlerId);if(!w)return reply({error:'Saved wrestler not found in your family account.'},404);
+ if(isTestWrestler(w.id))return reply({error:'Sample wrestlers use test attendance and test waivers only.'},409);
  const blocked=await checkCompetitionAccess(auth.user.id,input.program,w);if(blocked)return reply({error:blocked,approvalRequired:requiresApproval(input.program,w)},403);
  if(await hasScholarship(auth.user.id,w.id,input.program))return reply({error:'This wrestler already has an active scholarship in this program. Regular scheduled practices are included. View the scholarship in your family account.'},409);
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -37,7 +39,7 @@ export async function POST(request:Request){
  if(!p)return reply({error:'This program is no longer available. Refresh your options.'},409);
  const practice=input.plan==='walkin'?catalog.practices.find(s=>s.program===input.program&&s.date===date&&s.id===input.practiceId):null;
  if(input.plan==='walkin'&&!practice)return reply({error:'This practice changed or is unavailable. Refresh the schedule.'},409);
- const baseCents=input.plan==='walkin'?p.walkInCents:input.plan==='annual'?p.annualCents:p.monthlyCents;
+ const baseCents=input.plan==='walkin'?p.walkInCents:p.monthlyCents;
  const pricing=teamCodeDiscount(state.teamCodes??[],input.teamCode,p.id,input.plan,baseCents);if('error' in pricing)return reply({error:pricing.error},400);
  const membership=input.plan!=='walkin';
  return reply({review:{wrestlerName:w.name,grade:w.grade,programName:p.name,programId:p.id,plan:input.plan,baseCents,cents:pricing.cents,discount:pricing.discount,practice,termMonths:membership?12:null,paymentCount:input.plan==='monthly'?12:1,totalCents:pricing.cents===null?null:pricing.cents*(input.plan==='monthly'?12:1),renewal:membership?'manual':null,termsStatus:membership?'draft':null,termsUrl:membership?'/membership-terms':null},paymentsEnabled:false});

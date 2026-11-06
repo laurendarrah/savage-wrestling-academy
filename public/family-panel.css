@@ -1,0 +1,3 @@
+body.family-embedded { background:transparent; }
+body.family-embedded main { max-width:none; margin:0; padding:1px 2px 16px; display:flow-root; }
+body.family-embedded main > a:first-child[href="/family"] { display:none; }

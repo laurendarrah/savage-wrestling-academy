@@ -1,0 +1,2 @@
+DROP INDEX `document_family_wrestler_version`;--> statement-breakpoint
+CREATE UNIQUE INDEX `document_family_wrestler_version` ON `document_assignments` (`version_id`,`user_id`,`wrestler_id`) WHERE "document_assignments"."status" IN ('pending','signed');

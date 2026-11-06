@@ -26,5 +26,5 @@ export function GET(){
   .replaceAll('Sign agreement & activate scholarship','Complete sample signature')
   .replaceAll('Scholarship active. Your signed agreement is saved.','Sample signature complete. No real agreement or membership was created.')
   .replaceAll('Scholarship active. View it in your family account.','Sample signature complete. Reload to try again.');
- return new Response(preview,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer','Content-Security-Policy':"sandbox allow-scripts allow-modals allow-forms; default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'"}});
+ return new Response(preview,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer','Content-Security-Policy':"sandbox allow-scripts allow-modals allow-forms; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'"}});
 }

@@ -8,7 +8,7 @@ const db=new DatabaseSync(':memory:');
 db.exec(readFileSync('drizzle/0000_jazzy_silvermane.sql','utf8'));
 const DB={prepare(sql){let values=[];return {bind(...args){values=args;return this},async first(){return db.prepare(sql).get(...values)??null}}}};
 let identity=null;
-function loadTs(path){const module={exports:{}};const source=ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;vm.runInNewContext(source,{module,exports:module.exports,Response,Request,URL,console,require(name){if(name==='../../../lib/account-auth')return {ownerIdentity:async()=>({owner:identity?.email==='savagewrestlingclub@gmail.com'?{userId:identity.id,displayName:identity.email}:null,headers:new Headers({'Cache-Control':'private, no-store'})})};if(name==='cloudflare:workers')return {env:{DB}};if(name==='next/headers')return {headers:async()=>new Headers(identity?{'oai-authenticated-user-id':identity.id,'oai-authenticated-user-email':identity.email}:{})};if(name==='next/navigation')return {redirect(){throw Error('redirect')}};if(name==='../../chatgpt-auth')return loadTs('app/chatgpt-auth.ts');if(name.endsWith('/friday-live'))return loadTs('lib/friday-live.ts');if(name==='../../../lib/program-names')return loadTs('lib/program-names.ts');if(name==='../../../lib/academy-validation')return loadTs('lib/academy-validation.ts');throw Error(name)}});return module.exports}
+function loadTs(path){const module={exports:{}};const source=ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;vm.runInNewContext(source,{module,exports:module.exports,Response,Request,URL,console,require(name){if(name==='../../../lib/account-auth')return {ownerIdentity:async()=>({owner:identity?.email==='savagewrestlingclub@gmail.com'?{userId:identity.id,displayName:identity.email}:null,headers:new Headers({'Cache-Control':'private, no-store'})})};if(name==='cloudflare:workers')return {env:{DB}};if(name==='next/headers')return {headers:async()=>new Headers(identity?{'oai-authenticated-user-id':identity.id,'oai-authenticated-user-email':identity.email}:{})};if(name==='next/navigation')return {redirect(){throw Error('redirect')}};if(name==='../../chatgpt-auth')return loadTs('app/chatgpt-auth.ts');if(name.endsWith('/event-schedule'))return loadTs('lib/event-schedule.ts');if(name.endsWith('/friday-live'))return loadTs('lib/friday-live.ts');if(name==='../../../lib/program-names')return loadTs('lib/program-names.ts');if(name==='../../../lib/academy-validation')return loadTs('lib/academy-validation.ts');throw Error(name)}});return module.exports}
 const module={exports:loadTs('app/api/academy/route.ts')};
 const {GET,PUT}=module.exports;
 const html=readFileSync('app/portal.html','utf8');
@@ -114,3 +114,81 @@ run('data.seasons=[];data.extraPractices=[];data.events=[]');
 assert.equal(run("upcomingItems('2026-12-04','20:00').length"),0);
 assert.match(run('upcomingMarkup()'),/No upcoming sessions are published/);
 console.log('Passed: upcoming schedule includes saved special sessions, removes days off, archived/disabled/past sessions, and has no sample fallback.');
+
+// The live menu swaps owner panels and keeps earlier panels mounted.
+const navigation=readFileSync('public/owner-workspace.js','utf8');
+const frameEvents=[],selected=[],replaced=[];
+function element(tag){
+ const listeners={};
+ const doc={body:{classList:{contains:value=>value==='owner-embedded'}},
+  addEventListener(name,fn){listeners['document:'+name]=fn},
+  defaultView:{dispatchEvent:event=>frameEvents.push(event.type)}};
+ return {tag,hidden:false,children:[],attributes:{},listeners,contentDocument:doc,
+  contentWindow:{location:{replace:url=>replaced.push(url)}},
+  append(...items){this.children.push(...items)},setAttribute(k,v){this.attributes[k]=v},
+  addEventListener(name,fn){listeners[name]=fn}};
+}
+const outlet=element('outlet'),ownerWindow={location:{assign(){throw Error('Unexpected page navigation')}}};
+vm.runInNewContext(navigation,{window:ownerWindow,location:{origin:'https://academy.test'},URL,URLSearchParams,Event,
+ document:{getElementById:()=>outlet,createElement:element}});
+const choose=(...args)=>selected.push(args),show=ownerWindow.SavageOwnerWorkspace.show;
+assert.equal(show('Families','',choose),true);
+const [familyPanel]=outlet.children,familyFrame=familyPanel.children[1];
+assert.equal(familyFrame.src,'/accounts?embed=owner');
+familyFrame.listeners.load();
+function innerLink(path){
+ const event={target:{closest:()=>({href:'https://academy.test'+path,target:'',hasAttribute:()=>false,getAttribute:()=>path})},
+  button:0,preventDefault(){this.defaultPrevented=true}};
+ familyFrame.listeners['document:click'](event);
+ assert.equal(event.defaultPrevented,true);
+}
+innerLink('/accounts?program=Advanced');
+assert.equal(replaced[0],'/accounts?program=Advanced&embed=owner');
+innerLink('/attendance?test=1');
+assert.deepEqual(selected[0],['Attendance','?test=1']);
+assert.equal(show('Attendance','?test=1',choose),true);
+assert.equal(familyPanel.hidden,true);
+assert.equal(outlet.children[1].children[1].src,'/attendance?test=1&embed=owner');
+assert.equal(outlet.children[1].children[1].attributes.allow,'camera');
+assert.equal(show('Families','',choose),true);
+assert.equal(outlet.children[0],familyPanel);
+assert.equal(familyPanel.hidden,false);
+assert.deepEqual(frameEvents,['swa-panel-hidden','swa-panel-hidden','swa-panel-shown']);
+assert.equal(show('Coach timesheets','?review=0',choose),true);
+assert.equal(outlet.children[2].children[1].src,'/coach-time?review=1&embed=owner');
+assert.equal(show('Parent View','',choose),true);
+assert.equal(outlet.children[3].children[1].src,'/family?embed=owner');
+assert.match(html,/function openParentView\(\)\{if\(isOwnerWorkspace\(\)\)go\('Parent View'\)/);
+assert.equal(show('Dashboard','',choose),false);
+assert.equal(outlet.hidden,true);
+console.log('Passed: live owner sections stay in place, retain mounted panels, and route tools without leaving the workspace.');
+
+// Every top-level header control selects exactly one view without document navigation.
+const pressed=new Map(),opened=[];
+for(const id of ['publicBtn','familyBtn','childBtn','coachBtn','adminBtn']){
+ node('#'+id).setAttribute=(key,value)=>{if(key==='aria-pressed')pressed.set(id,value)};
+}
+ctx.location.pathname='/';
+ctx.location.href='https://academy.test/';
+ctx.window.SavageOwnerWorkspace={show(page,search){opened.push([page,search]);return !!page}};
+ctx.window.SavageNavigation={capture(){},commit(hash){ctx.location.hash=hash}};
+run('render=oldRender');
+ctx.sampleQrSvg=()=>'<svg></svg>';
+for(const [action,id,panel] of [
+ ['openPublishedCalendar()','publicBtn','Public Calendar'],
+ ['openParentView()','familyBtn','Parent View'],
+ ["setMode('child')",'childBtn',null],
+ ['openCoachView()','coachBtn','Coach View'],
+ ["setMode('admin')",'adminBtn','Dashboard']
+]){
+ run(action);
+ assert.deepEqual([...pressed].filter(([,value])=>value==='true').map(([key])=>key),[id]);
+ assert.equal(node('#'+id).className,'on');
+ assert.equal(opened.at(-1)[0],panel);
+ assert.equal(ctx.location.href,'https://academy.test/');
+}
+assert.equal(show('Public Calendar','?month=2026-11',choose),true);
+assert.equal(outlet.children[4].children[1].src,'/calendar?month=2026-11&embed=owner');
+assert.equal(show('Coach View','',choose),true);
+assert.equal(outlet.children[5].children[1].src,'/coach?embed=owner');
+console.log('Passed: all five header buttons stay in the workspace and update the selected view.');

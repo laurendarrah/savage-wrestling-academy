@@ -1,12 +1,21 @@
 import {readFileSync} from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
 const script=readFileSync('app/practice-plans/screen.html','utf8').match(/<script>([\s\S]*)<\/script>/)[1];
 const unescape=s=>s.replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
-async function harness(libraryMode=false){
+async function harness(libraryMode=false,search=libraryMode?'':'?program=Elementary&date=2026-12-07'){
  const data={owner:true,month:'2026-12',programs:[{id:'Elementary',name:'Youth'},{id:'Advanced',name:'Competition'}],practices:libraryMode?[]:[{program:'Elementary',date:'2026-12-07',start:'18:00',end:'19:30'},{program:'Elementary',date:'2026-12-14',start:'18:00',end:'19:30'},{program:'Advanced',date:'2026-12-08',start:'19:30',end:'21:00'}],plans:[]};
  const groups=libraryMode?[]:[{id:'elementary-group',program:'Elementary',name:'Foundations',revision:1},{id:'advanced-group',program:'Advanced',name:'Competition cycle',revision:1}],lessons=[];
  const nodes=new Map(),controls=new Proxy({},{get(target,name){return target[name]??={value:'',checked:false,focus(){}}}});
  function el(id){if(!nodes.has(id)){let html='';nodes.set(id,{value:'',hidden:false,textContent:'',style:{},disabled:false,focus(){},scrollIntoView(){},replaceChildren(...options){this.options=options;this.value=options[0]?.value||''},set innerHTML(v){html=v;if(id==='sections'){for(const m of v.matchAll(/<input name="([^"]+)"[^>]*value="([^"]*)"/g))controls[m[1]].value=unescape(m[2]);for(const m of v.matchAll(/<textarea name="([^"]+)"[^>]*>([\s\S]*?)<\/textarea>/g))controls[m[1]].value=unescape(m[2]);}},get innerHTML(){return html}})}return nodes.get(id)}el('planForm').elements=controls;el('planForm').reportValidity=()=>true;
- const ctx=vm.createContext({URL,URLSearchParams,Intl,Date,console,crypto,structuredClone,location:{search:libraryMode?'':'?program=Elementary&date=2026-12-07',pathname:libraryMode?'/curricula':'/practice-plans'},confirm:()=>true,window:{addEventListener(){},print(){}},requestAnimationFrame:()=>1,cancelAnimationFrame(){},document:{getElementById:el,createElement:()=>({}),querySelectorAll:()=>[],querySelector:s=>s==='h1'?el('heading'):null},fetch:async(url,options)=>{const response=d=>({ok:true,json:async()=>structuredClone(d)});if(url.startsWith('/api/practice-curricula')){if(options?.method==='POST'){const b=JSON.parse(options.body),id=b.id||crypto.randomUUID(),list=b.action==='saveGroup'?groups:lessons;const record=b.action==='saveGroup'?{id,program:b.program,name:b.name,revision:b.revision+1}:{id,curriculum_id:b.curriculumId,lesson_order:b.lessonOrder,name:b.name,data:structuredClone(b.data),revision:b.revision+1};const index=list.findIndex(c=>c.id===id);if(index>=0)list[index]=record;else list.push(record);return response({id,revision:record.revision})}const id=new URL('https://test'+url).searchParams.get('id');const lesson=lessons.find(c=>c.id===id);return response(id?{curriculum:{...lesson,curriculumId:lesson.curriculum_id,lessonOrder:lesson.lesson_order}}:{groups,curricula:lessons.map(({data,...c})=>c)})}if(options?.method==='POST'){const b=JSON.parse(options.body),record={program:b.program,date:b.date,data:b.data,published:b.published,revision:1,scheduled:true,updatedAt:'2026-10-16T15:35:00Z'},index=data.plans.findIndex(p=>p.program===b.program&&p.date===b.date);if(index>=0)data.plans[index]=record;else data.plans.push(record);return response({revision:1})}return response(data)}});vm.runInContext(script,ctx);await new Promise(resolve=>setImmediate(resolve));return {el,run:s=>vm.runInContext(s,ctx),ctx,data,groups,lessons,controls};
+ const ctx=vm.createContext({URL,URLSearchParams,Intl,Date,console,crypto,structuredClone,location:{search,pathname:libraryMode?'/curricula':'/practice-plans'},confirm:()=>true,window:{addEventListener(){},print(){}},requestAnimationFrame:()=>1,cancelAnimationFrame(){},document:{getElementById:el,createElement:()=>({}),querySelectorAll:()=>[],querySelector:s=>s==='h1'?el('heading'):null},fetch:async(url,options)=>{const response=d=>({ok:true,json:async()=>structuredClone(d)});if(url.startsWith('/api/practice-curricula')){if(options?.method==='POST'){const b=JSON.parse(options.body),id=b.id||crypto.randomUUID(),list=b.action==='saveGroup'?groups:lessons;const record=b.action==='saveGroup'?{id,program:b.program,name:b.name,revision:b.revision+1}:{id,curriculum_id:b.curriculumId,lesson_order:b.lessonOrder,name:b.name,data:structuredClone(b.data),revision:b.revision+1};const index=list.findIndex(c=>c.id===id);if(index>=0)list[index]=record;else list.push(record);return response({id,revision:record.revision})}const id=new URL('https://test'+url).searchParams.get('id');const lesson=lessons.find(c=>c.id===id);return response(id?{curriculum:{...lesson,curriculumId:lesson.curriculum_id,lessonOrder:lesson.lesson_order}}:{groups,curricula:lessons.map(({data,...c})=>c)})}if(options?.method==='POST'){
+ const b=JSON.parse(options.body);
+ if(['coachDraft','coachSubmit','reviewSave','reviewPublish'].includes(b.action)){
+  const old=data.submissions.find(p=>p.program===b.program&&p.date===b.date);
+  const status={coachDraft:'draft',coachSubmit:'submitted',reviewSave:'submitted',reviewPublish:'published'}[b.action];
+  const row={id:old?.id??crypto.randomUUID(),program:b.program,date:b.date,coachName:'Coach A',data:b.data,revision:b.revision+1,scheduled:true,status};
+  data.submissions=status==='published'&&data.owner?[]:[row];
+  return response({revision:row.revision,status});
+ }
+ const record={program:b.program,date:b.date,data:b.data,published:b.published,revision:1,scheduled:true,updatedAt:'2026-10-16T15:35:00Z'},index=data.plans.findIndex(p=>p.program===b.program&&p.date===b.date);if(index>=0)data.plans[index]=record;else data.plans.push(record);return response({revision:1})}return response(data)}});vm.runInContext(script,ctx);await new Promise(resolve=>setImmediate(resolve));return {el,run:s=>vm.runInContext(s,ctx),ctx,data,groups,lessons,controls};
 }
 const h=await harness();const {el,run,data,controls}=h;
 assert.equal(el('ownerEditor').hidden,false);assert.equal(el('practice').value,'Elementary|2026-12-07',el('status').textContent);assert.equal(run('blocks.map(b=>b.kind).join()'),'warmup,drill,technique,live,conditioning,cooldown');
@@ -14,6 +23,18 @@ const warmupId=run('blocks[0].id');controls['blockNotes'+warmupId].value='Moveme
 controls.title.value='Attack plan';controls.notes.value='<script>do not execute</script>';await el('planForm').onsubmit({preventDefault(){}});assert.match(el('status').textContent,/Saved and shared/);run('showPlan(state.plans[0])');assert.match(el('detail').innerHTML,/&lt;script&gt;/);assert.match(el('detail').innerHTML,/2\. Live/);
 assert.equal(el('curriculumTools').hidden,true);assert.equal(el('monthTools').hidden,true);assert.equal(el('practiceLabel').hidden,true);assert.equal(el('plans').hidden,true);assert.match(el('editorHeading').textContent,/December 7, 2026/);
 data.owner=false;await run("load('2026-12')");assert.equal(el('ownerEditor').hidden,true);assert.equal(el('fields').disabled,true);assert.doesNotMatch(el('plans').innerHTML,/data-edit|data-hide/);
+assert.equal(el('coachCalendar').hidden,false);
+assert.match(el('coachPracticeDays').innerHTML,/Shared plan/);
+assert.match(el('coachPracticeDays').innerHTML,/No shared plan/);
+run('showCoachPractice(state.practices[0])');
+assert.match(el('detail').innerHTML,/Attack plan/);
+assert.match(el('detail').innerHTML,/Scheduled coaching time.*6:00 PM–7:30 PM ET/);
+assert.match(el('coachPracticeDays').innerHTML,/data-coach-practice="0" aria-pressed="true"/);
+run('showCoachPractice(state.practices[1])');
+assert.match(el('detail').innerHTML,/No practice plan has been shared/);
+el('filter').value='Advanced';el('filter').onchange();
+assert.equal(el('detail').hidden,true);
+assert.doesNotMatch(el('coachPracticeDays').innerHTML,/>Youth</);
 const b=await harness(true);assert.equal(b.el('monthTools').hidden,true);assert.equal(b.el('noPractices').hidden,true);assert.equal(b.el('fields').disabled,true);b.el('groupName').value='Youth fundamentals';await b.el('saveGroup').onclick();assert.equal(b.groups.length,1);assert.equal(b.el('fields').disabled,false);b.controls.title.value='Stance and motion';b.el('curriculumName').value='Stance and motion';b.el('lessonOrder').value='1';await b.el('planForm').onsubmit({preventDefault(){}});assert.equal(b.lessons.length,1);
 b.el('curriculum').value='';await b.el('curriculum').onchange();b.controls.title.value='Finishing single legs';b.el('curriculumName').value='Single-leg finishes';await b.el('planForm').onsubmit({preventDefault(){}});assert.equal(b.lessons.length,2);assert.equal(b.lessons[1].lesson_order,2);assert.equal(b.data.plans.length,0);
 b.el('curriculumProgram').value='Advanced';b.el('curriculumProgram').onchange();assert.equal(b.el('curriculum').options.length,1);assert.equal(b.el('fields').disabled,true);b.el('groupName').value='Competition cycle';await b.el('saveGroup').onclick();assert.equal(b.groups[1].program,'Advanced');
@@ -32,3 +53,77 @@ d.controls['blockMinutes'+id].value='31';d.run('readBlocks();timing()');assert.e
 d.controls['blockMinutes'+id].value='';await d.el('planForm').onsubmit({preventDefault(){}});assert.equal(d.data.plans.length,0);assert.match(d.el('status').textContent,/every section/);
 d.controls['blockMinutes'+id].value='30';await d.el('planForm').onsubmit({preventDefault(){}});assert.equal(d.data.plans.length,1);assert.equal(d.data.plans[0].data.sections[0].title,'Technique — Single-leg offense');assert.equal(d.data.plans[0].data.sections.reduce((s,b)=>s+b.minutes,0),90);
 console.log('Passed: 90-minute default, touch pointer reorder and cancel, custom names/notes/durations preserved, and client blocks over-budget or missing minutes.');
+
+data.holidays=[{date:'2026-12-25',name:'Christmas Day'}];
+data.closures=[{program:'Elementary',date:'2026-12-25'},{program:'Elementary',date:'2026-12-28'}];
+data.activities=[{id:'event:sample:2026-12-25',date:'2026-12-25',name:'Test Clinic',type:'Clinic',start:'16:00',end:'17:00',gradeRange:'7–12',description:'<Clinic notes>'}];
+await run("load('2026-12')");
+el('filter').value='Elementary';el('filter').onchange();
+assert.match(el('coachPracticeDays').innerHTML,/calendar-holiday.*Christmas Day/);
+assert.doesNotMatch(el('coachPracticeDays').innerHTML,/>No practice</);
+assert.doesNotMatch(el('coachPracticeKey').innerHTML,/>No practice</);
+el('filter').value='activities';el('filter').onchange();
+assert.match(el('coachPracticeDays').innerHTML,/Christmas Day.*Test Clinic/s);
+assert.doesNotMatch(el('coachPracticeDays').innerHTML,/No practice/);
+assert.match(el('coachPracticeDays').innerHTML,/cal-special.*data-coach-activity="0"/);
+assert.doesNotMatch(el('coachPracticeDays').innerHTML,/data-coach-practice/);
+el('coachPracticeDays').onclick({target:{closest:()=>({dataset:{coachActivity:'0'}})}});
+assert.match(el('detail').innerHTML,/Test Clinic/);
+assert.match(el('detail').innerHTML,/4:00 PM–5:00 PM/);
+assert.match(el('detail').innerHTML,/&lt;Clinic notes&gt;/);
+assert.doesNotMatch(el('detail').innerHTML,/Scheduled coaching time/);
+run("showCoachActivity({...state.activities[0],type:'Additional practice'})");
+assert.match(el('detail').innerHTML,/Scheduled coaching time.*4:00 PM–5:00 PM ET/);
+assert.match(el('coachPracticeDays').innerHTML,/data-coach-activity="0" aria-pressed="true"/);
+console.log('Passed: coach activity filter and same-view event detail.');
+
+const coach=await harness();
+coach.data.owner=false;
+coach.data.draftPrograms=['Elementary'];
+coach.data.submissions=[];
+await coach.run("load('2026-12')");
+coach.run('showCoachPractice(state.practices[2])');
+assert.doesNotMatch(coach.el('detail').innerHTML,/Draft a plan/);
+assert.match(coach.el('detail').innerHTML,/programs assigned to you/);
+coach.run('showCoachPractice(state.practices[0])');
+assert.match(coach.el('detail').innerHTML,/Draft a plan/);
+assert.match(coach.el('coachPracticeDays').innerHTML,/Draft available/);
+assert.match(coach.el('detail').innerHTML,/Draft a plan.*No practice plan has been shared/s);
+const draftClick={target:{closest:()=>({})}};
+coach.el('detail').onclick(draftClick);
+assert.equal(coach.el('ownerEditor').hidden,false);
+assert.equal(coach.el('shareLabel').hidden,true);
+coach.controls.title.value='Draft from Coach View';
+await coach.el('planForm').onsubmit({preventDefault(){}});
+assert.match(coach.el('status').textContent,/private draft was saved/);
+assert.match(coach.el('detail').innerHTML,/Edit your draft/);
+coach.el('detail').onclick(draftClick);
+assert.equal(coach.controls.title.value,'Draft from Coach View');
+await coach.el('planForm').onsubmit({preventDefault(){},submitter:{id:'sendPlan'}});
+assert.match(coach.el('status').textContent,/Submitted for owner review/);
+assert.doesNotMatch(coach.el('detail').innerHTML,/data-draft-plan/);
+assert.equal(coach.el('ownerEditor').hidden,true);
+
+const owner=await harness(false,'?review=1&month=2026-12');
+owner.data.submissions=coach.data.submissions;
+await owner.run("load('2026-12')");
+assert.equal(owner.el('monthTools').hidden,false);
+assert.match(owner.el('reviewItems').innerHTML,/Draft from Coach View/);
+owner.el('reviewItems').onclick({target:{closest:()=>({dataset:{review:owner.data.submissions[0].id}})}});
+assert.equal(owner.controls.title.value,'Draft from Coach View');
+assert.equal(owner.el('sendPlan').textContent,'Publish plan');
+owner.controls.title.value='Edited by owner';
+await owner.el('planForm').onsubmit({preventDefault(){}});
+assert.equal(owner.controls.title.value,'Edited by owner');
+await owner.el('planForm').onsubmit({preventDefault(){},submitter:{id:'sendPlan'}});
+assert.match(owner.el('status').textContent,/Published/);
+assert.match(owner.el('reviewItems').innerHTML,/No coach submissions/);
+console.log('Passed: assigned-program draft controls, reopening a private draft, coach submission, and owner review editing and publication.');
+
+const todayCalendar=await harness();
+todayCalendar.data.owner=false;
+todayCalendar.data.month=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit'}).format(new Date()).slice(0,7);
+todayCalendar.data.practices=[];
+await todayCalendar.run("load()");
+assert.match(todayCalendar.el('coachPracticeDays').innerHTML,/<div class="coach-practice-day" aria-current="date"><time[^>]*>[^]*?<span class="swa-today-label">Today/);
+assert.equal((todayCalendar.el('coachPracticeDays').innerHTML.match(/aria-current="date"/g)||[]).length,1);

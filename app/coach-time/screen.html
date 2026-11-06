@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coach timesheets | Savage Wrestling Academy</title>
+<link rel="stylesheet" href="/responsive.css">
+<script src="/month-controls.js"></script><script defer src="/navigation.js"></script>
+<style>
+* { box-sizing:border-box }
+body { margin:0; background:#f5f5f6; color:#18191c; font:15px/1.55 Arial,sans-serif }
+main { max-width:960px; margin:auto; padding:24px }
+a { color:#a92330 }
+h1,h2,h3,p { margin-block:0 .65rem }
+h1 { font-size:clamp(1.9rem,5vw,2.6rem) }
+.card,dialog { background:white; border:1px solid #dedee2; border-radius:10px; padding:20px; margin:16px 0 }
+dialog { margin:auto; width:min(92%,530px); max-height:85vh; overflow:auto }
+dialog::backdrop { background:#10111699 }
+.row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap }
+.fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.totals { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px }
+.totals .card { margin:0 }
+.duration-editor { border:0; padding:0; margin:0 0 12px; min-width:0 }
+.duration-editor legend { font-weight:bold; margin-bottom:6px }
+.duration-pickers { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.totals strong { display:block; font-size:1.4rem }
+label { display:block; font-weight:bold }
+select,input,textarea,button,.action { font:inherit; padding:9px 12px; border:1px solid #bbb; border-radius:6px; min-height:44px }
+select,input,textarea { width:100%; display:block; margin:5px 0 12px }
+button,.action { background:white; color:#18191c; cursor:pointer }
+button:disabled { opacity:.5; cursor:default }
+.primary { background:#b72332; border-color:#b72332; color:white }
+.action { display:inline-flex; align-items:center; text-decoration:none; font-weight:bold }
+.muted { color:#62656e }
+.shift { border-top:1px solid #e5e5e7; padding:14px 0 }
+.shift h3 { font-size:1rem; margin:0 }
+.shift p { margin:.3rem 0 0 }
+.shift-actions { display:flex; flex-wrap:wrap; gap:8px }
+.shift-actions [data-delete] { color:#a92330 }
+.pill { display:inline-block; border-radius:4px; background:#ededf0; padding:2px 8px; font-size:.85rem; font-weight:bold }
+.approved { background:#e7f3eb; color:#175c33 }
+.time-flag { background:#fff1ca; color:#674600 }
+.time-flag-reasons { margin:.3rem 0 0; padding-left:1.3rem; color:#674600 }
+[hidden] { display:none!important }
+:focus-visible { outline:3px solid #227ab0; outline-offset:2px }
+@media (min-width:761px) { #timesheetFilters:has(#coachField:not([hidden])) { grid-template-columns:repeat(3,minmax(0,1fr)) } }
+@media (max-width:580px) { main{padding:16px} .fields,.totals{grid-template-columns:1fr} .card{padding:16px} }
+</style></head>
+<body><main>
+<p><a id="back" href="/coach">← Coach workspace</a></p>
+<h1 id="heading">My coaching hours</h1>
+<p class="muted" id="intro">Clock in and out to record a shift. Correct your drafts during the month, then submit your monthly timesheet for approval. Times are shown in Eastern time.</p>
+<section id="clockCard" class="card" hidden>
+ <h2 id="clockHeading">Practice check-in</h2>
+ <p id="clockInfo" class="muted"></p>
+ <form id="clockForm" hidden>
+  <div class="fields">
+   <label>Work type<select id="clockDuty" name="duty" required><option value="head">Head coach</option><option value="assistant">Assistant coach</option><option value="private_lesson">Private lesson</option></select></label>
+   <label id="programField">Program<select id="program" name="program" required></select></label>
+  </div>
+  <label id="lessonFormatField" hidden>Lesson format<select name="lessonFormat" id="lessonFormat" disabled><option value="one-on-one">One-on-one</option><option value="partner">Two-on-one</option><option value="small-group">Small group</option></select></label>
+  <p id="lessonClockHelp" class="muted" hidden>65% coach · 35% SWA. After clocking out, edit the shift to enter the total collected for the entire lesson.</p>
+  <p id="practiceClockHelp" class="muted">The standard shift is the scheduled practice. Record all time worked, including any required duties before or after class. For back-to-back practices, stay clocked in and note which classes you covered.</p>
+  <button type="submit" class="primary">Clock in</button>
+ </form>
+ <button type="button" id="clockOut" class="primary" hidden>Clock out and save draft</button>
+</section>
+<section class="card" id="payrollDemoTools" hidden>
+ <div class="row"><button type="button" id="togglePayrollDemo">Preview sample payroll</button><strong id="payrollDemoLabel" class="pill time-flag" hidden>Sample payroll only</strong></div>
+ <p id="payrollDemoHelp" class="muted" hidden>Sample Coach Jordan Avery · One full month of practice shifts. You can try approving shifts here. Sample changes are temporary and never enter live timesheets or payroll exports.</p>
+ <p id="payrollDemoEstimate" hidden></p>
+</section>
+<section class="card" aria-label="Timesheet period">
+ <div class="fields" id="timesheetFilters">
+  <div><label for="month">Month</label><div class="swa-month-switch"><button id="prev" aria-label="Previous month">←</button><select id="month"></select><button id="next" aria-label="Next month">→</button></div></div>
+  <label id="coachField" hidden>Coach<select id="payrollCoach"><option value="">All coaches</option></select></label>
+  <label id="periodField" hidden>Period<select id="period"><option value="full">Full month</option><option value="first">First half (1st–15th)</option><option value="second">Second half (16th–end)</option></select></label>
+ </div>
+</section>
+<p id="status" role="status" aria-live="polite">Loading timesheet…</p>
+<div class="totals" id="totals" hidden>
+ <section class="card">Approved hours<strong id="hours"></strong></section>
+ <section class="card">Estimated approved gross<strong id="gross"></strong></section>
+ <section class="card">Shifts to review<strong id="pending"></strong></section>
+</div>
+<section id="coachSummary" class="card" hidden>
+ <h2 id="coachSummaryHeading">Totals by coach</h2>
+ <p id="coachPeriodTotal" hidden></p><div id="coachSummaryRows"></div>
+ <p id="coachBreakdownHelp" class="muted" hidden>Each shift is counted once under its recorded program. For back-to-back coverage, check the shift notes for the other classes.</p>
+</section>
+<section class="card">
+ <div class="row"><h2>Practice shifts</h2><button type="button" id="submitPeriod" class="primary" hidden>Submit monthly timesheet</button><a id="download" class="action primary" download hidden>Download approved hours (CSV)</a></div>
+ <p class="muted" id="submitHelp" hidden></p>
+ <p class="muted" id="exportHelp" hidden>Download the approved shifts for this period and send the file to payroll. Gross estimates are straight time before taxes and adjustments.</p>
+ <div id="shifts"></div>
+</section>
+<dialog id="reviewDialog" aria-labelledby="reviewHeading">
+ <h2 id="reviewHeading">Review shift</h2>
+ <p id="reviewShift"></p>
+ <form id="reviewForm">
+  <label>Work type<select id="reviewDuty"><option value="head">Head coach</option><option value="assistant">Assistant coach</option><option value="private_lesson">Private lesson</option></select></label>
+  <fieldset class="duration-editor" aria-describedby="reviewHint">
+   <legend>Corrected work time</legend>
+   <div class="duration-pickers">
+    <label>Hours<select id="reviewHours"></select></label>
+    <label>Minutes<select id="reviewMinutes"></select></label>
+   </div>
+   <p id="reviewHint" class="muted"></p>
+   <button type="button" id="resetReviewTime">Use recorded time</button>
+  </fieldset>
+  <label id="lessonGrossField" hidden>Total collected for the lesson ($)<input id="lessonGross" type="number" min="0" max="100000" step="0.01" inputmode="decimal" disabled></label>
+  <p id="lessonGrossHelp" class="muted" hidden>Enter the total for all wrestlers in the session. The coach receives 65% and SWA retains 35% before processing fees.</p>
+  <label>Reason for correction<textarea id="reviewNote" rows="2" maxlength="300"></textarea></label>
+  <p id="reviewError" role="status"></p>
+  <button type="submit" id="approve" class="primary">Approve hours</button>
+  <button type="button" id="closeReview">Cancel</button>
+ </form>
+</dialog>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pageParams=new URLSearchParams(location.search);
+const review=pageParams.get('review')==='1';
+const programs={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=cents=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
+const day=date=>new Date(date+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'long',day:'numeric'});
+const clock=iso=>new Date(iso).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
+const duration=seconds=>Math.floor(seconds/3600)+'h '+Math.floor(seconds%3600/60)+'m'+(seconds%60?' '+seconds%60+'s':'');
+const dutyLabel=duty=>({head:'Head coach',assistant:'Assistant coach',private_lesson:'Private lesson'})[duty];
+const shiftDuty=shift=>shift.approved_duty??shift.draft_duty??shift.duty;
+const timeFlags=shift=>shift.practiceReview?.reasons??[];
+const isDraft=shift=>!!shift.ended_at&&!shift.submitted_at&&!shift.approved_at;
+const durationOptions=(max,pad=false)=>'<option value="">—</option>'+Array.from({length:max+1},(_,n)=>
+ `<option value="${n}">${pad?String(n).padStart(2,'0'):n}</option>`).join('');
+$('reviewHours').innerHTML=durationOptions(24);
+$('reviewMinutes').innerHTML=durationOptions(59,true);
+function setReviewTime(minutes){
+ $('reviewHours').value=minutes===null?'':String(Math.floor(minutes/60));
+ $('reviewMinutes').value=minutes===null?'':String(minutes%60);
+}
+function reviewTimeMinutes(){
+ const hours=$('reviewHours').value,minutes=$('reviewMinutes').value;
+ return hours===''&&minutes===''?null:Number(hours)*60+Number(minutes);
+}
+$('resetReviewTime').onclick=()=>{
+ setReviewTime(null);
+ $('reviewError').textContent='';
+};
+const currentMonth=SwaMonths.today().slice(0,7);
+const sampleMonth=SwaMonths.move(currentMonth,-1);
+let demo=review&&pageParams.get('demo')==='1',sampleRows=[],liveMonth=currentMonth,livePeriod='full',liveCoach='';
+let month=demo?sampleMonth:currentMonth,period='full',coachEmail='',sequence=0,busy=false,state=null,reviewing=null,reviewTimeRequired=false;
+if(review){
+ $('back').href='/#workspace=Coaches';$('back').textContent='← Owner workspace';
+ $('heading').textContent='Coach timesheets';
+ $('intro').textContent='Review coaching hours, approve shifts, and download an approved-hours file for payroll. Amber flags show shifts that need a closer look.';
+ $('exportHelp').hidden=false;
+ $('periodField').hidden=false;
+ $('coachField').hidden=false;
+ $('payrollDemoTools').hidden=false;
+}
+function params(){return 'month='+encodeURIComponent(month)+'&period='+encodeURIComponent(period)+(review?'&review=1':'')}
+async function request(path,body){
+ const response=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});
+ const data=await response.json();
+ if(!response.ok)throw Error(data.error||'Unable to load the timesheet.');
+ return data;
+}
+function clockWorkType(){
+ const privateLesson=$('clockDuty').value==='private_lesson';
+ $('programField').hidden=privateLesson;$('program').disabled=privateLesson;
+ $('practiceClockHelp').hidden=privateLesson;
+ $('lessonClockHelp').hidden=!privateLesson;
+ $('lessonFormatField').hidden=!privateLesson;
+ $('lessonFormat').disabled=!privateLesson;
+}
+$('clockDuty').onchange=clockWorkType;
+function samplePayrollRows(){
+ const [year,monthNumber]=sampleMonth.split('-').map(Number);
+ const days=new Date(Date.UTC(year,monthNumber,0)).getUTCDate(),rows=[];
+ const offset=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',timeZoneName:'longOffset'});
+ for(let date=1;date<=days;date++){
+  const noon=new Date(Date.UTC(year,monthNumber-1,date,12)),weekday=noon.getUTCDay();
+  if(weekday<1||weekday>4)continue;
+  const workDate=noon.toISOString().slice(0,10);
+  const zone=offset.formatToParts(noon).find(p=>p.type==='timeZoneName').value.slice(3);
+  const start=new Date(workDate+'T18:00:00'+zone);
+  const backToBack=rows.length===2,seconds=(backToBack?180:90)*60;
+  const end=new Date(+start+seconds*1000).toISOString();
+  const rate=4000,approved=date<=days-7&&!backToBack;
+  rows.push({
+   id:'sample-'+workDate,revision:1,coach_name:'Jordan Avery (sample)',coach_email:'jordan@example.test',
+   program:'Elementary',programName:'SWA Development',duty:'head',work_date:workDate,started_at:start.toISOString(),ended_at:end,
+   closed_at:end,submitted_at:end,seconds,rate,rate_cents:rate,gross:Math.round(seconds*rate/3600),
+   approved_at:approved?end:null,approved_seconds:approved?seconds:null,
+   ...(backToBack?{
+    practiceReview:{reasons:['Hours exceed the 90 scheduled minutes for one practice.','Possible back-to-back coverage with SWA Intermediate. Verify the continuous shift.']},
+    draft_note:'Covered Development from 6:00–7:30 p.m. and Intermediate from 7:30–9:00 p.m. in one continuous shift.'
+   }:{})
+  });
+ }
+ return rows;
+}
+function updateSampleShift(input){
+ const index=sampleRows.findIndex(s=>s.id===input.id&&s.revision===input.revision);
+ if(index<0)throw Error('This sample shift changed. Reload the sample before continuing.');
+ const row=sampleRows[index];
+ if(input.action==='delete'){sampleRows.splice(index,1);return}
+ if(input.action==='reopen'){
+  const seconds=Math.round((Date.parse(row.ended_at)-Date.parse(row.started_at))/1000);
+  sampleRows[index]={...row,seconds,rate:row.rate_cents,gross:Math.round(seconds*row.rate_cents/3600),
+   approved_at:null,approved_seconds:null,approved_duty:null,review_note:null,revision:row.revision+1};
+  return;
+ }
+ if(input.action!=='approve')throw Error('Choose a sample review action.');
+ const seconds=input.minutes==null?row.seconds:input.minutes*60,rate=input.duty==='assistant'?3000:4000;
+ if((seconds!==row.seconds||input.duty!==row.duty)&&!input.note.trim())throw Error('Add a reason for the correction.');
+ sampleRows[index]={...row,seconds,rate,gross:Math.round(seconds*rate/3600),approved_at:row.ended_at,
+  approved_seconds:seconds,approved_duty:input.duty,review_note:input.note.trim(),revision:row.revision+1};
+}
+$('togglePayrollDemo').onclick=()=>{
+ if(busy)return;
+ if(demo){demo=false;month=liveMonth;period=livePeriod;coachEmail=liveCoach}
+ else{liveMonth=month;livePeriod=period;liveCoach=coachEmail;demo=true;month=sampleMonth;period='full';coachEmail='';sampleRows=samplePayrollRows()}
+ load();
+};
+function renderClock(){
+ if(review)return;
+ $('clockCard').hidden=false;
+ const active=state.active;
+ $('clockForm').hidden=!!active;
+ $('clockOut').hidden=!active;
+ $('clockHeading').textContent=active?'You’re clocked in':'Coach check-in';
+ $('clockInfo').textContent=active?(active.duty==='private_lesson'?(active.lessonFormatName||dutyLabel(active.duty)):active.programName+' · '+dutyLabel(active.duty))+' · Started '+clock(active.started_at):
+  'Choose practice or private lesson before clocking in.';
+ if(!active){
+  for(const option of $('clockDuty').options)option.disabled=option.value!=='private_lesson'&&!state.programs.length;
+  if(!state.programs.length)$('clockDuty').value='private_lesson';
+  clockWorkType();
+  const prior=$('program').value;
+  $('program').replaceChildren(...state.programs.map(id=>new Option(programs[id],id)));
+  if(state.programs.includes(prior))$('program').value=prior;
+ }
+}
+function renderCoachFilter(){
+ if(!review)return;
+ const names=new Map((demo?sampleRows:state.rows).map(row=>[row.coach_email,row.coach_name]));
+ for(const coach of state.coaches??[])names.set(coach.email,coach.name);
+ if(!names.has(coachEmail))coachEmail='';
+ const counts=new Map();
+ for(const name of names.values())counts.set(name,(counts.get(name)??0)+1);
+ const filter=$('payrollCoach');
+ filter.innerHTML='<option value="">All coaches</option>'+[...names].sort(([emailA,nameA],[emailB,nameB])=>nameA.localeCompare(nameB)||emailA.localeCompare(emailB))
+  .map(([email,name])=>`<option value="${esc(email)}">${esc(counts.get(name)>1?name+' ('+email+')':name)}</option>`).join('');
+ filter.value=coachEmail;
+ filter.disabled=!names.size;
+}
+function renderCoachSummary(rows){
+ if(!review)return;
+ const selected=!!coachEmail,totals=new Map();
+ for(const shift of rows){
+  const duty=dutyLabel(shiftDuty(shift));
+  const key=selected?shift.program+'|'+(shift.lesson_format??duty):shift.coach_email;
+  const name=selected?(shift.program==='Private lesson'?(shift.lessonFormatName||shift.programName):shift.programName+' · '+duty):shift.coach_name;
+  const summary=totals.get(key)??{name,seconds:0,cents:0,pending:0,pendingSeconds:0,pendingCents:0,count:0};
+  summary.count++;
+  if(shift.approved_at){summary.seconds+=shift.approved_seconds;summary.cents+=shift.gross}
+  else{summary.pending++;summary.pendingSeconds+=shift.seconds??0;summary.pendingCents+=shift.gross??0}
+  totals.set(key,summary);
+ }
+ $('coachSummary').hidden=!totals.size;
+ $('coachSummaryHeading').textContent=selected?'Breakdown by program and role':'Totals by coach';
+ $('coachPeriodTotal').hidden=!selected;
+ $('coachBreakdownHelp').hidden=!selected;
+ if(selected){
+  const seconds=rows.reduce((sum,shift)=>sum+(shift.seconds??0),0);
+  const gross=rows.reduce((sum,shift)=>sum+(shift.gross??0),0);
+  $('coachPeriodTotal').textContent=rows.length+' shifts · '+duration(seconds)+' total entered · '+money(gross)+' estimated gross including unapproved hours';
+ }
+ $('coachSummaryRows').innerHTML=[...totals.values()].sort((a,b)=>a.name.localeCompare(b.name)).map(row=>{
+  const count=selected?row.count+' shift'+(row.count===1?'':'s')+' · ':'';
+  const pending=selected?' · '+money(row.pendingCents)+' estimated unapproved gross':'';
+  return `<article class="shift"><h3>${esc(row.name)}</h3><p>${count}${duration(row.seconds)} approved · ${money(row.cents)} estimated approved gross · ${duration(row.pendingSeconds)} recorded across ${row.pending} unapproved shift${row.pending===1?'':'s'}${pending}</p></article>`;
+ }).join('');
+}
+function render(){
+ renderClock();
+ const rows=review&&coachEmail?state.rows.filter(shift=>shift.coach_email===coachEmail):state.rows;
+ renderCoachSummary(rows);
+ const approved=rows.filter(shift=>shift.approved_at);
+ const drafts=rows.filter(isDraft);
+ $('totals').hidden=false;
+ $('hours').textContent=duration(approved.reduce((total,shift)=>total+shift.approved_seconds,0));
+ $('gross').textContent=money(approved.reduce((total,shift)=>total+shift.gross,0));
+ $('pending').textContent=String(rows.filter(shift=>shift.submitted_at&&!shift.approved_at).length);
+ $('submitPeriod').hidden=review||!drafts.length;
+ $('submitPeriod').disabled=!state.canSubmit;
+ $('submitHelp').hidden=review||!drafts.length;
+ if(!$('submitHelp').hidden)$('submitHelp').textContent=state.canSubmit
+  ?drafts.length+' draft shift'+(drafts.length===1?'':'s')+' this month. Check your hours before submitting.'
+  :'You can edit drafts now. Monthly submission opens '+day(state.submissionOpens)+' (Eastern time).';
+ $('download').hidden=!review||demo||!approved.length;
+ if(demo)$('download').removeAttribute('href');
+ if(review&&!demo&&approved.length){
+  $('download').href='/api/coach-time?'+params()+'&format=csv'+(coachEmail?'&coach='+encodeURIComponent(coachEmail):'');
+  $('download').textContent=coachEmail?'Download this coach’s approved hours (CSV)':'Download approved hours (CSV)';
+ }
+ $('payrollDemoEstimate').hidden=!demo;
+ if(demo)$('payrollDemoEstimate').textContent='Estimated gross if all shown shifts are approved: '+money(rows.reduce((sum,shift)=>sum+shift.gross,0));
+ $('shifts').innerHTML=[...rows].reverse().map(shift=>{
+  const status=shift.approved_at?'Approved':shift.submitted_at?'Submitted':isDraft(shift)?'Draft':shift.closed_at?'Needs review':'Clocked in';
+  const flags=timeFlags(shift);
+  const recorded='In '+clock(shift.started_at)+(shift.ended_at?' · Out '+clock(shift.ended_at):' · No clock-out');
+  const hours=shift.seconds===null?'':duration(shift.seconds);
+  const split=shift.lessonSplit;
+  const worked=shift.lesson_format
+   ? [hours,split?money(split.grossCents)+' collected · '+money(split.coachCents)+' coach (65%) · '+money(split.businessCents)+' SWA (35%)':'Collected revenue awaiting confirmation'].filter(Boolean).join(' · ')
+   : hours&&hours+' · '+money(shift.rate)+'/hr · '+money(shift.gross)+' estimated gross';
+  const id=esc(shift.id);
+  const actions=review?`${!isDraft(shift)?`<button type="button" data-review="${id}">${shift.approved_at?'Reopen shift':'Review & approve'}</button>`:''}
+   <button type="button" data-delete="${id}">Delete shift</button>`:
+   isDraft(shift)?`<button type="button" data-edit="${id}">Edit shift</button>`:
+   shift.submitted_at&&!shift.approved_at&&shift.ended_at?`<button type="button" data-pull="${id}">Pull back to edit</button>`:'';
+
+  return `<article class="shift"><div class="row"><div><h3>${esc(review?shift.coach_name+' · ':'')}${esc(shift.lessonFormatName||shift.programName)} · ${esc(day(shift.work_date))}</h3>
+   <p>${dutyLabel(shiftDuty(shift))} <span class="pill ${shift.approved_at?'approved':''}">${status}</span>${flags.length?` <span class="pill time-flag">${shift.approved_at?'Time flag reviewed':'Time flag · needs review'}</span>`:''}</p></div>
+   ${actions?`<div class="shift-actions">${actions}</div>`:''}</div>
+   <p class="muted">${esc(recorded)}</p>${worked?`<p>${esc(worked)}</p>`:''}
+   ${flags.length?`<ul class="time-flag-reasons">${flags.map(reason=>`<li>${esc(reason)}</li>`).join('')}</ul>`:''}
+   ${shift.draft_note?`<p>Coach correction: ${esc(shift.draft_note)}</p>`:''}
+   ${shift.review_note?`<p>Review note: ${esc(shift.review_note)}</p>`:''}</article>`;
+ }).join('')||(coachEmail?'<p class="muted">No shifts for this coach in this period.</p>':'<p class="muted">No shifts in this period.</p>');
+}
+async function load(message=''){
+ const generation=++sequence;
+ $('status').textContent='Loading timesheet…';
+ $('payrollCoach').disabled=true;
+ $('shifts').textContent='';$('submitPeriod').hidden=true;$('submitHelp').hidden=true;$('totals').hidden=true;$('download').hidden=true;$('coachSummary').hidden=true;
+ $('month').innerHTML=SwaMonths.options(month,'1900-01',currentMonth);$('month').value=month;$('period').value=period;
+ $('month').disabled=demo;
+ $('prev').disabled=demo||!SwaMonths.move(month,-1);$('next').disabled=demo||month>=currentMonth;
+ $('payrollDemoLabel').hidden=!demo;
+ $('payrollDemoHelp').hidden=!demo;
+ $('togglePayrollDemo').textContent=demo?'Return to live timesheets':'Preview sample payroll';
+ $('exportHelp').hidden=!review||demo;
+ try{
+  const data=demo?{rows:sampleRows.filter(shift=>{
+   const date=Number(shift.work_date.slice(-2));
+   return period==='full'||(period==='first'?date<=15:date>15);
+  })}:await request('/api/coach-time?'+params());
+  if(generation!==sequence)return;
+  state=data;renderCoachFilter();render();
+  $('status').textContent=message||SwaMonths.label(month)+(review?' · '+$('period').selectedOptions[0].textContent:'');
+ }catch(error){if(generation===sequence){state=null;$('clockCard').hidden=true;$('status').textContent=error.message}}
+}
+function changeMonth(value){
+ if(demo||!SwaMonths.valid(value)||value>currentMonth){SwaMonths.set($('month'),month);return}
+ month=value;load();
+}
+async function save(body,message,control,errorElement=$('status')){
+ if(busy)return;
+ busy=true;control.disabled=true;
+ try{
+  if(demo)updateSampleShift(body);
+  else await request('/api/coach-time',body);
+  if($('reviewDialog').open)$('reviewDialog').close();
+  await load(demo?'Sample only · '+message:message);
+ }
+ catch(error){errorElement.textContent=error.message}
+ finally{busy=false;control.disabled=control===$('submitPeriod')&&!state?.canSubmit}
+}
+$('clockForm').onsubmit=event=>{
+ event.preventDefault();
+ const data=new FormData(event.currentTarget);
+ save({action:'start',program:data.get('program'),duty:data.get('duty'),lessonFormat:data.get('lessonFormat')},'Clock-in recorded.',event.submitter);
+};
+$('clockOut').onclick=()=>{
+ const active=state?.active;if(!active)return;
+ save({action:'end',id:active.id,revision:active.revision},'Clock-out recorded. You can edit this draft before submitting.',$('clockOut'));
+};
+$('shifts').onclick=event=>{
+ const button=event.target.closest('[data-review],[data-delete],[data-edit],[data-pull]');
+ if(!button||busy)return;
+ const {review:reviewId,delete:deleteId,edit:editId,pull:pullId}=button.dataset;
+ const shift=state?.rows.find(row=>row.id===(deleteId??reviewId??editId??pullId));
+ if(!shift)return;
+ if(pullId){
+  save({action:'pull-back',id:shift.id,revision:shift.revision},'Shift returned to drafts. Edit it and submit it again.',button);
+  return;
+ }
+ if(deleteId){
+  const prompt='Delete the shift for '+shift.coach_name+' on '+day(shift.work_date)+'? It will be removed from totals and future payroll exports.';
+  if(confirm(prompt))save({action:'delete',id:shift.id,revision:shift.revision,confirmed:true},'Shift removed from timesheets and payroll exports.',button);
+  return;
+ }
+ if(shift.approved_at){
+  if(confirm('Reopen this shift? It will be excluded from new exports until you approve it again.'))save({action:'reopen',id:shift.id,revision:shift.revision},'Shift reopened.',button);
+  return;
+ }
+ reviewing=shift;
+ $('reviewHeading').textContent=review?'Review shift':'Edit draft shift';
+ $('approve').textContent=review?'Approve hours':'Save correction';
+ $('reviewShift').textContent=shift.coach_name+' · '+shift.programName+' · '+day(shift.work_date);
+ const lesson=shift.duty==='private_lesson';
+ for(const option of $('reviewDuty').options)option.disabled=(option.value==='private_lesson')!==lesson;
+ $('reviewDuty').value=shiftDuty(shift);
+ setReviewTime(review||shift.draft_seconds==null?null:shift.draft_seconds/60);
+ $('reviewNote').value=review?'':shift.draft_note??'';
+ const splitLesson=!!shift.lesson_format,gross=shift.lesson_gross_cents;
+ $('lessonGrossField').hidden=!splitLesson;
+ $('lessonGrossHelp').hidden=!splitLesson;
+ $('lessonGross').disabled=!splitLesson;
+ $('lessonGross').required=splitLesson&&review;
+ $('lessonGross').value=gross==null?'':(gross/100).toFixed(2);
+ $('reviewError').textContent='';
+ const clocked=shift.ended_at?Math.round((Date.parse(shift.ended_at)-Date.parse(shift.started_at))/1000):null;
+ const baseline=review?shift.seconds:clocked;
+ reviewTimeRequired=baseline===null||baseline<1||baseline>86400;
+ $('resetReviewTime').hidden=reviewTimeRequired;
+ $('resetReviewTime').textContent=review?'Use submitted time':'Use recorded time';
+ $('reviewHint').textContent=reviewTimeRequired?'Select the hours and minutes actually worked, then explain the correction.':
+  (review?'Time for review: ':'Clocked time: ')+duration(baseline)+'. Leave both blank to use this time. Add a reason if you change the role or time.';
+ const flags=timeFlags(shift);
+ if(flags.length)$('reviewHint').textContent+=' '+flags.join(' ')+(review?' Confirm all time worked before approving.':' Add a note if you covered multiple practices.');
+ $('reviewDialog').showModal();
+};
+$('reviewForm').onsubmit=event=>{
+ event.preventDefault();
+ if(!reviewing)return;
+ const minutes=reviewTimeMinutes(),gross=$('lessonGross').value;
+ if(minutes===null?reviewTimeRequired:(!Number.isInteger(minutes)||minutes<1||minutes>1440)){
+  $('reviewError').textContent='Select a worked time from 1 minute to 24 hours.';
+  $('reviewHours').focus();
+  return;
+ }
+ save({action:review?'approve':'edit-draft',id:reviewing.id,revision:reviewing.revision,duty:$('reviewDuty').value,minutes,note:$('reviewNote').value,
+  ...(reviewing.lesson_format?{lessonGrossCents:gross===''?null:Math.round(Number(gross)*100)}:{})},
+  review?'Shift approved.':'Correction saved. This shift is still a draft.',$('approve'),$('reviewError'));
+};
+$('submitPeriod').onclick=()=>{
+ const shifts=state?.rows.filter(isDraft).map(({id,revision})=>({id,revision}));
+ if(!state?.canSubmit||!shifts?.length||!confirm('Submit your '+SwaMonths.label(month)+' timesheet with '+shifts.length+' draft shift'+(shifts.length===1?'':'s')+'?'))return;
+ save({action:'submit',month,shifts},'Monthly timesheet submitted for owner approval.',$('submitPeriod'));
+};
+$('closeReview').onclick=()=>{if(!busy)$('reviewDialog').close()};
+$('month').onchange=()=>changeMonth($('month').value);
+$('prev').onclick=()=>changeMonth(SwaMonths.move(month,-1));
+$('next').onclick=()=>changeMonth(SwaMonths.move(month,1));
+$('period').onchange=()=>{period=$('period').value;load()};
+$('payrollCoach').onchange=()=>{
+ if(!state||!review)return;
+ coachEmail=$('payrollCoach').value;
+ render();
+ window.SavageNavigation?.capture();
+};
+globalThis.SavagePageNavigation={
+ snapshot:()=>({month,period,coachEmail}),
+ restore(value){if(!value)return;if(!demo&&SwaMonths.valid(value.month)&&value.month<=currentMonth)month=value.month;if(review&&['full','first','second'].includes(value.period))period=value.period;if(review&&typeof value.coachEmail==='string')coachEmail=value.coachEmail;load()},
+ back(){if(!$('reviewDialog').open)return false;if(!busy)$('reviewDialog').close();return true}
+};
+if(demo)sampleRows=samplePayrollRows();
+load();
+</script></body></html>

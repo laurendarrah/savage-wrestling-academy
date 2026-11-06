@@ -1,4 +1,18 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Practice plans | Savage</title><style>*{box-sizing:border-box}body{font:16px Arial;line-height:1.6;background:#f5f5f6;color:#18191c;margin:0}main{max-width:1000px;margin:auto;padding:24px}h1{line-height:1.15}section,article{background:white;border:1px solid #ddd;border-radius:10px;padding:24px;margin:20px 0}label{display:block;font-weight:bold;margin:16px 0}input,select,textarea,button{font:inherit}input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-top:6px}input[type=checkbox]{display:inline;width:auto}button{padding:12px;border:1px solid #ccc;border-radius:6px;background:white;color:#18191c;cursor:pointer}.primary{background:#d72732;color:white;border-color:#d72732}button:disabled{opacity:.55}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.row>label{flex:1;min-width:200px}a{color:#a92330}.muted{color:#626672}.badge{font-size:13px;font-weight:bold}#status{font-weight:bold;scroll-margin-top:20px}.plan-content{white-space:pre-wrap;overflow-wrap:anywhere}.block{background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:18px;margin:18px 0}.drag-handle{touch-action:none;cursor:grab;user-select:none}.block.dragging{opacity:.55}.block.drop-target{outline:3px solid #d72732}.block textarea{background:white}.block-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.block-head strong{flex:1}.block-head button{padding:8px 12px}.timing{font-size:13px;color:#626672}fieldset{border:0;padding:0;margin:0}[hidden]{display:none!important}@media print{body{background:white}main>*{display:none!important}#detail{display:block!important;border:0;padding:0}#detail button{display:none}}</style><link rel="stylesheet" href="/responsive.css"></head><body><main><a id="home" href="/coach">← Workspace</a> <a id="backCalendar" href="/#practice-calendar" hidden>← Practice calendar</a><h1>Practice plans.</h1><p id="intro">Loading access…</p><p id="status" role="status" aria-live="polite">Loading scheduled practices…</p><div id="monthTools" class="row"><label>Practice month<select id="month"></select></label><label>Filter program<select id="filter"><option value="">All assigned programs</option></select></label><button id="reload">Reload plans</button></div><section id="ownerEditor" hidden><h2 id="editorHeading">Add or edit a practice plan</h2><label id="practiceLabel">Scheduled practice<select id="practice"></select></label><p id="noPractices" hidden>No practices are scheduled in this month. Add your semester schedule first, then return here.</p><div id="curriculumTools" class="block"><h3>Program curriculum & lesson</h3><p>Each program has its own curricula and lessons. Loading a lesson creates a separate copy for this practice.</p><p id="builderLink"><a href="/curricula">Build or edit program curricula →</a></p><label id="curriculumProgramLabel" hidden>Program<select id="curriculumProgram"></select></label><label>Curriculum<select id="curriculumGroup"><option value="">Choose curriculum</option></select></label><div id="groupEditor" hidden><label>Curriculum name<input id="groupName" maxlength="120" placeholder="Example: Foundations — First season"></label><button type="button" id="saveGroup">Save curriculum name</button></div><label>Lesson<select id="curriculum"><option value="">Choose lesson</option></select></label><div id="lessonMetadata"><label>Lesson name<input id="curriculumName" maxlength="120" placeholder="Example: Lesson 1 — Stance and motion"></label><label>Lesson number<input id="lessonOrder" type="number" min="1" max="10000" step="1" value="1"></label></div><div class="row"><button type="button" id="loadCurriculum">Load lesson into selected practice</button><button type="button" id="saveCurriculum">Save current plan as lesson</button><button type="button" id="reloadCurricula">Refresh library</button></div><div id="legacyTools" hidden><h4>Earlier saved plans</h4><p>Your earlier plans are kept here. Copy one into a program curriculum, then save it as a lesson.</p><select id="legacyPlan"></select><button type="button" id="copyLegacy">Copy earlier plan into lesson draft</button></div><p id="curriculumStatus" role="status" aria-live="polite"></p></div><form id="planForm"><fieldset id="fields"><label>Plan title<input name="title" maxlength="120" required placeholder="Example: Leg attacks and finishes"></label><label>Practice goals<textarea name="objective" rows="3" maxlength="5000" placeholder="What should wrestlers improve today?"></textarea></label><h3>Practice rotation</h3><p>Standard template: Warm-up → Drills → Technique → Live → Conditioning → Cool-down. 90 minutes: Warm-up 10 · Drills 10 · Technique 30 · Live 30 · Conditioning 5 · Cool-down 5. Name each section however you like. Drag its handle to rearrange it. Every section needs minutes; the total cannot exceed 90.</p><p id="timingSummary" class="muted" role="status" aria-live="polite"></p><div id="sections"></div><div class="row"><label>Add a section<select id="newKind"><option value="warmup">Warm-up</option><option value="drill">Drills</option><option value="technique">Technique</option><option value="live">Live</option><option value="conditioning">Conditioning</option><option value="cooldown">Cool-down</option><option value="custom">Custom</option></select></label><button id="addSection" type="button">Add section</button><button id="resetOrder" type="button">Reset to standard order</button></div><label>Overall coach notes / equipment<textarea name="notes" rows="4" maxlength="5000"></textarea></label><label id="shareLabel"><input name="published" type="checkbox" checked>Share this plan with coaches assigned to this program</label><p class="muted">Leave unchecked to save a private draft. Customers and other programs’ coaches cannot view the plan.</p><button id="save" class="primary">Save practice plan</button></fieldset></form></section><section id="detail" hidden tabindex="-1"></section><h2 id="listHeading">Practice plans for this month</h2><div id="plans"></div></main><script>
+<!doctype html><html lang="en"><head><script defer src="/navigation.js"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Practice plans | Savage</title><style>*{box-sizing:border-box}body{font:16px Arial;line-height:1.6;background:#f5f5f6;color:#18191c;margin:0}main{max-width:1000px;margin:auto;padding:24px}h1{line-height:1.15}section,article{background:white;border:1px solid #ddd;border-radius:10px;padding:24px;margin:20px 0}label{display:block;font-weight:bold;margin:16px 0}input,select,textarea,button{font:inherit}input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-top:6px}input[type=checkbox]{display:inline;width:auto}button{padding:12px;border:1px solid #ccc;border-radius:6px;background:white;color:#18191c;cursor:pointer}.primary{background:#d72732;color:white;border-color:#d72732}button:disabled{opacity:.55}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.row>label{flex:1;min-width:200px}a{color:#a92330}.muted{color:#626672}.badge{font-size:13px;font-weight:bold}#status{font-weight:bold;scroll-margin-top:20px}.plan-content{white-space:pre-wrap;overflow-wrap:anywhere}.block{background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:18px;margin:18px 0}.drag-handle{touch-action:none;cursor:grab;user-select:none}.block.dragging{opacity:.55}.block.drop-target{outline:3px solid #d72732}.block textarea{background:white}.block-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.block-head strong{flex:1}.block-head button{padding:8px 12px}.timing{font-size:13px;color:#626672}fieldset{border:0;padding:0;margin:0}[hidden]{display:none!important}@media print{body{background:white}main>*{display:none!important}#detail{display:block!important;border:0;padding:0}#detail button{display:none}}
+.coach-practice-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.coach-practice-day{min-width:0;min-height:70px;border:1px solid #e2e2e5;border-radius:6px;padding:6px;background:#fafafa}
+.coach-practice-day time{font-size:.83rem;font-weight:bold;display:block}
+.coach-practice-day time .date-long{display:none}
+.coach-practice-grid button{display:block;width:100%;font-size:.81rem;text-align:left;padding:6px;margin-top:5px;overflow-wrap:anywhere}
+.coach-practice-grid button small{display:block;line-height:1.2}
+.coach-practice-grid .weekday{text-align:center;font-weight:bold}
+@media(max-width:700px){
+ .coach-practice-grid{grid-template-columns:1fr}
+ .coach-practice-grid .weekday,.coach-practice-grid .empty-day,.coach-practice-day time .date-short{display:none}
+ .coach-practice-day time .date-long{display:inline}
+ .coach-practice-day{min-height:0}
+}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main><a id="home" href="/coach">← Workspace</a> <a id="backCalendar" href="/#practice-calendar" hidden>← Practice calendar</a><h1>Practice plans.</h1><p id="intro">Loading access…</p><p id="status" role="status" aria-live="polite">Loading scheduled practices…</p><div id="monthTools" class="row"><div><label for="month">Practice month</label><div class="swa-month-switch"><button type="button" id="previousPlanMonth" aria-label="Previous month">←</button><select id="month"></select><button type="button" id="nextPlanMonth" aria-label="Next month">→</button></div></div><label id="filterLabel">Filter calendar<select id="filter"><option value="">All assigned programs</option></select></label><button id="reload">Reload plans</button></div><section id="coachCalendar" hidden aria-labelledby="coachCalendarHeading"><h2 id="coachCalendarHeading">Academy calendar</h2><p class="muted">Select a practice to see its shared plan or draft one for an assigned program. Select any event for details. All times are Eastern.</p><div id="coachPracticeKey" class="calendar-key" aria-label="Calendar colors"></div><div id="coachPracticeDays" class="coach-practice-grid"></div></section><section id="detail" hidden tabindex="-1"></section><section id="reviewQueue" hidden><h2>Coach plan submissions</h2><div id="reviewItems"></div></section><section id="ownerEditor" hidden><h2 id="editorHeading">Add or edit a practice plan</h2><label id="practiceLabel">Scheduled practice<select id="practice"></select></label><p id="noPractices" hidden>No practices are scheduled in this month. Add your semester schedule first, then return here.</p><div id="curriculumTools" class="block"><h3>Program curriculum & lesson</h3><p>Each program has its own curricula and lessons. Loading a lesson creates a separate copy for this practice.</p><p id="builderLink"><a href="/curricula">Build or edit program curricula →</a></p><label id="curriculumProgramLabel" hidden>Program<select id="curriculumProgram"></select></label><label>Curriculum<select id="curriculumGroup"><option value="">Choose curriculum</option></select></label><div id="groupEditor" hidden><label>Curriculum name<input id="groupName" maxlength="120" placeholder="Example: Foundations — First season"></label><button type="button" id="saveGroup">Save curriculum name</button></div><label>Lesson<select id="curriculum"><option value="">Choose lesson</option></select></label><div id="lessonMetadata"><label>Lesson name<input id="curriculumName" maxlength="120" placeholder="Example: Lesson 1 — Stance and motion"></label><label>Lesson number<input id="lessonOrder" type="number" min="1" max="10000" step="1" value="1"></label></div><div class="row"><button type="button" id="loadCurriculum">Load lesson into selected practice</button><button type="button" id="saveCurriculum">Save current plan as lesson</button><button type="button" id="reloadCurricula">Refresh library</button></div><div id="legacyTools" hidden><h4>Earlier saved plans</h4><p>Your earlier plans are kept here. Copy one into a program curriculum, then save it as a lesson.</p><select id="legacyPlan"></select><button type="button" id="copyLegacy">Copy earlier plan into lesson draft</button></div><p id="curriculumStatus" role="status" aria-live="polite"></p></div><form id="planForm"><fieldset id="fields"><label>Plan title<input name="title" maxlength="120" required placeholder="Example: Leg attacks and finishes"></label><label>Practice goals<textarea name="objective" rows="3" maxlength="5000" placeholder="What should wrestlers improve today?"></textarea></label><h3>Practice rotation</h3><p>Standard template: Warm-up → Drills → Technique → Live → Conditioning → Cool-down. 90 minutes: Warm-up 10 · Drills 10 · Technique 30 · Live 30 · Conditioning 5 · Cool-down 5. Name each section however you like. Drag its handle to rearrange it. Every section needs minutes; the total cannot exceed 90.</p><p id="timingSummary" class="muted" role="status" aria-live="polite"></p><div id="sections"></div><div class="row"><label>Add a section<select id="newKind"><option value="warmup">Warm-up</option><option value="drill">Drills</option><option value="technique">Technique</option><option value="live">Live</option><option value="conditioning">Conditioning</option><option value="cooldown">Cool-down</option><option value="custom">Custom</option></select></label><button id="addSection" type="button">Add section</button><button id="resetOrder" type="button">Reset to standard order</button></div><label>Overall coach notes / equipment<textarea name="notes" rows="4" maxlength="5000"></textarea></label><label id="shareLabel"><input name="published" type="checkbox" checked>Share this plan with coaches</label><p id="shareHelp" class="muted">Leave unchecked to save a private draft. Only signed-in coaches can view shared plans.</p><p id="submissionHelp" class="muted" hidden></p><div class="row"><button id="save" class="primary">Save practice plan</button><button id="sendPlan" type="submit" hidden></button><button id="closePlanEditor" type="button" hidden>Close editor</button></div></fieldset></form></section><h2 id="listHeading">Practice plans for this month</h2><div id="plans"></div></main><script>
 function namedMonthOptions(key,min='2020-01',max='2100-12'){
  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(key))return '';
  const [year,month]=key.split('-').map(Number),fmt=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric',timeZone:'UTC'});
@@ -8,9 +22,12 @@ function setNamedMonth(control,key){control.innerHTML=namedMonthOptions(key,cont
 
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const libraryMode=location.pathname==='/curricula';
+const reviewMode=new URLSearchParams(location.search).get('review')==='1';
+const coachEmbedded=new URLSearchParams(location.search).get('embed')==='coach';
 const kinds={warmup:'Warm-up',drill:'Drills',technique:'Technique',live:'Live',conditioning:'Conditioning',cooldown:'Cool-down',custom:'Custom'};const standard=['warmup','drill','technique','live','conditioning','cooldown'];
 const newBlock=kind=>({id:crypto.randomUUID(),kind,title:kinds[kind],minutes:null,notes:''});const template=()=>standard.map((kind,i)=>({...newBlock(kind),minutes:[10,10,30,30,5,5][i]}));
-let state=null,current='',dirty=false,busy=false,revision=0,blocks=[],curricula=[],curriculumBusy=false,curriculaLoaded=false,groups=[],chosenGroup='',libraryProgram='',chosenLesson='';
+let lastFilter='';
+let state=null,current='',dirty=false,busy=false,revision=0,blocks=[],curricula=[],curriculumBusy=false,curriculaLoaded=false,groups=[],chosenGroup='',libraryProgram='',chosenLesson='',viewedPractice='',submissionEditor=null;
 const key=p=>p.program+'|'+p.date;
 const title=p=>state.programs.find(g=>g.id===p.program)?.name||p.program;
 const date=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long',month:'long',day:'numeric',year:'numeric'});
@@ -19,10 +36,86 @@ const slot=p=>state.practices.find(s=>key(s)===key(p));
 const label=p=>date(p.date)+' · '+title(p)+(slot(p)?' · '+clock(slot(p).start)+'–'+clock(slot(p).end)+' (New York time)':' · Practice no longer scheduled');
 async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Unable to load practice plans.');return d}
 function canLeave(){return !dirty||confirm('Leave without saving your practice plan changes?')}
-function editSelected(){const practice=state.practices.find(p=>key(p)===current),p=libraryMode?null:state.plans.find(p=>key(p)===current),f=$('planForm');revision=p?.revision||0;f.elements.title.value=p?.data.title||'Practice plan';f.elements.objective.value=p?.data.objective||'';f.elements.notes.value=p?.data.notes||'';blocks=structuredClone(p?.data.sections||template());f.elements.published.checked=p?p.published:true;renderBlocks();$('fields').disabled=libraryMode?!$('curriculumGroup').value||busy:!practice||busy;dirty=false;if(curriculaLoaded)renderLibraryGroups(chosenGroup);}
+function setPlanFields(plan){
+ const f=$('planForm');
+ revision=plan?.revision||0;
+ f.elements.title.value=plan?.data.title||'Practice plan';
+ f.elements.objective.value=plan?.data.objective||'';
+ f.elements.notes.value=plan?.data.notes||'';
+ blocks=structuredClone(plan?.data.sections||template());
+ f.elements.published.checked=plan?.published??true;
+ renderBlocks();dirty=false;
+}
+function editSelected(){
+ const practice=state.practices.find(p=>key(p)===current),plan=libraryMode?null:state.plans.find(p=>key(p)===current);
+ setPlanFields(plan);
+ $('fields').disabled=libraryMode?!$('curriculumGroup').value||busy:!practice||busy;
+ if(curriculaLoaded)renderLibraryGroups(chosenGroup);
+}
+const coachProposal=p=>(state.submissions??[]).find(row=>key(row)===key(p));
+const canDraft=p=>(state.draftPrograms??[]).includes(p.program);
+const proposalStatus={draft:'Your draft',submitted:'Submitted for review',published:'Published'};
+function closeSubmissionEditor(){
+ submissionEditor=null;
+ dirty=false;
+ $('ownerEditor').hidden=!state.owner||reviewMode||!current;
+ $('shareLabel').hidden=libraryMode;
+ $('shareHelp').hidden=libraryMode;
+ $('submissionHelp').hidden=true;
+ $('sendPlan').hidden=true;
+ $('closePlanEditor').hidden=true;
+ $('save').textContent=libraryMode?'Save lesson':'Save practice plan';
+ if(state.owner&&!libraryMode&&!reviewMode&&current){
+  $('editorHeading').textContent=label(state.practices.find(p=>key(p)===current));
+  editSelected();
+ }
+}
+function openSubmissionEditor(practice,proposal,review=false){
+ if(busy||!practice||!canLeave())return;
+ if(review?(!state.owner||proposal?.status!=='submitted'):(state.owner||!canDraft(practice)||(proposal&&proposal.status!=='draft')))return;
+ const official=state.plans.find(p=>key(p)===key(practice));
+ submissionEditor={practice,proposal,review,planRevision:official?.revision??0};
+ $('ownerEditor').hidden=false;
+ $('editorHeading').textContent=(review?'Review '+proposal.coachName+'’s plan':'Draft a practice plan')+' · '+label(practice);
+ $('shareLabel').hidden=true;
+ $('shareHelp').hidden=true;
+ $('submissionHelp').hidden=false;
+ $('submissionHelp').textContent=review
+  ? official?'Publishing will replace the official plan for this practice.':'Publishing will share this plan with coaches.'
+  : 'Your draft is private. Once you submit it, the owner can review, edit, and publish it.';
+ $('save').textContent=review?'Save review edits':'Save draft';
+ $('sendPlan').textContent=review?'Publish plan':'Submit for review';
+ $('sendPlan').hidden=false;
+ $('closePlanEditor').hidden=false;
+ $('fields').disabled=false;
+ setPlanFields(proposal);
+ $('ownerEditor').scrollIntoView({behavior:'smooth'});
+ $('planForm').elements.title.focus();
+}
+$('closePlanEditor').onclick=()=>{if(!busy&&canLeave())closeSubmissionEditor()};
+function renderReviewQueue(){
+ const visible=state.owner&&!libraryMode;
+ $('reviewQueue').hidden=!visible;
+ if(!visible)return;
+ const submissions=(state.submissions??[]).filter(s=>reviewMode||key(s)===current);
+ $('reviewItems').innerHTML=submissions.map(s=>`<article><h3>${esc(s.data.title)}</h3><p>${esc(s.coachName)} · ${esc(label(s))}</p>
+  <button type="button" data-review="${esc(s.id)}">${s.scheduled?'Review submission':'View submission'}</button></article>`).join('')
+  ||'<p>No coach submissions awaiting review for this '+(reviewMode?'month.':'practice.')+'</p>';
+}
+$('reviewItems').onclick=e=>{
+ const button=e.target.closest('[data-review]');
+ if(!button||busy||!canLeave())return;
+ const proposal=state.submissions.find(s=>s.id===button.dataset.review);
+ if(!proposal)return;
+ if(proposal.scheduled)openSubmissionEditor(slot(proposal),proposal,true);
+ else{
+  if(submissionEditor)closeSubmissionEditor();
+  showPlan(proposal,'Coach submission · practice no longer scheduled');
+ }
+};
 function readBlocks(){const f=$('planForm');blocks=blocks.map(b=>({...b,title:f.elements['blockTitle'+b.id].value,notes:f.elements['blockNotes'+b.id].value,minutes:f.elements['blockMinutes'+b.id].value===''?null:Number(f.elements['blockMinutes'+b.id].value)}))}
 function budgetError(){const total=blocks.reduce((sum,b)=>sum+(Number(b.minutes)||0),0);if(total>90)return 'Your plan is '+(total-90)+' minute(s) over the 90-minute limit. Reduce section times before saving.';if(blocks.some(b=>!Number.isInteger(b.minutes)||b.minutes<1))return 'Enter at least 1 whole minute for every section before saving.';return ''}
-function timing(){const total=blocks.reduce((sum,b)=>sum+(Number(b.minutes)||0),0),error=budgetError();$('timingSummary').textContent=total+' / 90 minutes · '+(error||((90-total)+' minute(s) remaining.'));$('timingSummary').style.color=error?'#a92330':'';$('save').disabled=!!error;$('saveCurriculum').disabled=!!error||curriculumBusy;return !error}
+function timing(){const total=blocks.reduce((sum,b)=>sum+(Number(b.minutes)||0),0),error=budgetError();$('timingSummary').textContent=total+' / 90 minutes · '+(error||((90-total)+' minute(s) remaining.'));$('timingSummary').style.color=error?'#a92330':'';$('save').disabled=!!error;$('sendPlan').disabled=!!error;$('saveCurriculum').disabled=!!error||curriculumBusy;return !error}
 function validateBudget(){readBlocks();if(timing())return true;$(libraryMode?'curriculumStatus':'status').textContent=budgetError();return false}
 function renderBlocks(){$('sections').innerHTML=blocks.map((b,i)=>`<div class="block" id="block-${b.id}"><div class="block-head"><strong>${i+1}. ${esc(b.title||kinds[b.kind])}</strong><button type="button" class="drag-handle" data-drag="${i}" aria-label="Reorder ${esc(b.title)}" title="Drag to reorder; use arrow keys on a keyboard">⠿ Drag</button><button type="button" data-remove="${i}">Remove</button></div><label>Section name<input name="blockTitle${b.id}" maxlength="80" required value="${esc(b.title)}"></label><label>Minutes<input name="blockMinutes${b.id}" type="number" min="1" max="90" step="1" required data-block-minutes value="${b.minutes??''}" placeholder="Enter minutes"></label><label>Instructions / drills<textarea name="blockNotes${b.id}" maxlength="5000" rows="4" placeholder="Write the drills, coaching points, or situations…">${esc(b.notes)}</textarea></label></div>`).join('');document.querySelectorAll('[data-drag]').forEach(b=>{b.onpointerdown=dragStart;b.onkeydown=e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();moveBlock(Number(b.dataset.drag),e.key==='ArrowUp'?-1:1)}}});document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>removeBlock(Number(b.dataset.remove)));document.querySelectorAll('[data-block-minutes]').forEach(b=>b.oninput=()=>{readBlocks();timing()});timing()}
 function reorderBlock(index,target){if(busy||curriculumBusy||index===target||target<0||target>=blocks.length)return;readBlocks();const [b]=blocks.splice(index,1);blocks.splice(target,0,b);dirty=true;renderBlocks();document.querySelector('#block-'+b.id+' [data-drag]')?.focus()}
@@ -36,9 +129,100 @@ function dragStart(e){if(busy||curriculumBusy||e.button!==0||e.isPrimary===false
 }
 function removeBlock(index){if(busy||blocks.length<=1){$('status').textContent='Keep at least one section in your practice plan.';return}readBlocks();if(blocks[index].notes&&!confirm('Remove this section and its instructions from this practice?'))return;blocks.splice(index,1);dirty=true;renderBlocks()}
 $('addSection').onclick=()=>{if(busy||blocks.length>=30)return;readBlocks();blocks.push(newBlock($('newKind').value));dirty=true;renderBlocks()};$('resetOrder').onclick=()=>{if(busy)return;readBlocks();const order=[...standard,'custom'];blocks.sort((a,b)=>order.indexOf(a.kind)-order.indexOf(b.kind));dirty=true;renderBlocks()};
-function renderList(){const filter=$('filter').value,list=state.plans.filter(p=>!filter||p.program===filter);$('plans').innerHTML=list.map(p=>{const index=state.plans.indexOf(p);return `<article><span class="badge">${p.published?'Shared with assigned coaches':'Private draft'}${!p.scheduled?' · Schedule changed':''}</span><h3>${esc(p.data.title)}</h3><p>${esc(label(p))}</p><p class="muted">Saved ${new Date(p.updatedAt).toLocaleString()}</p><div class="row"><button data-view="${index}">View plan</button>${state.owner&&p.scheduled?`<button data-edit="${index}">Edit plan</button>`:''}${state.owner&&p.published?`<button data-hide="${index}">Stop sharing</button>`:''}</div></article>`}).join('')||`<article>${state.owner?'No saved plans for this month and program.':'No plans have been shared for your assigned programs in this month yet.'}</article>`;document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showPlan(state.plans[Number(b.dataset.view)]));document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{if(busy||!canLeave())return;current=key(state.plans[Number(b.dataset.edit)]);$('practice').value=current;editSelected();$('ownerEditor').scrollIntoView({behavior:'smooth'});$('planForm').elements.title.focus()});document.querySelectorAll('[data-hide]').forEach(b=>b.onclick=()=>hidePlan(state.plans[Number(b.dataset.hide)]))}
-function showPlan(p){if(!p)return;$('detail').hidden=false;$('detail').innerHTML=`<p class="badge">${p.published?'Shared practice plan':'Owner draft'}</p><h2>${esc(p.data.title)}</h2><p>${esc(label(p))}</p>${p.data.objective?`<h3>Practice goals</h3><p class="plan-content">${esc(p.data.objective)}</p>`:''}${p.data.sections.map((b,i)=>`<h3>${i+1}. ${esc(b.title)}${b.minutes===null?'':' · '+b.minutes+' min'}</h3><p class="plan-content">${esc(b.notes||'No instructions added.')}</p>`).join('')}${p.data.notes?`<h3>Coach notes / equipment</h3><p class="plan-content">${esc(p.data.notes)}</p>`:''}<button onclick="window.print()">Print / save as PDF</button>`;$('detail').focus();$('detail').scrollIntoView({behavior:'smooth'})}
-async function load(month,preferred=current){if(busy)return;busy=true;$('month').disabled=true;$('reload').disabled=true;$('fields').disabled=true;$('status').textContent='Loading plans…';try{const d=await call('/api/practice-plans'+(month?'?month='+encodeURIComponent(month):''));state=d;setNamedMonth($('month'),d.month);$('home').href=d.owner?'/':'/coach';$('backCalendar').hidden=!d.owner;$('backCalendar').href='/#practice-calendar?month='+d.month;$('intro').textContent=d.owner?libraryMode?'Build a curriculum for each program and save its numbered lessons. Assign lessons to classes from your practice calendar.':'Attach a plan to a scheduled practice. Save a draft or share it with the assigned coaches.':'Read-only plans shared for your assigned programs. Times are shown in New York time.';$('ownerEditor').hidden=!d.owner;$('monthTools').hidden=libraryMode||d.owner;$('practiceLabel').hidden=libraryMode||d.owner;$('curriculumTools').hidden=!libraryMode;$('builderLink').hidden=libraryMode;$('curriculumProgramLabel').hidden=!libraryMode;$('groupEditor').hidden=!libraryMode;$('shareLabel').hidden=libraryMode;$('listHeading').hidden=libraryMode||d.owner;$('plans').hidden=libraryMode||d.owner;$('editorHeading').textContent=libraryMode?'Build a program curriculum':'Add or edit a practice plan';$('save').textContent=libraryMode?'Save lesson':'Save practice plan';$('loadCurriculum').hidden=libraryMode;document.querySelector('h1').textContent=libraryMode?'Program curricula.':'Practice plans.';if(libraryMode){const old=libraryProgram||d.programs[0]?.id||'';$('curriculumProgram').replaceChildren(...d.programs.map(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;return o}));$('curriculumProgram').value=old;libraryProgram=old;}if(d.owner&&libraryMode&&!curriculaLoaded)loadCurricula();const oldFilter=$('filter').value;$('filter').replaceChildren(...[{id:'',name:d.owner?'All programs':'All assigned programs'},...d.programs].map(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;return o}));if(d.programs.some(p=>p.id===oldFilter))$('filter').value=oldFilter;$('practice').replaceChildren(...d.practices.map(p=>{const o=document.createElement('option');o.value=key(p);o.textContent=label(p);return o}));const params=new URLSearchParams(location.search),requested=params.get('program')+'|'+params.get('date');current=d.owner&&!libraryMode?(d.practices.some(p=>key(p)===requested)?requested:''):d.practices.some(p=>key(p)===preferred)?preferred:d.practices.some(p=>key(p)===requested)?requested:d.practices.length?key(d.practices[0]):'';$('practice').value=current;$('noPractices').hidden=libraryMode||!!d.practices.length;busy=false;editSelected();renderList();$('detail').hidden=true;if(d.owner&&!libraryMode){$('home').hidden=true;$('ownerEditor').hidden=!current;document.querySelector('h1').textContent='Practice plan';$('editorHeading').textContent=current?label(d.practices.find(p=>key(p)===current)):'Practice unavailable';$('intro').textContent='Write the plan for this practice, move sections into the order you want, then save.';$('status').textContent=current?'Ready to edit this practice.':'This practice is no longer scheduled. Return to the calendar and choose a practice.'}else $('status').textContent=d.owner?'Ready. Plans save online.':d.plans.length+' shared plan(s) available.'}catch(e){$('status').textContent=e.message;if(state)setNamedMonth($('month'),state.month)}finally{busy=false;$('month').disabled=false;$('reload').disabled=false;$('fields').disabled=!state?.owner||(libraryMode?!$('curriculumGroup').value:!current)}}
+const practiceColor=id=>id==='Advanced'?'cal-advanced':id==='Intermediate'?'cal-intermediate':'cal-elementary';
+function activityTime(activity){
+ return activity.start&&activity.end?clock(activity.start)+'–'+clock(activity.end):'Time to be announced';
+}
+function practiceStaffWindow({start,end}){
+ if(!start||!end)return '';
+ return `<p><strong>Scheduled coaching time</strong> · ${clock(start)}–${clock(end)} ET<br><span class="muted">Record all time you actually work. Time outside practice is flagged for review.</span></p>`;
+}
+function renderCoachCalendar(){
+ if(!state||state.owner)return;
+ const filter=$('filter').value,[year,month]=state.month.split('-').map(Number);
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const first=new Date(Date.UTC(year,month-1,1)).getUTCDay(),count=new Date(Date.UTC(year,month,0)).getUTCDate();
+ $('coachPracticeKey').innerHTML=state.programs.map(p=>`<span class="${practiceColor(p.id)}">${esc(p.name)}</span>`).join('')
+  +'<span class="cal-special">Camps, clinics, events &amp; additional practices</span><span class="calendar-holiday">Holiday</span>';
+ const shared=new Set(state.plans.map(key)),sessions=new Map();
+ function append(date,start,markup){
+  const day=sessions.get(date)??[];
+  day.push({start,markup});sessions.set(date,day);
+ }
+ for(const [index,p] of state.practices.entries()){
+  if(filter&&filter!==p.program)continue;
+  const time=clock(p.start)+'–'+clock(p.end),proposal=coachProposal(p);
+  const sharedStatus=shared.has(key(p))?'Shared plan':'No shared plan';
+  const status=proposalStatus[proposal?.status]||(canDraft(p)?sharedStatus+' · Draft available':sharedStatus);
+  append(p.date,p.start,`<button type="button" class="calendar-item ${practiceColor(p.program)}" data-coach-practice="${index}" aria-pressed="${viewedPractice===key(p)}" aria-label="${esc(label(p)+' · '+status)}">
+   <strong>${esc(title(p))}</strong><small>${esc(time)}</small><small>${status}</small></button>`);
+ }
+ for(const h of state.holidays??[]){
+  append(h.date,'',`<div class="calendar-holiday"><strong>${esc(h.name)}</strong><span>Holiday</span></div>`);
+ }
+ if(!filter||filter==='activities'){
+  for(const [index,activity] of (state.activities??[]).entries()){
+   const time=activityTime(activity);
+   append(activity.date,activity.start??'',`<button type="button" class="calendar-item cal-special" data-coach-activity="${index}" aria-pressed="${viewedPractice===activity.id}" aria-label="${esc(date(activity.date)+' · '+activity.name+' · '+activity.type+' · '+time)}">
+    <strong>${esc(activity.name)}</strong><small>${esc(activity.type)}</small><small>${esc(time)}</small></button>`);
+  }
+ }
+ $('coachPracticeDays').innerHTML=sessions.size||today.startsWith(state.month+'-')?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="weekday">${d}</div>`).join('')
+  +'<div class="empty-day" aria-hidden="true"></div>'.repeat(first)
+  +Array.from({length:count},(_,i)=>{
+   const day=state.month+'-'+String(i+1).padStart(2,'0'),entries=sessions.get(day)??[];
+   return `<div class="coach-practice-day${entries.length||day===today?'':' empty-day'}"${day===today?' aria-current="date"':''}><time datetime="${day}"><span class="date-short">${i+1}</span><span class="date-long">${esc(date(day))}</span>${day===today?'<span class="swa-today-label">Today</span>':''}</time>${entries.sort((a,b)=>a.start.localeCompare(b.start)).map(entry=>entry.markup).join('')}</div>`;
+  }).join(''):'<p>No practices or events scheduled for this selection.</p>';
+}
+function showCoachPractice(p){
+ if(!p||state.owner||!canLeave())return;
+ if(submissionEditor)closeSubmissionEditor();
+ viewedPractice=key(p);renderCoachCalendar();
+ const plan=state.plans.find(row=>key(row)===viewedPractice),proposal=coachProposal(p);
+ const proposalNote=proposal?`<p><strong>Your plan</strong> · ${esc(proposalStatus[proposal.status])}${proposal.status==='submitted'?' · Awaiting owner review.':''}</p>`:'';
+ const draftAction=canDraft(p)
+  ? (!proposal||proposal.status==='draft'?`<p><button class="primary" type="button" data-draft-plan>${proposal?'Edit your draft':'Draft a plan'}</button></p>`:'')
+  : '<p class="muted">You can draft plans for the programs assigned to you.</p>';
+ const coachTools=proposalNote+draftAction+practiceStaffWindow(p);
+ if(plan)showPlan(plan,'Shared practice plan',coachTools);
+ else{
+  $('detail').hidden=false;
+  $('detail').innerHTML=`<h2>${esc(title(p))}</h2><p>${esc(label(p))}</p>${coachTools}<p>No practice plan has been shared for this session yet.</p>`;
+ }
+ $('detail').focus();$('detail').scrollIntoView({behavior:'smooth'});
+}
+$('detail').onclick=e=>{
+ if(e.target.closest('[data-draft-plan]')){
+  const practice=state.practices.find(p=>key(p)===viewedPractice);
+  if(practice)openSubmissionEditor(practice,coachProposal(practice));
+ }
+};
+function showCoachActivity(activity){
+ if(!activity||state.owner||!canLeave())return;
+ if(submissionEditor)closeSubmissionEditor();
+ viewedPractice=activity.id;renderCoachCalendar();
+ $('detail').hidden=false;
+ $('detail').innerHTML=`<p class="badge">${esc(activity.type)}</p><h2>${esc(activity.name)}</h2>
+  <p>${esc(date(activity.date)+' · '+activityTime(activity))}</p>
+  ${activity.type==='Additional practice'?practiceStaffWindow(activity):''}
+  ${activity.gradeRange?`<p><strong>Grade range:</strong> ${esc(activity.gradeRange)}</p>`:''}
+  ${activity.description?`<p class="plan-content">${esc(activity.description)}</p>`:''}`;
+ $('detail').focus();$('detail').scrollIntoView({behavior:'smooth'});
+}
+$('coachPracticeDays').onclick=e=>{
+ const button=e.target.closest('[data-coach-practice],[data-coach-activity]');
+ if(!button||busy||!state)return;
+ if(button.dataset.coachActivity!==undefined)showCoachActivity(state.activities?.[Number(button.dataset.coachActivity)]);
+ else showCoachPractice(state.practices[Number(button.dataset.coachPractice)]);
+};
+function renderList(){const filter=$('filter').value,list=state.plans.filter(p=>!filter||p.program===filter);$('plans').innerHTML=list.map(p=>{const index=state.plans.indexOf(p);return `<article><span class="badge">${p.published?'Shared with coaches':'Private draft'}${!p.scheduled?' · Schedule changed':''}</span><h3>${esc(p.data.title)}</h3><p>${esc(label(p))}</p><p class="muted">Saved ${new Date(p.updatedAt).toLocaleString()}</p><div class="row"><button data-view="${index}">View plan</button>${state.owner&&p.scheduled?`<button data-edit="${index}">Edit plan</button>`:''}${state.owner&&p.published?`<button data-hide="${index}">Stop sharing</button>`:''}</div></article>`}).join('')||`<article>${state.owner?'No saved plans for this month and program.':'No plans have been shared for your assigned programs in this month yet.'}</article>`;document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showPlan(state.plans[Number(b.dataset.view)]));document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{if(busy||!canLeave())return;current=key(state.plans[Number(b.dataset.edit)]);$('practice').value=current;editSelected();$('ownerEditor').scrollIntoView({behavior:'smooth'});$('planForm').elements.title.focus()});document.querySelectorAll('[data-hide]').forEach(b=>b.onclick=()=>hidePlan(state.plans[Number(b.dataset.hide)]))}
+function showPlan(p,badge=p?.published?'Shared practice plan':'Owner draft',coachTools=''){if(!p)return;$('detail').hidden=false;$('detail').innerHTML=`<p class="badge">${esc(badge)}</p><h2>${esc(p.data.title)}</h2><p>${esc(label(p))}</p>${coachTools}${p.data.objective?`<h3>Practice goals</h3><p class="plan-content">${esc(p.data.objective)}</p>`:''}${p.data.sections.map((b,i)=>`<h3>${i+1}. ${esc(b.title)}${b.minutes===null?'':' · '+b.minutes+' min'}</h3><p class="plan-content">${esc(b.notes||'No instructions added.')}</p>`).join('')}${p.data.notes?`<h3>Coach notes / equipment</h3><p class="plan-content">${esc(p.data.notes)}</p>`:''}<button onclick="window.print()">Print / save as PDF</button>`;$('detail').focus();$('detail').scrollIntoView({behavior:'smooth'})}
+async function load(month,preferred=current){if(busy)return;busy=true;$('month').disabled=true;$('reload').disabled=true;$('fields').disabled=true;$('status').textContent='Loading plans…';try{const query=new URLSearchParams();if(month)query.set('month',month);if(coachEmbedded)query.set('coachView','1');const d=await call('/api/practice-plans'+(query.size?'?'+query:''));state=d;submissionEditor=null;setNamedMonth($('month'),d.month);$('home').href=d.owner?'/':'/coach';$('backCalendar').hidden=!d.owner;$('backCalendar').href='/#practice-calendar?month='+d.month;$('intro').textContent=d.owner?libraryMode?'Build a curriculum for each program and save its numbered lessons. Assign lessons to classes from your practice calendar.':'Attach a plan to a scheduled practice. Save a draft or share it with coaches.':'Browse the academy schedule across all programs, including camps, clinics, and events. Open any practice plan shared with coaches.';$('ownerEditor').hidden=!d.owner;$('monthTools').hidden=libraryMode||(d.owner&&!reviewMode);$('practiceLabel').hidden=libraryMode||d.owner;$('filterLabel').hidden=d.owner;$('curriculumTools').hidden=!libraryMode;$('builderLink').hidden=libraryMode;$('curriculumProgramLabel').hidden=!libraryMode;$('groupEditor').hidden=!libraryMode;$('shareLabel').hidden=libraryMode;$('shareHelp').hidden=libraryMode;$('submissionHelp').hidden=true;$('sendPlan').hidden=true;$('closePlanEditor').hidden=true;$('listHeading').hidden=true;$('plans').hidden=true;$('coachCalendar').hidden=libraryMode||d.owner;$('editorHeading').textContent=libraryMode?'Build a program curriculum':'Add or edit a practice plan';$('save').textContent=libraryMode?'Save lesson':'Save practice plan';$('loadCurriculum').hidden=libraryMode;document.querySelector('h1').textContent=libraryMode?'Program curricula.':'Practice plans.';if(libraryMode){const old=libraryProgram||d.programs[0]?.id||'';$('curriculumProgram').replaceChildren(...d.programs.map(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;return o}));$('curriculumProgram').value=old;libraryProgram=old;}if(d.owner&&libraryMode&&!curriculaLoaded)loadCurricula();const oldFilter=$('filter').value;$('filter').replaceChildren(...[{id:'',name:'All scheduled activities'},...d.programs,...(d.owner?[]:[{id:'activities',name:'Camps, clinics, events & additional practices'}])].map(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;return o}));if(oldFilter==='activities'||d.programs.some(p=>p.id===oldFilter))$('filter').value=oldFilter;lastFilter=$('filter').value;$('practice').replaceChildren(...d.practices.map(p=>{const o=document.createElement('option');o.value=key(p);o.textContent=label(p);return o}));const params=new URLSearchParams(location.search),requested=params.get('program')+'|'+params.get('date');current=d.owner&&!libraryMode?(d.practices.some(p=>key(p)===requested)?requested:''):d.practices.some(p=>key(p)===preferred)?preferred:d.practices.some(p=>key(p)===requested)?requested:d.practices.length?key(d.practices[0]):'';$('practice').value=current;$('noPractices').hidden=libraryMode||!!d.practices.length;busy=false;editSelected();renderList();renderReviewQueue();viewedPractice='';renderCoachCalendar();$('detail').hidden=true;if(d.owner&&reviewMode&&!libraryMode){
+ $('home').hidden=true;$('ownerEditor').hidden=true;
+ document.querySelector('h1').textContent='Review coach practice plans';
+ $('intro').textContent='Choose a month, then open a submission to edit it and publish it for coaches.';
+ $('status').textContent='Submissions loaded.';
+ }else if(d.owner&&!libraryMode){$('home').hidden=true;$('ownerEditor').hidden=!current;document.querySelector('h1').textContent='Practice plan';$('editorHeading').textContent=current?label(d.practices.find(p=>key(p)===current)):'Practice unavailable';$('intro').textContent='Write the plan for this practice, move sections into the order you want, then save.';$('status').textContent=current?'Ready to edit this practice.':'This practice is no longer scheduled. Return to the calendar and choose a practice.'}else $('status').textContent=d.owner?'Ready. Plans save online.':d.plans.length+' shared plan(s) available.';return true}catch(e){$('status').textContent=e.message;if(state)setNamedMonth($('month'),state.month)}finally{busy=false;$('month').disabled=false;$('reload').disabled=false;$('fields').disabled=!submissionEditor&&(!state?.owner||(libraryMode?!$('curriculumGroup').value:!current))}}
 function currentPlanData(){readBlocks();const f=$('planForm');return {title:f.elements.title.value,objective:f.elements.objective.value,sections:structuredClone(blocks),notes:f.elements.notes.value}}
 function selectedProgram(){return libraryMode?$('curriculumProgram').value:current.split('|')[0]||''}
 function renderLibraryGroups(preferred=chosenGroup){const matching=groups.filter(g=>g.program===selectedProgram());$('curriculumGroup').replaceChildren(...[{id:'',name:libraryMode?'New curriculum':'Choose curriculum'},...matching].map(g=>{const o=document.createElement('option');o.value=g.id;o.textContent=g.name;return o}));chosenGroup=matching.some(g=>g.id===preferred)?preferred:matching[0]?.id||'';$('curriculumGroup').value=chosenGroup;$('groupName').value=groups.find(g=>g.id===chosenGroup)?.name||'';renderLessons();if(libraryMode)$('fields').disabled=!chosenGroup||busy}
@@ -56,9 +240,36 @@ $('loadCurriculum').onclick=()=>{const id=$('curriculum').value;if(id)return app
 async function saveLesson(){if(busy||curriculumBusy||!state?.owner||(!libraryMode&&!current))return;const group=groups.find(g=>g.id===chosenGroup);if(!group||group.program!==selectedProgram()){$('curriculumStatus').textContent='Create or choose a curriculum for this program first.';return}if(!$('planForm').reportValidity()||!validateBudget())return;const data=currentPlanData(),name=$('curriculumName').value.trim()||data.title,order=Number($('lessonOrder').value),existing=curricula.find(c=>c.id===$('curriculum').value&&c.curriculum_id===chosenGroup);if(existing&&!confirm('Update '+existing.name+' in this curriculum? Practice plans already attached to dates stay unchanged.'))return;curriculumBusy=true;$('saveCurriculum').disabled=true;try{const result=await call('/api/practice-curricula',{action:'save',curriculumId:chosenGroup,lessonOrder:order,name,data,revision:existing?.revision||0,...(existing?{id:existing.id}:{})});await loadCurricula(result.id,group.id);$('curriculumName').value=name;if(libraryMode)dirty=false;$('curriculumStatus').textContent=libraryMode?'Lesson saved in this program curriculum. Create another lesson or select a class from the calendar.':'Lesson saved in the program curriculum. Save the daily practice plan separately to attach it to this date.'}catch(e){$('curriculumStatus').textContent=e.message}finally{curriculumBusy=false;timing()}}
 $('saveCurriculum').onclick=saveLesson;
 $('planForm').oninput=()=>dirty=true;$('planForm').onchange=()=>dirty=true;
-$('practice').onchange=()=>{if(busy||!canLeave()){$('practice').value=current;return}current=$('practice').value;editSelected()};$('filter').onchange=renderList;
-$('month').onchange=()=>{if(!canLeave()){setNamedMonth($('month'),state?.month||'');return}load($('month').value,'')};$('reload').onclick=()=>{if(canLeave())load($('month').value)};
-$('planForm').onsubmit=async e=>{e.preventDefault();if(libraryMode){await saveLesson();return}if(busy||!state?.owner||!current)return;const p=state.practices.find(p=>key(p)===current);if(!p||!validateBudget())return;const f=$('planForm'),data=currentPlanData();const published=f.elements.published.checked;busy=true;$('fields').disabled=true;$('month').disabled=true;$('status').textContent='Saving…';try{const result=await call('/api/practice-plans',{action:'save',program:p.program,date:p.date,revision,published,data});revision=result.revision;dirty=false;busy=false;await load(state.month,current);$('status').textContent=published?'Saved and shared. Assigned coaches can now view this practice plan.':'Draft saved. Only you can view this plan.';$('status').scrollIntoView({behavior:'smooth'})}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth'})}finally{busy=false;$('fields').disabled=false;$('month').disabled=false;timing()}};
+$('practice').onchange=()=>{if(busy||!canLeave()){$('practice').value=current;return}current=$('practice').value;editSelected()};$('filter').onchange=()=>{
+ if(!canLeave()){ $('filter').value=lastFilter;return }
+ lastFilter=$('filter').value;
+ if(submissionEditor)closeSubmissionEditor();
+ viewedPractice='';$('detail').hidden=true;renderCoachCalendar();renderList();
+};
+function shiftPlanMonth(delta){if(!state?.month||busy)return;const [y,m]=state.month.split('-').map(Number),next=new Date(Date.UTC(y,m-1+delta,1)).toISOString().slice(0,7);if(next<'2020-01'||next>'2100-12')return;setNamedMonth($('month'),next);$('month').onchange()}$('previousPlanMonth').onclick=()=>shiftPlanMonth(-1);$('nextPlanMonth').onclick=()=>shiftPlanMonth(1);$('month').onchange=()=>{if(!canLeave()){setNamedMonth($('month'),state?.month||'');return}load($('month').value,'')};$('reload').onclick=()=>{if(canLeave())load($('month').value)};
+async function saveSubmission(send){
+ const {practice,proposal,review,planRevision}=submissionEditor;
+ if(!validateBudget())return;
+ if(send&&review&&planRevision&&!confirm('Replace the official plan for this practice with the reviewed submission?'))return;
+ const action=review?(send?'reviewPublish':'reviewSave'):(send?'coachSubmit':'coachDraft');
+ const data=currentPlanData();
+ busy=true;$('fields').disabled=true;$('month').disabled=true;$('status').textContent='Saving…';
+ try{
+  await call('/api/practice-plans',{action,program:practice.program,date:practice.date,revision,submissionId:proposal?.id,planRevision,data});
+  busy=false;dirty=false;
+  const loaded=await load(state.month,current);
+  if(!loaded)return;
+  if(!review)showCoachPractice(practice);
+  else if(!send){
+   const updated=state.submissions.find(s=>s.id===proposal.id);
+   if(updated)openSubmissionEditor(practice,updated,true);
+  }
+  $('status').textContent=review?(send?'Published. Coaches can now view this plan.':'Review edits saved.'):(send?'Submitted for owner review.':'Your private draft was saved.');
+ }catch(error){$('status').textContent=error.message+' Your changes have not been saved.'}
+ finally{busy=false;$('month').disabled=false;if(submissionEditor)$('fields').disabled=false;$('status').scrollIntoView({behavior:'smooth'})}
+}
+$('planForm').onsubmit=async e=>{e.preventDefault();if(busy)return;if(submissionEditor){await saveSubmission(e.submitter?.id==='sendPlan');return}if(libraryMode){await saveLesson();return}if(!state?.owner||!current)return;const p=state.practices.find(p=>key(p)===current);if(!p||!validateBudget())return;const f=$('planForm'),data=currentPlanData();const published=f.elements.published.checked;busy=true;$('fields').disabled=true;$('month').disabled=true;$('status').textContent='Saving…';try{const result=await call('/api/practice-plans',{action:'save',program:p.program,date:p.date,revision,published,data});revision=result.revision;dirty=false;busy=false;await load(state.month,current);$('status').textContent=published?'Saved and shared. Coaches can now view this practice plan.':'Draft saved. Only you can view this plan.';$('status').scrollIntoView({behavior:'smooth'})}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth'})}finally{busy=false;$('fields').disabled=false;$('month').disabled=false;timing()}};
 async function hidePlan(p){if(busy||!p||!canLeave()||!confirm('Hide this plan from coaches? Your saved plan will be kept as a draft.'))return;busy=true;try{await call('/api/practice-plans',{action:'unpublish',program:p.program,date:p.date,revision:p.revision});busy=false;await load(state.month,current);$('status').textContent='Plan kept as a private draft. Coaches can no longer load it.'}catch(e){$('status').textContent=e.message}finally{busy=false}}
-window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});const initialDate=new URLSearchParams(location.search).get('date');load(initialDate&&/^\d{4}-\d{2}-\d{2}$/.test(initialDate)?initialDate.slice(0,7):'');
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});const initialParams=new URLSearchParams(location.search),initialDate=initialParams.get('date'),initialMonth=initialParams.get('month');
+load(/^\d{4}-\d{2}-\d{2}$/.test(initialDate??'')?initialDate.slice(0,7):/^\d{4}-(0[1-9]|1[0-2])$/.test(initialMonth??'')?initialMonth:'');
 </script></body></html>

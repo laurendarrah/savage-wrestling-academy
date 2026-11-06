@@ -2,14 +2,23 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
-function compile(file,deps={}){const module={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,Request,Response,URL,Intl,Date,require:name=>{if(name in deps)return deps[name];if(name==='./friday-live')return compile('lib/friday-live.ts');throw Error(name)}});return module.exports}
+function compile(file,deps={}){const module={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,Request,Response,URL,Intl,Date,require:name=>{if(name in deps)return deps[name];if(name==='./event-schedule')return compile('lib/event-schedule.ts');if(name==='./friday-live')return compile('lib/friday-live.ts');throw Error(name)}});return module.exports}
 const {registrationCatalog}=compile('lib/registration-catalog.ts',{'./program-names':compile('lib/program-names.ts')});
 const state={programs:[{id:'Elementary',name:'Elementary',description:'Train',grades:'K–5',priceCents:20000,walkInPriceCents:4000,secret:'PRIVATE'}],kids:[{name:'PRIVATE'}],seasons:[{program:'Elementary',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Friday',start:'18:00',end:'19:30'}],excludedDates:['2026-12-25']}]};
 const catalog=registrationCatalog(state,'2026-12','2026-12-05');assert.deepEqual(Array.from(catalog.practices,s=>s.date),['2026-12-11','2026-12-18']);assert.equal(catalog.programs[0].monthlyCents,20000);assert.equal(catalog.programs[0].walkInCents,4000);assert.equal(JSON.stringify(catalog).includes('PRIVATE'),false);assert.equal(catalog.paymentsEnabled,false);
+assert.equal(catalog.closures.length,1);
+assert.ok(catalog.holidays.some(h=>h.date==='2026-12-25'&&h.name==='Christmas Day'));
+assert.equal(catalog.closures[0].program,'Elementary');
+const observed=structuredClone(state);
+observed.seasons[0]={...observed.seasons[0],start:'2021-12-01',end:'2021-12-31',excludedDates:['2021-12-25','2021-12-31','2021-12-17']};
+const observedCatalog=registrationCatalog(observed,'2021-12','2021-12-01');
+assert.deepEqual(Array.from(observedCatalog.closures,c=>c.date),['2021-12-17','2021-12-31']);
+assert.ok(observedCatalog.holidays.some(h=>h.date==='2021-12-31'&&h.name==='New Year’s Day (observed)'));
+assert.ok(registrationCatalog({...state,seasons:[]},'2026-12','2026-12-05').holidays.some(h=>h.name==='Christmas Day'));
 assert.equal(registrationCatalog(state,'2027-01','2026-12-05').practices.length,0);
 assert.equal(registrationCatalog({programNamingVersion:2,programs:[{id:'Elementary',name:'Elementary',priceCents:-1}]},'2026-12','2026-12-05').programs[0].walkInCents,null);
 let auth={user:null,strong:false,headers:new Headers()};
-const route=compile('app/api/registration/route.ts',{'cloudflare:workers':{env:{DB:{prepare:()=>({first:async()=>({payload:JSON.stringify(state)})})}}},'../../../lib/account-auth':{strongAccount:async()=>auth,accountReply:(body,status=200,headers)=>Response.json(body,{status,headers})},'../../../lib/program-approval':{familyProfile:async()=>null,checkCompetitionAccess:async()=>null,requiresApproval:()=>false},'../../../lib/scholarships':{hasScholarship:async()=>false},'../../../lib/registration-catalog':{registrationCatalog},'../../../lib/academy-validation':compile('lib/academy-validation.ts')});
+const route=compile('app/api/registration/route.ts',{'cloudflare:workers':{env:{DB:{prepare:()=>({first:async()=>({payload:JSON.stringify(state)})})}}},'../../../lib/account-auth':{strongAccount:async()=>auth,accountReply:(body,status=200,headers)=>Response.json(body,{status,headers})},'../../../lib/program-approval':{familyProfile:async()=>null,checkCompetitionAccess:async()=>null,requiresApproval:()=>false},'../../../lib/scholarships':{hasScholarship:async()=>false},'../../../lib/test-family':compile('lib/test-family.ts'),'../../../lib/registration-catalog':{registrationCatalog},'../../../lib/academy-validation':compile('lib/academy-validation.ts')});
 assert.equal((await route.GET(new Request('https://academy.test/api/registration'))).status,401);
 auth.user={email_confirmed_at:'yes',factors:[{status:'verified'}]};assert.equal((await route.GET(new Request('https://academy.test/api/registration'))).status,403);
 auth.strong=true;assert.equal((await route.GET(new Request('https://academy.test/api/registration?month=wrong'))).status,400);const res=await route.GET(new Request('https://academy.test/api/registration?month=2026-12'));assert.equal(res.status,200);assert.equal((await res.json()).programs[0].monthlyCents,20000);
@@ -36,7 +45,7 @@ vm.runInContext(`catalog.programs.push({id:'Intermediate',name:'Development Wres
 el('teamCode').value='school15';let sent;ctx.fetch=async(url,options)=>{sent=JSON.parse(options.body);return {ok:true,json:async()=>({review:{wrestlerName:'Test Wrestler',grade:'6',programName:'Development Wrestling',programId:'Intermediate',plan:'monthly',baseCents:20000,cents:17000,discount:{code:'SCHOOL15',name:'School team',percent:15,cents:3000},practice:null}})}};await el('selection').onsubmit({preventDefault(){}});assert.equal(sent.teamCode,'school15');assert.match(el('reviewDetails').innerHTML,/SCHOOL15/);assert.match(el('reviewDetails').innerHTML,/15% off/);assert.match(el('reviewDetails').innerHTML,/\$170.00/);assert.match(el('reviewDetails').innerHTML,/\$30.00/);console.log('Passed: customer team code submission and server-confirmed discount breakdown in registration review.');
 // Calendar selection uses real catalog slots and keeps walk-in review tied to a date and time.
 vm.runInContext(`family.data.wrestlers[0].grade='5';document.getElementById('program').value='Elementary';document.getElementById('plan').value='walkin';selected='';selectedDate='';update()`,ctx);
-assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-11"/);assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-25"[^>]*disabled/);assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-04"[^>]*disabled/);assert.equal(el('reviewButton').disabled,true);
+assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-11"/);assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-05" aria-current="date"[^>]*disabled\s*>5<span class="swa-today-label">Today/);assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-25"[^>]*disabled/);assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-04"[^>]*disabled/);assert.equal(el('reviewButton').disabled,true);
 vm.runInContext(`selectPracticeDay('2026-12-11')`,ctx);assert.match(el('practices').innerHTML,/6:00 PM–7:30 PM/);assert.equal(el('reviewButton').disabled,true);
 vm.runInContext(`selectPracticeTime('Elementary:2026-12-11:18:00')`,ctx);assert.equal(el('reviewButton').disabled,false);assert.match(el('selectedPractice').textContent,/December 11/);assert.match(el('selectedPractice').textContent,/6:00 PM–7:30 PM/);
 vm.runInContext(`selectPracticeDay('2026-12-25')`,ctx);assert.match(el('selectedPractice').textContent,/December 11/);
@@ -47,17 +56,7 @@ vm.runInContext(`loading=true;update()`,ctx);assert.equal(el('practiceCalendar')
 vm.runInContext(`loading=false;document.getElementById('program').value='Intermediate';document.getElementById('program').onchange()`,ctx);assert.equal(el('reviewButton').disabled,true);assert.match(el('calendarAvailability').textContent,/No published practices/);assert.equal(el('selectedPractice').hidden,true);
 console.log('Passed: calendar days, unavailable/past/holiday dates, explicit time selection, selection clearing, monthly schedule browsing, walk-in switch, loading state and unpublished schedule empty state.');
 
-// Annual selection hides installment-only codes and sends no stale code.
-vm.runInContext("family.data.wrestlers[0].grade='5';document.getElementById('program').value='Elementary';document.getElementById('plan').value='annual';document.getElementById('teamCode').value='STALE';catalog.programs[0].annualCents=240000;back();update()",ctx);
-assert.equal(el('teamCodeField').hidden,true);
-assert.equal(el('monthly').hidden,false);
-assert.match(el('price').textContent,/\$2,400.00/);
-assert.match(el('membershipBilling').textContent,/One upfront payment/);
-ctx.fetch=async(url,options)=>{sent=JSON.parse(options.body);return {ok:true,json:async()=>({review:{wrestlerName:'Test Wrestler',programName:'SWA Development',programId:'Elementary',plan:'annual',cents:240000,totalCents:240000,paymentCount:1,termMonths:12}})}};
-await el('selection').onsubmit({preventDefault(){}});
-assert.equal(sent.plan,'annual');
-assert.equal(sent.teamCode,'');
-assert.match(el('reviewDetails').innerHTML,/paid upfront/);
-assert.match(el('reviewDetails').innerHTML,/One upfront payment/);
-assert.doesNotMatch(el('reviewDetails').innerHTML,/\$2,400.00 \/ month/);
-console.log('Passed: annual customer selection, correct upfront price, 12-month total and stale team-code clearing.');
+// Both signup choices are available in one control.
+const planControl=readFileSync('app/register/screen.html','utf8').match(/<select id="plan">([^<]*(?:<option[^>]*>[^<]*<\/option>)+)<\/select>/)[1];
+assert.deepEqual([...planControl.matchAll(/value="([^"]+)"/g)].map(match=>match[1]),['monthly','walkin']);
+console.log('Passed: registration shows only monthly installments and walk-ins.');

@@ -3,7 +3,7 @@ import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@s
 import type { User } from '@supabase/supabase-js';
 
 export const OWNER_EMAIL = 'savagewrestlingclub@gmail.com';
-export const APP_ORIGIN = 'https://savage-registration-preview.wellrose34.chatgpt.site';
+export const APP_ORIGIN = 'https://savage-registration-preview.justinaccordino546.chatgpt.site';
 export function accountClient(request: Request) {
  const headers = new Headers({'Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Content-Security-Policy':"frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"});
  const config=env as Cloudflare.Env & {SUPABASE_URL?:string;SUPABASE_PUBLISHABLE_KEY?:string};

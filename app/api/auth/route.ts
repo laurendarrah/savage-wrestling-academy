@@ -11,6 +11,8 @@ export async function POST(request:Request){
  if(!request.headers.get('content-type')?.includes('application/json'))return accountReply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>8192)return accountReply({error:'Request too large.'},413);
  let input;try{input=JSON.parse(raw)}catch{return accountReply({error:'Invalid request.'},400)}
+ const coachContext=input?.context==='coach';
+ const confirmationUrl=APP_ORIGIN+'/auth/confirm'+(coachContext?'?next=coach':'');
  const action=input?.action,email=typeof input?.email==='string'?input.email.trim().toLowerCase():'';
  if(!['signup','login','reset','change','logout','resend'].includes(action))return accountReply({error:'Unknown action.'},400);
  if(['signup','login','reset','resend'].includes(action)&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254))return accountReply({error:'Enter a valid email address.'},400);
@@ -21,7 +23,7 @@ export async function POST(request:Request){
  try{
  if(action==='logout'){const {error}=await auth.client.auth.signOut({scope:'local'});if(error&&error.status!==403)return reply({error:'Sign-out could not finish. Try again.'},502);return reply({ok:true})}
  if(action==='signup'){
- const {error}=await auth.client.auth.signUp({email,password:input.password,options:{emailRedirectTo:APP_ORIGIN+'/auth/confirm'}});
+ const {error}=await auth.client.auth.signUp({email,password:input.password,options:{emailRedirectTo:confirmationUrl}});
  if(error)return reply({error:error.code==='over_email_send_rate_limit'?'Email limit reached. Please wait before trying again.':'Account creation could not finish. Check your details or try signing in.'},400);
  return reply({message:'Check your email to confirm your account, then return here to sign in.'});
  }
@@ -39,12 +41,12 @@ export async function POST(request:Request){
  return reply({redirect:((role==='owner'||role==='coach'||hasFactor)&&level?.currentLevel!=='aal2')?'/security':roleDestination(role)});
  }
  if(action==='reset'){
- const {error}=await auth.client.auth.resetPasswordForEmail(email,{redirectTo:APP_ORIGIN+'/auth/confirm?next=change'});
+ const {error}=await auth.client.auth.resetPasswordForEmail(email,{redirectTo:APP_ORIGIN+'/auth/confirm?next=change'+(coachContext?'&coach=1':'')});
  if(error)return reply({error:error.status===429||error.code==='over_email_send_rate_limit'?'Email sending is temporarily limited. Your reset email could not be sent. Please try again later; your current password still works.':'Unable to request a reset right now. Try again later.'},error.status===429||error.code==='over_email_send_rate_limit'?429:502);
  return reply({message:'If an account exists, you will receive a password reset email. Check your inbox and spam folder.'});
  }
  if(action==='resend'){
- const {error}=await auth.client.auth.resend({type:'signup',email,options:{emailRedirectTo:APP_ORIGIN+'/auth/confirm'}});
+ const {error}=await auth.client.auth.resend({type:'signup',email,options:{emailRedirectTo:confirmationUrl}});
  if(error)return reply({error:error.status===429||error.code==='over_email_send_rate_limit'?'Email sending is temporarily limited. A new confirmation email could not be sent. Please try again later.':'Unable to request a confirmation email right now. Try again later.'},error.status===429||error.code==='over_email_send_rate_limit'?429:502);
  return reply({message:'If confirmation is needed, a confirmation email has been requested. Please check your inbox.'});
  }

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live attendance | Savage</title>
+<script defer src="/navigation.js"></script><script defer src="/jsqr-1.4.0.js"></script><script defer src="/live-attendance.js"></script>
+<link rel="stylesheet" href="/responsive.css">
+<style>
+*{box-sizing:border-box}body{font:16px/1.55 Arial,sans-serif;color:#18191c;background:#f5f5f6;margin:0}main{max-width:850px;margin:auto;padding:24px}
+a{color:#a92330}section{background:#fff;border:1px solid #ddd;border-radius:10px;margin:18px 0;padding:20px}
+.row{display:flex;align-items:end;gap:12px;flex-wrap:wrap}label{display:block;font-weight:700}input,select,button{font:inherit;min-height:44px;padding:8px;border:1px solid #888;border-radius:6px}label select,label input{display:block;margin-top:4px}
+button{cursor:pointer;background:#fff;color:#18191c}button.primary{background:#b72332;color:white;border-color:#b72332;font-weight:700}button:disabled{opacity:.65;cursor:default}
+ul{padding:0;list-style:none}li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid #e3e3e3}small{display:block;color:#525660}video{display:block;width:min(100%,400px);margin-top:12px}
+[hidden]{display:none!important}
+.card-warning{color:#8b2530;font-weight:bold}
+</style></head><body><main>
+<a href="/#workspace=Dashboard">← Dashboard</a><h1 id="heading">Attendance</h1><p id="testNotice" hidden>Test attendance uses sample practices and keeps check-ins separate from live attendance. <a href="/attendance">Return to live attendance</a></p>
+<p>Choose a practice, then check wrestlers in by name or scan their family QR pass. All practice times are New York time. Today’s live check-in requires a verified, current USA Wrestling card.</p>
+<section id="enrollment" hidden>
+<h2>Record confirmed signup</h2><p id="enrollWrestler"></p>
+<p>Use this after confirming a registration outside the platform. Online checkout is still in preview.</p>
+<form id="enrollForm">
+<div class="row">
+<label>Program<select id="enrollProgram" required></select></label>
+<label>Registration type<select id="enrollKind"><option value="membership">Membership</option><option value="walkin">Walk-in</option></select></label>
+<label><span id="enrollDateLabel">Membership start</span><input id="enrollDate" type="date" required></label>
+<label id="enrollEndLabel">Membership end<input id="enrollEnd" type="date" required></label>
+<label id="enrollPracticeLabel" hidden>Scheduled practice<select id="enrollPractice"></select></label>
+</div><p><button id="saveSignup" class="primary" type="submit">Record confirmed signup</button> <a href="/accounts">Back to family accounts</a></p>
+<p id="enrollStatus" role="status"></p>
+</form></section>
+<section aria-label="Choose practice">
+<div class="row">
+<label>Practice date<input id="date" type="date"></label>
+<label>Practice<select id="practice" disabled><option value="">Choose a date first</option></select></label>
+<button id="scan" type="button" class="primary" disabled>Open QR scanner</button>
+<button id="manual" type="button" disabled>Take attendance manually</button>
+<button id="stop" type="button" hidden>Stop camera</button>
+</div>
+<video id="camera" playsinline muted hidden></video><canvas id="frame" hidden></canvas>
+<p id="status" role="status"></p>
+</section>
+<section id="manualRoster" aria-labelledby="rosterHeading" hidden><h2 id="rosterHeading" tabindex="-1">Practice roster</h2><p id="total"></p><ul id="roster"></ul></section>
+<p><a href="/accounts">Online families and confirmed signups →</a></p>
+</main></body></html>

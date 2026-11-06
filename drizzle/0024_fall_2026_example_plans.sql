@@ -1,0 +1,158 @@
+-- One-time owner-requested examples for the published September–November 2026 practice schedule.
+-- Match each saved date and time against the current schedule before inserting. Existing plans are preserved.
+WITH
+ scheduled(program,date,start,end) AS (VALUES
+  ('Advanced','2026-09-01','19:30','21:00'),
+  ('Elementary','2026-09-01','18:00','19:30'),
+  ('Elementary','2026-09-02','18:00','19:30'),
+  ('Intermediate','2026-09-02','19:30','21:00'),
+  ('Advanced','2026-09-03','19:30','21:00'),
+  ('Elementary','2026-09-03','18:00','19:30'),
+  ('Advanced','2026-09-06','10:00','12:00'),
+  ('Advanced','2026-09-08','19:30','21:00'),
+  ('Elementary','2026-09-08','18:00','19:30'),
+  ('Elementary','2026-09-09','18:00','19:30'),
+  ('Intermediate','2026-09-09','19:30','21:00'),
+  ('Advanced','2026-09-10','19:30','21:00'),
+  ('Elementary','2026-09-10','18:00','19:30'),
+  ('Advanced','2026-09-13','10:00','12:00'),
+  ('Elementary','2026-09-14','18:00','19:30'),
+  ('Intermediate','2026-09-14','19:30','21:00'),
+  ('Advanced','2026-09-15','19:30','21:00'),
+  ('Elementary','2026-09-15','18:00','19:30'),
+  ('Elementary','2026-09-16','18:00','19:30'),
+  ('Intermediate','2026-09-16','19:30','21:00'),
+  ('Advanced','2026-09-17','19:30','21:00'),
+  ('Elementary','2026-09-17','18:00','19:30'),
+  ('Advanced','2026-09-20','10:00','12:00'),
+  ('Elementary','2026-09-21','18:00','19:30'),
+  ('Intermediate','2026-09-21','19:30','21:00'),
+  ('Advanced','2026-09-22','19:30','21:00'),
+  ('Elementary','2026-09-22','18:00','19:30'),
+  ('Elementary','2026-09-23','18:00','19:30'),
+  ('Intermediate','2026-09-23','19:30','21:00'),
+  ('Advanced','2026-09-24','19:30','21:00'),
+  ('Elementary','2026-09-24','18:00','19:30'),
+  ('Advanced','2026-09-27','10:00','12:00'),
+  ('Elementary','2026-09-28','18:00','19:30'),
+  ('Intermediate','2026-09-28','19:30','21:00'),
+  ('Advanced','2026-09-29','19:30','21:00'),
+  ('Elementary','2026-09-29','18:00','19:30'),
+  ('Elementary','2026-09-30','18:00','19:30'),
+  ('Intermediate','2026-09-30','19:30','21:00'),
+  ('Advanced','2026-10-01','19:30','21:00'),
+  ('Elementary','2026-10-01','18:00','19:30'),
+  ('Advanced','2026-10-04','10:00','12:00'),
+  ('Elementary','2026-10-05','18:00','19:30'),
+  ('Intermediate','2026-10-05','19:30','21:00'),
+  ('Advanced','2026-10-06','19:30','21:00'),
+  ('Elementary','2026-10-06','18:00','19:30'),
+  ('Elementary','2026-10-07','18:00','19:30'),
+  ('Intermediate','2026-10-07','19:30','21:00'),
+  ('Advanced','2026-10-08','19:30','21:00'),
+  ('Elementary','2026-10-08','18:00','19:30'),
+  ('Advanced','2026-10-11','10:00','12:00'),
+  ('Advanced','2026-10-13','19:30','21:00'),
+  ('Elementary','2026-10-13','18:00','19:30'),
+  ('Elementary','2026-10-14','18:00','19:30'),
+  ('Intermediate','2026-10-14','19:30','21:00'),
+  ('Advanced','2026-10-15','19:30','21:00'),
+  ('Elementary','2026-10-15','18:00','19:30'),
+  ('Advanced','2026-10-18','10:00','12:00'),
+  ('Elementary','2026-10-19','18:00','19:30'),
+  ('Intermediate','2026-10-19','19:30','21:00'),
+  ('Advanced','2026-10-20','19:30','21:00'),
+  ('Elementary','2026-10-20','18:00','19:30'),
+  ('Elementary','2026-10-21','18:00','19:30'),
+  ('Intermediate','2026-10-21','19:30','21:00'),
+  ('Advanced','2026-10-22','19:30','21:00'),
+  ('Elementary','2026-10-22','18:00','19:30'),
+  ('Advanced','2026-10-25','10:00','12:00'),
+  ('Elementary','2026-10-26','18:00','19:30'),
+  ('Intermediate','2026-10-26','19:30','21:00'),
+  ('Advanced','2026-10-27','19:30','21:00'),
+  ('Elementary','2026-10-27','18:00','19:30'),
+  ('Elementary','2026-10-28','18:00','19:30'),
+  ('Intermediate','2026-10-28','19:30','21:00'),
+  ('Advanced','2026-10-29','19:30','21:00'),
+  ('Elementary','2026-10-29','18:00','19:30'),
+  ('Advanced','2026-11-01','10:00','12:00'),
+  ('Elementary','2026-11-02','18:00','19:30'),
+  ('Intermediate','2026-11-02','19:30','21:00'),
+  ('Advanced','2026-11-03','19:30','21:00'),
+  ('Elementary','2026-11-03','18:00','19:30'),
+  ('Elementary','2026-11-04','18:00','19:30'),
+  ('Intermediate','2026-11-04','19:30','21:00'),
+  ('Advanced','2026-11-05','19:30','21:00'),
+  ('Elementary','2026-11-05','18:00','19:30'),
+  ('Advanced','2026-11-08','10:00','12:00'),
+  ('Elementary','2026-11-09','18:00','19:30'),
+  ('Intermediate','2026-11-09','19:30','21:00'),
+  ('Advanced','2026-11-10','19:30','21:00'),
+  ('Elementary','2026-11-10','18:00','19:30'),
+  ('Advanced','2026-11-12','19:30','21:00'),
+  ('Elementary','2026-11-12','18:00','19:30'),
+  ('Advanced','2026-11-15','10:00','12:00'),
+  ('Elementary','2026-11-16','18:00','19:30'),
+  ('Intermediate','2026-11-16','19:30','21:00'),
+  ('Advanced','2026-11-17','19:30','21:00'),
+  ('Elementary','2026-11-17','18:00','19:30'),
+  ('Elementary','2026-11-18','18:00','19:30'),
+  ('Intermediate','2026-11-18','19:30','21:00'),
+  ('Advanced','2026-11-19','19:30','21:00'),
+  ('Elementary','2026-11-19','18:00','19:30'),
+  ('Advanced','2026-11-22','10:00','12:00'),
+  ('Elementary','2026-11-23','18:00','19:30'),
+  ('Intermediate','2026-11-23','19:30','21:00'),
+  ('Advanced','2026-11-24','19:30','21:00'),
+  ('Elementary','2026-11-24','18:00','19:30'),
+  ('Elementary','2026-11-25','18:00','19:30'),
+  ('Intermediate','2026-11-25','19:30','21:00'),
+  ('Advanced','2026-11-29','10:00','12:00'),
+  ('Elementary','2026-11-30','18:00','19:30'),
+  ('Intermediate','2026-11-30','19:30','21:00')
+ ),
+ templates(program,rotation,payload) AS (VALUES
+  ('Elementary',0,'{"title":"Fall example — Stance, motion, and level change","objective":"Stay balanced and change levels without dropping the head.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Movement games, light jogging, stance motion, and dynamic mobility. Match partners by size and experience."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Stance mirrors, circle steps, and level changes on a clap."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Demonstrate stance, a level change, and a penetration step. Build from shadow reps to a stationary partner."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Stance-tag rounds and 20-second movement games. Reset when posture breaks."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short stance-and-motion intervals with recovery as needed."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Walk, breathe, hydrate, and ask wrestlers to repeat one technique cue."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Elementary',1,'{"title":"Fall example — Double-leg entry","objective":"Step between the feet, keep the head up, and finish under control.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Movement games, light jogging, stance motion, and dynamic mobility. Match partners by size and experience."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Shadow shots, knee-over-toe steps, and partner target touches."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Review stance and level change. Teach the double-leg entry and a controlled corner finish on a cooperative partner."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Short double-leg entry rounds at light resistance, followed by neutral starting games."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short stance-and-motion intervals with recovery as needed."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Walk, breathe, hydrate, and ask wrestlers to repeat one technique cue."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Elementary',2,'{"title":"Fall example — Sprawl and go-behind","objective":"Move the hips back and circle behind while staying balanced.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Movement games, light jogging, stance motion, and dynamic mobility. Match partners by size and experience."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Sprawl-and-recover on a signal. Add circle steps without reaching."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Practice hips back, hands on shoulders, and a slow circle behind. Use matched partners and coach-controlled contact."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Start with a partner reaching for the legs. Defend, circle, reset, and switch roles."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short stance-and-motion intervals with recovery as needed."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Walk, breathe, hydrate, and ask wrestlers to repeat one technique cue."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Elementary',3,'{"title":"Fall example — Stand-up escape","objective":"Build a base, clear the hands, and face the opponent.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Movement games, light jogging, stance motion, and dynamic mobility. Match partners by size and experience."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Tripod-to-base movements and hand-clearing reps."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Teach first movement from referee’s position, hand control, the stand-up, and turning to face. Start without resistance."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Short bottom-position starts. Award the escape only when the wrestler turns to face."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short stance-and-motion intervals with recovery as needed."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Walk, breathe, hydrate, and ask wrestlers to repeat one technique cue."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Elementary',4,'{"title":"Fall example — Top control and a safe breakdown","objective":"Cover the hips and bring the opponent to the mat with control.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Movement games, light jogging, stance motion, and dynamic mobility. Match partners by size and experience."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Hip-following drills with a walking partner and basic top positioning."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Teach a tight-waist and near-arm breakdown. Emphasize chest pressure, controlled direction, and releasing on the whistle."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Top and bottom starts with light resistance. Reset after a safe breakdown or escape."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short stance-and-motion intervals with recovery as needed."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Walk, breathe, hydrate, and ask wrestlers to repeat one technique cue."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Elementary',5,'{"title":"Fall example — Linking takedown and escape skills","objective":"Recall a neutral attack and respond from top or bottom.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Movement games, light jogging, stance motion, and dynamic mobility. Match partners by size and experience."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Partner review of stance, penetration steps, and hand clearing."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Rotate through double-leg, sprawl, and stand-up stations. Ask each wrestler to demonstrate one cue before rotating."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Mix short neutral and referee’s-position rounds. Pair by size and experience."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short stance-and-motion intervals with recovery as needed."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Walk, breathe, hydrate, and ask wrestlers to repeat one technique cue."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Intermediate',0,'{"title":"Fall example — Inside ties and single-leg setups","objective":"Create an angle from an inside tie before attacking.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility, stance motion, and progressive partner movement."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Inside-hand pummeling, stance changes, and level-change entries."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Build from inside tie to a snap or push-pull setup and head-inside single. Drill the finish in stages."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Alternate tie-up starts and single-leg finish rounds. Reset after a takedown or clean defense."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short wrestling-position intervals with controlled pace and recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Easy movement, hydration, and one technical correction per wrestler."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Intermediate',1,'{"title":"Fall example — Single-leg finish and reshot","objective":"Finish a clean single and reattack after the first exchange.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility, stance motion, and progressive partner movement."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Single-leg footwork, partner pressure, and level-change reentries."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Teach turning the corner and shelf finishes at controlled speed. Connect a defended shot to a reshot when position allows."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Start on a captured single, then go neutral with one planned reattack each round."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short wrestling-position intervals with controlled pace and recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Easy movement, hydration, and one technical correction per wrestler."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Intermediate',2,'{"title":"Fall example — Sprawl, front head position, and circle","objective":"Defend the shot and circle safely to score.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility, stance motion, and progressive partner movement."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Sprawl and circle patterns, hip pressure, and hand-fighting starts."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Teach head-and-arm position without neck pressure, then a controlled go-behind. Add a reattack off the reset."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Alternate shot-defense starts with short neutral goes. Award points only after control."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short wrestling-position intervals with controlled pace and recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Easy movement, hydration, and one technical correction per wrestler."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Intermediate',3,'{"title":"Fall example — Stand-up against wrist control","objective":"Clear the controlling hand and escape under resistance.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility, stance motion, and progressive partner movement."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Base-building, wrist clears, and wall stand-up footwork."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Teach first movement, wrist control, hip separation, and turning in. Add a second stand-up when the first is stopped."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Start bottom with wrist control at light resistance. Increase resistance by round, then switch roles."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short wrestling-position intervals with controlled pace and recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Easy movement, hydration, and one technical correction per wrestler."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Intermediate',4,'{"title":"Fall example — Top breakdown and wrist ride","objective":"Break the base and maintain control without sacrificing position.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility, stance motion, and progressive partner movement."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Tight-waist positioning, hip coverage, and wrist handoffs."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Connect a tight-waist breakdown to a wrist ride. Add safe reset mechanics when the bottom wrestler rebuilds the base."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Ride-or-escape rounds from referee’s position. Rotate partners after a short coaching cue."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short wrestling-position intervals with controlled pace and recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Easy movement, hydration, and one technical correction per wrestler."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Intermediate',5,'{"title":"Fall example — Folkstyle match situations","objective":"Choose a scoring action based on position, time, and score.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility, stance motion, and progressive partner movement."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Review first movement, short finish chains, and boundary footwork."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Run neutral, top, and bottom stations with score-and-time constraints. Rehearse restarts and safe returns."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Short simulated periods with coach-set scores. Reset after each scoring sequence to discuss the decision."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short wrestling-position intervals with controlled pace and recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Easy movement, hydration, and one technical correction per wrestler."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Advanced',0,'{"title":"Fall example — Hand-fighting to a second attack","objective":"Score by changing angles and connecting a second attack when the first is stopped.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility and progressive hand-fighting intensity. Build pace before live work."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Tempo pummeling, inside ties, elbow passes, and reattack steps."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Link an elbow pass or snap to a single. When the defender squares, transition to a reshot or angle change."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Tie-specific starts, then short neutral rounds that require a second attack before reset."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short match-pace intervals with coach-directed recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Downshift, hydrate, and identify one position to revisit next practice."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Advanced',1,'{"title":"Fall example — Single-leg finishes under pressure","objective":"Finish from more than one defensive reaction while maintaining position.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility and progressive hand-fighting intensity. Build pace before live work."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Run-the-pipe footwork, corner turns, and position-based partner reps."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Review finish options against a square defender and a defender who turns away. Practice controlled mat finishes."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Alternate captured-single rounds and open neutral. Start with moderate resistance and build."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short match-pace intervals with coach-directed recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Downshift, hydrate, and identify one position to revisit next practice."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Advanced',2,'{"title":"Fall example — Front head position and short offense","objective":"Convert defense into a go-behind or a clean return to neutral.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility and progressive hand-fighting intensity. Build pace before live work."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Sprawl-to-angle transitions, short drag footwork, and circle recovery."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Build front head-and-arm position without neck pressure. Link a short drag, go-behind, or clean reattack."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Front-position starts with time limits, then short neutral rounds with a shot-defense objective."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short match-pace intervals with coach-directed recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Downshift, hydrate, and identify one position to revisit next practice."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Advanced',3,'{"title":"Fall example — Bottom pressure and second movement","objective":"Escape by chaining first and second movements against an active rider.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility and progressive hand-fighting intensity. Build pace before live work."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Wrist-clear chains, sit-through footwork, and stand-up resets."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Work stand-up and hip-heist progressions against wrist control. Drill a second movement when the initial escape stalls."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Bottom starts down one point with short time. Vary the starting control and rotate partners."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short match-pace intervals with coach-directed recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Downshift, hydrate, and identify one position to revisit next practice."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Advanced',4,'{"title":"Fall example — Wrist ride and controlled turns","objective":"Break the base, establish wrist control, and attempt a legal turn with control.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility and progressive hand-fighting intensity. Build pace before live work."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Hip coverage, wrist exchanges, and breakdown timing."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Link breakdown to wrist ride and a legal tilt. Coach checks shoulder position, pressure, and releases."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Top and bottom starts with short ride-or-turn objectives. Reset when position or control is lost."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short match-pace intervals with coach-directed recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Downshift, hydrate, and identify one position to revisit next practice."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}'),
+  ('Advanced',5,'{"title":"Fall example — Match management and late scoring","objective":"Choose the right attack, ride, or escape for the score and time.","sections":[{"id":"warmup","kind":"warmup","title":"Warm-up","minutes":10,"notes":"Dynamic mobility and progressive hand-fighting intensity. Build pace before live work."},{"id":"drill","kind":"drill","title":"Drills","minutes":10,"notes":"Fast starts, boundary awareness, and short scoring chains."},{"id":"technique","kind":"technique","title":"Technique","minutes":30,"notes":"Rehearse up-one, down-one, and tied scenarios from neutral and referee’s position. Discuss risk and reset choices."},{"id":"live","kind":"live","title":"Live","minutes":30,"notes":"Run short scored periods with clock and score constraints. Finish with a coached decision review."},{"id":"conditioning","kind":"conditioning","title":"Conditioning","minutes":5,"notes":"Short match-pace intervals with coach-directed recovery."},{"id":"cooldown","kind":"cooldown","title":"Cool-down","minutes":5,"notes":"Downshift, hydrate, and identify one position to revisit next practice."}],"notes":"Example draft. Adjust intensity, resistance, and pairings for the wrestlers present."}')
+ ),
+ current_seasons AS (
+  SELECT s.*,(
+   SELECT season.value FROM academy_state a,json_each(a.payload,'$.seasons') season
+   WHERE a.id='academy' AND json_extract(season.value,'$.program')=s.program
+    AND s.date BETWEEN json_extract(season.value,'$.start') AND json_extract(season.value,'$.end')
+   ORDER BY CAST(season.key AS INTEGER) DESC LIMIT 1
+  ) AS season
+  FROM scheduled s
+ ),
+ numbered AS (
+  SELECT c.*, (row_number() OVER (PARTITION BY c.program ORDER BY c.date)-1) % 6 AS rotation
+  FROM current_seasons c
+  WHERE NOT EXISTS(SELECT 1 FROM json_each(c.season,'$.excludedDates') d WHERE d.value=c.date)
+   AND (COALESCE(json_extract(c.season,'$.exceptions'),'')='' OR json_type(c.season,'$.excludedDates')='array')
+   AND EXISTS(SELECT 1 FROM json_each(c.season,'$.weekly') w
+    WHERE json_extract(w.value,'$.day')=CASE strftime('%w',c.date)
+     WHEN '0' THEN 'Sunday' WHEN '1' THEN 'Monday' WHEN '2' THEN 'Tuesday' WHEN '3' THEN 'Wednesday'
+     WHEN '4' THEN 'Thursday' WHEN '5' THEN 'Friday' ELSE 'Saturday' END
+    AND json_extract(w.value,'$.start')=c.start AND json_extract(w.value,'$.end')=c.end)
+ )
+INSERT INTO practice_plans(id,program,date,payload,published,revision,updated_by,updated_at)
+SELECT n.program||'-'||n.date,n.program,n.date,t.payload,0,1,'fall-2026-examples',strftime('%Y-%m-%dT%H:%M:%fZ','now')
+FROM numbered n JOIN templates t ON t.program=n.program AND t.rotation=n.rotation
+WHERE 1 ON CONFLICT(program,date) DO NOTHING;

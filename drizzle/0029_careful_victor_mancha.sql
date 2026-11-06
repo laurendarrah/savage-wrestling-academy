@@ -1,0 +1,1 @@
+ALTER TABLE `coach_time_entries` ADD `practice_context` text;

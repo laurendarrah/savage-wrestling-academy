@@ -1,0 +1,145 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Financials | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><link rel="stylesheet" href="/owner-navigation.css"><script src="/month-controls.js"></script><script defer src="/navigation.js"></script><style>
+*{box-sizing:border-box}body{margin:0;background:#f5f5f6;color:#18191c;font:15px/1.55 Arial,sans-serif}.shell{display:grid;grid-template-columns:235px minmax(0,1fr);min-height:100vh}aside{background:#18191c;color:white;padding:25px 20px;position:sticky;top:0;height:100vh;overflow:auto}.brand{font-size:24px;font-weight:900;letter-spacing:2px}.brand small{display:block;font-size:9px}.divider{width:38px;height:3px;background:#d72732;margin:20px 0}aside nav{display:grid;gap:4px}aside a{display:block;color:#ccc;padding:10px 12px;border-radius:7px;text-decoration:none}aside a:hover{background:#313238;color:#fff}aside a[aria-current=page]{background:#d72732;color:white}.mobile-nav{display:none}main{max-width:1120px;padding:26px;margin:auto}h1{font-size:36px;margin:8px 0}h2{margin-top:0}a{color:#a92330}.muted{color:#62656e}.card{background:white;border:1px solid #dedee2;border-radius:10px;padding:20px;margin:16px 0}.totals,.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.totals strong{display:block;font-size:clamp(21px,3vw,31px);margin-top:5px;overflow-wrap:anywhere}.totals .card{margin:0}.negative{color:#a92330}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}label{display:block;font-weight:bold;margin:10px 0}input,select,button{font:inherit;padding:10px 12px;border:1px solid #bbb;border-radius:6px;min-height:44px}input,select{display:block;width:100%;margin-top:6px}button{background:white;color:#18191c;cursor:pointer}.primary{background:#d72732;color:white;border-color:#d72732}button:disabled{opacity:.55;cursor:default}[hidden]{display:none!important}.table-scroll{overflow:auto}.year-table{min-width:440px}.year-table button{padding:7px 10px}table{width:100%;border-collapse:collapse;text-align:left;min-width:660px}th,td{border-bottom:1px solid #e4e4e7;padding:12px 8px;vertical-align:top}.amount{text-align:right;white-space:nowrap}.entry-actions{white-space:nowrap}.entry-actions button{padding:7px 10px}.voided{color:#65676f}.notice{border-left:4px solid #d72732;padding:13px 16px;background:#fff1f1}.month-wrap{max-width:330px;width:100%}:focus-visible{outline:3px solid #227ab0;outline-offset:2px}@media(max-width:800px){.shell{display:block}aside{position:static;height:auto;padding:16px}.mobile-nav{display:block;width:100%;text-align:left}aside nav{display:none;margin-top:8px}aside nav.open{display:grid;grid-template-columns:1fr 1fr}main{padding:16px}}@media(max-width:580px){.totals,.fields{grid-template-columns:1fr}.totals .card{padding:14px}}
+.category-header h2 { margin: 0; }
+.category-header label { margin: 0; min-width: 145px; }
+.category-layout { display: grid; grid-template-columns: minmax(0, 185px) minmax(0, 1fr); gap: 24px; align-items: center; margin-top: 18px; }
+.category-donut { display: block; width: 100%; max-width: 185px; justify-self: center; }
+.category-legend { list-style: none; padding: 0; margin: 0; min-width: 0; }
+.category-legend li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 6px 12px; padding: 9px 0; border-bottom: 1px solid #e4e4e7; }
+.category-legend li:last-child { border-bottom: 0; }
+.category-label { display: flex; gap: 8px; align-items: baseline; overflow-wrap: anywhere; }
+.category-swatch { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 auto; }
+.category-value { text-align: right; font-variant-numeric: tabular-nums; }
+.category-value small { color: #62656e; margin-left: .4rem; }
+@media (max-width: 560px) {
+ .category-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+ .category-value small { display: block; margin-left: 0; }
+}
+</style></head><body><div class="shell"><aside><div class="brand">SAVAGE<small>WRESTLING ACADEMY</small></div><div class="divider"></div><button id="menu" class="mobile-nav" aria-controls="ownerNav" aria-expanded="false">Menu · Financials</button><nav id="ownerNav" aria-label="Academy navigation" class="owner-navigation"><a href="/#workspace=Dashboard">Dashboard</a><details><summary>Wrestlers &amp; Families</summary><div class="owner-nav-items"><a href="/accounts">Families</a><a href="/attendance">Attendance</a><a href="/#workspace=Messages">Messages</a><a href="/documents">Waivers &amp; Contracts</a></div></details><details><summary>Programs &amp; Scheduling</summary><div class="owner-nav-items"><a href="/#practice-calendar">Calendar</a><a href="/#schedules">Schedules</a><a href="/#workspace=Camps%20%26%20Events">Camps &amp; Events</a><a href="/#workspace=Private%20lessons">Private lessons</a></div></details><details open><summary>Memberships &amp; Financials</summary><div class="owner-nav-items"><a href="/#workspace=Programs%20%26%20pricing">Programs &amp; Pricing</a><a href="/scholarships">Scholarships</a><a href="/#workspace=Discount%20%26%20Team%20Codes">Discount &amp; Team Codes</a><a href="/financials" aria-current="page">Financials</a></div></details><details><summary>Team &amp; Settings</summary><div class="owner-nav-items"><a href="/#coaches">Coaches</a><a href="/coach-time?review=1">Coach timesheets</a><a href="/coach-time-off?review=1">Coach Time Off</a><a href="/#workspace=Academy%20Settings">Academy Settings</a></div></details></nav></aside><div class="owner-content"><main><p class="muted">OWNER WORKSPACE</p><div class="row"><h1>Financials</h1><button class="primary" id="add" disabled>+ Record income or expense</button></div><p class="notice">This ledger totals the entries you record here. It does not collect payments or import Stripe activity.</p><div class="row"><label>View<select id="view"><option value="monthly">Monthly ledger</option><option value="yearly">Yearly summary</option></select></label><div class="month-wrap" id="monthControls"><label for="month">Financial month</label><div class="swa-month-switch"><button id="previousMonth" aria-label="Previous month">←</button><select id="month" aria-label="Financial month"></select><button id="nextMonth" aria-label="Next month">→</button></div></div><div class="month-wrap" id="yearControls" hidden><label for="year">Financial year</label><div class="swa-month-switch"><button id="previousYear" aria-label="Previous year">←</button><select id="year"></select><button id="nextYear" aria-label="Next year">→</button></div></div><button id="refresh">Refresh</button></div><p id="status" role="status" aria-live="polite">Loading financials…</p><div class="totals"><section class="card">Income recorded<strong id="income">—</strong></section><section class="card">Expenses recorded<strong id="expenses">—</strong></section><section class="card">Net recorded<strong id="net">—</strong></section></div>
+<section id="editor" class="card" hidden><h2 id="editorTitle">Record an entry</h2><form id="entryForm"><div class="fields"><label>Entry type<select id="kind"><option value="income">Income</option><option value="expense">Expense</option></select></label><label>Category<select id="category" required></select></label><label>Date<input id="date" type="date" min="1900-01-01" required></label></div><label>Description<input id="description" maxlength="160" required placeholder="For example, November rent"></label><label>Amount (USD)<input id="amount" inputmode="decimal" maxlength="10" required placeholder="0.00"></label><p id="formStatus" role="status" aria-live="polite"></p><button class="primary" id="save">Save entry</button> <button type="button" id="cancel">Cancel</button></form></section>
+<section class="card" id="lessonFinancials" hidden>
+<h2>Approved private lesson revenue</h2>
+<p id="lessonTotals"></p>
+<p class="muted">From approved coach timesheets. This breakdown is shown separately from ledger entries.</p>
+</section><section class="card" aria-labelledby="categoryHeading">
+ <div class="row category-header"><h2 id="categoryHeading">Breakdown by category</h2>
+  <label for="chartKind">Show<select id="chartKind" disabled><option value="expense">Expenses</option><option value="income">Income</option></select></label>
+ </div>
+ <div id="categoryChart"><p class="muted">Loading category totals…</p></div>
+</section>
+<section id="ledger" class="card"><h2>Recorded entries</h2><div class="table-scroll"><table><thead><tr><th>Date</th><th>Type</th><th>Category / description</th><th class="amount">Amount</th><th>Actions</th></tr></thead><tbody id="entries"></tbody></table></div><div class="row" style="margin-top:14px"><button id="previousPage" disabled>Previous page</button><span id="page"></span><button id="nextPage" disabled>Next page</button></div></section><section id="annual" class="card" hidden><h2>Month by month</h2><p class="muted">Select a month to open its ledger.</p><div class="table-scroll"><table class="year-table"><thead><tr><th scope="col">Month</th><th scope="col" class="amount">Income</th><th scope="col" class="amount">Expenses</th><th scope="col" class="amount">Net</th></tr></thead><tbody id="months"></tbody></table></div></section></main></div></div><script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100),dateLabel=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'});
+let breakdown=null;
+let view='monthly',month=SwaMonths.today().slice(0,7),offset=0,state=null,editing=null,sequence=0,busy=false;
+async function call(path,body){const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Unable to load financials.');return d}
+function setPeriodControls(){
+ const yearly=view==='yearly';
+ $('view').value=view;
+ $('monthControls').hidden=$('ledger').hidden=$('add').hidden=yearly;
+ $('yearControls').hidden=$('annual').hidden=!yearly;
+ if(yearly){
+  const year=Number(month.slice(0,4));
+  const options=Array.from({length:25},(_,i)=>year-12+i).filter(y=>y>=1900&&y<=9999);
+  $('year').innerHTML=options.map(y=>`<option value="${y}">${y}</option>`).join('');
+  $('year').value=String(year);
+  $('previousYear').disabled=year<=1900;
+  $('nextYear').disabled=year>=9999;
+ }else{
+  SwaMonths.set($('month'),month);
+  $('previousMonth').disabled=!SwaMonths.move(month,-1);
+  $('nextMonth').disabled=!SwaMonths.move(month,1);
+ }
+}
+function renderTotals(totals){
+ for(const key of ['income','expenses','net'])$(key).textContent=money(totals[key]);
+ $('net').classList.toggle('negative',totals.net<0);
+}
+const chartColors=['#ad2134','#286681','#6a5098','#19746b','#956005'];
+function renderCategoryChart(){
+ const kind=$('chartKind').value;
+ const rows=(breakdown||[]).filter(row=>row.kind===kind);
+ const total=rows.reduce((sum,row)=>sum+row.cents,0);
+ if(!total){
+  $('categoryChart').innerHTML='<p class="muted">No '+(kind==='income'?'income':'expenses')+' recorded for this period.</p>';
+  return;
+ }
+ let offset=0;
+ const slices=rows.map((row,i)=>{
+  const portion=row.cents/total*100,color=chartColors[i%chartColors.length];
+  const slice={...row,portion,offset,color};
+  offset+=portion;
+  return slice;
+ });
+ const circles=slices.map(slice=>`<circle cx="60" cy="60" r="48" fill="none" stroke="${slice.color}" stroke-width="18" pathLength="100" stroke-dasharray="${slice.portion} ${100-slice.portion}" stroke-dashoffset="${-slice.offset}"/>`).join('');
+ const labels=slices.map(slice=>`<li><span class="category-label"><span class="category-swatch" aria-hidden="true" style="background:${slice.color}"></span>${esc(slice.category)}</span><span class="category-value"><strong>${money(slice.cents)}</strong> <small>${slice.portion<0.1?'&lt;0.1':slice.portion.toFixed(1)}%</small></span></li>`).join('');
+ $('categoryChart').innerHTML=`<div class="category-layout"><svg class="category-donut" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><g transform="rotate(-90 60 60)">${circles}</g></svg><ul class="category-legend" aria-label="${kind==='income'?'Income':'Expenses'} by category">${labels}</ul></div>`;
+}
+$('chartKind').onchange=renderCategoryChart;
+function renderYear(data){
+ $('months').innerHTML=data.months.map(row=>`<tr><th scope="row"><button type="button" data-month="${esc(row.month)}">${esc(SwaMonths.label(row.month))}</button></th><td class="amount">${money(row.income)}</td><td class="amount">${money(row.expenses)}</td><td class="amount ${row.net<0?'negative':''}">${money(row.net)}</td></tr>`).join('');
+ $('months').querySelectorAll('[data-month]').forEach(button=>button.onclick=()=>{
+  changePeriod('monthly',button.dataset.month);
+  $('month').focus();
+ });
+}
+function render(){const d=state;$('entries').innerHTML=d.entries.map((e,i)=>`<tr class="${e.voided_at?'voided':''}"><td>${esc(dateLabel(e.date))}</td><td>${e.kind==='income'?'Income':'Expense'}${e.voided_at?'<br>Voided':''}</td><td><b>${esc(e.category)}</b><br>${esc(e.description)}</td><td class="amount">${esc(money(e.cents))}</td><td class="entry-actions">${e.voided_at?'—':`<button data-edit="${i}">Edit</button> <button data-void="${i}">Void</button>`}</td></tr>`).join('')||'<tr><td colspan="5">No entries for this month.</td></tr>';$('entries').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editor(d.entries[Number(b.dataset.edit)]));$('entries').querySelectorAll('[data-void]').forEach(b=>b.onclick=()=>voidEntry(d.entries[Number(b.dataset.void)]));$('page').textContent='Page '+(offset/50+1);$('previousPage').disabled=!offset;$('nextPage').disabled=!d.hasMore;$('add').disabled=false}
+async function load(message=''){
+ const request=++sequence,yearly=view==='yearly',year=month.slice(0,4);
+ $('status').textContent='Loading financials…';
+ $('lessonFinancials').hidden=true;
+ $('chartKind').disabled=true;
+ $('categoryChart').textContent='Loading category totals…';
+ $('add').disabled=$('previousPage').disabled=$('nextPage').disabled=true;
+ $('entries').textContent=$('months').textContent=$('page').textContent='';
+ for(const key of ['income','expenses','net'])$(key).textContent='—';
+ $('net').classList.remove('negative');
+ setPeriodControls();
+ const query=yearly?'year='+year:'month='+month+'&offset='+offset;
+ try{
+  const data=await call('/api/financials?'+query);
+  if(request!==sequence)return;
+  renderTotals(data.totals);
+  if(data.lessonTotals){
+   const {count,grossCents,coachCents,businessCents}=data.lessonTotals;
+   $('lessonFinancials').hidden=false;
+   $('lessonTotals').textContent=count+' approved lesson'+(count===1?'':'s')+' · '+money(grossCents)+' collected · '+money(coachCents)+' coach (65%) · '+money(businessCents)+' SWA (35%)';
+  }
+  if(breakdown===null&&!data.totals.expenses&&data.totals.income)$('chartKind').value='income';
+  breakdown=data.categoryTotals;
+  $('chartKind').disabled=false;
+  renderCategoryChart();
+  if(yearly)renderYear(data);
+  else{state=data;render()}
+  $('status').textContent=message||data.totals.count+' active entries · '+(yearly?year:SwaMonths.label(month));
+ }catch(error){if(request===sequence){
+  $('status').textContent=error.message;
+  $('categoryChart').textContent='Category totals could not be loaded.';
+ }}
+}
+function categories(selected=''){$('category').innerHTML=(state?.categories[$('kind').value]||[]).map(c=>`<option value="${esc(c)}" ${c===selected?'selected':''}>${esc(c)}</option>`).join('')}
+function editor(entry=null){if(!state||busy)return;editing=entry;$('editor').hidden=false;$('editorTitle').textContent=entry?'Edit recorded entry':'Record income or expense';$('kind').value=entry?.kind||'income';categories(entry?.category);$('date').max=state.today;$('date').value=entry?.date||(month<state.today.slice(0,7)?month+'-01':state.today);$('description').value=entry?.description||'';$('amount').value=entry?(entry.cents/100).toFixed(2):'';$('formStatus').textContent='';$('editor').scrollIntoView({behavior:'smooth'});$('description').focus({preventScroll:true})}
+function closeEditor(){if(busy)return false;$('editor').hidden=true;editing=null;return true}
+$('entryForm').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;$('save').disabled=true;try{const date=$('date').value;await call('/api/financials',{action:editing?'edit':'add',id:editing?.id,revision:editing?.revision,date,kind:$('kind').value,category:$('category').value,description:$('description').value,amount:$('amount').value});busy=false;closeEditor();month=date.slice(0,7);offset=0;await load('Entry saved.')}catch(error){$('formStatus').textContent=error.message}finally{busy=false;$('save').disabled=false}};
+async function voidEntry(e){if(busy||!confirm('Void this entry? It will stay in the history and be removed from totals.'))return;busy=true;try{await call('/api/financials',{action:'void',id:e.id,revision:e.revision});busy=false;closeEditor();await load('Entry voided.')}catch(error){$('status').textContent=error.message}finally{busy=false}}
+function changePeriod(nextView,value){
+ if(!SwaMonths.valid(value)||!closeEditor()){setPeriodControls();return}
+ view=nextView;
+ month=value;
+ offset=0;
+ load();
+}
+function changeYear(value){changePeriod('yearly',String(value)+month.slice(4))}
+$('kind').onchange=()=>categories();
+$('add').onclick=()=>editor();
+$('cancel').onclick=closeEditor;
+$('view').onchange=()=>changePeriod($('view').value,month);
+$('month').onchange=()=>changePeriod('monthly',$('month').value);
+$('previousMonth').onclick=()=>changePeriod('monthly',SwaMonths.move(month,-1));
+$('nextMonth').onclick=()=>changePeriod('monthly',SwaMonths.move(month,1));
+$('year').onchange=()=>changeYear($('year').value);
+$('previousYear').onclick=()=>changeYear(Number(month.slice(0,4))-1);
+$('nextYear').onclick=()=>changeYear(Number(month.slice(0,4))+1);
+$('refresh').onclick=()=>load();$('previousPage').onclick=()=>{offset=Math.max(0,offset-50);load()};$('nextPage').onclick=()=>{offset+=50;load()};$('menu').onclick=()=>{$('menu').setAttribute('aria-expanded',String($('ownerNav').classList.toggle('open')))};
+globalThis.SavagePageNavigation={snapshot:()=>({view,month,offset}),restore(v){if(!v)return;view=v.view==='yearly'?'yearly':'monthly';if(SwaMonths.valid(v.month))month=v.month;offset=Number.isSafeInteger(v.offset)&&v.offset>=0?v.offset:0;load()},back(){if(!$('editor').hidden)return closeEditor();return false}};load();
+</script></body></html>

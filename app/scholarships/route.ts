@@ -1,4 +1,4 @@
 import html from './screen.html?raw';
-import {ownerPage} from '../../lib/protected-page';
+import {ownerToolPage} from '../../lib/owner-workspace';
 export const dynamic='force-dynamic';
-export async function GET(request:Request){return ownerPage(request,html)}
+export async function GET(request:Request){return ownerToolPage(request,html)}

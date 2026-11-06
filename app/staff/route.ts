@@ -1,1 +1,1 @@
-import html from './screen.html?raw';import {ownerPage} from '../../lib/protected-page';export const dynamic='force-dynamic';export async function GET(request:Request){return ownerPage(request,html)}
+import {ownerPage} from '../../lib/protected-page';export const dynamic='force-dynamic';export async function GET(request:Request){const auth=await ownerPage(request,'');if(auth.status!==200)return auth;auth.headers.set('Location','/#coaches');return new Response(null,{status:303,headers:auth.headers})}

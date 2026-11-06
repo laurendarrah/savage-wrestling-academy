@@ -92,10 +92,10 @@ console.log('Passed: real registration review uses saved team code percentage, r
 
 // The website sees a deliberately public projection, never the private academy state.
 const publicApi=load('app/api/public-schedule/route.ts'),booking=load('app/api/booking-review/route.ts');
-state.events=[{id:'camp-live',name:'Winter Camp',type:'Camp',dates:[date,new Date(Date.parse(date+'T12:00:00Z')+86400000).toISOString().slice(0,10)],price:125.50,day:70.25,slots:20},{id:'old',name:'Old clinic',type:'Clinic',dates:['2020-01-01'],price:10,slots:5},{id:'hidden',name:'Hidden event',type:'Event',dates:[date],price:10,slots:5,archived:true}];state.kids=[{name:'PRIVATE_CHILD'}];state.contact={email:'PRIVATE_PARENT'};state.messages=[{body:'PRIVATE_MESSAGE'}];state.programs[0].secret='PRIVATE_PROGRAM_FIELD';sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));
-const publicRes=await publicApi.GET(new Request('https://academy.test/api/public-schedule?month='+date.slice(0,7))),publicData=await publicRes.json();assert.equal(publicRes.status,200);assert.equal(publicRes.headers.get('Access-Control-Allow-Origin'),'*');assert.equal(publicData.events.length,1);assert.equal(publicData.events[0].cents,12550);assert.equal(publicData.events[0].dayCents,7025);assert.equal(publicData.privateFormats.length,3);assert.doesNotMatch(JSON.stringify(publicData),/PRIVATE_|SCHOOL15|user_id|wrestler_name|sender_role/);assert.equal(publicData.practices.length,2);assert.equal((await publicApi.GET(new Request('https://academy.test/api/public-schedule?month=bad'))).status,400);
+state.events=[{id:'camp-live',name:'Winter Camp',type:'Camp',dates:[date,new Date(Date.parse(date+'T12:00:00Z')+86400000).toISOString().slice(0,10)],price:125.50,day:70.25,slots:20},{id:'old',name:'Old clinic',type:'Clinic',dates:['2020-01-01'],price:10,slots:5},{id:'hidden',name:'Hidden event',type:'Event',dates:[date],price:10,slots:5,archived:true}];state.events[0].schedule=state.events[0].dates.map((date,index)=>({date,start:index?'12:00':'09:00',end:index?'16:30':'14:00',internal:'PRIVATE_EVENT_FIELD'}));state.kids=[{name:'PRIVATE_CHILD'}];state.contact={email:'PRIVATE_PARENT'};state.messages=[{body:'PRIVATE_MESSAGE'}];state.programs[0].secret='PRIVATE_PROGRAM_FIELD';sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));
+const publicRes=await publicApi.GET(new Request('https://academy.test/api/public-schedule?month='+date.slice(0,7))),publicData=await publicRes.json();assert.equal(publicRes.status,200);assert.equal(publicRes.headers.get('Access-Control-Allow-Origin'),'*');assert.equal(publicData.events.length,1);assert.equal(publicData.events[0].cents,12550);assert.equal(publicData.events[0].dayCents,7025);assert.deepEqual(publicData.events[0].schedule.map(({start,end})=>[start,end]),[['09:00','14:00'],['12:00','16:30']]);assert.equal(publicData.privateFormats.length,3);assert.doesNotMatch(JSON.stringify(publicData),/PRIVATE_|SCHOOL15|user_id|wrestler_name|sender_role/);assert.equal(publicData.practices.length,2);assert.equal((await publicApi.GET(new Request('https://academy.test/api/public-schedule?month=bad'))).status,400);
 const bReq=(body,session='alice',origin='https://academy.test')=>req('/api/booking-review','POST',body,session,origin),bBody={type:'event',id:'camp-live',wrestlerId:'kid-7',option:'full'};
-let b=await booking.POST(bReq({...bBody,cents:0,price:0}));assert.equal(b.status,200);let br=await b.json();assert.equal(br.review.cents,12550);assert.equal(br.paymentsEnabled,false);assert.match(br.review.message,/No enrollment|no payment/i);assert.equal((await booking.POST(bReq({...bBody,wrestlerId:'foreign'}))).status,404);assert.equal((await booking.POST(bReq(bBody,'bob'))).status,404);assert.equal((await booking.POST(bReq(bBody,'none'))).status,401);assert.equal((await booking.POST(bReq(bBody,'alice','https://evil.test'))).status,403);assert.equal((await booking.POST(bReq({...bBody,id:'hidden'}))).status,409);assert.equal((await booking.POST(bReq({...bBody,option:'2020-01-01'}))).status,400);b=await booking.POST(bReq({...bBody,option:date}));assert.equal((await b.json()).review.cents,7025);b=await booking.POST(bReq({type:'lesson',format:'one-on-one',wrestlerId:'kid-7',price:1}));br=await b.json();assert.equal(br.review.cents,null);assert.equal(br.review.status,'inquiry_review');assert.match(br.review.message,/No lesson is reserved/);assert.equal((await booking.POST(bReq({type:'lesson',format:'invented',wrestlerId:'kid-7'}))).status,400);state.events[0].slots=0;sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));assert.equal((await booking.POST(bReq(bBody))).status,409);assert.equal(sqlite.prepare('SELECT revision FROM family_accounts WHERE user_id=?').get('alice-uuid').revision,1);
+let b=await booking.POST(bReq({...bBody,cents:0,price:0}));assert.equal(b.status,200);let br=await b.json();assert.equal(br.review.cents,12550);assert.equal(br.review.schedule.length,2);assert.equal(br.paymentsEnabled,false);assert.match(br.review.message,/No enrollment|no payment/i);assert.equal((await booking.POST(bReq({...bBody,wrestlerId:'foreign'}))).status,404);assert.equal((await booking.POST(bReq(bBody,'bob'))).status,404);assert.equal((await booking.POST(bReq(bBody,'none'))).status,401);assert.equal((await booking.POST(bReq(bBody,'alice','https://evil.test'))).status,403);assert.equal((await booking.POST(bReq({...bBody,id:'hidden'}))).status,409);assert.equal((await booking.POST(bReq({...bBody,option:'2020-01-01'}))).status,400);b=await booking.POST(bReq({...bBody,option:date}));const single=(await b.json()).review;assert.equal(single.cents,7025);assert.deepEqual(single.schedule,[{date,start:'09:00',end:'14:00'}]);b=await booking.POST(bReq({type:'lesson',format:'one-on-one',wrestlerId:'kid-7',price:1}));br=await b.json();assert.equal(br.review.cents,null);assert.equal(br.review.status,'inquiry_review');assert.match(br.review.message,/No lesson is reserved/);assert.equal((await booking.POST(bReq({type:'lesson',format:'invented',wrestlerId:'kid-7'}))).status,400);state.events[0].slots=0;sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));assert.equal((await booking.POST(bReq(bBody))).status,409);assert.equal(sqlite.prepare('SELECT revision FROM family_accounts WHERE user_id=?').get('alice-uuid').revision,1);
 console.log('Passed: anonymous public calendar projection and CORS without family data/codes; archived events omitted; family-isolated booking reviews, server prices, camp days, full events, unavailable lessons, MFA/CSRF and no reservations/payments.');
 
 levels.owner='aal1';assert.equal((await booking.POST(bReq(bBody,'owner'))).status,403);levels.owner='aal2';
@@ -109,22 +109,18 @@ state.extraPractices.push({...state.extraPractices[0],id:'clinic',name:'Live Cli
 state.extraPractices[0].enabled=false;sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));assert.equal((await booking.POST(bReq(liveBody))).status,409);state.extraPractices=[];sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));assert.equal((await booking.POST(bReq(liveBody))).status,409);
 console.log('Passed: named practice/date lookup, same-day offerings use their own prices, forged membership/amount ignored, saved wrestler isolation, unselected dates, hide and removal.');
 
-// Annual totals and commitment length come from saved prices, not browser input.
-const annual=await review('kid-7',{program:'Intermediate',plan:'annual',cents:1,totalCents:1,paymentCount:999,termMonths:1});
-assert.equal(annual.status,200);
-const annualBody=await annual.json();
-assert.equal(annualBody.review.cents,240000);
-assert.equal(annualBody.review.totalCents,240000);
-assert.equal(annualBody.review.paymentCount,1);
-assert.equal(annualBody.review.termMonths,12);
-assert.equal(annualBody.review.renewal,'manual');
-assert.equal(annualBody.review.termsStatus,'draft');
-assert.equal(annualBody.paymentsEnabled,false);
-const installments=await (await review('kid-7',{program:'Intermediate'})).json();
+// A yearly commitment uses twelve server-priced installments.
+const response=await review('kid-7',{program:'Intermediate',plan:'monthly',cents:1,totalCents:1,paymentCount:999,termMonths:1});
+assert.equal(response.status,200);
+const installments=await response.json();
+assert.equal(installments.review.cents,20000);
 assert.equal(installments.review.paymentCount,12);
 assert.equal(installments.review.totalCents,240000);
-assert.equal((await review('kid-7',{program:'Intermediate',plan:'annual',teamCode:'SCHOOL15'})).status,400);
-assert.equal((await review('kid-7',{program:'Advanced',plan:'annual',approved:true})).status,403);
-assert.equal((await review('kid-7',{program:'Intermediate',plan:'month-to-month'})).status,400);
-assert.equal((await review('foreign-kid',{program:'Intermediate',plan:'annual'})).status,404);
-console.log('Passed: annual upfront price, 12 installment total, term/renewal controls, forged-price rejection, draft/payment gate and annual approval/account isolation.');
+assert.equal(installments.review.termMonths,12);
+assert.equal(installments.review.renewal,'manual');
+assert.equal(installments.review.termsStatus,'draft');
+assert.equal(installments.paymentsEnabled,false);
+for(const plan of ['annual','month-to-month']){
+ assert.equal((await review('kid-7',{program:'Intermediate',plan})).status,400);
+}
+console.log('Passed: 12 installment total, term and renewal controls, forged-price rejection, payment gate and unsupported-plan rejection.');

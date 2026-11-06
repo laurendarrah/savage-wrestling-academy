@@ -1,0 +1,72 @@
+.owner-navigation details {
+  min-width: 0;
+}
+.owner-navigation summary {
+  padding: 12px 8px;
+  color: #e2e2e6;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.owner-navigation summary:hover {
+  background: #292a2f;
+  border-radius: 5px;
+}
+.owner-navigation summary:focus-visible,
+.removed-coaches summary:focus-visible {
+  outline: 3px solid #e25c63;
+  outline-offset: -2px;
+}
+.owner-nav-items {
+  padding-left: 9px;
+}
+.owner-navigation.nav button {
+  width: 100%;
+  white-space: normal;
+}
+.removed-coaches {
+  margin-top: 18px;
+}
+.removed-coaches summary {
+  padding: 10px 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+.remove-coach {
+  color: #ab1f2a;
+}
+@media (max-width: 760px) {
+  aside .nav.owner-navigation.is-open,
+  aside nav.owner-navigation.open,
+  .owner-sidebar nav.owner-navigation.is-open {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 650px) {
+  .nav.owner-navigation {
+    flex-direction: column;
+    overflow: visible;
+  }
+  .nav.owner-navigation button {
+    min-height: 40px;
+    font-size: 13px;
+  }
+}
+
+#ownerWorkspacePanels { min-width:0; padding:24px clamp(12px,3vw,38px) 20px; }
+#ownerWorkspacePanels iframe { display:block; width:100%; height:max(340px,calc(100dvh - 180px)); border:0; }
+#ownerWorkspacePanels [hidden] { display:none!important; }
+@media (max-width:760px) {
+  #ownerWorkspacePanels { padding-top:14px; }
+  #ownerWorkspacePanels iframe { height:max(340px,calc(100dvh - 230px)); }
+}
+
+#workspaceHeader { position:sticky; top:0; z-index:5; }
+#workspaceHeader .switch button[aria-pressed="true"] { background:#b72332; color:#fff; }
+
+.membership-tabs { display:flex; flex-wrap:wrap; gap:8px; padding:16px clamp(12px,3vw,38px) 0; }
+.membership-tabs[hidden] { display:none; }
+.membership-tabs button { min-height:44px; padding:8px 12px; font-weight:700; }
+.membership-tabs button[aria-current="page"] { background:#b72332; border-color:#b72332; color:#fff; }
