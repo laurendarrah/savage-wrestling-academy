@@ -255,6 +255,90 @@ await step('owner announces to SWA Intermediate; family reads it and replies; ow
   await waitText(owner, '#threadBox', /see you there/);
 });
 
+// ---------- Older owner pages ----------
+const draw = async (page, sel) => {
+  await page.locator(sel).scrollIntoViewIfNeeded(); const box = await page.locator(sel).boundingBox();
+  await page.mouse.move(box.x + 30, box.y + 40); await page.mouse.down();
+  for (let i = 0; i < 25; i++) await page.mouse.move(box.x + 30 + i * 12, box.y + 40 + Math.sin(i / 3) * 18);
+  await page.mouse.up();
+};
+await step('owner grants coach access on /staff', async () => {
+  await owner.goto(BASE + '/staff'); await owner.waitForSelector('#staffForm');
+  await owner.fill('#staffForm [name=name]', 'Coach Lee'); await owner.fill('#staffForm [name=email]', 'coach.lee@example.test');
+  await owner.check('#staffForm [name=programs][value=Elementary]'); await owner.click('#staffForm button');
+  await waitText(owner, '#staff', /Coach Lee/);
+});
+await step('family requests SWA Advance approval; owner approves; transfer to SWA Advance goes through', async () => {
+  await family.goto(BASE + `/register?program=Advanced&wrestler=${samId}`); await family.waitForSelector('#requestApproval');
+  await family.waitForFunction(() => !document.querySelector('#requestApproval').closest('[hidden]'), null, {timeout: 8000});
+  await family.click('#requestApproval'); await waitText(family, '#status', /Approval request saved/);
+  await owner.goto(BASE + '/approvals'); await waitText(owner, '#requests', /Sam Example/);
+  await owner.locator('[data-status="approved"]').first().click();
+  await waitText(owner, '#requests', /Revoke approval/);
+  await owner.goto(BASE + '/transfers'); await owner.waitForFunction(() => [...document.querySelectorAll('#order option')].some(o => o.value));
+  await owner.selectOption('#to', 'Advanced'); await owner.fill('#reason', 'Moved up after evaluation'); await owner.fill('#date', ny(5));
+  await owner.click('#form button'); await waitText(owner, '#status', /moves to SWA Advance/);
+  const later = await api(owner, '/api/roster?date=' + ny(5)), before = await api(owner, '/api/roster?date=' + ny(4));
+  const where = r => r.body.sessions.filter(s => s.entries.some(e => e.name === 'Sam Example')).map(s => s.title).join();
+  expect(where(later) === 'SWA Advance' && where(before) === 'SWA Intermediate', `roster after transfer: ${where(before)} -> ${where(later)}`);
+});
+await step('owner offers a scholarship; family 2 accepts it with a drawn signature', async () => {
+  await owner.goto(BASE + '/scholarships'); await owner.waitForSelector('#offerForm');
+  await owner.fill('#offerForm [name=email]', 'family.b@example.test'); await owner.fill('#offerForm [name=wrestlerName]', 'Riley Two');
+  await owner.selectOption('#program', 'Intermediate'); await owner.click('#create');
+  await owner.waitForFunction(() => document.querySelector('#inviteUrl')?.value, null, {timeout: 8000});
+  const invite = await owner.inputValue('#inviteUrl');
+  // Acceptance opens only once the owner saves the attorney-reviewed terms.
+  await owner.locator('summary:has-text("attorney-reviewed terms")').first().click();
+  await owner.locator('[data-finalize] [name=terms]').first().fill('Sample scholarship terms for testing only. '.repeat(8));
+  await owner.locator('[data-finalize] [name=reviewed]').first().check(); await owner.locator('[data-finalize] button').first().click();
+  await owner.waitForTimeout(800);
+  await family2.goto(invite.replace(/^https?:\/\/[^/]+/, BASE)); await family2.waitForSelector('#acceptForm');
+  await family2.fill('#signer', 'Riley Parent'); await draw(family2, '#signatureCanvas');
+  await family2.check('#accepted'); await family2.check('#electronicConsent'); await family2.click('#accept');
+  await waitText(family2, '#offer', /Scholarship active/);
+  await family2.goto(BASE + '/family'); await waitText(family2, '#membershipCards', /Active scholarship/);
+  await owner.goto(BASE + '/scholarships'); await waitText(owner, '#awards', /Riley Two[\s\S]*(active|Active)/);
+});
+await step('owner shares a practice plan; the coach sees it', async () => {
+  await owner.goto(BASE + `/practice-plans?program=Intermediate&date=${today}`);
+  // The address chooses the practice; wait until the editor has loaded it.
+  await owner.waitForFunction(() => document.querySelector('#fields') && !document.querySelector('#fields').disabled && document.querySelector('#planForm [name=title]')?.offsetParent, null, {timeout: 15000});
+  await owner.fill('#planForm [name=title]', 'Leg attacks and finishes');
+  if (!(await owner.locator('#sections input, #sections textarea').count())) await owner.click('#resetOrder');
+  await owner.click('#save'); await owner.waitForTimeout(500);
+  const st = await owner.locator('#status').first().textContent().catch(() => '');
+  expect(/saved|shared|published/i.test(st || ''), 'plan save status: ' + st);
+  await coach.goto(BASE + '/coach'); await coach.click('text=Open practice plans');
+  await coach.waitForFunction(() => /Leg attacks and finishes/.test(document.body.textContent), null, {timeout: 10000});
+});
+await step('owner adds a curriculum lesson on /curricula', async () => {
+  await owner.goto(BASE + '/curricula'); await owner.waitForSelector('#groupName');
+  await owner.selectOption('#curriculumProgram', 'Intermediate').catch(() => {});
+  await owner.fill('#groupName', 'Foundations'); await owner.click('#saveGroup'); await owner.waitForTimeout(500);
+  await owner.fill('#curriculumName', 'Stance and motion'); await owner.fill('#lessonOrder', '1').catch(() => {});
+  await owner.fill('#planForm [name=title]', 'Stance and motion');
+  if (!(await owner.locator('#sections input, #sections textarea').count())) await owner.click('#resetOrder');
+  await owner.click('#saveCurriculum').catch(async () => owner.click('#save')); await owner.waitForTimeout(600);
+  const r = await api(owner, '/api/practice-curricula');
+  expect(JSON.stringify(r.body).includes('Stance and motion'), 'curriculum lesson not saved: ' + JSON.stringify(r.body).slice(0, 200));
+});
+await step('payment setup, security log and family accounts load with real records', async () => {
+  await owner.goto(BASE + '/payment-setup'); await owner.waitForFunction(() => /test mode/i.test(document.body.textContent), null, {timeout: 8000});
+  await owner.goto(BASE + '/security-log'); expect(/offline_payment_recorded|waiver_published|Offline payment/i.test(await owner.content()), 'security log shows recent actions');
+  await owner.goto(BASE + '/accounts'); const acc = await owner.content(); expect(/Pat Example/.test(acc) && /Riley Parent/.test(acc), 'accounts list both families');
+  const fam = await family.request.get(BASE + '/accounts'); expect(fam.status() !== 200 || !/Riley Parent/.test(await fam.text()), 'a family opened the accounts list');
+});
+await step('owner downloads an encrypted backup and previews and restores it from the file', async () => {
+  await owner.goto(BASE + '/backups'); await owner.waitForSelector('#exportPassword');
+  await owner.fill('#exportPassword', 'correct horse battery staple 2026'); await owner.fill('#exportConfirm', 'correct horse battery staple 2026');
+  const [dl] = await Promise.all([owner.waitForEvent('download', {timeout: 15000}), owner.click('#download')]);
+  const file = await dl.path(); expect(file, 'no backup file');
+  await owner.setInputFiles('#file', file); await owner.fill('#importPassword', 'correct horse battery staple 2026'); await owner.click('#preview');
+  await owner.waitForFunction(() => /payments/.test(document.querySelector('#summary')?.textContent || ''), null, {timeout: 15000});
+  await owner.click('#restore'); await owner.waitForFunction(() => /restored|Restore complete|No missing/i.test(document.body.textContent), null, {timeout: 15000});
+});
+
 // ---------- Owner dashboard and backups ----------
 await step('owner dashboard shows today\'s real numbers', async () => {
   await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Sessions today/);
@@ -291,6 +375,28 @@ await step('family pages fit a phone screen', async () => {
     expect(!broken.length, `${path}: words broken across lines: ${broken.join(', ')}`);
     if (SHOTS) await phone.screenshot({path: `${SHOTS}/phone-${path.replace(/[^a-z]/g, '') || 'home'}.png`, fullPage: true});
   }
+});
+
+// ---------- Accessibility (axe-core) on every page, as each role ----------
+const axeSource = (await import('node:fs')).readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
+const a11yPages = {
+  public: ['/calendar', '/login', '/membership-terms'],
+  family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
+  coach: ['/coach', '/roster'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
+};
+const a11y = [];
+await step('accessibility: no serious or critical axe-core issues on any page', async () => {
+  const pages = {family, coach, owner, public: await (await browser.newContext()).newPage()};
+  for (const [role, paths] of Object.entries(a11yPages)) for (const path of paths) {
+    const page = pages[role];
+    await page.goto(BASE + path, {waitUntil: 'load'}); await page.waitForTimeout(600);
+    await page.evaluate(axeSource);
+    const result = await page.evaluate(async () => (await axe.run(document, {resultTypes: ['violations']})).violations.map(v => ({id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length, target: v.nodes[0]?.target?.join(' ')})));
+    for (const v of result) if (v.impact === 'serious' || v.impact === 'critical') a11y.push(`${role} ${path}: ${v.id} (${v.impact}, ${v.nodes}x) ${v.help} e.g. ${v.target}`);
+  }
+  if (process.env.E2E_A11Y_REPORT) console.log(a11y.join('\n'));
+  expect(!a11y.length, `${a11y.length} accessibility issue(s):\n` + a11y.slice(0, 40).join('\n'));
 });
 
 await browser.close(); auth.close();
