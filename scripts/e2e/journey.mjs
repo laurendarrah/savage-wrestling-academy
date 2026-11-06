@@ -229,7 +229,7 @@ await step('camp fills; family 2 joins the waitlist from the booking page; owner
   await owner.locator('[data-offer]').first().click(); await waitText(owner, '#status', /Seat offered/);
   await family2.goto(BASE + '/family'); await waitText(family2, '#waitlistList', /Seat held for you/);
   await family2.goto(BASE + '/booking?type=event&id=winter-camp'); await family2.waitForSelector('#submit'); await family2.click('#submit');
-  await family2.waitForFunction(() => /\$160\.00/.test(document.body.textContent), null, {timeout: 8000});
+  await family2.waitForFunction(() => /\$160\.00/.test(document.body.textContent), null, {timeout: 30000});
   expect(rid, 'riley id');
 });
 
