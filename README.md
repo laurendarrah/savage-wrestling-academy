@@ -2,9 +2,10 @@
 
 Registration, scheduling, scholarships and coaching tools for Savage Wrestling Academy.
 
-- **Live site:** moving from ChatGPT Sites to the academy's Cloudflare account; see [docs/GO_LIVE.md](docs/GO_LIVE.md) (#100)
+- **Live site:** on the academy's Cloudflare account, published by the Deploy workflow; see [docs/GO_LIVE.md](docs/GO_LIVE.md) (#100)
 - **Launch plan:** [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md)
 - **Publishing checklist:** [docs/GO_LIVE.md](docs/GO_LIVE.md)
+- **When something goes wrong:** [docs/RUNBOOK.md](docs/RUNBOOK.md)
 - **Policy drafts for attorney review:** [docs/policies/](docs/policies/README.md)
 - **Work tracking:** [Issues](../../issues) grouped by [milestone](../../milestones)
 - **How we work together:** [CONTRIBUTING.md](CONTRIBUTING.md)
