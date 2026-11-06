@@ -477,7 +477,7 @@ await step('family downloads their data and asks to close the account; owner rec
 await step('each role has a guide linked from its home page; guides are role-only', async () => {
   await family.goto(BASE + '/family'); await family.click('#accountMenu summary'); await family.click('#accountMenu a:has-text("Help")'); await waitText(family, 'h1', /Help for families/);
   await coach.goto(BASE + '/coach'); await coach.click('text=Coach help'); await waitText(coach, 'h1', /Help for coaches/);
-  await owner.goto(BASE + '/'); await owner.click('a.tool:has-text("Owner guide")'); await waitText(owner, 'h1', /Owner guide/);
+  await owner.goto(BASE + '/'); await owner.click('.toolmore summary'); await owner.click('.toolmore a:has-text("Owner guide")'); await waitText(owner, 'h1', /Owner guide/);
   const fc = await family.request.get(BASE + '/help/coach', {maxRedirects: 0}); expect(fc.status() !== 200, 'family opened the coach guide');
   const fo = await family.request.get(BASE + '/help/owner', {maxRedirects: 0}); expect(fo.status() !== 200, 'family opened the owner guide');
 });
