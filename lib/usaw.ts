@@ -12,6 +12,43 @@ export type CardStatus = {state: 'missing' | 'expired' | 'invalid' | 'recheck' |
 
 const longDate = fullDate;
 
+// USA Wrestling membership seasons (issue #131). The membership year runs September 1 to August 31, and every card
+// expires on August 31 of its membership year, whatever month it was bought. New-season cards usually open in
+// mid-August, so from August 1 a family can also choose the next season.
+export type CardSeason = {start: string; end: string; label: string};
+
+// "2027-08-31" -> "2026–27 season".
+export function seasonLabel(end: string): string {
+  const y = Number(end.slice(0, 4));
+  return `${y - 1}–${String(y).slice(-2)} season`;
+}
+
+// The season a date falls in: September or later belongs to the season ending next August 31.
+export function cardSeason(onDate: string): CardSeason {
+  const y = Number(onDate.slice(0, 4)), m = Number(onDate.slice(5, 7)), endYear = m >= 9 ? y + 1 : y;
+  const end = `${endYear}-08-31`;
+  return {start: `${endYear - 1}-09-01`, end, label: seasonLabel(end)};
+}
+
+export const isSeasonEnd = (date: string | undefined | null) => typeof date === 'string' && /^\d{4}-08-31$/.test(date);
+
+// The seasons a family can choose on a date: the current one, plus the next one from August 1 on.
+export function seasonOptions(today: string): {expires: string; label: string}[] {
+  const now = cardSeason(today), list = [{expires: now.end, label: now.label}];
+  if (today.slice(5, 7) === '08') { const next = cardSeason(`${Number(now.end.slice(0, 4))}-09-01`); list.push({expires: next.end, label: next.label}); }
+  return list;
+}
+
+// Summary for the owner's cards page. In August: how many cards still end this August 31, so the wrestler has not
+// renewed for the new season yet. The rest of the year: how many cards end with the current season.
+export function cardRenewal(cards: {number?: string; expires?: string}[], today: string) {
+  const season = cardSeason(today), august = today.slice(5, 7) === '08';
+  const count = cards.filter(c => c.number && c.expires === season.end).length;
+  const next = cardSeason(`${season.end.slice(0, 4)}-09-01`);
+  return {august, ends: season.end, count,
+    label: august ? `Not yet renewed for ${next.label.replace(' season', '')}` : `Cards expire ${longDate(season.end)}`};
+}
+
 export function cardStatus(w: CardWrestler, review: Review, onDate: string): CardStatus {
   const number = (w.usawNumber || '').trim().toUpperCase(), expires = w.usawExpires || '';
   if (!number || !USAW_NUMBER.test(number) || !/^\d{4}-\d{2}-\d{2}$/.test(expires)) return {state: 'missing', number, expires, note: ''};

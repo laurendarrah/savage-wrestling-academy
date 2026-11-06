@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
 import { validFamily, cleanFamily, emptyFamily } from '../../../lib/family-records';
-import { cardStatus, reviewFor } from '../../../lib/usaw';
+import { cardStatus, reviewFor, seasonOptions } from '../../../lib/usaw';
 import { exceptionFor } from '../../../lib/exceptions';
 import { dailyReminders, quietly } from '../../../lib/notify';
 import { academyToday } from '../../../lib/public-schedule';
@@ -14,7 +14,8 @@ export async function GET(request:Request){
  const data=row?JSON.parse(row.payload):emptyFamily(),today=academyToday(),cards:Record<string,unknown>={};
  // USA Wrestling card status per wrestler, including the owner's review, so the family sees what blocks booking.
  for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]);cards[w.id]={...cardStatus(w,await reviewFor(auth.user.id,w.id),today),exceptionUntil:x?.endsOn??null}}
- return accountReply({email:auth.user.email,data,cards,revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
+ // The card seasons a family can choose today (issue #131); the page offers them in the wrestler editor.
+ return accountReply({email:auth.user.email,data,cards,cardSeasons:seasonOptions(today),revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
 }
 export async function PUT(request:Request){
  const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);

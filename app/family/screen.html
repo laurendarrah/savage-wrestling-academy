@@ -53,6 +53,8 @@ html body a.button{display:inline-flex;align-items:center;justify-content:center
 label{display:block;margin:14px 0}
 input,select{display:block;width:100%;margin-top:5px}
 .row{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.card-row{grid-template-columns:1fr 1fr}
+.card-hint{margin:0 0 4px;font-size:15px}
 .athlete{border-bottom:1px solid #E1E3E8;padding-bottom:16px}
 .card-line{margin:6px 0 10px}
 .form-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
@@ -133,11 +135,11 @@ function showSummary(focus=false){
 }
 function editProfile(){$('summary').hidden=true;$('editor').hidden=false;$('cancelEdit').hidden=!savedProfile;draw();renderHome();$('status').textContent='Make your changes, then choose Save family profile.';$('familyForm').elements.parentName.focus()}
 function cancelProfileEdit(){profile=JSON.parse(JSON.stringify(savedProfile));draw();showSummary(true);$('status').textContent='Nothing was changed.'}
-function readFields(){const f=$('familyForm');profile.parentName=f.elements.parentName.value;profile.phone=f.elements.phone.value;profile.wrestlers=profile.wrestlers.map((w,i)=>({...w,name:document.getElementById('name'+i).value,grade:document.getElementById('grade'+i).value,usawNumber:document.getElementById('usaw'+i).value.trim().toUpperCase(),usawExpires:document.getElementById('usawExp'+i).value}))}
-function draw(){const f=$('familyForm');f.elements.parentName.value=profile.parentName;f.elements.phone.value=profile.phone;renderMembershipCards();$('wrestlers').innerHTML=profile.wrestlers.map((w,i)=>`<div class="athlete"><div class="row"><label>Wrestler ${i+1} name<input id="name${i}" value="${esc(w.name)}" maxlength="120" required></label><label>Grade<select id="grade${i}">${['K',...Array.from({length:12},(_,i)=>String(i+1)),'Adult'].map(g=>`<option value="${g}" ${g===w.grade?'selected':''}>${g==='K'?'Kindergarten':g}</option>`).join('')}</select></label></div><div class="row"><label>USA Wrestling card number<input id="usaw${i}" value="${esc(w.usawNumber||'')}" maxlength="24" autocomplete="off" placeholder="From the USA Wrestling card"></label><label>Card expires<input id="usawExp${i}" type="date" value="${esc(w.usawExpires||'')}"></label></div><p class="muted card-line">${cardLine(w)}</p><button type="button" onclick="removeWrestler(${i})">Remove wrestler</button></div>`).join('')||'<p class="muted">Add your first wrestler below.</p>'}
+function readFields(){const f=$('familyForm');profile.parentName=f.elements.parentName.value;profile.phone=f.elements.phone.value;profile.wrestlers=profile.wrestlers.map((w,i)=>({...w,name:document.getElementById('name'+i).value,grade:document.getElementById('grade'+i).value,usawNumber:document.getElementById('usaw'+i).value.trim().toUpperCase(),usawExpires:cardExpires(i)}))}
+function draw(){const f=$('familyForm');f.elements.parentName.value=profile.parentName;f.elements.phone.value=profile.phone;renderMembershipCards();$('wrestlers').innerHTML=profile.wrestlers.map((w,i)=>`<div class="athlete"><div class="row"><label>Wrestler ${i+1} name<input id="name${i}" value="${esc(w.name)}" maxlength="120" required></label><label>Grade<select id="grade${i}">${['K',...Array.from({length:12},(_,i)=>String(i+1)),'Adult'].map(g=>`<option value="${g}" ${g===w.grade?'selected':''}>${g==='K'?'Kindergarten':g}</option>`).join('')}</select></label></div><div class="row card-row"><label>USA Wrestling card number<input id="usaw${i}" value="${esc(w.usawNumber||'')}" maxlength="24" autocomplete="off" placeholder="From the USA Wrestling card"></label><div>${seasonField(w,i)}</div></div><p class="muted card-hint" id="usawHint${i}">Every USA Wrestling card expires on August 31, whatever month it was bought. New-season cards usually open in mid-August at <a href="https://www.usawmembership.com" target="_blank" rel="noopener">usawmembership.com</a>.</p><p class="muted card-line">${cardLine(w)}</p><button type="button" onclick="removeWrestler(${i})">Remove wrestler</button></div>`).join('')||'<p class="muted">Add your first wrestler below.</p>'}
 function addWrestler(){if(!ready)return;readFields();if(profile.wrestlers.length>=20)return;profile.wrestlers.push({id:crypto.randomUUID(),name:'',grade:'K'});draw()}
 function removeWrestler(i){readFields();profile.wrestlers.splice(i,1);draw()}
-async function loadFamily(){ready=false;$('save').disabled=true;$('status').textContent='Loading…';try{const r=await fetch('/api/family',{cache:'no-store'}),body=await r.json();if(r.status===401){location.href='/login';return}if(!r.ok)throw Error(body.error||'We couldn’t load your family account. Refresh the page to try again.');profile=body.data;cards=body.cards||{};revision=body.revision;$('email').textContent=body.email;draw();ready=true;loadScholarships();loadOrders();loadWaiver();loadWaitlist();loadUnread();loadRequests();savedAt=body.updatedAt;savedProfile=body.updatedAt?JSON.parse(JSON.stringify(profile)):null;if(savedProfile)showSummary();else renderHome();loadNextUp();$('status').textContent=''}catch(e){$('status').textContent=e.message}finally{$('save').disabled=!ready}}
+async function loadFamily(){ready=false;$('save').disabled=true;$('status').textContent='Loading…';try{const r=await fetch('/api/family',{cache:'no-store'}),body=await r.json();if(r.status===401){location.href='/login';return}if(!r.ok)throw Error(body.error||'We couldn’t load your family account. Refresh the page to try again.');profile=body.data;cards=body.cards||{};cardSeasons=Array.isArray(body.cardSeasons)?body.cardSeasons:[];revision=body.revision;$('email').textContent=body.email;draw();ready=true;loadScholarships();loadOrders();loadWaiver();loadWaitlist();loadUnread();loadRequests();savedAt=body.updatedAt;savedProfile=body.updatedAt?JSON.parse(JSON.stringify(profile)):null;if(savedProfile)showSummary();else renderHome();loadNextUp();$('status').textContent=''}catch(e){$('status').textContent=e.message}finally{$('save').disabled=!ready}}
 $('familyForm').onsubmit=async e=>{e.preventDefault();if(!ready)return;$('save').disabled=true;$('status').textContent='Saving…';try{readFields();const r=await fetch('/api/family',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,data:profile})}),body=await r.json();if(!r.ok)throw Error(body.error||'Something went wrong.');revision=body.revision;savedAt=body.updatedAt;savedProfile=JSON.parse(JSON.stringify(profile));renderMembershipCards();$('status').textContent='Your changes are saved.';showSummary(true);refreshCards();loadNextUp()}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth',block:'start'})}finally{$('save').disabled=false}};
 async function loadScholarships(){
  try{const r=await fetch('/api/scholarship',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'We couldn’t load scholarship details. Refresh the page to try again.');scholarshipAwards=d.awards||[];renderMembershipCards();refreshHome()}catch(e){$('status').textContent=e.message}
@@ -151,14 +153,38 @@ function cardState(w){
  if(!/^[A-Z0-9-]{4,24}$/.test(number)||!/^\d{4}-\d{2}-\d{2}$/.test(expires))return {state:'missing',number,expires,note:''};
  return {state:expires<academyDay()?'expired':'current',number,expires,note:''};
 }
+// Card seasons (issue #131): USA Wrestling's membership year runs September 1 to August 31, and every card expires on
+// August 31 of its season. The server sends the seasons a family can choose today (lib/usaw.ts seasonOptions).
+let cardSeasons=[];
+const seasonEndOn=d=>{const y=Number(String(d).slice(0,4));return (Number(String(d).slice(5,7))>=9?y+1:y)+'-08-31'};
+const seasonName=end=>{const y=Number(String(end).slice(0,4));return (y-1)+'–'+String(y).slice(-2)+' season'};
+const isSeasonEnd=d=>/^\d{4}-08-31$/.test(String(d||''));
+// The choices for one wrestler: the offered seasons, plus the season already saved if it is no longer offered.
+function seasonChoices(saved){
+ const list=cardSeasons.filter(s=>s&&isSeasonEnd(s.expires)).map(s=>({expires:s.expires,label:s.label||seasonName(s.expires)}));
+ if(isSeasonEnd(saved)&&!list.some(s=>s.expires===saved))list.push({expires:saved,label:seasonName(saved)});
+ return list.sort((a,b)=>a.expires.localeCompare(b.expires));
+}
+function seasonField(w,i){
+ const saved=w.usawExpires||'',choices=seasonChoices(saved),other=!!saved&&!choices.some(s=>s.expires===saved),today=academyDay();
+ return '<label>Card season<select id="usawSeason'+i+'" onchange="seasonPicked('+i+')" aria-describedby="usawHint'+i+'"><option value="">Choose the season on the card</option>'
+  +choices.map(s=>'<option value="'+esc(s.expires)+'"'+(s.expires===saved?' selected':'')+'>'+esc(s.label)+' · '+(s.expires<today?'expired ':'expires ')+esc(longDate(s.expires))+'</option>').join('')
+  +'<option value="other"'+(other?' selected':'')+'>My card has a different expiration date</option></select></label>'
+  +'<label id="usawExpBox'+i+'"'+(other?'':' hidden')+'>Expiration date on the card<input id="usawExp'+i+'" type="date" value="'+(other?esc(saved):'')+'"></label>';
+}
+function seasonPicked(i){const other=document.getElementById('usawSeason'+i).value==='other';document.getElementById('usawExpBox'+i).hidden=!other;if(other)document.getElementById('usawExp'+i).focus()}
+// A chosen season stores its August 31; "different date" stores the date typed in.
+function cardExpires(i){const v=document.getElementById('usawSeason'+i).value;return v==='other'?document.getElementById('usawExp'+i).value:v}
 function cardLine(w){
  const c=cardState(w),server=cards[w.id],blocked=server&&server.exceptionUntil?' The academy is allowing bookings until '+esc(longDate(server.exceptionUntil))+' while this is sorted out.':' <strong>Booking is blocked until this is fixed.</strong>',renew=' <a href="https://www.usawmembership.com" target="_blank" rel="noopener">Get or renew a card →</a>';
- if(c.state==='missing')return '<span class="billing-pill warning">No USA Wrestling card</span> Add the card number and expiration date.'+blocked+renew;
- if(c.state==='expired')return '<span class="billing-pill warning">USA Wrestling card expired</span> Expired '+esc(longDate(c.expires))+'.'+blocked+renew;
+ if(c.state==='missing')return '<span class="billing-pill warning">No USA Wrestling card</span> Add the card number and the card’s season.'+blocked+renew;
+ if(c.state==='expired')return '<span class="billing-pill warning">USA Wrestling card expired</span> Expired '+esc(longDate(c.expires))+'.'+(isSeasonEnd(c.expires)?' Renew for the '+esc(seasonName(seasonEndOn(academyDay())))+', then choose it here.':'')+blocked+renew;
  if(c.state==='recheck')return '<span class="billing-pill warning">Waiting for the academy</span> The academy will check your updated card.'+blocked;
  if(c.state==='invalid')return '<span class="billing-pill warning">Card not verified</span> The academy could not verify this card'+(c.note?': '+esc(c.note):'')+'. Check the number and date.'+blocked;
  const soon=c.expires<=new Date(Date.now()+30*864e5).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
- return '<span class="billing-pill '+(soon?'warning':'active')+'">USA Wrestling card '+(c.state==='verified'?'verified':'on file')+'</span> Current through '+esc(longDate(c.expires))+'.'+(soon?' Renew soon. Sessions after that date cannot be booked.'+renew:'');
+ const season=isSeasonEnd(c.expires),next=season?seasonName((Number(c.expires.slice(0,4))+1)+'-08-31'):'';
+ return '<span class="billing-pill '+(soon?'warning':'active')+'">USA Wrestling card '+(c.state==='verified'?'verified':'on file')+'</span> Current through '+esc(longDate(c.expires))+(season?', the end of the '+esc(seasonName(c.expires)):'')+'.'
+  +(soon?(season?' Renew for the '+esc(next)+' by Aug 31. New-season cards usually open in mid-August.':' Renew soon. Sessions after that date cannot be booked.')+renew:'');
 }
 // Unread announcements and messages (issue #72).
 async function loadUnread(){try{const r=await fetch('/api/inbox',{cache:'no-store'}),d=await r.json();if(r.ok&&d.unread)$('inboxLink').textContent='Messages ('+d.unread+' new)'}catch{}}
@@ -199,7 +225,7 @@ function setupSteps(){
  const steps=[
   {key:'details',title:'Your details',done:details,text:details?'Your name and phone number are saved.':'Add your name and phone number so the academy can reach you.',button:'<button type="button" onclick="startDetails()">Add your details</button>'},
   {key:'wrestler',title:'Your wrestler and USA Wrestling card',done:kids.length>0&&!noCard.length,
-   text:!kids.length?'Add each wrestler with their grade, USA Wrestling card number and expiration date.':noCard.length?esc(noCard.map(w=>w.name).join(', '))+(noCard.length===1?' needs':' need')+' a current USA Wrestling card before booking.':'Every wrestler has a current USA Wrestling card.',
+   text:!kids.length?'Add each wrestler with their grade, USA Wrestling card number and the card’s season.':noCard.length?esc(noCard.map(w=>w.name).join(', '))+(noCard.length===1?' needs':' need')+' a current USA Wrestling card before booking.':'Every wrestler has a current USA Wrestling card.',
    button:'<button type="button" onclick="startWrestler()">'+(kids.length?'Add the card':'Add a wrestler')+'</button>'}
  ];
  if(waiverInfo&&waiverInfo.waiver){

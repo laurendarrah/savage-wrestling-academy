@@ -78,16 +78,38 @@ await step('family is refused a walk-in without a card, with a link to fix it', 
   await waitText(family, '#status', /needs a current USA Wrestling card/);
   expect(await family.isVisible('#cardHelp'), 'card help link not shown');
 });
+// Card seasons (issue #131): a card is entered by choosing its season, which stores August 31. A rare card with another
+// date uses "My card has a different expiration date", which is also how this test enters an expired card.
+const latestSeason = page => page.$$eval('#usawSeason0 option', os => os.map(o => o.value).filter(v => /^\d{4}-08-31$/.test(v)).pop());
 await step('family adds an expired card, then a current one', async () => {
   await family.goto(BASE + '/family'); await family.click('text=Edit family profile');
-  await family.fill('#usaw0', 'ab-123456'); await family.fill('#usawExp0', ny(-3)); await family.click('#save');
+  expect(await family.isHidden('#usawExpBox0'), 'the date box waits for "different date"');
+  await family.fill('#usaw0', 'ab-123456'); await family.selectOption('#usawSeason0', 'other');
+  await family.fill('#usawExp0', ny(-3)); await family.click('#save');
   await waitText(family, '#savedDetails', /USA Wrestling card expired/);
-  await family.click('text=Edit family profile'); await family.fill('#usawExp0', ny(200)); await family.click('#save');
-  await waitText(family, '#savedDetails', /USA Wrestling card on file[\s\S]*Current through/);
+  await family.click('text=Edit family profile');
+  expect(await family.inputValue('#usawSeason0') === 'other' && await family.inputValue('#usawExp0') === ny(-3), 'a saved special date shows as "different date" with the date filled in');
+  const season = await latestSeason(family); expect(season, 'a season to choose');
+  await family.selectOption('#usawSeason0', season);
+  expect(await family.isHidden('#usawExpBox0'), 'choosing a season hides the date box');
+  await family.click('#save');
+  await waitText(family, '#savedDetails', /USA Wrestling card on file[\s\S]*Current through Aug 31, \d{4}, the end of the \d{4}–\d{2} season/);
+  await family.click('text=Edit family profile');
+  expect(await family.inputValue('#usawSeason0') === season, 'the saved season is preselected');
+  await family.click('#save'); await waitText(family, '#status', /saved/);
 });
 await step('owner sees the card on /cards, marks it not valid; family is blocked with the reason', async () => {
   await owner.goto(BASE + '/cards'); await owner.selectOption('#show', 'all');
   await waitText(owner, '#rows', /Sam Example[\s\S]*AB-123456/);
+  await waitText(owner, '#tRenewLabel', /^(Not yet renewed for \d{4}–\d{2}|Cards expire Aug 31, \d{4})$/);
+  // "Look up on USA Wrestling" copies the number and opens USA Wrestling's check in a new tab (a stand-in page here).
+  await owner.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: BASE});
+  await owner.context().route('https://www.usawmembership.com/**', r => r.fulfill({status: 200, contentType: 'text/html', body: '<title>USA Wrestling stand-in</title>'}));
+  const [popup] = await Promise.all([owner.waitForEvent('popup'), owner.click('#rows a:has-text("Look up on USA Wrestling")')]);
+  expect(popup.url() === 'https://www.usawmembership.com/verify_membership', 'lookup opened ' + popup.url());
+  expect(await popup.evaluate(() => window.opener === null), 'the USA Wrestling tab has no access to this page');
+  await popup.close();
+  await waitText(owner, '#status', /Copied AB-123456 for Sam Example|AB-123456 is selected on this page/);
   await owner.fill('#rows input[id^=note]', 'Number not found');
   await owner.click('#rows button:has-text("Not valid")');
   await waitText(owner, '#status', /Marked not valid/);
@@ -264,7 +286,7 @@ await step('coach removes an opening nobody booked; the booked one stays', async
 await step('camp fills; family 2 joins the waitlist from the booking page; owner offers; family 2 can book', async () => {
   await family2.goto(BASE + '/family'); await family2.waitForSelector('#familyForm');
   await family2.fill('[name=parentName]', 'Riley Parent'); await family2.click('text=+ Add wrestler'); await family2.fill('#name0', 'Riley Two'); await family2.selectOption('#grade0', '8');
-  await family2.fill('#usaw0', 'CD-5555'); await family2.fill('#usawExp0', ny(300)); await family2.click('#save'); await waitText(family2, '#status', /saved/);
+  await family2.fill('#usaw0', 'CD-5555'); await family2.selectOption('#usawSeason0', await latestSeason(family2)); await family2.click('#save'); await waitText(family2, '#status', /saved/);
   const rid = await wid(family2);
   await owner.goto(BASE + '/waivers'); await owner.selectOption('#show', 'all');
   await waitText(owner, '#rows', /Riley Two/);
@@ -477,6 +499,12 @@ await step('family pages fit a phone screen', async () => {
     expect(!broken.length, `${path}: words broken across lines: ${broken.join(', ')}`);
     if (SHOTS) await phone.screenshot({path: `${SHOTS}/phone-${path.replace(/[^a-z]/g, '') || 'home'}.png`, fullPage: true});
   }
+  // The profile editor with the card season choice, and the "different date" box open (issue #131).
+  await phone.goto(BASE + '/family'); await phone.click('text=Edit family profile'); await phone.waitForSelector('#usawSeason0');
+  await phone.selectOption('#usawSeason0', 'other');
+  const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(over <= 1, `/family editor scrolls sideways by ${over}px on a phone`);
+  if (SHOTS) { await phone.locator('#editor').scrollIntoViewIfNeeded(); await phone.screenshot({path: `${SHOTS}/phone-family-editor.png`, fullPage: true}); }
 });
 
 // ---------- Accessibility (axe-core) on every page, as each role ----------
