@@ -84,6 +84,12 @@ html body .swa-head>p+p{margin-top:8px}
 html body .swa-head a{color:#FFFFFF}
 html body .swa-head>a:first-child,html body .swa-head>.swa-back{display:inline-flex;align-items:center;min-height:36px;margin:0 0 10px;color:var(--swa-silver);font-size:13px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;text-decoration:none}
 html body .swa-head>a:first-child:hover{color:#FFFFFF}
+html body .swa-head .eyebrow{color:var(--swa-silver);margin:0 0 10px}
+html body .swa-head button:not(.primary),html body .swa-head .button:not(.primary){background:transparent;color:#FFFFFF;border-color:rgba(255,255,255,.4);box-shadow:none}
+html body .swa-head button:not(.primary):hover,html body .swa-head .button:not(.primary):hover{border-color:#FFFFFF;color:#FFFFFF}
+html body .swa-head.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+html body .swa-head.top h1{margin:0}
+html body .swa-head .bar a{color:#FFFFFF}
 html body .hero{background:var(--swa-texture)}
 @media (max-width:640px){html body .swa-head{padding:28px 0 26px;margin-bottom:20px}html body .swa-head::after,html body .fam-hero::after{right:-24px;opacity:.07}}
 

@@ -51,4 +51,13 @@ console.log('Page chrome: stylesheet, icons and top bar on every page; skipped p
   assert.equal(pageHead(card), card, 'a heading inside a card is not moved');
   assert.match(decoratePage('<html><head></head><body><main><h1>Payments</h1><p>All of them.</p></main></body></html>', '/payments'), /<main><div class="swa-head"><h1>Payments<\/h1><p>All of them.<\/p><\/div>/);
 }
+// Issue #157: an eyebrow line before the heading, the calendar header and the Messages heading row.
+{
+  const {pageHead} = module.exports;
+  const wrap = h => pageHead(`<html><body><main>${h}</main></body></html>`);
+  assert.match(wrap('<p class="eyebrow" id="kind">Camp</p><h1 id="heading">Winter camp</h1><p id="status" role="status">x</p>'), /<main><div class="swa-head"><p class="eyebrow" id="kind">Camp<\/p><h1 id="heading">Winter camp<\/h1><\/div><p id="status"/);
+  assert.match(wrap('<header id="heading"><h1>Calendar</h1><p>Choose.</p></header><section>x</section>'), /<main><header id="heading" class="swa-head"><h1>Calendar<\/h1>/);
+  assert.match(wrap('<div class="top"><h1>Messages</h1><button id="markAll" hidden>Mark all</button></div><p id="status">x</p>'), /<main><div class="top swa-head"><h1>Messages<\/h1>/);
+  assert.equal(wrap('<div class="top"><span class="brand">X</span></div><h1 id="name">Sam</h1>').includes('swa-head'), false, 'a top row without a heading (the dark wrestler page) is left alone');
+}
 console.log('page head ok');
