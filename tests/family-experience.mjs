@@ -50,6 +50,9 @@ function page(file, {fetch, search = '', hidden = []}) {
   assert.doesNotMatch(cards, /class="swatch"/, 'no colour square that looks like a checkbox (issue #171)');
   assert.match(cards, /\$200 a month for a 12-month membership, or \$2,400 paid upfront/);
   assert.match(cards, /\$40 for a single walk-in practice/);
+  // Weekly practice times on each card, from the published practices (issue #180).
+  assert.match(cards, /SWA Development<\/h3><span class="times">Mon · 6:00–7:30 PM<\/span>/);
+  assert.match(cards, /SWA Advance<\/h3><span class="times">Tue · 3:00–4:30 PM<\/span>/, 'next month\'s practices count too');
   assert.match(cards, /\$225\.50 a month/, 'cents shown when the price has them');
   assert.equal((cards.match(/needs coach approval/g) || []).length, 1, 'only SWA Advance says coach approval');
   assert.match(cards, /">Grades 7–12<\/span><h3>SWA Advance<\/h3>/, 'approval is said once, in the note');

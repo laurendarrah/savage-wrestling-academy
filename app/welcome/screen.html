@@ -20,7 +20,9 @@ h2{margin:0}
 
 .program h3{margin:0;font-size:21px}
 .program p{margin:0}
-.program .grades{align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;padding:5px 10px;border-radius:999px}
+.program .program .times{font-weight:700;font-size:15px;color:#141416}
+.program .times::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#C4222C;margin-right:8px;vertical-align:1px}
+.grades{align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;padding:5px 10px;border-radius:999px}
 .program .price{font-weight:700}
 .program .note{border-left:3px solid #C4222C;padding-left:10px;font-size:15px}
 .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));padding:0;margin:0;counter-reset:s;background:#fff;border:1px solid #E1E3E8;border-radius:6px;overflow:hidden}
@@ -69,10 +71,19 @@ const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(String(t||''));if(!m)return ''
 const dayLabel=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
 const nextMonth=ym=>{const [y,m]=ym.split('-').map(Number);return m===12?(y+1)+'-01':y+'-'+String(m+1).padStart(2,'0')};
 // Program cards come from the academy's own settings, so names and prices are always current.
-function programCard(p){
+// When a program practises, from the published practices (issue #180): "Mon, Wed & Fri · 6:00–7:30 PM", one line per time slot.
+const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],ORDER=[1,2,3,4,5,6,0];
+function span(a,b){const x=clock(a),y=clock(b);if(!x||!y)return x;return x.slice(-2)===y.slice(-2)?x.slice(0,-3)+'–'+y:x+'–'+y}
+function weeklyTimes(id,schedules,today){
+ const slots=new Map();
+ for(const d of schedules)for(const p of d.practices||[])if(p.program===id&&p.date>=today){const k=p.start+'|'+(p.end||'');if(!slots.has(k))slots.set(k,new Set());slots.get(k).add(new Date(p.date+'T12:00:00Z').getUTCDay())}
+ const first=days=>Math.min(...[...days].map(d=>ORDER.indexOf(d)));
+ return [...slots].sort((a,b)=>first(a[1])-first(b[1])||a[0].localeCompare(b[0])).map(([k,days])=>{const [st,en]=k.split('|'),names=ORDER.filter(d=>days.has(d)).map(d=>DAY[d]);return (names.length>1?names.slice(0,-1).join(', ')+' & '+names.at(-1):names[0])+' · '+span(st,en)})
+}
+function programCard(p,schedules=[],today=''){
  const grades=String(p.grades||GRADES[p.id]||'').replace(/\s*·\s*Coach approval required/i,'');
  const prices=[p.monthlyCents!=null?money(p.monthlyCents)+' a month for a 12-month membership'+(p.annualCents!=null?', or '+money(p.annualCents)+' paid upfront':''):'',p.walkInCents!=null?money(p.walkInCents)+' for a single walk-in practice':''].filter(Boolean);
- return '<article class="program card">'+(grades?'<span class="grades" style="'+(swatch[p.id]||'background:#C4222C;color:#fff')+'">'+esc(grades)+'</span>':'')+'<h3>'+esc(p.name)+'</h3>'+(p.description?'<p>'+esc(p.description)+'</p>':'')+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'</article>'}
+ return '<article class="program card">'+(grades?'<span class="grades" style="'+(swatch[p.id]||'background:#C4222C;color:#fff')+'">'+esc(grades)+'</span>':'')+'<h3>'+esc(p.name)+'</h3>'+weeklyTimes(p.id,schedules,today).map(t=>'<span class="times">'+esc(t)+'</span>').join('')+(p.description?'<p>'+esc(p.description)+'</p>':'')+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'</article>'}
 // The next sessions from today, soonest first: practices, extra practices and the first day of each event.
 function upcoming(schedules,today,limit=6){
  const items=[],seen=new Set(),programs=schedules[0]?.programs||[];
@@ -91,7 +102,7 @@ async function load(){
   const now=await get('/api/public-schedule');
   // Near the end of a month the next sessions are in next month, so read both.
   let later=null;try{later=await get('/api/public-schedule?month='+nextMonth(now.month||now.today.slice(0,7)))}catch{}
-  $('programs').innerHTML=(now.programs||[]).map(programCard).join('')||'<p>The programs will be listed here soon.</p>';
+  $('programs').innerHTML=(now.programs||[]).map(p=>programCard(p,[now,later].filter(Boolean),now.today)).join('')||'<p>The programs will be listed here soon.</p>';
   const next=upcoming([now,later].filter(Boolean),now.today,5);
   $('week').innerHTML=next.length?next.map(row).join(''):'<div class="row">Nothing is scheduled in the next few weeks. See the full calendar for later dates.</div>';
  }catch(e){$('programs').innerHTML='<p>'+esc(e.message)+'</p>';$('week').innerHTML='<div class="row">'+esc(e.message)+'</div>'}
