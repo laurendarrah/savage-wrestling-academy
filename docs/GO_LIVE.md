@@ -9,7 +9,7 @@ For whoever publishes to the ChatGPT Sites project (issue #9). Follow the steps 
 
 ## 2. Database migrations
 
-Main adds fourteen migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
+Main adds fifteen migrations to the 13 the live site already has. Apply them to the live D1 database in this order, once each, before or as part of publishing. All but one only add tables or columns. **0019 rebuilds the `orders` table** to allow lesson orders: it copies every order into a new table with the same columns and indexes, then swaps it in. Take the backup in step 1 first, and afterwards check that the number of orders is unchanged.
 
 | File | What it adds |
 |---|---|
@@ -27,8 +27,9 @@ Main adds fourteen migrations to the 13 the live site already has. Apply them to
 | `drizzle/0024_kind_wendigo.sql` | `booking_exceptions` table (owner exceptions to the card and waiver blocks) |
 | `drizzle/0025_graceful_karma.sql` | Waiver signatures unique per child name instead of per wrestler entry |
 | `drizzle/0026_panoramic_terrax.sql` | `notifications` table (automatic notices) |
+| `drizzle/0027_stale_pete_wisdom.sql` | `error_log` table (server errors for the site health page) |
 
-- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the fourteen files with the platform's database tools.
+- [ ] Confirm how the Sites platform applies migrations on publish. If it applies `drizzle/` automatically, check afterwards that the new tables exist. If not, apply the fifteen files with the platform's database tools.
 - [ ] Never re-run 0000 to 0012; they are already applied.
 
 If a migration is missing, the new pages (roster, payments, family purchases, checkout) return errors. Every page that existed before keeps working.
@@ -102,6 +103,11 @@ Only after the matching decision is recorded on its issue:
 4. Test with Stripe test cards first (#24), then follow the live steps on #26.
 
 The Stripe webhook endpoint must point at `/api/stripe-webhook` and send `checkout.session.*`, `charge.refunded`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted`.
+
+## After publishing: watch the site
+
+- [ ] Sign up for a free uptime monitor (for example UptimeRobot) and point it at `/api/health` every 5 minutes, with alerts to the owner's phone.
+- [ ] Check **Site health** on the owner dashboard the day after publishing. A steady stream of errors means something needs fixing.
 
 ## Rolling back
 
