@@ -1,6 +1,7 @@
 // Family inbox (issue #72): announcements and the private thread with the academy.
 import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {familyInbox, markRead, postMessage} from '../../../lib/messages';
+import {dailyReminders, quietly} from '../../../lib/notify';
 import {rateLimited} from '../../../lib/rate-limit';
 export const dynamic = 'force-dynamic';
 async function family(request: Request) {
@@ -12,6 +13,7 @@ async function family(request: Request) {
 export async function GET(request: Request) {
   const {auth, error} = await family(request);
   if (error) return error;
+  await quietly(() => dailyReminders());
   return accountReply(await familyInbox(auth.user!.id), 200, auth.headers);
 }
 export async function POST(request: Request) {

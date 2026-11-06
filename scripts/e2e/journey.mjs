@@ -247,8 +247,10 @@ await step('owner announces to SWA Intermediate; family reads it and replies; ow
   await owner.selectOption('#audType', 'program'); await owner.selectOption('#program', 'Intermediate'); await waitText(owner, '#audCount', /1 family/);
   await owner.fill('#subject', 'Practice moved'); await owner.fill('#body', 'Practice starts at 6:30 tonight.'); await owner.click('#send');
   await waitText(owner, '#status', /Sent to 1 family/);
-  await family.goto(BASE + '/family'); await waitText(family, '#inboxLink', /1 new/);
+  await family.goto(BASE + '/family'); await waitText(family, '#inboxLink', /\d+ new/);
   await family.goto(BASE + '/inbox'); await waitText(family, '#announcements', /Practice moved/);
+  // Automatic notices from earlier steps (issue #105).
+  await waitText(family, '#notices', /Payment received[\s\S]*/); await waitText(family, '#notices', /Lesson booked/); await waitText(family, '#notices', /Please sign the Participation waiver/);
   await family.fill('#body', 'Thanks, see you there.'); await family.click('#reply button'); await waitText(family, '#thread', /see you there/);
   await family2.goto(BASE + '/inbox'); await waitText(family2, '#announcements', /No announcements/);
   await owner.goto(BASE + '/messages'); await owner.locator('[data-family]').filter({hasText: 'Pat Example'}).click();

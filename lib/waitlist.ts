@@ -6,6 +6,7 @@ import {env} from 'cloudflare:workers';
 import {familyProfile} from './program-approval';
 import {publicSchedule, academyToday} from './public-schedule';
 import {eventSlots, seatsLeft} from './capacity';
+import {noticeWaitlistOffer, quietly} from './notify';
 
 const nowIso = () => new Date().toISOString();
 const hoursFrom = (h: number) => new Date(Date.now() + h * 3600000).toISOString();
@@ -29,8 +30,11 @@ export async function settleOffers(eventId?: string) {
     const done = await env.DB!.prepare("UPDATE waitlist_entries SET status='expired',closed_at=? WHERE id=? AND status='offered'").bind(at, o.id).run();
     if (!o.auto_next || !(done.meta?.changes ?? (done as any).changes)) continue;
     const next = await env.DB!.prepare("SELECT id FROM waitlist_entries WHERE event_id=? AND status='waiting' ORDER BY created_at,id LIMIT 1").bind(o.event_id).first<{id: string}>();
-    if (next) await env.DB!.prepare("UPDATE waitlist_entries SET status='offered',offered_at=?,offer_expires_at=?,offer_hours=?,auto_next=1,offered_by=? WHERE id=? AND status='waiting'")
-      .bind(at, hoursFrom(o.offer_hours), o.offer_hours, o.offered_by, next.id).run();
+    if (next) {
+      await env.DB!.prepare("UPDATE waitlist_entries SET status='offered',offered_at=?,offer_expires_at=?,offer_hours=?,auto_next=1,offered_by=? WHERE id=? AND status='waiting'")
+        .bind(at, hoursFrom(o.offer_hours), o.offer_hours, o.offered_by, next.id).run();
+      await quietly(() => noticeWaitlistOffer(next.id));
+    }
   }
 }
 
@@ -79,6 +83,7 @@ export async function offerSeat(ownerId: string, entryId: unknown, hours: unknow
     .bind(at, hoursFrom(hours as number), hours, autoNext === true ? 1 : 0, ownerId, entryId).run();
   if (!(r.meta?.changes ?? (r as any).changes)) return {status: 409, error: 'This family is no longer waiting. Reload the list.'};
   await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'waitlist_offer', entryId, at).run();
+  await quietly(() => noticeWaitlistOffer(entryId as string));
   return {status: 200};
 }
 

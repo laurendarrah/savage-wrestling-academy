@@ -6,6 +6,7 @@ import {academyToday} from './public-schedule';
 import {PROGRAM_ON} from './transfers';
 import {programDetails} from './program-names';
 import {sendEmails} from './email';
+import {familyNotices, markNoticeRead} from './notify';
 
 export type Audience = {type: 'all'} | {type: 'program'; program: string} | {type: 'event'; eventId: string};
 const at = () => new Date().toISOString();
@@ -79,14 +80,17 @@ export async function familyInbox(userId: string) {
   const ann = (await env.DB!.prepare('SELECT a.id,a.subject,a.body,a.sent_at,r.read_at FROM announcement_recipients r JOIN announcements a ON a.id=r.announcement_id WHERE r.user_id=? ORDER BY a.sent_at DESC LIMIT 200')
     .bind(userId).all<any>()).results;
   const thread = (await env.DB!.prepare('SELECT id,sender_role,body,created_at,read_at FROM family_messages WHERE user_id=? ORDER BY created_at,id LIMIT 500').bind(userId).all<any>()).results;
+  const notices = await familyNotices(userId);
   return {
+    notices,
     announcements: ann.map(a => ({id: a.id, subject: a.subject, body: a.body, sentAt: a.sent_at, read: !!a.read_at})),
     thread: thread.map(m => ({id: m.id, from: m.sender_role === 'owner' ? 'academy' : 'you', body: m.body, at: m.created_at})),
-    unread: ann.filter(a => !a.read_at).length + thread.filter(m => m.sender_role === 'owner' && !m.read_at).length
+    unread: notices.filter(n => !n.read).length + ann.filter(a => !a.read_at).length + thread.filter(m => m.sender_role === 'owner' && !m.read_at).length
   };
 }
 
 export async function markRead(userId: string, input: any) {
+  if (input?.noticeId) await markNoticeRead(userId, input.noticeId);
   if (input?.announcementId) await env.DB!.prepare('UPDATE announcement_recipients SET read_at=? WHERE announcement_id=? AND user_id=? AND read_at IS NULL').bind(at(), String(input.announcementId), userId).run();
   if (input?.thread) await env.DB!.prepare("UPDATE family_messages SET read_at=? WHERE user_id=? AND sender_role='owner' AND read_at IS NULL").bind(at(), userId).run();
 }

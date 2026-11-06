@@ -37,7 +37,7 @@ function load(file) {
       require(name) {
         if (name === 'cloudflare:workers') return {env};
         if (name === 'stripe') return StripeMock;
-        if (name.endsWith('/account-auth')) return {
+        if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',
           ownerIdentity: async () => ({owner: {userId: 'owner-id'}, headers: new Headers()}),
           strongAccount: async () => ({user: {id: 'parent-1', email: 'pat@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
           sameOrigin: () => true, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};

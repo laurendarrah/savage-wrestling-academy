@@ -1,6 +1,7 @@
 import {env} from 'cloudflare:workers';
 import {ownerIdentity,sameOrigin,accountReply} from '../../../lib/account-auth';
 import {securityEvent} from '../../../lib/security-events';
+import {noticeApproval, quietly} from '../../../lib/notify';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in and authenticator verification required.'},403,auth.headers);
@@ -16,5 +17,5 @@ export async function POST(request:Request){
  const now=new Date(Math.max(Date.now(),Date.parse(input.updatedAt)+1)).toISOString();
  const row=await env.DB!.prepare(`UPDATE program_approvals SET status=?,decided_by=?,updated_at=? WHERE id=? AND updated_at=? AND EXISTS (SELECT 1 FROM family_accounts f,json_each(f.payload,'$.wrestlers') w WHERE f.user_id=program_approvals.user_id AND json_extract(w.value,'$.id')=program_approvals.wrestler_id AND json_extract(w.value,'$.name')=program_approvals.wrestler_name AND json_extract(w.value,'$.grade')=program_approvals.grade) RETURNING id`).bind(input.status,auth.user!.id,now,input.id,input.updatedAt).first<{id:string}>();
  if(!row)return reply({error:'This request or wrestler profile changed. Refresh the requests before deciding.'},409);
- await securityEvent(auth.user!.id,'program_approval_'+input.status,row.id);return reply({ok:true});
+ await securityEvent(auth.user!.id,'program_approval_'+input.status,row.id);await quietly(()=>noticeApproval(row.id,input.status));return reply({ok:true});
 }

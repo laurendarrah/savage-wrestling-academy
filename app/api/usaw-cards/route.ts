@@ -4,6 +4,7 @@ import {env} from 'cloudflare:workers';
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyToday} from '../../../lib/public-schedule';
 import {listCards, setReview, clearReview, cardStatus} from '../../../lib/usaw';
+import {noticeCardRejected, quietly} from '../../../lib/notify';
 export const dynamic = 'force-dynamic';
 
 const validDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').toISOString().slice(0, 10) === d;
@@ -38,5 +39,6 @@ export async function POST(request: Request) {
   const note = typeof input.note === 'string' ? input.note.trim().slice(0, 200) : '';
   if (input.status === 'invalid' && !note) return reply({error: 'Add a short reason the family will see, for example "number not found".'}, 400);
   await setReview(input.userId, input.wrestlerId, s.number, s.expires, input.status, note, auth.owner.userId);
+  if (input.status === 'invalid') await quietly(() => noticeCardRejected(input.userId, input.wrestlerId, note));
   return reply({ok: true});
 }

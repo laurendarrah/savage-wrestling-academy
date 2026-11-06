@@ -23,7 +23,7 @@ function load(file) {
     {module, exports: module.exports, crypto, btoa, TextEncoder, Uint8Array, Intl, Date, URL, Response, Request, Headers, JSON, Math, Number, String, Array, Set, Map, Object, console,
       require(name) {
         if (name === 'cloudflare:workers') return {env};
-        if (name.endsWith('/account-auth')) return {
+        if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',
           ownerIdentity: async () => ({owner: actor.owner ? {userId: actor.id} : null, headers: new Headers()}),
           strongAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
           sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};

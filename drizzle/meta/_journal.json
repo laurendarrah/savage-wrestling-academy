@@ -183,6 +183,13 @@
       "when": 1793921714194,
       "tag": "0025_graceful_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1793926337632,
+      "tag": "0026_panoramic_terrax",
+      "breakpoints": true
     }
   ]
 }

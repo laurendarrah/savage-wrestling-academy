@@ -7,6 +7,7 @@ import {membershipTerm} from './membership-term';
 import {academyToday} from './public-schedule';
 import {withinCapacity} from './capacity';
 import {acceptStatement} from './waitlist';
+import {noticePaymentRecorded, noticeLessonBooked, quietly} from './notify';
 
 export const METHODS = ['cash', 'check', 'venmo', 'zelle', 'card-in-person', 'other'] as const;
 export const OFFLINE_KINDS = ['annual', 'walkin', 'event', 'live', 'lesson'] as const;
@@ -72,6 +73,8 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
   if (charge.kind === 'event') await acceptStatement(charge.itemId, input.userId, quote.wrestler.id, at).run();
   await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
     .bind(crypto.randomUUID(), ownerId, 'offline_payment_recorded', `${id} ${charge.kind} ${amount}`, at).run();
+  await quietly(() => noticePaymentRecorded(id));
+  if (charge.kind === 'lesson') await quietly(() => noticeLessonBooked(id));
   return {status: 200, orderId: id};
 }
 

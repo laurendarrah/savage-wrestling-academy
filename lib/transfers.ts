@@ -5,6 +5,7 @@ import {env} from 'cloudflare:workers';
 import {familyProfile, checkCompetitionAccess} from './program-approval';
 import {academyToday} from './public-schedule';
 import {programDetails} from './program-names';
+import {noticeTransfer, quietly} from './notify';
 const programName = (id: string) => programDetails[id]?.name ?? id;
 
 // SQL for "the program this membership order covered on date ?": the program before the first transfer that took
@@ -59,5 +60,6 @@ export async function transferMembership(ownerId: string, input: any) {
     env.DB!.prepare('UPDATE orders SET program=?,updated_at=? WHERE id=?').bind(input.toProgram, at, o.id),
     env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'membership_transferred', `${o.id} ${o.program}->${input.toProgram} ${effective}`, at)
   ]);
+  await quietly(() => noticeTransfer(o.id, programName(input.toProgram), effective));
   return {status: 200, id};
 }
