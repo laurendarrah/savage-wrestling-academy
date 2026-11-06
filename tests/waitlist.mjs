@@ -134,3 +134,24 @@ as('owner'); assert.equal((await call(ownerApi, 'POST', {action: 'remove', id: p
 assert.equal((await entries('p3')).find(x => x.eventId === 'camp').status, 'removed');
 
 console.log('Waitlist tests passed');
+
+// #125: the owner page says plainly when an event is over its limit, and asks before offering a seat that is not free.
+{
+  const page = readFileSync('app/waitlists/screen.html', 'utf8');
+  const fn = name => page.slice(page.indexOf('function ' + name + '('), page.indexOf('\n', page.indexOf('function ' + name + '(')));
+  const asked = [];
+  const ctx = vm.createContext({confirm: m => { asked.push(m); return false; }});
+  vm.runInContext(fn('seatText') + '\n' + fn('confirmOverLimit'), ctx);
+  const ev = (seatsLeft, slots = 1, more = {}) => ({name: 'Winter camp', slots, seatsLeft, ...more});
+  assert.equal(ctx.seatText(ev(2, 10)), '2 of 10 seats free');
+  assert.equal(ctx.seatText(ev(0)), 'Full');
+  assert.equal(ctx.seatText(ev(-1)), 'Full: 1 over the 1-seat limit');
+  assert.equal(ctx.seatText(ev(null, null)), 'No seat limit');
+  assert.equal(ctx.seatText(ev(3, 10, {manuallyFull: true})), 'Marked full');
+  assert.equal(ctx.confirmOverLimit(ev(2, 10)), true); assert.equal(asked.length, 0, 'no question while seats are free');
+  assert.equal(ctx.confirmOverLimit(ev(null, null)), true);
+  assert.equal(ctx.confirmOverLimit(ev(0)), false); assert.match(asked.at(-1), /No seat is free in Winter camp.*1-seat limit/);
+  assert.equal(ctx.confirmOverLimit(ev(5, 10, {manuallyFull: true})), false); assert.match(asked.at(-1), /marked full/);
+  assert.ok(!page.includes("(e.seatsLeft??0)+' of '+e.slots+' seats free'}"), 'the old negative-number text is gone');
+  console.log('Waitlist seats wording and over-limit confirmation');
+}
