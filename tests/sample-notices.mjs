@@ -9,6 +9,9 @@ code = code.slice(0, code.indexOf("if(location.hash==='#policy')"));
 const nodes = new Map(), node = s => { if (!nodes.has(s)) nodes.set(s, {value: '', style: {}, textContent: '', innerHTML: '', focus() {}}); return nodes.get(s); };
 const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date, JSON, Set, FormData, location: {hash: ''}, document: {querySelector: node, addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {}, confirm: () => true});
 vm.runInContext(code, ctx);
+// The fictional admin demo keeps every sample screen and notice; the live owner dashboard shows real numbers (issue #101).
+assert.equal(vm.runInContext(`liveWorkspace=true;mode='admin';page='Dashboard';sampleNotice()`, ctx), '', 'live dashboard has no sample notice');
+vm.runInContext('liveWorkspace=false', ctx);
 const notice = (mode, page) => vm.runInContext(`mode=${JSON.stringify(mode)};page=${JSON.stringify(page)};sampleNotice()`, ctx);
 
 const expectations = {
