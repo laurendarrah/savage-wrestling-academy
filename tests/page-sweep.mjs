@@ -6,7 +6,7 @@ const read = f => readFileSync(f, 'utf8');
 assert.match(read('app/wrestler/screen.html'), /html body main section\.card\.next\{background:#C4222C/);
 // Headings set from script carry no trailing period (issue #130).
 assert.doesNotMatch(read('app/payment-setup/screen.html'), /'(?:Stripe payments: live|Stripe payments: test mode|Connect Stripe for testing)\.'/);
-assert.doesNotMatch(read('app/practice-plans/screen.html'), /Program curricula\./);
+assert.doesNotMatch(read('app/practice-plans/screen.html'), /Program curricula\.|'Practice plans\.'/);
 // The sample signature page gets the shared look; printable documents stay undecorated.
 const chrome = read('lib/page-chrome.ts');
 assert.doesNotMatch(chrome, /'\/scholarship-signature-preview'/);
