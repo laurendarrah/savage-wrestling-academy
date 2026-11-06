@@ -80,8 +80,8 @@ input,select,textarea{display:block;width:100%;margin-top:5px;box-sizing:border-
 html body .opt{font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#55585F;background:#EEF0F3;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
 .details-group legend .opt{margin-left:0}
 .field-hint{margin:4px 0 0;font-size:15px}
-.addr-row{grid-template-columns:2fr 1fr 1fr}
-.emergency-row{grid-template-columns:1fr 1fr}
+.row.addr-row{grid-template-columns:2fr 1fr 1fr}
+.row.emergency-row{grid-template-columns:1fr 1fr}
 .birth input{max-width:260px}
 html body .safety textarea{min-height:76px}
 .kid-safety{margin:0 0 12px;padding:10px 12px;border-left:3px solid #B9C4C9;background:#F7F8F9;border-radius:0 6px 6px 0;font-size:16px;overflow-wrap:anywhere;white-space:pre-line}
@@ -134,8 +134,9 @@ main>section[id],#status{scroll-margin-top:80px}
 @media(max-width:560px){
  html body main>section,html body main>details.card{padding:16px}
  .row{grid-template-columns:1fr;gap:0}
- .addr-row{grid-template-columns:1fr 1fr;gap:0 12px}
- .addr-row label:first-child{grid-column:1/-1}
+ .row.emergency-row{grid-template-columns:1fr}
+ .row.addr-row{grid-template-columns:1fr 1fr;gap:0 12px}
+ .row.addr-row label:first-child{grid-column:1/-1}
  .contact-lines{grid-template-columns:1fr}
  .member-details{grid-template-columns:1fr}
  .member-card{padding:14px}
