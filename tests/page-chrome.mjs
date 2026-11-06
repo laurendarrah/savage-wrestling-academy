@@ -12,7 +12,7 @@ const page = '<!doctype html><html><head><title>X</title></head><body class="a">
 
 const out = decoratePage(page, '/register');
 assert.match(out, /<link rel="stylesheet" href="\/savage.css"><\/head>/, 'stylesheet is the last thing in head, so it wins');
-assert.match(out, /<body class="a"><header class="swa-bar">/, 'top bar comes first in the body');
+assert.match(out, /<body data-swa-page="\/register" class="a"><header class="swa-bar">/, 'top bar comes first in the body, and the body names the page');
 assert.match(out, /href="\/brand\/favicon-32.png"/);
 assert.equal(decoratePage(out, '/register'), out, 'decorating twice changes nothing');
 assert.match(topBar('/calendar'), /href="\/calendar" aria-current="page">Calendar/);
@@ -34,3 +34,21 @@ assert.equal(await decorateResponse(new Request('https://x.test/family'), redire
 for (const f of ['public/savage.css', 'public/brand/savage-logo-128.png', 'public/brand/favicon-32.png', 'public/brand/favicon-64.png', 'public/brand/apple-touch-icon.png', 'public/fonts/OFL-LICENSE.txt']) assert.ok(existsSync(f), f);
 for (const m of readFileSync('public/savage.css', 'utf8').matchAll(/url\(\/(fonts\/[^)]+)\)/g)) assert.ok(existsSync('public/' + m[1]), m[1]);
 console.log('Page chrome: stylesheet, icons and top bar on every page; skipped pages, redirects and headers handled');
+
+// Issue #146: a page's opening back link, heading and intro move into the black header band.
+{
+  const {pageHead} = module.exports;
+  const wrap = h => pageHead(`<html><body><main>${h}</main></body></html>`);
+  assert.equal(wrap('<a href="/">← Back</a><h1>Roster</h1><p class="muted">Who paid.</p><section>x</section>'),
+    '<html><body><main><div class="swa-head"><a href="/">← Back</a><h1>Roster</h1><p class="muted">Who paid.</p></div><section>x</section></main></body></html>');
+  assert.equal(wrap('<h1>Site health</h1><p id="status" role="status">Loading…</p>'),
+    '<html><body><main><div class="swa-head"><h1>Site health</h1></div><p id="status" role="status">Loading…</p></main></body></html>', 'status lines stay outside');
+  assert.match(wrap('<h1>Terms</h1><p class="notice">Draft</p>'), /<div class="swa-head"><h1>Terms<\/h1><\/div><p class="notice">/, 'notices stay outside');
+  assert.match(wrap('<h1>Pay <b>now</b></h1><p>Intro with <a href="/x">a link</a>.</p><p>Second</p>'), /<div class="swa-head"><h1>Pay <b>now<\/b><\/h1><p>Intro with <a href="\/x">a link<\/a>.<\/p><\/div><p>Second/);
+  const own = '<html><body><div class="fam-hero"></div><main><h1>Hi</h1></main></body></html>';
+  assert.equal(pageHead(own), own, 'pages with their own header are left alone');
+  const card = '<html><body><main><section class="card"><h1>Welcome back</h1></section></main></body></html>';
+  assert.equal(pageHead(card), card, 'a heading inside a card is not moved');
+  assert.match(decoratePage('<html><head></head><body><main><h1>Payments</h1><p>All of them.</p></main></body></html>', '/payments'), /<main><div class="swa-head"><h1>Payments<\/h1><p>All of them.<\/p><\/div>/);
+}
+console.log('page head ok');
