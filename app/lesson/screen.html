@@ -1,8 +1,30 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Book a private lesson | Savage Wrestling Academy</title><style>*{box-sizing:border-box}body{font:16px Arial,sans-serif;line-height:1.5;background:#f5f5f6;color:#18191c;margin:0}main{max-width:900px;margin:auto;padding:20px 16px 60px}h1{line-height:1.15;margin:12px 0 4px}h2{margin:0 0 10px;font-size:20px}a{color:#a92330}section{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;margin:18px 0}.muted{color:#626672}label{display:flex;flex-direction:column;font-weight:bold;gap:4px;margin:10px 0}label.check{flex-direction:row;align-items:flex-start;font-weight:normal;gap:10px}input,select,button{font:inherit}input,select{padding:10px;border:1px solid #ccc;border-radius:6px;font-weight:normal}button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#18191c;cursor:pointer}button.primary{background:#d72732;border-color:#d72732;color:#fff}button:disabled{opacity:.55}.formats,.times{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.choice{text-align:left;border:2px solid #ddd;border-radius:10px;padding:14px;background:#fff}.choice[aria-pressed="true"]{border-color:#d72732;background:#fff5f5}.choice b{display:block}.choice:disabled{cursor:not-allowed}.day{margin:14px 0 6px;font-weight:bold}.summary{background:#f7f7f8;border-radius:8px;padding:14px}#status{font-weight:bold;min-height:1.5em}[hidden]{display:none!important}</style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Book a private lesson</h1><p class="muted">Choose a lesson type, your wrestler and one of the coaches’ open times. Times are New York time. The time is yours once it’s paid for.</p><p id="status" role="status" aria-live="polite">Loading…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
-<section><h2>1. Lesson type</h2><div class="formats" id="formats"></div></section>
-<section><h2>2. Wrestler</h2><label>Wrestler<select id="wrestler"></select></label><label id="partnersLabel" hidden>Training partners (optional)<input id="partners" maxlength="200" placeholder="Names of the other wrestlers joining"></label></section>
-<section><h2>3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="times"></div></section>
-<section id="reviewBox" hidden><h2>4. Review and pay</h2><div class="summary" id="summary"></div><div id="payArea"><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label><button class="primary" id="pay" disabled>Pay securely</button></div><p id="notOpen" class="muted" hidden>Online payment for lessons isn’t open yet. To book this time, contact the academy and pay there. Nothing is reserved until the academy records your payment.</p></section>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Book a private lesson | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
+body{background:#F4F5F7;color:#141416;margin:0}
+main{max-width:900px;margin:auto;padding:20px 16px 56px}
+h1{margin:8px 0 6px}h2{margin:0 0 10px}
+html body main>section{padding:20px;margin:18px 0}
+label{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+label.check{flex-direction:row;align-items:flex-start;font-weight:400;gap:10px}
+.formats,.times{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+html body button.choice{text-align:left;border:2px solid #E1E3E8;border-radius:6px;padding:14px;background:#fff;font-weight:400;height:auto}
+html body button.choice[aria-pressed="true"]{border-color:#C4222C;background:#FFF5F5}
+.choice b{display:block}
+.day{margin:14px 0 6px;font-weight:700}
+.summary{background:#F4F5F7;border-radius:6px;padding:14px}
+#status{font-weight:600;min-height:1.5em}
+html body main>section.closed{border-left:4px solid #C4222C}
+.closed h2{margin-bottom:6px}
+.closed .go{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+html body a.button{display:inline-flex;align-items:center;justify-content:center;padding:0 18px;text-decoration:none}
+#pay{padding:0 18px}
+[hidden]{display:none!important}
+</style></head><body><main><h1>Book a private lesson</h1><p class="muted" id="intro">Choose a lesson type, your wrestler and one of the coaches’ open times. Times are New York time. The time is yours once it’s paid for.</p>
+<section id="closed" class="closed" hidden aria-labelledby="closedHeading"><h2 id="closedHeading">No open lesson times right now</h2><p id="closedText">No coach has open lesson times right now. Coaches add new times often, so check back soon, or message the academy to ask about a lesson.</p><div class="go"><a class="button" href="/family" id="addWrestler" hidden>Add a wrestler</a><a class="button primary" href="/inbox" id="messageAcademy">Message the academy</a></div></section>
+<p id="status" role="status" aria-live="polite">Loading…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
+<section id="stepType" hidden aria-labelledby="typeHeading"><h2 id="typeHeading">1. Lesson type</h2><div class="formats" id="formats"></div></section>
+<section id="stepWrestler" hidden aria-labelledby="wrestlerHeading"><h2 id="wrestlerHeading">2. Wrestler</h2><label>Wrestler<select id="wrestler"></select></label><label id="partnersLabel" hidden>Training partners (optional)<input id="partners" maxlength="200" placeholder="Names of the other wrestlers joining"></label></section>
+<section id="stepTime" hidden aria-labelledby="timeHeading"><h2 id="timeHeading">3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="times"></div></section>
+<section id="reviewBox" hidden aria-labelledby="reviewHeading"><h2 id="reviewHeading">4. Review and pay</h2><div class="summary" id="summary"></div><div id="payArea"><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label><button class="primary" id="pay" disabled>Pay securely</button></div><p id="notOpen" class="muted" hidden>Online payment for lessons isn’t open yet. To book this time, contact the academy and pay there. Nothing is reserved until the academy records your payment.</p></section>
 </main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);
@@ -10,14 +32,28 @@ const clock=t=>{const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+Strin
 const day=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
 let data=null,family=null,format='',opening='',review=null;
 async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login';throw Error('Sign in again.')}const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
+// Lesson types without an online price can't be booked here, so they aren't shown (issue #132).
+const bookable=()=>(data?.formats||[]).filter(f=>f.cents!==null&&f.cents!==undefined);
+// What stops a family from booking, said first, before any steps (issue #132). Null when they can book.
+function blocker(){
+ if(!data||!family)return null;
+ if(!(family.wrestlers||[]).length)return {title:'Add your wrestler first',text:'Add your wrestler in your family account, then come back here to book a lesson.',wrestler:true};
+ if(!bookable().length)return {title:'Lessons are booked through the academy',text:'Private lessons can’t be booked online yet. Message the academy to arrange a lesson.'};
+ if(!data.openings.length)return {title:'No open lesson times right now',text:'No coach has open lesson times right now. Coaches add new times often, so check back soon, or message the academy to ask about a lesson.'};
+ return null;
+}
 function render(){
- $('formats').innerHTML=data.formats.map(f=>`<button type="button" class="choice" data-format="${esc(f.id)}" aria-pressed="${f.id===format}" ${f.cents===null?'disabled':''}><b>${esc(f.name)}</b><span class="muted">${esc(f.description)}</span><br><strong>${f.cents===null?'Ask the academy to book this one':money(f.cents)+' per lesson'}</strong></button>`).join('');
+ const stop=blocker();
+ $('closed').hidden=!stop;
+ if(stop){$('closedHeading').textContent=stop.title;$('closedText').textContent=stop.text;$('addWrestler').hidden=!stop.wrestler;$('messageAcademy').className=stop.wrestler?'button':'button primary';$('addWrestler').className=stop.wrestler?'button primary':'button'}
+ $('intro').hidden=!!stop;$('stepType').hidden=$('stepWrestler').hidden=$('stepTime').hidden=!!stop||!data;
+ $('formats').innerHTML=bookable().map(f=>`<button type="button" class="choice" data-format="${esc(f.id)}" aria-pressed="${f.id===format}"><b>${esc(f.name)}</b><span class="muted">${esc(f.description)}</span><br><strong>${money(f.cents)} per lesson</strong></button>`).join('');
  document.querySelectorAll('[data-format]').forEach(b=>b.onclick=()=>{format=b.dataset.format;review=null;render();check()});
  $('partnersLabel').hidden=!(format==='partner'||format==='small-group');
- const coach=$('coach').value,list=data.openings.filter(o=>!coach||o.coachKey===coach);
+ const coach=$('coach').value,list=(data?.openings||[]).filter(o=>!coach||o.coachKey===coach);
  if(opening&&!list.some(o=>o.id===opening))opening='';
  const days=[...new Set(list.map(o=>o.date))];
- $('times').innerHTML=days.length?days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b>${esc(o.coach)}</button>`).join('')}</div>`).join(''):'<p class="muted">No open lesson times right now. Coaches add new times regularly; check back soon.</p>';
+ $('times').innerHTML=days.length?days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b>${esc(o.coach)}</button>`).join('')}</div>`).join(''):'<p class="muted">This coach has no open times right now. Choose Any coach to see every open time.</p>';
  document.querySelectorAll('[data-opening]').forEach(b=>b.onclick=()=>{opening=b.dataset.opening;review=null;render();check()});
  $('reviewBox').hidden=!review;
  if(review){
@@ -46,8 +82,10 @@ if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=$('sta
  $('wrestler').innerHTML=(family.wrestlers||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
  const coaches=[...new Map(data.openings.map(o=>[o.coachKey,o.coach])).entries()];
  $('coach').innerHTML='<option value="">Any coach</option>'+coaches.map(([e,n])=>`<option value="${esc(e)}">${esc(n)}</option>`).join('');
- const q=new URLSearchParams(location.search);if(q.get('format')&&data.formats.some(x=>x.id===q.get('format')&&x.cents!==null))format=q.get('format');
+ const q=new URLSearchParams(location.search);if(q.get('format')&&bookable().some(x=>x.id===q.get('format')))format=q.get('format');
+ // With only one lesson type to choose from, it is already chosen.
+ if(!format&&bookable().length===1)format=bookable()[0].id;
  render();
- $('status').textContent=!(family.wrestlers||[]).length?'Add a wrestler in your family account first.':data.formats.every(x=>x.cents===null)?'Online lesson booking is not open yet. Contact the academy to arrange a lesson.':'';
+ $('status').textContent='';
 }catch(e){$('status').textContent=e.message}})();
 </script></body></html>

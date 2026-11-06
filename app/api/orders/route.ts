@@ -4,7 +4,7 @@ import {strongAccount, accountReply} from '../../../lib/account-auth';
 import {checkoutKinds} from '../../../lib/checkout-config';
 export const dynamic = 'force-dynamic';
 
-const FIELDS = 'o.id,o.kind,o.program,o.item_label,o.wrestler_id,o.wrestler_name,o.dates,o.base_cents,o.discount_cents,o.amount_cents,o.currency,o.status,o.created_at,o.paid_at,o.term_start,o.term_end,'
+const FIELDS = 'o.id,o.kind,o.program,o.item_id,o.item_label,o.wrestler_id,o.wrestler_name,o.dates,o.base_cents,o.discount_cents,o.amount_cents,o.currency,o.status,o.created_at,o.paid_at,o.term_start,o.term_end,'
   + 's.payments_made,s.payments_total,s.status AS subscription_status,s.term_end AS membership_end,s.paid_through';
 const FROM = 'FROM orders o LEFT JOIN subscriptions s ON s.order_id=o.id';
 

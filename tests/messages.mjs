@@ -116,4 +116,17 @@ r = await call(owner, 'GET', null, '?family=p1'); assert.equal(r.body.thread.len
 assert.equal((await call(owner, 'GET')).body.families.find(f => f.userId === 'p1').unread, 0, 'opening the thread marks it read');
 assert.equal((await call(owner, 'POST', {action: 'message', userId: 'nobody', body: 'x'})).status, 404);
 
+// --- Mark all as read (issue #132): one family's notices, announcements and replies, nobody else's ---
+const notify = (id, u) => sqlite.prepare("INSERT INTO notifications(id,user_id,email,kind,subject,body,dedupe_key,created_at,read_at,email_status) VALUES (?,?,'e','test','Notice','b',?,'2026-11-06T12:00:00Z',NULL,'skipped')").run(id, u, id);
+notify('n-p1', 'p1'); notify('n-p2', 'p2');
+await announce({type: 'all'}, {subject: 'Gym closed Monday'});
+as('owner'); await call(owner, 'POST', {action: 'message', userId: 'p1', body: 'See you Monday.'});
+b = await box('p1'); assert.ok(b.unread >= 3, 'notice, announcement and reply are unread: ' + b.unread);
+const p2Before = (await box('p2')).unread; assert.ok(p2Before >= 2);
+as('p1'); r = await call(inbox, 'POST', {action: 'read', all: true});
+assert.equal(r.status, 200); assert.equal(r.body.unread, 0, 'everything is read');
+assert.ok(r.body.notices.every(n => n.read) && r.body.announcements.every(a => a.read));
+assert.equal((await box('p2')).unread, p2Before, 'another family keeps its unread messages');
+as('p1'); assert.equal((await call(inbox, 'POST', {action: 'read', all: 'yes'})).status, 200, 'only all: true marks everything');
+
 console.log('Messaging tests passed');

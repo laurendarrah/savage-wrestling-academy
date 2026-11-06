@@ -59,7 +59,7 @@ await step('owner saves a Stripe test key; Stripe confirms the account', async (
 });
 await step('family pays for a walk-in: checkout opens a Stripe session', async () => {
   await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
-  await family.selectOption('#plan', 'walkin'); await family.selectOption('#program', 'Intermediate');
+  await family.check('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
   await family.locator(`[data-day="${ny(1)}"]`).first().click(); await family.locator('[data-slot]').first().click();
   await family.click('#reviewButton'); await family.waitForSelector('#acceptTerms', {state: 'visible'});
   await family.check('#acceptTerms');
@@ -91,7 +91,7 @@ await step('a refund in Stripe marks the walk-in refunded and takes Sam off that
 });
 await step('family starts a 12-month membership paid monthly: a Stripe subscription checkout', async () => {
   await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
-  await family.selectOption('#plan', 'monthly'); await family.selectOption('#program', 'Intermediate');
+  await family.check('#plan-monthly'); await family.selectOption('#program', 'Intermediate');
   await family.click('#reviewButton'); await family.waitForSelector('#acceptTerms', {state: 'visible'}); await family.check('#acceptTerms');
   await Promise.all([family.waitForURL(/checkout\.stripe\.com/, {timeout: 15000}), family.click('#payButton')]);
   const o = sql("SELECT id,status,amount_cents FROM orders WHERE kind='monthly'")[0];

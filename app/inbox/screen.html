@@ -1,17 +1,45 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Messages | Savage Wrestling Academy</title><style>*{box-sizing:border-box}body{font:16px Arial,sans-serif;line-height:1.5;background:#f5f5f6;color:#18191c;margin:0}main{max-width:760px;margin:auto;padding:20px 16px 60px}h1{line-height:1.15;margin:12px 0 4px}h2{margin:0 0 10px;font-size:20px}a{color:#a92330}section{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;margin:18px 0}.muted{color:#626672}details{border-top:1px solid #eee;padding:10px 0}details:first-of-type{border-top:0}summary{cursor:pointer}summary.unread{font-weight:bold}.body{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#d72732;margin-right:6px}.msg{border-radius:10px;padding:10px 12px;margin:8px 0;max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere}.msg.you{background:#18191c;color:#fff;margin-left:auto}.msg.academy{background:#eef0f3}.msg small{display:block;opacity:.7;font-size:12px}label{display:flex;flex-direction:column;font-weight:bold;gap:4px}textarea,button{font:inherit}textarea{padding:9px;border:1px solid #ccc;border-radius:6px;min-height:90px}button{padding:10px 14px;border:1px solid #d72732;border-radius:6px;background:#d72732;color:#fff;cursor:pointer;margin-top:8px}#status{font-weight:bold;min-height:1.5em}</style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Messages</h1><p id="status" role="status" aria-live="polite">Loading…</p>
-<section id="noticesBox" hidden><h2>Notices</h2><div id="notices"></div></section><section><h2>Announcements</h2><div id="announcements"></div></section>
-<section><h2>Your conversation with the academy</h2><div id="thread"></div><form id="reply"><label>Message the academy<textarea id="body" maxlength="5000" required></textarea></label><button>Send</button></form></section></main><script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Messages | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
+body{background:#F4F5F7;color:#141416;margin:0}
+main{max-width:760px;margin:auto;padding:20px 16px 56px}
+h1{margin:8px 0 4px}h2{margin:0 0 8px}
+html body main>section{padding:20px;margin:18px 0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#markAll{padding:0 16px}
+details{border-top:1px solid #E1E3E8;padding:4px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;min-height:44px;padding:10px 0 8px;overflow-wrap:anywhere}
+summary .when{display:block;font-size:15px;font-weight:400}
+summary.unread{font-weight:700}
+.body{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 10px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#C4222C;margin-right:6px}
+.msg{border-radius:10px;padding:10px 12px;margin:8px 0;max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.you{background:#141416;color:#fff;margin-left:auto}
+.msg.academy{background:#EEF0F3}
+.msg small{display:block;opacity:.8;font-size:13px}
+label{display:flex;flex-direction:column;gap:4px}
+#reply button{margin-top:10px;padding:0 20px}
+#status{font-weight:600;min-height:1.5em}
+.when{display:block;font-size:14px;font-weight:400;margin-top:2px}</style></head><body><main><div class="top"><h1>Messages</h1><button type="button" id="markAll" hidden>Mark all as read</button></div><p id="status" role="status" aria-live="polite">Loading…</p>
+<section id="noticesBox" hidden aria-labelledby="noticesHeading"><h2 id="noticesHeading">Notices</h2><div id="notices"></div></section><section aria-labelledby="announcementsHeading"><h2 id="announcementsHeading">Announcements</h2><div id="announcements"></div></section>
+<section aria-labelledby="threadHeading"><h2 id="threadHeading">Your conversation with the academy</h2><div id="thread"></div><form id="reply"><label>Message the academy<textarea id="body" maxlength="5000" required></textarea></label><button class="primary">Send</button></form></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[\u202f\u00a0]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
+const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
 async function call(body){const r=await fetch('/api/inbox',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login';throw Error('Sign in again.')}const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
+// One message in a list: subject and time, opened to read the body. The newest one opens by itself (issue #132).
+function item(attr,subject,at,read,body,open){return `<details ${attr}${open?' open':''}><summary class="${read?'':'unread'}">${read?'':'<span class="dot" aria-label="Unread"></span>'}${esc(subject)}<span class="muted when">${esc(when(at))}</span></summary><div class="body">${esc(body)}</div></details>`}
+function markShown(el,payload){if(el.open&&el.querySelector('.unread'))call(payload).then(d=>{el.querySelector('summary').classList.remove('unread');el.querySelector('.dot')?.remove();showMarkAll(d)}).catch(()=>{})}
+function showMarkAll(d){$('markAll').hidden=!(d&&d.unread>0)}
 function render(d){
- $('noticesBox').hidden=!(d.notices||[]).length;
- $('notices').innerHTML=(d.notices||[]).map(n=>`<details data-notice="${esc(n.id)}"><summary class="${n.read?'':'unread'}">${n.read?'':'<span class="dot" aria-label="Unread"></span>'}${esc(n.subject)} <span class="muted">· ${esc(when(n.at))}</span></summary><div class="body">${esc(n.body)}</div></details>`).join('');
- document.querySelectorAll('details[data-notice]').forEach(el=>el.ontoggle=()=>{if(el.open&&el.querySelector('.unread'))call({action:'read',noticeId:el.dataset.notice}).then(()=>{el.querySelector('summary').classList.remove('unread');el.querySelector('.dot')?.remove()}).catch(()=>{})});
- $('announcements').innerHTML=d.announcements.map(a=>`<details data-id="${esc(a.id)}"><summary class="${a.read?'':'unread'}">${a.read?'':'<span class="dot" aria-label="Unread"></span>'}${esc(a.subject)} <span class="muted">· ${esc(when(a.sentAt))}</span></summary><div class="body">${esc(a.body)}</div></details>`).join('')||'<p class="muted">No announcements yet.</p>';
- document.querySelectorAll('details[data-id]').forEach(el=>el.ontoggle=()=>{if(el.open&&el.querySelector('.unread'))call({action:'read',announcementId:el.dataset.id}).then(x=>{el.querySelector('summary').classList.remove('unread');el.querySelector('.dot')?.remove()}).catch(()=>{})});
- $('thread').innerHTML=d.thread.map(m=>`<div class="msg ${m.from}">${esc(m.body)}<small>${m.from==='you'?'You':'Savage Wrestling Academy'} · ${esc(when(m.at))}</small></div>`).join('')||'<p class="muted">No messages yet. Questions about schedules, payments or your wrestler? Write to the academy here.</p>';
+ const notices=d.notices||[],announcements=d.announcements||[];
+ $('noticesBox').hidden=!notices.length;
+ $('notices').innerHTML=notices.map((n,i)=>item('data-notice="'+esc(n.id)+'"',n.subject,n.at,n.read,n.body,i===0)).join('');
+ document.querySelectorAll('details[data-notice]').forEach(el=>{el.ontoggle=()=>markShown(el,{action:'read',noticeId:el.dataset.notice})});
+ $('announcements').innerHTML=announcements.map((a,i)=>item('data-id="'+esc(a.id)+'"',a.subject,a.sentAt,a.read,a.body,!notices.length&&i===0)).join('')||'<p class="muted">No announcements yet.</p>';
+ document.querySelectorAll('details[data-id]').forEach(el=>{el.ontoggle=()=>markShown(el,{action:'read',announcementId:el.dataset.id})});
+ $('thread').innerHTML=(d.thread||[]).map(m=>`<div class="msg ${m.from}">${esc(m.body)}<small>${m.from==='you'?'You':'Savage Wrestling Academy'} · ${esc(when(m.at))}</small></div>`).join('')||'<p class="muted">No messages yet. Questions about schedules, payments or your wrestler? Write to the academy here.</p>';
+ showMarkAll(d);
 }
+$('markAll').onclick=async()=>{$('markAll').disabled=true;try{render(await call({action:'read',all:true}));$('status').textContent='All messages are marked as read.'}catch(err){$('status').textContent=err.message}finally{$('markAll').disabled=false}};
 $('reply').onsubmit=async e=>{e.preventDefault();try{render(await call({action:'reply',body:$('body').value}));$('body').value='';$('status').textContent='Sent. The academy will reply here.'}catch(err){$('status').textContent=err.message}};
-(async()=>{try{const d=await call();render(d);if(d.thread.length)await call({action:'read',thread:true});$('status').textContent=''}catch(e){$('status').textContent=e.message}})();
+(async()=>{try{const d=await call();render(d);if(d.thread.length&&d.thread.some(m=>m.from==='academy'))showMarkAll(await call({action:'read',thread:true}));$('status').textContent=''}catch(e){$('status').textContent=e.message}})();
 </script></body></html>

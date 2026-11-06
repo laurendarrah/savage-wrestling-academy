@@ -71,7 +71,7 @@ await step('family saves a profile and wrestler without a card, and sees booking
 await step('family is refused a walk-in without a card, with a link to fix it', async () => {
   await family.goto(BASE + '/register');
   await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
-  await family.selectOption('#plan', 'walkin'); await family.selectOption('#program', 'Intermediate');
+  await family.check('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
   await family.waitForSelector('[data-day]'); await family.locator(`[data-day="${ny(1)}"]`).first().click();
   await family.waitForSelector('[data-slot]'); await family.locator('[data-slot]').first().click();
   await family.click('#reviewButton');
@@ -134,11 +134,50 @@ await step('owner publishes a waiver; family is blocked until they sign it on /w
   await shot(family, 'waiver-signed');
 });
 
+// ---------- Visitors and brand-new families (issue #132) ----------
+const phoneAs = async name => { const ctx = await browser.newContext({viewport: {width: 390, height: 844}, deviceScaleFactor: SHOTS ? 3 : 1, isMobile: true, hasTouch: true});
+  if (name) { const c = sessionCookie(name, AUTH); await ctx.addCookies([{name: c.name, value: c.value, url: BASE}]); }
+  const p = await ctx.newPage(); p.on('pageerror', e => problems.push(`[${current}] page error on ${p.url()}: ${e.message}`)); return p; };
+await step('a signed-out visitor lands on the welcome page with programs, steps and what is coming up', async () => {
+  const visitor = await phoneAs(null);
+  await visitor.goto(BASE + '/'); expect(new URL(visitor.url()).pathname === '/welcome', 'signed-out home should be /welcome, got ' + visitor.url());
+  await waitText(visitor, '#programs', /SWA Development[\s\S]*SWA Intermediate[\s\S]*SWA Advance/);
+  await waitText(visitor, '#programs', /\$200 a month[\s\S]*\$40 for a single walk-in practice/);
+  await waitText(visitor, '#programs', /needs coach approval/);
+  await waitText(visitor, '#week', /practice/);
+  expect(!/\d{4}-\d{2}-\d{2}|\d{2}:\d{2}(?! [AP]M)/.test(await visitor.locator('#week').innerText()), 'coming up reads like "Mon, Nov 9 · 6:00 PM"');
+  expect(await visitor.getAttribute('a:has-text("Join the academy")', 'href') === '/login?mode=signup', 'join link');
+  expect(await visitor.getAttribute('main a[href="/login"], .actions a[href="/login"]', 'href') === '/login', 'sign-in link');
+  const over = await visitor.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); expect(over <= 1, `/welcome scrolls sideways by ${over}px`);
+  if (SHOTS) await visitor.screenshot({path: `${SHOTS}/phone-welcome.png`, fullPage: true});
+  await visitor.context().close();
+});
+await step('a brand-new family sees a guided start, and lessons and booking say what to do first', async () => {
+  const fresh = await phoneAs('newfam');
+  await fresh.goto(BASE + '/family'); await fresh.waitForSelector('#start:not([hidden])');
+  await waitText(fresh, '#startCount', /^0 of 4 done$/);
+  expect((await fresh.locator('#startSteps [data-step]').count()) === 4, 'four steps once the academy has a waiver');
+  expect(await fresh.locator('main .primary:visible').count() === 1, 'one main button: Save family profile, while the profile form is open');
+  expect(!(await fresh.isVisible('#nextUp')), 'no "Next up" before anything is booked');
+  expect(!(await fresh.isVisible('#accountMenu .menu a')), 'account links wait in the Account menu');
+  if (SHOTS) await fresh.screenshot({path: `${SHOTS}/phone-newfam-family.png`, fullPage: true});
+  await fresh.click('#startSteps [data-step=details] button'); await waitText(fresh, '#status', /Add your name and phone number/);
+  expect(await fresh.evaluate(() => document.activeElement?.name === 'parentName'), 'the first step goes to the name field');
+  await fresh.goto(BASE + '/lesson'); await waitText(fresh, '#closedHeading', /Add your wrestler first/);
+  expect(!(await fresh.isVisible('#stepType')), 'lesson steps hidden until they can be used');
+  if (SHOTS) await fresh.screenshot({path: `${SHOTS}/phone-newfam-lesson.png`, fullPage: true});
+  await fresh.goto(BASE + '/register'); await fresh.waitForSelector('#empty:not([hidden])');
+  if (SHOTS) await fresh.screenshot({path: `${SHOTS}/phone-newfam-register.png`, fullPage: true});
+  await fresh.goto(BASE + '/inbox'); await waitText(fresh, '#announcements', /No announcements/);
+  expect(!(await fresh.isVisible('#markAll')), 'nothing to mark as read');
+  await fresh.context().close();
+});
+
 // ---------- Walk-in review now passes ----------
 await step('family reviews a walk-in once card and waiver are in order', async () => {
   await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
   expect(await family.inputValue('#program') === 'Intermediate', 'a Grade 8 wrestler should start on SWA Intermediate');
-  await family.selectOption('#plan', 'walkin'); await family.selectOption('#program', 'Intermediate');
+  await family.check('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
   await family.locator(`[data-day="${ny(1)}"]`).first().click(); await family.locator('[data-slot]').first().click();
   await family.click('#reviewButton');
   await family.waitForFunction(() => /\$40\.00/.test(document.body.textContent), null, {timeout: 8000});
@@ -175,6 +214,12 @@ await step('family sees the pass, the wrestler view and the membership', async (
   await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /Active membership/);
   await waitText(family, '#paymentsPill', /^Paid$/);
   await waitText(family, '#purchaseList', /Paid/);
+  // Set up, so the family home leads with the next session and the entry pass instead of the guided start (issue #132).
+  await waitText(family, '#nextUpBody', /SWA Intermediate practice[\s\S]*Show entry pass/);
+  expect(!(await family.isVisible('#start')), 'a family that is set up does not see the guided start');
+  expect(await family.getAttribute('#nextUpBody a.primary', 'href') === '/pass?wrestler=' + samId, 'entry pass button');
+  await waitText(family, '#savedDetails', /USA Wrestling card verified[\s\S]*Waiver signed[\s\S]*Member/);
+  await shot(family, 'family-home');
 });
 await step('a coach sees today\'s roster for their program only and can check in', async () => {
   await coach.goto(BASE + '/roster'); await waitText(coach, '#sessions', /SWA Intermediate/);
@@ -233,8 +278,12 @@ await step('camp fills; family 2 joins the waitlist from the booking page; owner
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record'); await waitText(owner, '#status', /recorded/i);
   await family2.goto(BASE + '/booking?type=event&id=winter-camp'); await family2.waitForSelector('#submit');
   expect(!/\d{4}-\d{2}-\d{2}/.test(await family2.locator('main').innerText()), 'camp dates should be readable, not 2026-11-15');
+  // The page is titled with the event and says where each wrestler stands (issue #132).
+  await waitText(family2, 'h1', /Winter camp/); await waitText(family2, '#wrestlerStatus', /Riley Two is not registered yet/);
   await family2.click('#submit'); await waitText(family2, '#status', /Join the waitlist/);
   await family2.click('#joinWaitlist'); await waitText(family2, '#status', /on the waitlist/);
+  await waitText(family2, '#wrestlerStatus', /Riley Two is on the waitlist/);
+  await family.goto(BASE + '/booking?type=event&id=winter-camp'); await waitText(family, '#wrestlerStatus', /Sam Example is already registered/);
   await owner.goto(BASE + '/waitlists'); await waitText(owner, '#events', /Riley Two/);
   await owner.locator('[data-offer]').first().click(); await waitText(owner, '#status', /Seat offered/);
   // The camp was full, so the owner confirmed going over the limit; the page says so instead of a negative number.
@@ -264,6 +313,13 @@ await step('owner announces to SWA Intermediate; family reads it and replies; ow
   // Automatic notices from earlier steps (issue #105).
   await waitText(family, '#notices', /Payment received[\s\S]*/); await waitText(family, '#notices', /Lesson booked/); await waitText(family, '#notices', /Please sign the Participation waiver/);
   await family.fill('#body', 'Thanks, see you there.'); await family.click('#reply button'); await waitText(family, '#thread', /see you there/);
+  // The newest notice opens by itself, and one button marks everything read (issue #132).
+  expect(await family.locator('#notices details[open]').count() === 1 && await family.locator('#notices details').first().getAttribute('open') !== null, 'newest notice is open');
+  await family.waitForSelector('#markAll:not([hidden])'); await family.click('#markAll'); await waitText(family, '#status', /All messages are marked as read/);
+  expect(await family.locator('#notices .unread, #announcements .unread').count() === 0 && !(await family.isVisible('#markAll')), 'nothing left unread');
+  expect(!((await api(family, '/api/inbox')).body.unread), 'server agrees nothing is unread');
+  await family.goto(BASE + '/family'); await family.waitForSelector('#summary:not([hidden])'); await family.waitForTimeout(500);
+  expect(!/new/.test(await text(family, '#inboxLink')), 'Messages link no longer counts new messages');
   await family2.goto(BASE + '/inbox'); await waitText(family2, '#announcements', /No announcements/);
   await owner.goto(BASE + '/messages'); await owner.locator('[data-family]').filter({hasText: 'Pat Example'}).click();
   await waitText(owner, '#threadBox', /see you there/);
@@ -397,7 +453,7 @@ await step('family downloads their data and asks to close the account; owner rec
 
 // ---------- Guides ----------
 await step('each role has a guide linked from its home page; guides are role-only', async () => {
-  await family.goto(BASE + '/family'); await family.click('text=Help'); await waitText(family, 'h1', /Help for families/);
+  await family.goto(BASE + '/family'); await family.click('#accountMenu summary'); await family.click('#accountMenu a:has-text("Help")'); await waitText(family, 'h1', /Help for families/);
   await coach.goto(BASE + '/coach'); await coach.click('text=Coach help'); await waitText(coach, 'h1', /Help for coaches/);
   await owner.goto(BASE + '/'); await owner.click('a.tool:has-text("Owner guide")'); await waitText(owner, 'h1', /Owner guide/);
   const fc = await family.request.get(BASE + '/help/coach', {maxRedirects: 0}); expect(fc.status() !== 200, 'family opened the coach guide');
@@ -412,7 +468,7 @@ await step('one family cannot see another family\'s data', async () => {
 });
 await step('family pages fit a phone screen', async () => {
   const phone = await (async () => { const p = await (await browser.newContext({viewport: {width: 390, height: 844}, deviceScaleFactor: SHOTS ? 3 : 1, isMobile: true, hasTouch: true})); const c = (await import('./fake-supabase.mjs')).sessionCookie('family', AUTH); await p.addCookies([{name: c.name, value: c.value, url: BASE}]); return p.newPage(); })();
-  for (const path of ['/help', '/family', '/register', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
+  for (const path of ['/welcome', '/help', '/family', '/register', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
     await phone.goto(BASE + path); await phone.waitForTimeout(700);
     const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(over <= 1, `${path} scrolls sideways by ${over}px on a phone`);
@@ -426,7 +482,7 @@ await step('family pages fit a phone screen', async () => {
 // ---------- Accessibility (axe-core) on every page, as each role ----------
 const axeSource = (await import('node:fs')).readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const a11yPages = {
-  public: ['/calendar', '/login', '/membership-terms', '/help'],
+  public: ['/welcome', '/calendar', '/login', '/membership-terms', '/help'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
   coach: ['/coach', '/roster', '/help/coach'],
   owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
