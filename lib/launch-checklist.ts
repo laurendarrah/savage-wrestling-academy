@@ -1,6 +1,8 @@
 // Launch checklist for the owner dashboard (issue #123). Shows, from the real records and the site's settings, what is
 // ready and what is left before families use the site, each with the page that fixes it. Reads only; it changes
 // nothing and never reveals a secret (only whether one is set).
+import {kindList} from './purchase-kinds';
+
 type Settings = {APP_ORIGIN?: string; SUPABASE_URL?: string; SUPABASE_PUBLISHABLE_KEY?: string; EMAIL_API_KEY?: string; MAIL_FROM?: string;
   STRIPE_TEST_WEBHOOK_SECRET?: string; STRIPE_CONFIG_ENCRYPTION_KEY?: string; CHECKOUT_KINDS?: string};
 export type Item = {key: string; group: string; label: string; status: 'done' | 'todo' | 'waiting' | 'info'; detail: string; href?: string; section?: string};
@@ -26,7 +28,7 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
   const lessonPrices = Object.values(lessons.prices ?? {}).filter(v => Number(v) > 0).length;
   const origin = settings.APP_ORIGIN?.trim() ?? '';
   const kinds = (settings.CHECKOUT_KINDS ?? '').split(',').map(s => s.trim()).filter(Boolean);
-  const when = (iso: string) => new Date(iso).toLocaleDateString('en-US', {timeZone: 'America/New_York', month: 'short', day: 'numeric'});
+  const when = (iso: string) => new Date(iso).toLocaleDateString('en-US', {timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric'});
 
   const items: Item[] = [
     {key: 'programs', group: 'Academy', label: 'Programs and prices', section: 'Programs & pricing',
@@ -40,16 +42,16 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
     {key: 'lessons', group: 'Academy', label: 'Private lesson prices', href: '/lesson-settings',
       status: lessonPrices ? 'done' : 'todo', detail: lessonPrices ? `${lessonPrices} lesson type${lessonPrices === 1 ? '' : 's'} priced` : 'Set lesson prices so families can book coach openings'},
     {key: 'address', group: 'Site', label: 'Site address', status: /^https:\/\/|^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin) ? 'done' : 'todo',
-      detail: origin ? (/^http:\/\/(?!127\.0\.0\.1|localhost)/.test(origin) ? `${origin} must start with https://` : `Email links point to ${origin}`) : 'APP_ORIGIN is not set, so sign-up and password emails cannot be sent'},
+      detail: origin ? (/^http:\/\/(?!127\.0\.0\.1|localhost)/.test(origin) ? `${origin} must start with https://` : `Email links point to ${origin}`) : 'The site address is not set, so sign-up and password emails cannot be sent. Ask whoever maintains the site to set it'},
     {key: 'signin', group: 'Site', label: 'Family and staff sign-in', status: settings.SUPABASE_URL && settings.SUPABASE_PUBLISHABLE_KEY ? 'done' : 'todo',
       detail: settings.SUPABASE_URL && settings.SUPABASE_PUBLISHABLE_KEY ? 'Connected' : 'Sign-in is not connected'},
     {key: 'email', group: 'Site', label: 'Email notices', status: settings.EMAIL_API_KEY && settings.MAIL_FROM ? 'done' : 'waiting',
-      detail: settings.EMAIL_API_KEY && settings.MAIL_FROM ? `Sent from ${settings.MAIL_FROM}` : 'Notices go to each family’s Messages inbox. Email starts once the email provider is chosen (#87)'},
+      detail: settings.EMAIL_API_KEY && settings.MAIL_FROM ? `Sent from ${settings.MAIL_FROM}` : 'Notices go to each family’s Messages inbox. Email starts once an email service is chosen and set up'},
     {key: 'stripe', group: 'Payments', label: 'Stripe test connection', href: '/payment-setup',
       status: stripeKey && settings.STRIPE_TEST_WEBHOOK_SECRET ? 'done' : 'todo',
-      detail: stripeKey && settings.STRIPE_TEST_WEBHOOK_SECRET ? `Test key saved ${when(stripeKey.updated_at)}` : stripeKey ? 'Test key saved; the webhook secret is not set yet' : 'Save the Stripe test key on Online payment setup'},
+      detail: stripeKey && settings.STRIPE_TEST_WEBHOOK_SECRET ? `Test key saved ${when(stripeKey.updated_at)}` : stripeKey ? 'Test key saved. Whoever maintains the site still needs to add the Stripe webhook secret' : 'Save the Stripe test key on Online payment setup'},
     {key: 'checkout', group: 'Payments', label: 'Online payment', href: '/payment-setup', status: kinds.length ? 'done' : 'info',
-      detail: kinds.length ? `Open for: ${kinds.join(', ')}` : 'Closed. Families pay at the academy and you record it on Payments. Each purchase type opens after its terms are decided'},
+      detail: kinds.length ? `Open for ${kindList(kinds)}` : 'Closed. Families pay at the academy and you record it on Payments. Each purchase type opens after its terms are decided'},
     {key: 'backup', group: 'Safety', label: 'Recent backup', href: '/backups', status: backup && backup.created_at >= weekAgo ? 'done' : 'todo',
       detail: backup ? `Last downloaded ${when(backup.created_at)}${backup.created_at >= weekAgo ? '' : '. Download a fresh one'}` : 'Download an encrypted backup and keep it somewhere safe'},
     {key: 'health', group: 'Safety', label: 'Site health', href: '/site-health', status: errors ? 'todo' : 'done',

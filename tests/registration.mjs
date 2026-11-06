@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
-function compile(file,deps={}){const module={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,Request,Response,URL,Intl,Date,require:name=>{if(name in deps)return deps[name];if(name==='./friday-live')return compile('lib/friday-live.ts');throw Error(name)}});return module.exports}
+function compile(file,deps={}){const module={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,Request,Response,URL,Intl,Date,require:name=>{if(name in deps)return deps[name];if(name==='./friday-live')return compile('lib/friday-live.ts');if(name==='./datetime')return compile('lib/datetime.ts');throw Error(name)}});return module.exports}
 const {registrationCatalog}=compile('lib/registration-catalog.ts',{'./program-names':compile('lib/program-names.ts')});
 const state={programs:[{id:'Elementary',name:'Elementary',description:'Train',grades:'K–5',priceCents:20000,walkInPriceCents:4000,secret:'PRIVATE'}],kids:[{name:'PRIVATE'}],seasons:[{program:'Elementary',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Friday',start:'18:00',end:'19:30'}],excludedDates:['2026-12-25']}]};
 const catalog=registrationCatalog(state,'2026-12','2026-12-05');assert.deepEqual(Array.from(catalog.practices,s=>s.date),['2026-12-11','2026-12-18']);assert.equal(catalog.programs[0].monthlyCents,20000);assert.equal(catalog.programs[0].walkInCents,4000);assert.equal(JSON.stringify(catalog).includes('PRIVATE'),false);assert.equal(catalog.paymentsEnabled,false);
@@ -38,11 +38,11 @@ el('teamCode').value='school15';let sent;ctx.fetch=async(url,options)=>{sent=JSO
 vm.runInContext(`family.data.wrestlers[0].grade='5';document.getElementById('program').value='Elementary';document.getElementById('plan').value='walkin';selected='';selectedDate='';update()`,ctx);
 assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-11"/);assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-25"[^>]*disabled/);assert.match(el('practiceCalendar').innerHTML,/id="day-2026-12-04"[^>]*disabled/);assert.equal(el('reviewButton').disabled,true);
 vm.runInContext(`selectPracticeDay('2026-12-11')`,ctx);assert.match(el('practices').innerHTML,/6:00 PM–7:30 PM/);assert.equal(el('reviewButton').disabled,true);
-vm.runInContext(`selectPracticeTime('Elementary:2026-12-11:18:00')`,ctx);assert.equal(el('reviewButton').disabled,false);assert.match(el('selectedPractice').textContent,/December 11/);assert.match(el('selectedPractice').textContent,/6:00 PM–7:30 PM/);
-vm.runInContext(`selectPracticeDay('2026-12-25')`,ctx);assert.match(el('selectedPractice').textContent,/December 11/);
+vm.runInContext(`selectPracticeTime('Elementary:2026-12-11:18:00')`,ctx);assert.equal(el('reviewButton').disabled,false);assert.match(el('selectedPractice').textContent,/Fri, Dec 11, 2026/);assert.match(el('selectedPractice').textContent,/6:00 PM–7:30 PM/);
+vm.runInContext(`selectPracticeDay('2026-12-25')`,ctx);assert.match(el('selectedPractice').textContent,/Fri, Dec 11, 2026/);
 vm.runInContext(`selectPracticeDay('2026-12-18')`,ctx);assert.equal(el('reviewButton').disabled,true);assert.equal(el('selectedPractice').hidden,true);
 vm.runInContext(`document.getElementById('plan').value='monthly';update()`,ctx);assert.equal(el('reviewButton').disabled,false);assert.match(el('calendarHelp').textContent,/no individual reservation/);
-vm.runInContext(`selectPracticeTime('Elementary:2026-12-18:18:00')`,ctx);assert.equal(el('plan').value,'walkin');assert.match(el('selectedPractice').textContent,/December 18/);
+vm.runInContext(`selectPracticeTime('Elementary:2026-12-18:18:00')`,ctx);assert.equal(el('plan').value,'walkin');assert.match(el('selectedPractice').textContent,/Fri, Dec 18, 2026/);
 vm.runInContext(`loading=true;update()`,ctx);assert.equal(el('practiceCalendar').innerHTML,'');assert.equal(el('reviewButton').disabled,true);
 vm.runInContext(`loading=false;document.getElementById('program').value='Intermediate';document.getElementById('program').onchange()`,ctx);assert.equal(el('reviewButton').disabled,true);assert.match(el('calendarAvailability').textContent,/No published practices/);assert.equal(el('selectedPractice').hidden,true);
 console.log('Passed: calendar days, unavailable/past/holiday dates, explicit time selection, selection clearing, monthly schedule browsing, walk-in switch, loading state and unpublished schedule empty state.');

@@ -105,7 +105,7 @@ assert.match((await book('p1', 'o1', 'partner')).error, /not open for online boo
 q = await book('p1', 'o1', 'one-on-one', {partners: 'x'.repeat(300)});
 assert.equal(q.ok, true); assert.equal(q.charge.kind, 'lesson'); assert.equal(q.charge.amountCents, 6000); assert.equal(q.charge.itemId, 'o1');
 assert.equal(JSON.stringify(q.charge.dates), JSON.stringify([tomorrow])); assert.equal(q.charge.pricing.slots, 1); assert.equal(q.charge.pricing.partners.length, 200);
-assert.match(q.charge.itemLabel, /One-on-one lesson with Coach Dana, .* at 16:00/);
+assert.match(q.charge.itemLabel, /^One-on-one lesson with Coach Dana, [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · 4:00 PM$/, "lesson label reads like Mon, Nov 9 · 4:00 PM");
 assert.equal(q.charge.dedupeKey, `p1|w-p1|lesson|o1`, 'per family, so one family cannot cancel another family\'s checkout');
 // The card must cover the lesson date, not just today.
 sqlite.prepare("UPDATE family_accounts SET payload=json_set(payload,'$.wrestlers[0].usawExpires',?) WHERE user_id='p1'").run(today);

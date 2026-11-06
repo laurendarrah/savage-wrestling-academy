@@ -3,18 +3,19 @@
 <section><h2>History</h2><div class="table"><table><thead><tr><th>Wrestler</th><th>From</th><th>To</th><th>Effective</th><th>Reason</th></tr></thead><tbody id="history"></tbody></table></div></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
+const fdate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}):String(d??'');
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 let data={memberships:[],history:[]};
 function render(){
  const q=$('q').value.trim().toLowerCase(),keep=$('order').value;
  const list=data.memberships.filter(m=>!q||[m.wrestler,m.parent,m.email].join(' ').toLowerCase().includes(q));
- $('order').innerHTML=list.map(m=>`<option value="${esc(m.orderId)}">${esc(m.wrestler)} · ${m.grade==='K'?'K':m.grade?'Grade '+esc(m.grade):''} · ${esc(names[m.programToday]||m.programToday)}${m.program!==m.programToday?' (moving to '+esc(names[m.program])+')':''} · until ${esc(m.termEnd)}</option>`).join('')||'<option value="">No active memberships match</option>';
+ $('order').innerHTML=list.map(m=>`<option value="${esc(m.orderId)}">${esc(m.wrestler)} · ${m.grade==='K'?'K':m.grade?'Grade '+esc(m.grade):''} · ${esc(names[m.programToday]||m.programToday)}${m.program!==m.programToday?' (moving to '+esc(names[m.program])+')':''} · until ${esc(fdate(m.termEnd))}</option>`).join('')||'<option value="">No active memberships match</option>';
  if(list.some(m=>m.orderId===keep))$('order').value=keep;
- $('history').innerHTML=data.history.map(t=>`<tr><td>${esc(t.wrestler||'Ended membership')}</td><td>${esc(names[t.from_program]||t.from_program)}</td><td>${esc(names[t.to_program]||t.to_program)}</td><td>${esc(t.effective_date)}</td><td>${esc(t.reason)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No transfers yet.</td></tr>';
+ $('history').innerHTML=data.history.map(t=>`<tr><td>${esc(t.wrestler||'Membership has ended')}</td><td>${esc(names[t.from_program]||t.from_program)}</td><td>${esc(names[t.to_program]||t.to_program)}</td><td>${esc(fdate(t.effective_date))}</td><td>${esc(t.reason)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No transfers yet.</td></tr>';
 }
-async function call(body){const r=await fetch('/api/transfers',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not save.');return d}
-$('form').onsubmit=async e=>{e.preventDefault();const m=data.memberships.find(x=>x.orderId===$('order').value);if(!m)return;if(!confirm('Move '+m.wrestler+' to '+names[$('to').value]+' from '+$('date').value+'?'))return;
- try{data=await call({orderId:m.orderId,toProgram:$('to').value,effectiveDate:$('date').value,reason:$('reason').value});$('reason').value='';render();$('status').textContent=m.wrestler+' moves to '+names[$('to').value]+' from '+$('date').value+'.'}catch(e){$('status').textContent=e.message}};
+async function call(body){const r=await fetch('/api/transfers',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
+$('form').onsubmit=async e=>{e.preventDefault();const m=data.memberships.find(x=>x.orderId===$('order').value);if(!m)return;if(!confirm('Move '+m.wrestler+' to '+names[$('to').value]+' from '+fdate($('date').value)+'?'))return;
+ try{data=await call({orderId:m.orderId,toProgram:$('to').value,effectiveDate:$('date').value,reason:$('reason').value});$('reason').value='';render();$('status').textContent=m.wrestler+' moves to '+names[$('to').value]+' from '+fdate($('date').value)+'.'}catch(e){$('status').textContent=e.message}};
 $('q').oninput=render;$('date').value=today();$('date').min=today();
 (async()=>{try{data=await call();render();$('status').textContent=''}catch(e){$('status').textContent=e.message}})();
 </script></body></html>

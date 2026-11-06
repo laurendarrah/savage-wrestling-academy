@@ -10,7 +10,10 @@ for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()) s
 const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }}; }};
 const module = {exports: {}};
 vm.runInNewContext(ts.transpileModule(readFileSync('lib/launch-checklist.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
-  {module, exports: module.exports, JSON, Date, Number, Array, Object, Set});
+  {module, exports: module.exports, JSON, Date, Number, Array, Object, Set, require: name => {
+    if (name !== './purchase-kinds') throw Error(name);
+    const m = {exports: {}}; vm.runInNewContext(ts.transpileModule(readFileSync('lib/purchase-kinds.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText, {module: m, exports: m.exports}); return m.exports;
+  }});
 const {launchChecklist} = module.exports;
 const today = '2026-11-06', now = Date.parse('2026-11-06T15:00:00Z');
 const by = list => Object.fromEntries(list.items.map(i => [i.key, i]));
@@ -20,7 +23,7 @@ let r = await launchChecklist(DB, {}, today, now), i = by(r);
 assert.equal(r.ready, 1, 'only site health is ready on a new site');
 for (const k of ['programs', 'schedule', 'waiver', 'coaches', 'lessons', 'address', 'signin', 'stripe', 'backup']) assert.equal(i[k].status, 'todo', k);
 assert.equal(i.email.status, 'waiting'); assert.equal(i.checkout.status, 'info'); assert.equal(i.health.status, 'done');
-assert.match(i.address.detail, /APP_ORIGIN is not set/);
+assert.match(i.address.detail, /site address is not set/);
 assert.equal(i.programs.section, 'Programs & pricing'); assert.equal(i.waiver.href, '/waivers');
 
 // Set up the academy, then check each item turns ready.
@@ -40,7 +43,7 @@ assert.equal(r.ready, r.total, JSON.stringify(r.items.filter(x => x.status === '
 assert.match(i.programs.detail, /^1 program with prices/);
 assert.match(i.schedule.detail, /^1 program schedule published/, 'a season that ended does not count');
 assert.match(i.waiver.detail, /Participation waiver/);
-assert.match(i.checkout.detail, /walkin, event/);
+assert.match(i.checkout.detail, /^Open for walk-ins and camps & events$/, 'plain names, not the CHECKOUT_KINDS ids');
 assert.equal(i.email.status, 'waiting');
 assert.ok(!JSON.stringify(r).includes('must_not_leak'), 'a secret value appeared in the checklist');
 

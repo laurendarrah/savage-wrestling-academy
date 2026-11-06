@@ -53,5 +53,5 @@ assert.match(readFileSync('app/admin-demo/demo.js', 'utf8'), /function startAdmi
 // Issue #32: the demo may load its web fonts, and still cannot call any API.
 const route = readFileSync('app/admin-demo/route.ts', 'utf8');
 assert.match(route, /style-src 'self' 'unsafe-inline' https:\/\/fonts\.googleapis\.com;/); assert.match(route, /font-src https:\/\/fonts\.gstatic\.com;/); assert.match(route, /connect-src 'none'/);
-assert.ok(html.includes('<strong>OWNER WORKSPACE</strong> · Online saving · The family and wrestler views here are previews with sample families'), 'banner the demo rewrites');
+assert.ok(html.includes('<strong>OWNER WORKSPACE</strong> · Parent view and Wrestler view show sample families, not your real ones'), 'banner the demo rewrites');
 console.log('Live owner dashboard tests passed');

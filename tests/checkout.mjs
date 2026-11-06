@@ -122,7 +122,7 @@ assert.deepEqual(membershipTerm('2026-01-01'), {start: '2026-01-01', end: '2026-
 env.CHECKOUT_KINDS = '';
 assert.equal((await pay(camp)).status, 403, 'closed when CHECKOUT_KINDS is empty');
 let review = await (await post(bookingRoute, camp)).json();
-assert.equal(review.paymentsEnabled, false); assert.match(review.review.message, /no payment/i);
+assert.equal(review.paymentsEnabled, false); assert.match(review.review.message, /Online payment isn’t open yet/);
 env.CHECKOUT_KINDS = 'walkin,annual,event,live,monthly';
 const savedSecret = env.STRIPE_TEST_WEBHOOK_SECRET; delete env.STRIPE_TEST_WEBHOOK_SECRET;
 assert.equal((await pay(camp)).status, 403, 'closed without a webhook secret, since only webhooks can mark orders paid');
