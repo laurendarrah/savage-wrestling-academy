@@ -79,3 +79,15 @@ assert.match(dropIn(9,'Advanced',{member:true,kidProgram:'Advanced'}).toast,/Alr
 }
 
 console.log('Passed: sample camp/clinic review opens with correct discounts; drop-in grade bands K-6 and 7-12 with coach approval for every SWA Advance grade; Kindergarten selectable and saved.');
+
+// With no sample wrestlers (the workspace runs on real data now), the preview's review buttons explain what to do
+// instead of throwing (#121).
+{
+  const w=loadWorkspace();
+  w.run(`data.kids=[];data.bookings=[{type:'Sample camp',name:'Someone'}];data.events=[{id:'camp',name:'Sample camp',type:'Camp',dates:['${futureDate(30)}'],price:160,day:60,slots:20}];`);
+  w.node('#eventKid').value='';w.node('#enrollKid').value='';w.node('#teamCode').value='';
+  assert.doesNotThrow(()=>w.run('finishEvent(0)'),'finishEvent with no wrestlers must not throw');
+  assert.doesNotThrow(()=>w.run("enrollReview('Elementary')"),'enrollReview with no wrestlers must not throw');
+  assert.equal(w.run('__toasts.filter(t=>/no sample wrestlers/.test(t)).length'),2);
+}
+console.log('Empty sample workspace: review buttons explain instead of throwing');

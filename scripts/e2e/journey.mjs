@@ -23,7 +23,7 @@ async function as(name, viewport = {width: 1200, height: 900}) {
   await ctx.addCookies([{name: c.name, value: c.value, url: BASE}]);
   const page = await ctx.newPage();
   page.on('dialog', d => d.accept().catch(() => {}));
-  page.on('pageerror', e => problems.push(`[${current}] page error on ${page.url()}: ${e.message}`));
+  page.on('pageerror', e => { problems.push(`[${current}] page error on ${page.url()}: ${e.message}`); if (process.env.E2E_SWEEP_LOG) console.log('    ERROR', e.message, (e.stack || '').split('\n')[1]); });
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource: the server responded with a status of 4\d\d/.test(m.text())) problems.push(`[${current}] console error on ${page.url()}: ${m.text().slice(0, 200)}`); });
   page.on('response', r => { if (r.status() >= 500) problems.push(`[${current}] HTTP ${r.status()} ${r.request().method()} ${r.url()}`); });
   return page;
@@ -203,6 +203,16 @@ await step('coach adds an opening; owner sets prices; family reviews a lesson; o
   await waitText(owner, '#status', /recorded/i);
   await coach.goto(BASE + '/coach'); await waitText(coach, '#slots', /Booked: One-on-one lesson with Sam Example/);
   await owner.goto(BASE + '/coach-pay'); await waitText(owner, '#coaches', /Coach Dana[\s\S]*1 lesson/);
+});
+
+await step('coach removes an opening nobody booked; the booked one stays', async () => {
+  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#opening');
+  await coach.fill('#opening [name=date]', ny(4)); await coach.fill('#opening [name=start]', '17:00'); await coach.fill('#opening [name=end]', '18:00');
+  await coach.click('#opening button'); await waitText(coach, '#status', /Opening saved/);
+  const before = await coach.locator('[data-slot]').count();
+  expect(before >= 1, 'the new opening should be removable');
+  await coach.locator('[data-slot]').last().click(); await waitText(coach, '#status', /Opening removed/);
+  await coach.waitForFunction(n => document.querySelectorAll('[data-slot]').length === n - 1, before);
 });
 
 // ---------- Waitlist ----------
@@ -426,6 +436,72 @@ await step('accessibility: no serious or critical axe-core issues on any page', 
   }
   if (process.env.E2E_A11Y_REPORT) console.log(a11y.join('\n'));
   expect(!a11y.length, `${a11y.length} accessibility issue(s):\n` + a11y.slice(0, 40).join('\n'));
+});
+
+// ---------- Every button and link, on every page, as each role ----------
+// Clicks every visible button (including ones that appear after a click, such as workspace tabs) and follows every
+// link. Fails on errors, server failures and broken links. Buttons where nothing at all happens (no page change, no
+// request, no navigation, no dialog) are listed, because a button that does nothing is a bug too.
+const SKIP = /sign ?out|log ?out|reset workspace|restore from|print/i;
+const sweepPages = {...a11yPages, coach: [...a11yPages.coach, '/practice-plans', '/security']};
+const dead = [], broken = [], clicks = {n: 0};
+await step('every button and link on every page responds', async () => {
+  const pages = {family, coach, owner, public: await (await browser.newContext()).newPage()};
+  const linkSeen = new Set();
+  for (const [role, paths] of Object.entries(sweepPages)) for (const path of paths) {
+    const page = pages[role], start = BASE + path;
+    current = `sweep ${role} ${path}`;
+    await page.goto(start, {waitUntil: 'load'}); await page.waitForTimeout(500);
+    // Links: every same-site address must open (no 404, no server error).
+    const links = await page.evaluate(() => [...document.querySelectorAll('a[href]')].map(a => a.href).filter(h => h.startsWith(location.origin) && !/\/(signout|logout)/.test(h)));
+    for (const href of links) {
+      const key = role + ' ' + href.split('#')[0]; if (linkSeen.has(key)) continue; linkSeen.add(key);
+      const r = await page.request.get(href.split('#')[0], {maxRedirects: 5}).catch(e => ({status: () => 0}));
+      if (r.status() === 404 || r.status() >= 500 || r.status() === 0) broken.push(`${role} ${path}: link ${href.replace(BASE, '')} -> ${r.status()}`);
+    }
+    // Buttons one at a time, re-reading the page after each click. Buttons a click just revealed (a workspace section,
+    // a pop-up) go first, and close or cancel buttons go last, so every section and pop-up gets explored.
+    const done = new Set(), LAST = /cancel|close|×|✕|back|done|not now/i;
+    let prev = new Set();
+    for (let n = 0; n < 250; n++) {
+      const list = await page.evaluate(() => {
+        const keyOf = b => { const host = b.closest('[id]'), box = b.closest('section,dialog,[role=dialog],form,article,.modal'); const head = box?.querySelector('h1,h2,h3,legend')?.textContent.trim().slice(0, 30) || '';
+          return (b.textContent.trim() || b.getAttribute('aria-label') || b.title || b.value || '').replace(/\s+/g, ' ').slice(0, 60) + '@' + (host ? host.id : '') + '/' + head; };
+        document.querySelectorAll('[data-sweep]').forEach(e => e.removeAttribute('data-sweep'));
+        // While a pop-up is open, only its buttons can be reached.
+        const open = [...document.querySelectorAll('[aria-modal=true], dialog[open]')].find(d => d.getClientRects().length);
+        return [...(open || document).querySelectorAll('button, [role=button], input[type=submit], input[type=button]')]
+          .filter(b => b.offsetParent && !b.matches(':disabled') && !b.closest('[hidden],[inert]')).map((b, i) => { b.dataset.sweep = i; return {i, key: keyOf(b)}; });
+      });
+      const todo = list.filter(b => !done.has(b.key) && !SKIP.test(b.key));
+      if (!todo.length) { if (process.env.E2E_SWEEP_LOG) console.log(`    end ${role} ${path}: ${list.length} visible, url ${page.url()}`, JSON.stringify(list.slice(0, 8).map(x => x.key))); break; }
+      const fresh = todo.filter(b => !prev.has(b.key)), pool = fresh.length ? fresh : todo;
+      const b = pool.find(x => !LAST.test(x.key)) || pool[0];
+      prev = new Set(list.map(x => x.key));
+      {
+        done.add(b.key);
+        const el = page.locator(`[data-sweep="${b.i}"]`);
+        if (!(await el.count()) || !(await el.isVisible().catch(() => false))) continue;
+        if (process.env.E2E_SWEEP_LOG) console.log(`    click ${role} ${path}: ${b.key}`);
+        let requests = 0, dialogs = 0; const onReq = r => { if (!/\.(js|css|png|svg|ico|woff2?)(\?|$)/.test(r.url())) requests++; }, onDlg = () => dialogs++;
+        page.on('request', onReq); page.on('dialog', onDlg);
+        await page.evaluate(() => { window.__mut = 0; window.__obs?.disconnect(); window.__obs = new MutationObserver(m => { window.__mut += m.length; }); window.__obs.observe(document, {subtree: true, childList: true, attributes: true, characterData: true}); });
+        const before = page.url();
+        const invalid = await el.evaluate(e => !!(e.form && e.type === 'submit' && !e.form.checkValidity())).catch(() => false);
+        let blocked = false; await el.click({timeout: 3000}).catch(() => { blocked = true; }); clicks.n++;
+        await page.waitForTimeout(350);
+        const mut = await page.evaluate(() => window.__mut ?? 0).catch(() => 1);
+        page.off('request', onReq); page.off('dialog', onDlg);
+        const moved = page.url().split('#')[0] !== before.split('#')[0];
+        if (blocked) dead.push(`${role} ${path}: "${b.key.split('@')[0]}" could not be clicked (covered or off screen)`);
+        else if (!moved && !requests && !dialogs && !mut && !invalid) dead.push(`${role} ${path}: "${b.key.split('@')[0]}"`);
+        if (moved) { await page.goto(start, {waitUntil: 'load'}); await page.waitForTimeout(400); prev = new Set(); }
+      }
+    }
+  }
+  console.log(`  swept ${clicks.n} button clicks and ${linkSeen.size} links`);
+  if (dead.length) console.log('  buttons with no visible effect:\n   ' + dead.join('\n   '));
+  expect(!broken.length, `${broken.length} broken link(s):\n` + broken.join('\n'));
 });
 
 await browser.close(); auth.close();
