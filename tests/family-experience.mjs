@@ -85,9 +85,12 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   assert.deepEqual([...steps.matchAll(/data-step="(\w+)"/g)].map(m => m[1]), ['details', 'wrestler', 'training']);
   assert.match(steps, /class="step current" data-step="details"/);
   assert.doesNotMatch(steps, /primary/, 'Save family profile is the main action while the form is open');
-  assert.match(steps, /Add a wrestler<\/button>/); assert.match(steps, /href="\/register">Choose training/);
+  // Only the current step carries a button; later steps are listed quietly (issue #141).
+  assert.match(steps, /data-step="details"[\s\S]*Add your details<\/button>/); assert.doesNotMatch(steps, /Add a wrestler<\/button>|href="\/register">Choose training/);
+  assert.match(el('startLede').textContent, /^Three steps /, 'the step count in the text matches the list');
+  for (const id of ['memberships', 'purchaseHistory', 'yourData', 'billingExample', 'membershipsLink', 'purchasesLink']) assert.equal(el(id).hidden, true, id + ' waits until there is something to show');
   assert.equal(el('nextUp').hidden, true); assert.equal(el('editor').hidden, false); assert.equal(el('status').textContent, '');
-  assert.equal(el('hello').textContent, 'Your family');
+  assert.equal(el('hello').textContent, 'Welcome');
   // Account things live in one menu, not as four buttons at the top.
   const menu = html.match(/<details class="account-menu" id="accountMenu">[\s\S]*?<\/details>/)[0];
   for (const label of ['Help', 'Account security', 'Change password', 'Sign out']) assert.match(menu, new RegExp('>' + label + '<'));
@@ -103,7 +106,10 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   const steps = el('startSteps').innerHTML;
   assert.match(steps, /class="step done" data-step="details"/);
   assert.match(steps, /class="step current" data-step="wrestler"[\s\S]*Sam Example needs a current USA Wrestling card[\s\S]*class="primary" onclick="startWrestler\(\)">Add the card/);
-  assert.match(steps, /data-step="waiver"[\s\S]*Sign the Participation waiver for Sam Example[\s\S]*href="\/waiver\?wrestler=w-1"/);
+  assert.match(steps, /data-step="waiver"[\s\S]*Sign the Participation waiver for Sam Example/);
+  assert.doesNotMatch(steps, /href="\/waiver/, 'the waiver step gets its button once it is the current step');
+  assert.match(el('startLede').textContent, /^Four steps /);
+  assert.equal(el('memberships').hidden, false, 'a saved family sees its memberships');
   assert.equal((steps.match(/primary/g) || []).length, 1, 'one main button');
   assert.equal(el('hello').textContent, 'Hi, Pat');
   const details = el('savedDetails').innerHTML;
