@@ -3,7 +3,7 @@
 import {env} from 'cloudflare:workers';
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyToday} from '../../../lib/public-schedule';
-import {listCards, setReview, clearReview, cardStatus} from '../../../lib/usaw';
+import {listCards, setReview, clearReview, cardStatus, cardRenewal} from '../../../lib/usaw';
 import {noticeCardRejected, quietly} from '../../../lib/notify';
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +14,9 @@ export async function GET(request: Request) {
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   const q = new URL(request.url).searchParams, today = academyToday(), date = q.get('date') || today;
   if (!validDate(date)) return reply({error: 'Choose a valid date.'}, 400);
-  return reply({today, date, cards: await listCards(date)});
+  const cards = await listCards(date);
+  // The season summary is about today, whatever date the owner checks cards on (issue #131).
+  return reply({today, date, cards, renewal: cardRenewal(cards, today)});
 }
 
 export async function POST(request: Request) {

@@ -7,6 +7,7 @@ import {academyToday} from './public-schedule';
 import {sendEmails} from './email';
 import {currentWaiver} from './waivers';
 import {dayTime, fullDate, when} from './datetime';
+import {cardSeason, isSeasonEnd} from './usaw';
 
 type Notice = {userId: string | null; email: string; kind: string; subject: string; body: string; dedupeKey: string; link?: string};
 
@@ -103,10 +104,27 @@ export async function noticeTransfer(orderId: string, toProgramName: string, eff
 }
 
 // --- Daily reminders ---
+// Card reminder wording (issue #131). Every USA Wrestling card expires on August 31, the end of its membership season,
+// so a card ending then is renewed for the next season. A card with a different date gets the plain wording.
+export function cardExpiringNotice(name: string, exp: string) {
+  const subject = `${name}'s USA Wrestling card expires ${longDate(exp)}`;
+  if (!isSeasonEnd(exp)) return {subject,
+    body: `${name}'s USA Wrestling card expires on ${longDate(exp)}. Renew it at usawmembership.com and update the new expiration date in your family account. Sessions after that date cannot be booked until then.`};
+  const next = cardSeason(`${exp.slice(0, 4)}-09-01`);
+  return {subject,
+    body: `${name}'s USA Wrestling card expires on ${longDate(exp)}, at the end of the ${cardSeason(exp).label}. Renew for the ${next.label} by Aug 31 at usawmembership.com. New-season cards usually open in mid-August. Then choose the ${next.label} for ${name} in your family account. Sessions after Aug 31 cannot be booked until then.`};
+}
+// An expired season card is renewed for the season the academy is in now.
+export function cardExpiredNotice(name: string, exp: string, today: string) {
+  const subject = `${name}'s USA Wrestling card has expired`;
+  if (!isSeasonEnd(exp)) return {subject, body: `${name}'s USA Wrestling card expired on ${longDate(exp)}. Booking is paused until a current card is added in your family account.`};
+  return {subject, body: `${name}'s USA Wrestling card expired on ${longDate(exp)}, at the end of the ${cardSeason(exp).label}. Booking is paused until you renew for the ${cardSeason(today).label} at usawmembership.com and choose it in your family account.`};
+}
+
 // Runs at most once per academy day: every morning from the Cron Trigger (build/worker.ts, #123), or on the first
 // family or roster visit of the day if the schedule has not run yet. A per-day record stops a second send.
-export async function dailyReminders(force = false) {
-  const today = academyToday();
+// `today` is the academy's date; tests can set it.
+export async function dailyReminders(force = false, today = academyToday()) {
   if (!force) {
     const r = await env.DB!.prepare("INSERT OR IGNORE INTO academy_settings(id,payload,updated_at,updated_by) VALUES (?,'{}',?,'system')").bind('reminders:' + today, new Date().toISOString()).run();
     if (!Number(r.meta?.changes ?? (r as any).changes ?? 0)) return 0;
@@ -122,12 +140,10 @@ export async function dailyReminders(force = false) {
       const exp = w.usawExpires as string | undefined;
       if (w.usawNumber && exp && exp >= today && exp <= soon)
         list.push({userId: f.user_id, email: f.email, kind: 'card_expiring', dedupeKey: `card-soon:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
-          subject: `${w.name}'s USA Wrestling card expires ${longDate(exp)}`,
-          body: `${w.name}'s USA Wrestling card expires on ${longDate(exp)}. Renew it at usawmembership.com and update the new expiration date in your family account. Sessions after that date cannot be booked until then.`});
+          ...cardExpiringNotice(w.name, exp)});
       if (w.usawNumber && exp && exp < today)
         list.push({userId: f.user_id, email: f.email, kind: 'card_expired', dedupeKey: `card-expired:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
-          subject: `${w.name}'s USA Wrestling card has expired`,
-          body: `${w.name}'s USA Wrestling card expired on ${longDate(exp)}. Booking is paused until a current card is added in your family account.`});
+          ...cardExpiredNotice(w.name, exp, today)});
       if (waiver && !signed.has(`${f.user_id}|${w.id}|${String(w.name).trim().toLowerCase()}`))
         list.push({userId: f.user_id, email: f.email, kind: 'waiver_needed', dedupeKey: `waiver:${waiver.id}:${f.user_id}:${w.id}`, link: '/waiver?wrestler=' + encodeURIComponent(w.id),
           subject: `Please sign the ${waiver.title} for ${w.name}`,
