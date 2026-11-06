@@ -62,6 +62,7 @@ Logins do not move: the new Supabase project starts empty (#139). Families and t
 - [ ] Supabase → Authentication → URL Configuration: set the Site URL to the new address, and add `https://<new address>/auth/confirm` and `https://<new address>/auth/confirm?next=change` to the redirect URLs.
 - [ ] Supabase → Authentication → Sign In / Providers → Email: keep **Confirm email** on.
 - [ ] Supabase → Authentication → Multi-Factor: keep **Authenticator app (TOTP)** on. The owner and coaches cannot sign in without it.
+- [ ] Supabase → Authentication → Emails → Templates: paste the Savage-branded emails from `docs/email-templates/` (steps in its README).
 - [ ] Leaked-password protection, if the Supabase plan allows it.
 - [ ] **Email sender.** Supabase's built-in sender delivers only to members of the Supabase project team, a few emails an hour. Testing with Lauren's and Justin's addresses works; families get no confirmation emails until a custom email sender (SMTP) is set under Authentication → Emails. This waits on the email decision (#87).
 - [ ] Stripe → Developers → Webhooks: add `https://<new address>/api/stripe-webhook` with `checkout.session.*`, `charge.refunded`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted`. Put its signing secret in `STRIPE_TEST_WEBHOOK_SECRET`.
