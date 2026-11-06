@@ -11,9 +11,11 @@ const context=vm.createContext({document:{getElementById:element},location:{},UR
 vm.runInContext(script,context);
 const settle=()=>new Promise(resolve=>setImmediate(resolve));await settle();
 assert.equal(element('editor').hidden,true);assert.equal(element('summary').hidden,false);assert.match(element('savedDetails').innerHTML,/Test Wrestler/);
+// Issue #127: no timestamp status line; the saved time reads in New York time, not the browser's locale format.
+assert.equal(element('status').textContent,'');assert.equal(element('savedTime').textContent,'Last saved Fri, Oct 16 · 8:30 AM.');
 vm.runInContext('editProfile()',context);element('familyForm').elements.parentName.value='Updated Parent';element('name0').value='Updated Wrestler';element('grade0').value='6';
 await element('familyForm').onsubmit({preventDefault(){}});
-assert.equal(stored.wrestlers[0].name,'Updated Wrestler');assert.equal(element('editor').hidden,true);assert.match(element('status').textContent,/Success!/);assert.equal(element('summary').focused,true);
+assert.equal(stored.wrestlers[0].name,'Updated Wrestler');assert.equal(element('editor').hidden,true);assert.equal(element('status').textContent,'Your changes are saved.');assert.equal(element('summary').focused,true);
 vm.runInContext('editProfile()',context);element('familyForm').elements.parentName.value='Unsaved';vm.runInContext('cancelProfileEdit()',context);assert.match(element('savedDetails').innerHTML,/Updated Parent/);assert.doesNotMatch(element('savedDetails').innerHTML,/Unsaved/);
 vm.runInContext('editProfile()',context);rejectSave=true;await element('familyForm').onsubmit({preventDefault(){}});assert.equal(element('editor').hidden,false);assert.match(element('status').textContent,/not been saved/);assert.equal(element('save').disabled,false);
 console.log('Passed: saved-profile landing, save confirmation, edit, cancel, and visible save errors.');

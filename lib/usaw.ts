@@ -4,12 +4,13 @@
 import {env} from 'cloudflare:workers';
 import {USAW_NUMBER} from './family-records';
 import {exceptionFor} from './exceptions';
+import {fullDate} from './datetime';
 
 export type CardWrestler = {id: string; name: string; usawNumber?: string; usawExpires?: string};
 export type Review = {number: string; expires: string; status: 'valid' | 'invalid'; note: string; reviewed_at: string} | null;
 export type CardStatus = {state: 'missing' | 'expired' | 'invalid' | 'recheck' | 'current' | 'verified'; number: string; expires: string; note: string};
 
-const longDate = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric'});
+const longDate = fullDate;
 
 export function cardStatus(w: CardWrestler, review: Review, onDate: string): CardStatus {
   const number = (w.usawNumber || '').trim().toUpperCase(), expires = w.usawExpires || '';

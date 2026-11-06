@@ -34,8 +34,9 @@ async function openScreen({paymentsEnabled, checkout = {ok: true, body: {url: 'h
   const {el} = await openScreen({paymentsEnabled: false});
   assert.equal(el('payBox').hidden, true);
   assert.equal(el('payPending').hidden, false);
-  assert.equal(el('reviewHeading').textContent, 'Review only — not booked');
-  assert.equal(el('status').textContent, 'Selection reviewed. Registration has not been completed.');
+  assert.equal(el('reviewHeading').textContent, 'Not booked yet');
+  assert.equal(el('status').textContent, '', 'the notice explains how to pay once; the status line stays empty');
+  assert.match(el('details').innerHTML, /Fri, Dec 18/, 'dates read as people say them, not 2026-12-18');
   assert.match(el('details').innerHTML, /\$20\.00 \(non-member price\)/, 'the wrestler sees their own price');
 }
 

@@ -132,6 +132,10 @@ assert.equal(notices('p1', 'lesson_booked').length, 1);
 const coachNotice = sqlite.prepare("SELECT * FROM notifications WHERE kind='lesson_booked_coach'").get();
 assert.equal(coachNotice.email, 'dana@example.test'); assert.equal(coachNotice.user_id, null); assert.equal(coachNotice.email_status, 'sent');
 assert.ok(sent.some(m => m.to[0] === 'dana@example.test' && /New lesson: Sam/.test(m.subject)), 'coach emailed');
+// Times read as people say them (issue #127): "Mon, Nov 9 · 3:00 PM", never the raw "15:00".
+assert.match(notices('p1', 'lesson_booked')[0].body, /is booked for [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · 3:00 PM\.$/);
+assert.match(coachNotice.subject, /^New lesson: Sam, [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · 3:00 PM$/);
+assert.ok(!/15:00/.test(coachNotice.body + coachNotice.subject), 'no 24-hour clock in lesson notices');
 assert.ok(sent.every(m => m.text.includes('https://swa.example/')), 'links use appOrigin');
 // The same webhook again does nothing more.
 const before = sqlite.prepare('SELECT count(*) n FROM notifications').get().n;

@@ -10,6 +10,7 @@ import {fridayLiveSchedule} from './friday-live';
 import {publicSchedule, academyToday} from './public-schedule';
 import {eventSlots, seatsLeft} from './capacity';
 import {cardProblem} from './usaw';
+import {dayDate, dayTime} from './datetime';
 import {waiverProblem} from './waivers';
 import {lessonOpening, lessonSettings} from './lessons';
 import {settleOffers, activeOffer} from './waitlist';
@@ -37,7 +38,7 @@ export type QuoteOptions = {checkoutKinds?: ReadonlySet<string>};
 const tail = (opts: QuoteOptions | undefined, kind: ChargeKind | null) =>
   kind && opts?.checkoutKinds?.has(kind)
     ? ' Continue to secure checkout to complete registration.'
-    : ' Review only; no payment, enrollment, or reservation has been completed.';
+    : ' Online payment isn’t open yet. To book, pay the academy; your spot is confirmed once the academy records your payment.';
 const fail = (status: number, error: string, extra?: Record<string, unknown>): Quote => ({ok: false, status, error, ...(extra ? {extra} : {})});
 
 async function academyState(): Promise<any> {
@@ -135,10 +136,10 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     const review = {
       type: 'live', title: session.name, wrestler: w.name, dates: [session.date], start: session.start, end: session.end,
       cents, memberEligible: member, memberCents: session.memberCents, nonMemberCents: session.nonMemberCents, includedInMembership: false, status: 'registration_review',
-      message: (member ? 'Active membership verified. Member price applied for this separate practice.' : 'Separate purchase required for every wrestler, including members. Non-member price applies.') + tail(opts, 'live')
+      message: (member ? 'Your membership is active, so the member price applies to this extra practice.' : 'Extra practices are a separate purchase for every wrestler, including members. The non-member price applies.') + tail(opts, 'live')
     };
     const charge: Charge | null = cents === null || cents === undefined ? null : {
-      kind: 'live', program: null, itemId: String(session.id), itemLabel: `${session.name} on ${session.date}`, dates: [session.date],
+      kind: 'live', program: null, itemId: String(session.id), itemLabel: `${session.name} on ${dayDate(session.date)}`, dates: [session.date],
       baseCents: session.nonMemberCents ?? cents, discountCents: (session.nonMemberCents ?? cents) - cents, amountCents: cents,
       pricing: {member, memberCents: session.memberCents, nonMemberCents: session.nonMemberCents},
       dedupeKey: [userId, w.id, 'live', session.id, session.date].join('|')
@@ -154,7 +155,7 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
       if (card) return fail(403, card, {usawRequired: true});
       const waiver = await waiverProblem(userId, w, [today]);
       if (waiver) return fail(403, waiver, {waiverRequired: true});
-      return {ok: true, wrestler, charge: null, review: {type: 'lesson', title: format.name, wrestler: w.name, cents: null, status: 'inquiry_review', message: 'Coach, date, availability, and price need academy confirmation. No lesson is reserved and no payment is taken.'}};
+      return {ok: true, wrestler, charge: null, review: {type: 'lesson', title: format.name, wrestler: w.name, cents: null, status: 'inquiry_review', message: 'The academy will confirm the coach, date and price with you. Nothing is reserved or charged yet.'}};
     }
     const opening = await lessonOpening(input.openingId, today);
     if (!opening) return fail(409, 'This lesson time is no longer available. Choose another time.');
@@ -166,10 +167,10 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     if (typeof price !== 'number') return fail(409, `${format.name}s are not open for online booking yet. Contact the academy to arrange one.`);
     if ((await seatsLeft(opening.id, [opening.date], 1, 'lesson')) <= 0) return fail(409, 'Another family just booked this lesson time. Choose another time.');
     const partners = typeof input.partners === 'string' ? input.partners.trim().slice(0, 200) : '';
-    const when = new Date(opening.date + 'T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric'});
-    const label = `${format.name} with ${opening.coach}, ${when} at ${opening.start}`;
+    const label = `${format.name} with ${opening.coach}, ${dayTime(opening.date, opening.start)}`;
     const review = {type: 'lesson', title: format.name, wrestler: w.name, coach: opening.coach, dates: [opening.date], start: opening.start, end: opening.end, cents: price, partners, status: 'registration_review',
-      message: 'Once you continue to checkout, this time is held for you for 30 minutes while you pay.' + tail(opts, 'lesson')};
+      // With lesson checkout closed, the lesson page itself says how to pay, so the review adds nothing.
+      message: opts?.checkoutKinds?.has('lesson') ? 'Once you continue to checkout, this time is held for you for 30 minutes while you pay.' : ''};
     const charge: Charge = {
       kind: 'lesson', program: null, itemId: opening.id, itemLabel: label, dates: [opening.date], baseCents: price, discountCents: 0, amountCents: price,
       pricing: {format: format.id, formatName: format.name, coachEmail: opening.coachEmail, coachName: opening.coach, start: opening.start, end: opening.end, slots: 1, partners},
@@ -209,10 +210,10 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   const review = {
     type: 'event', title: event.name, wrestler: w.name, dates: option === 'full' ? event.dates : [option], baseCents,
     cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, seatsLeft: left, status: 'registration_review', offerExpiresAt: offer?.offer_expires_at ?? null,
-    message: (memberDiscount ? 'Active membership verified. A 10% camp member discount is applied.' : 'Price shown is the full price for this event.') + tail(opts, baseCents === null ? null : 'event')
+    message: (memberDiscount ? 'Your membership is active, so the 10% member discount for camps is applied.' : 'The price shown is the full price for this event.') + tail(opts, baseCents === null ? null : 'event')
   };
   const charge: Charge | null = baseCents === null ? null : {
-    kind: 'event', program: null, itemId: String(event.id), itemLabel: option === 'full' ? String(event.name) : `${event.name} on ${option}`,
+    kind: 'event', program: null, itemId: String(event.id), itemLabel: option === 'full' ? String(event.name) : `${event.name} on ${dayDate(option)}`,
     dates: option === 'full' ? event.dates : [option], baseCents, discountCents: memberDiscount, amountCents: baseCents - memberDiscount,
     // A seat offered from the waitlist is the owner's decision, so it is not limited again at checkout.
     pricing: {member, option, eventType: event.type, slots: offer ? null : slots, ...(offer ? {waitlistOffer: offer.id} : {})}, dedupeKey: [userId, w.id, 'event', event.id, option].join('|')

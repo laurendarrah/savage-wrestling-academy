@@ -27,7 +27,7 @@ export async function POST(request:Request){
  if(Date.parse(award.expires_at)<=Date.now())return reply({error:'This invitation expired. Ask SWA for a new link.'},410);
  if(input.action==='view')return reply({award:scholarshipView(award)});
  if(input.action!=='accept')return reply({error:'Choose a valid action.'},400);
- if(!award.terms_ready)return reply({error:'The agreement is still a draft. SWA must finalize it before acceptance.'},409);
+ if(!award.terms_ready)return reply({error:'This agreement isn’t final yet. You can accept it once the academy finishes it.'},409);
  if(input.revision!==award.revision)return reply({error:'The terms changed. Reload and review the current agreement.'},409);
  if(input.accepted!==true||typeof input.signer!=='string'||input.signer.trim().length<2||input.signer.length>120)return reply({error:'Enter the parent/guardian’s full name and confirm acceptance.'},400);
  const signature=cleanSignature(input.signature);

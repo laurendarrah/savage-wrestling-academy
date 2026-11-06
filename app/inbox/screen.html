@@ -2,7 +2,7 @@
 <section id="noticesBox" hidden><h2>Notices</h2><div id="notices"></div></section><section><h2>Announcements</h2><div id="announcements"></div></section>
 <section><h2>Your conversation with the academy</h2><div id="thread"></div><form id="reply"><label>Message the academy<textarea id="body" maxlength="5000" required></textarea></label><button>Send</button></form></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const when=d=>new Date(d).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[\u202f\u00a0]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
 async function call(body){const r=await fetch('/api/inbox',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login';throw Error('Sign in again.')}const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
 function render(d){
  $('noticesBox').hidden=!(d.notices||[]).length;

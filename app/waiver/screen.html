@@ -9,7 +9,7 @@
 <button class="primary" id="sign">Sign waiver</button></form></section>
 <section id="history" hidden><h2>Signed copies</h2><div id="historyList"></div></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const when=d=>new Date(d).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'long',day:'numeric',year:'numeric'});
+const when=d=>new Date(d).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'});
 let data=null,family=null,signatureStrokes=[],drawing=null,activePointer=null;
 $('consentText').textContent='I consent to use an electronic signature for this waiver and intend my drawn signature to record my agreement. I can save or print a copy of the signed waiver.';
 const canvas=$('signatureCanvas'),context=canvas.getContext('2d');

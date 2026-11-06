@@ -6,6 +6,7 @@ import {appOrigin} from './account-auth';
 import {academyToday} from './public-schedule';
 import {sendEmails} from './email';
 import {currentWaiver} from './waivers';
+import {dayTime, fullDate, when} from './datetime';
 
 type Notice = {userId: string | null; email: string; kind: string; subject: string; body: string; dedupeKey: string; link?: string};
 
@@ -35,8 +36,7 @@ async function family(userId: string) {
   const row = await env.DB!.prepare('SELECT email,payload FROM family_accounts WHERE user_id=?').bind(userId).first<{email: string; payload: string}>();
   return row ? {email: row.email, ...JSON.parse(row.payload)} : null;
 }
-const when = (iso: string) => new Intl.DateTimeFormat('en-US', {timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'}).format(new Date(iso));
-const longDate = (d: string) => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric'});
+const longDate = fullDate;
 
 // Run a notice without letting a failure affect the caller.
 export async function quietly(fn: () => Promise<unknown>) { try { await fn(); } catch (e) { console.error('notice failed', e); } }
@@ -87,10 +87,10 @@ export async function noticeLessonBooked(orderId: string) {
   const p = JSON.parse(o.pricing || '{}'), date = JSON.parse(o.dates || '[]')[0];
   const coach = p.coachEmail ? await env.DB!.prepare('SELECT email,name FROM staff_access WHERE email=? AND active=1').bind(p.coachEmail).first<{email: string; name: string}>() : null;
   const list: Notice[] = [{userId: o.user_id, email: o.email, kind: 'lesson_booked', dedupeKey: `lesson-family:${o.id}`, link: '/wrestler?id=' + encodeURIComponent(o.wrestler_id),
-    subject: `Lesson booked: ${o.item_label}`, body: `${o.wrestler_name}'s ${p.formatName ?? 'private lesson'} with ${p.coachName ?? 'the coach'} is booked for ${longDate(date)} at ${p.start ?? ''}.`}];
+    subject: `Lesson booked: ${o.item_label}`, body: `${o.wrestler_name}'s ${p.formatName ?? 'private lesson'} with ${p.coachName ?? 'the coach'} is booked for ${dayTime(date, p.start)}.`}];
   if (coach) list.push({userId: null, email: coach.email, kind: 'lesson_booked_coach', dedupeKey: `lesson-coach:${o.id}`, link: '/coach',
-    subject: `New lesson: ${o.wrestler_name}, ${longDate(date)} at ${p.start ?? ''}`,
-    body: `${o.wrestler_name} booked a ${p.formatName ?? 'private lesson'} with you on ${longDate(date)} at ${p.start ?? ''}.${p.partners ? ` Training partners: ${p.partners}.` : ''} Details are on your coach page.`});
+    subject: `New lesson: ${o.wrestler_name}, ${dayTime(date, p.start)}`,
+    body: `${o.wrestler_name} booked a ${p.formatName ?? 'private lesson'} with you for ${dayTime(date, p.start)}.${p.partners ? ` Training partners: ${p.partners}.` : ''} Details are on your coach page.`});
   await notify(list);
 }
 
