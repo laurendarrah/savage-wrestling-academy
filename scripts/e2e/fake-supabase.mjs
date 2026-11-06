@@ -10,6 +10,8 @@ export const users = {
   family2: {id: 'e2e-family-b', email: 'family.b@example.test', factors: [], aal: 'aal1'},
   // A family that has only just signed up and saved nothing yet (issue #132).
   newfam: {id: 'e2e-family-new', email: 'new.family@example.test', factors: [], aal: 'aal1'},
+  // The owner's very first sign-in, before any authenticator is set up (issue #175).
+  freshowner: {id: 'e2e-owner-fresh', email: 'savagewrestlingclub@gmail.com', factors: [], aal: 'aal1'},
   coach: {id: 'e2e-coach', email: 'coach.dana@example.test', factors: [{id: 'f-coach', status: 'verified', factor_type: 'totp'}], aal: 'aal2'},
 };
 const userJson = u => ({id: u.id, aud: 'authenticated', role: 'authenticated', email: u.email, email_confirmed_at: '2026-01-01T00:00:00Z', confirmed_at: '2026-01-01T00:00:00Z',
