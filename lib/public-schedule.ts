@@ -1,6 +1,6 @@
 import {fridayLiveSchedule} from './friday-live';
 import {registrationCatalog} from './registration-catalog';
-export const privateFormats=[{id:'one-on-one',name:'One-on-one lesson',description:'Individual coaching for one wrestler.'},{id:'partner',name:'Partner lesson',description:'Focused training for two wrestlers.'},{id:'small-group',name:'Small-group lesson',description:'Targeted instruction with additional training partners.'}];
+export const privateFormats=[{id:'one-on-one',name:'One-on-one lesson',description:'Individual coaching for one wrestler.'},{id:'partner',name:'Partner lesson',description:'Focused training for two wrestlers.'},{id:'small-group',name:'Small-group lesson',description:'Three to six wrestlers training together.'}];
 const realDate=(d:unknown):d is string=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d))&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;
 const cents=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=10000?Math.round(v*100):null;
 export function publicSchedule(state:any,month:string,today:string){

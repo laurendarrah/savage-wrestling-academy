@@ -24,8 +24,8 @@ const reply = body => ({ok: true, status: 200, json: async () => body});
 {
   const fetch = async path => reply(path === '/api/roster'
     ? {sessions: [{title: 'SWA Intermediate', start: '18:00', end: '19:30', entries: [{}, {}, {}, {}, {}], checkedIn: 3}]}
-    : {name: 'Coach Dana', programs: ['Intermediate'], openings: [{id: 'o2', date: '2026-11-10', start: '09:30', end: '10:30', booking: null},
-        {id: 'o1', date: '2026-11-09', start: '15:00', end: '16:00', booking: {format: 'One-on-one lesson', wrestler: 'Sam Example', parent: 'Pat Example'}}]});
+    : {name: 'Coach Dana', programs: ['Intermediate'], openings: [{id: 'o2', date: '2026-11-10', start: '09:30', end: '10:30', format: null, capacity: 1, spotsLeft: 1, hosted: null, roster: []},
+        {id: 'o1', date: '2026-11-09', start: '15:00', end: '16:00', format: 'one-on-one', formatName: 'One-on-one lesson', capacity: 1, spotsLeft: 0, hosted: null, roster: [{wrestler: 'Sam Example', parent: 'Pat Example', status: 'paid'}]}]});
   const {el, html} = page('app/coach/screen.html', {fetch});
   await settle(); await settle();
   assert.match(el('sessions').innerHTML, /6:00 PM<\/span><span class="name">SWA Intermediate<\/span><span class="count">3 of 5 checked in/);
@@ -39,8 +39,8 @@ const reply = body => ({ok: true, status: 200, json: async () => body});
 // Coach home: no "workspace", no claim that booking is "still being connected", dates and times as people say them.
 {
   const {el, html} = page('app/coach/screen.html', {fetch: async () => reply({name: 'Coach Dana', programs: ['Intermediate'], openings: [
-    {id: 'o1', date: '2026-11-09', start: '15:00', end: '16:00', booking: {format: 'One-on-one lesson', wrestler: 'Sam Example', parent: 'Pat Example', phone: '555-0100', email: 'pat@example.test'}},
-    {id: 'o2', date: '2026-11-10', start: '09:30', end: '10:30', booking: null}]})});
+    {id: 'o1', date: '2026-11-09', start: '15:00', end: '16:00', format: 'one-on-one', formatName: 'One-on-one lesson', capacity: 1, spotsLeft: 0, hosted: null, roster: [{wrestler: 'Sam Example', parent: 'Pat Example', phone: '555-0100', email: 'pat@example.test', status: 'paid'}]},
+    {id: 'o2', date: '2026-11-10', start: '09:30', end: '10:30', format: null, capacity: 1, spotsLeft: 1, hosted: null, roster: []}]})});
   await settle();
   assert.equal(el('heading').textContent, 'Coach Dana', 'the coach\'s name alone, so it fits a phone (issue #173)');
   assert.equal(el('programs').textContent, 'You coach SWA Intermediate.');

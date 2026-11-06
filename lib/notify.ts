@@ -91,7 +91,7 @@ export async function noticeLessonBooked(orderId: string) {
     subject: `Lesson booked: ${o.item_label}`, body: `${o.wrestler_name}'s ${p.formatName ?? 'private lesson'} with ${p.coachName ?? 'the coach'} is booked for ${dayTime(date, p.start)}.`}];
   if (coach) list.push({userId: null, email: coach.email, kind: 'lesson_booked_coach', dedupeKey: `lesson-coach:${o.id}`, link: '/coach',
     subject: `New lesson: ${o.wrestler_name}, ${dayTime(date, p.start)}`,
-    body: `${o.wrestler_name} booked a ${p.formatName ?? 'private lesson'} with you for ${dayTime(date, p.start)}.${p.partners ? ` Training partners: ${p.partners}.` : ''} Details are on your coach page.`});
+    body: `${o.wrestler_name} booked ${Number(p.slots) > 1 ? 'a spot in your' : 'a'} ${p.formatName ?? 'private lesson'} with you for ${dayTime(date, p.start)}.${p.partners ? ` Training partners: ${p.partners}.` : ''} The lesson's roster is on your coach page.`});
   await notify(list);
 }
 

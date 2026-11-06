@@ -4,88 +4,203 @@ main{max-width:900px;margin:auto;padding:20px 16px 56px}
 h1{margin:8px 0 6px}h2{margin:0 0 10px}
 html body main>section{padding:20px;margin:18px 0}
 label{display:flex;flex-direction:column;gap:4px;margin:10px 0}
-label.check{flex-direction:row;align-items:flex-start;font-weight:400;gap:10px}
-.formats,.times{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-html body button.choice{text-align:left;border:2px solid #E1E3E8;border-radius:6px;padding:14px;background:#fff;font-weight:400;height:auto}
-html body button.choice[aria-pressed="true"]{border-color:#C4222C;background:#FFF5F5}
-.choice b{display:block}
+label.check{flex-direction:row;align-items:center;font-weight:600;gap:12px;min-height:44px;margin:4px 0}
+label.check input{width:22px;height:22px;margin:0;flex:none}
+.paths,.times,.kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+/* Choice cards read as plain sentences, not as button labels. */
+html body button.choice{text-align:left;border:1.5px solid #E1E3E8;border-radius:8px;padding:14px 16px;background:#fff;height:auto;min-height:44px;font-family:Barlow,'Helvetica Neue',Arial,sans-serif;font-weight:400;font-size:16px;letter-spacing:0;text-transform:none;line-height:1.4;display:flex;flex-direction:column;gap:2px}
+html body button.choice[aria-pressed="true"]{border-color:#C4222C;box-shadow:inset 0 0 0 1px #C4222C;background:#FFF7F7}
+html body button.choice:disabled{background:#F7F8FA}
+.choice b{display:block;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.3px;line-height:1.1;color:#141416}
+.choice .price{font-weight:700;color:#141416}.choice .left{font-weight:700;color:#1F6F3A}
 .day{margin:14px 0 6px;font-weight:700}
-.summary{background:#F4F5F7;border-radius:6px;padding:14px}
+.summary{background:#F4F5F7;border-radius:8px;padding:14px 16px}.summary p{margin:0 0 6px}.summary p:last-child{margin:0}
 #status{font-weight:600;min-height:1.5em}
 html body main>section.closed{border-left:4px solid #C4222C}
 .closed h2{margin-bottom:6px}
-.closed .go{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.go{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 html body a.button{display:inline-flex;align-items:center;justify-content:center;padding:0 18px;text-decoration:none}
-#pay{padding:0 18px}
+#pay,#requestGroup{padding:0 18px}
+.calm{margin:12px 0 0;padding:12px 16px;border-left:3px solid #B9C4C9;background:#F7F8FA;border-radius:0 6px 6px 0}
+.group{border:1.5px solid #E1E3E8;border-radius:8px;padding:16px;margin:12px 0 0}
+.group-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.group-head p{margin:0}
+.spots{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.invite{display:flex;gap:8px;margin:12px 0 0;flex-wrap:wrap;align-items:flex-end}.invite label{flex:1 1 240px;margin:0;min-width:0}.invite input{width:100%;min-width:0;font-size:15px;flex:none}
+.roster{list-style:none;padding:0;margin:12px 0 0}.roster li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;padding:8px 0;border-top:1px solid #E1E3E8}.roster li>span:first-child{font-weight:600}
+.roster .state{color:#55585F;font-size:15px;text-align:right}
+fieldset{border:0;padding:0;margin:10px 0 0;min-width:0}legend{font-weight:700;padding:0;margin:0 0 4px}
 [hidden]{display:none!important}
-</style></head><body><main><h1>Book a private lesson</h1><p class="muted" id="intro">Choose a lesson type, your wrestler and one of the coaches’ open times. Times are New York time. The time is yours once it’s paid for.</p>
+</style></head><body><main><h1>Book a private lesson</h1><p class="muted" id="intro">One-on-one, with a partner, or in a small group of up to six. Each family books and pays for their own wrestler at the price per wrestler. Times are New York time.</p>
 <section id="closed" class="closed" hidden aria-labelledby="closedHeading"><h2 id="closedHeading">No open lesson times right now</h2><p id="closedText">No coach has open lesson times right now. Coaches add new times often, so check back soon, or message the academy to ask about a lesson.</p><div class="go"><a class="button" href="/family" id="addWrestler" hidden>Add a wrestler</a><a class="button primary" href="/inbox" id="messageAcademy">Message the academy</a></div></section>
 <p id="status" role="status" aria-live="polite">Loading…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
-<section id="stepType" hidden aria-labelledby="typeHeading"><h2 id="typeHeading">1. Lesson type</h2><div class="formats" id="formats"></div></section>
-<section id="stepWrestler" hidden aria-labelledby="wrestlerHeading"><h2 id="wrestlerHeading">2. Wrestler</h2><label>Wrestler<select id="wrestler"></select></label><label id="partnersLabel" hidden>Training partners (optional)<input id="partners" maxlength="200" placeholder="Names of the other wrestlers joining"></label></section>
+<section id="joinBox" hidden aria-labelledby="joinHeading"><h2 id="joinHeading">Join a private group</h2><div id="joinInfo"></div><label id="joinWrestlerLabel">Your wrestler<select id="joinWrestler"></select></label></section>
+<section id="mine" hidden aria-labelledby="mineHeading"><h2 id="mineHeading">Your private groups</h2><p class="muted">Send the invite link to the families you want in the group. Each family signs in, books their own wrestler and pays the academy for their spot.</p><div id="mineList"></div></section>
+<section id="stepType" hidden aria-labelledby="typeHeading"><h2 id="typeHeading">1. Choose how to train</h2><div class="paths" id="paths"></div></section>
+<section id="stepWrestler" hidden aria-labelledby="wrestlerHeading"><h2 id="wrestlerHeading">2. Wrestler</h2>
+<label id="wrestlerLabel">Wrestler<select id="wrestler"></select></label>
+<div id="requestOptions" hidden><fieldset><legend>Group size</legend><div class="kinds" id="kinds"></div></fieldset><label id="spotsLabel" hidden>Number of wrestlers in the group<select id="spots"><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+<fieldset><legend>Your wrestlers in this group</legend><div id="ownWrestlers"></div><p class="muted" id="ownHelp">Their spots are kept for them. The other spots are for families you invite.</p></fieldset></div></section>
 <section id="stepTime" hidden aria-labelledby="timeHeading"><h2 id="timeHeading">3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="times"></div></section>
-<section id="reviewBox" hidden aria-labelledby="reviewHeading"><h2 id="reviewHeading">4. Review and pay</h2><div class="summary" id="summary"></div><div id="payArea"><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label><button class="primary" id="pay" disabled>Pay securely</button></div><p id="notOpen" class="muted" hidden>Online payment for lessons isn’t open yet. To book this time, contact the academy and pay there. Nothing is reserved until the academy records your payment.</p></section>
+<section id="reviewBox" hidden aria-labelledby="reviewHeading"><h2 id="reviewHeading">4. Review</h2><div class="summary" id="summary"></div>
+<div id="payArea"><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label><button class="primary" id="pay" disabled>Pay securely</button></div>
+<p id="notOpen" class="calm" hidden>Online payment for lessons isn’t open yet. To book this spot, pay the academy for your wrestler. Nothing is reserved until the academy records your payment.</p>
+<div id="requestArea" hidden><p class="calm">Nothing is charged now. You get an invite link to send to the families you want in the group. Each family pays the academy for their own wrestler, and each spot is confirmed once the academy records that payment.</p><button class="primary" id="requestGroup">Ask for this private group</button></div></section>
 </main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);
 const clock=t=>{const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
 const day=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
-let data=null,family=null,format='',opening='',review=null;
-async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login';throw Error('Sign in again.')}const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
-// Lesson types without an online price can't be booked here, so they aren't shown (issue #132).
-const bookable=()=>(data?.formats||[]).filter(f=>f.cents!==null&&f.cents!==undefined);
+const spotsText=(left,cap)=>left+' of '+cap+' spot'+(cap===1?'':'s')+' left';
+// Three ways to book (issue #177): one = a one-on-one at an open time, group = a spot in a partner or small group a
+// coach posted, request = turn an open time into a private group and invite other families. join = an invite link.
+let data=null,family=null,path='',kind='',opening='',review=null,joinCode='';
+async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login?next='+encodeURIComponent(location.pathname+location.search);throw Error('Sign in again.')}const d=await r.json();if(!r.ok){const e=Error(d.error||'Something went wrong.');e.data=d;throw e}return d}
+const fmt=id=>(data?.formats||[]).find(f=>f.id===id);
+const priced=id=>{const f=fmt(id);return !!f&&f.cents!==null&&f.cents!==undefined};
+const nameOf=id=>fmt(id)?.name||'Private lesson';
+// What each path can offer right now. Lesson types without an online price aren't shown (issue #132).
+function choices(){
+ const list=data?.openings||[];
+ return {
+  one:priced('one-on-one')?list.filter(o=>o.capacity===1&&o.format!=='partner'&&o.format!=='small-group'):[],
+  group:list.filter(o=>o.capacity>1&&priced(o.format)),
+  request:(priced('partner')||priced('small-group'))?list.filter(o=>o.format===null):[]
+ };
+}
+const PATHS=[['one','Book a one-on-one','Your wrestler alone with a coach for an hour.',()=>priced('one-on-one')?money(fmt('one-on-one').cents)+' per wrestler':''],
+ ['group','Join a partner or small group','A coach’s group lesson. Book a spot for your wrestler.',()=>['partner','small-group'].filter(priced).map(f=>nameOf(f).replace(' lesson','')+' '+money(fmt(f).cents)).join(' · ')+' per wrestler'],
+ ['request','Start a private group','Take an open time as a partner or small group and invite the families you choose.',()=>['partner','small-group'].filter(priced).map(f=>nameOf(f).replace(' lesson','')+' '+money(fmt(f).cents)).join(' · ')+' per wrestler']];
 // What stops a family from booking, said first, before any steps (issue #132). Null when they can book.
 function blocker(){
  if(!data||!family)return null;
  if(!(family.wrestlers||[]).length)return {title:'Add your wrestler first',text:'Add your wrestler in your family account, then come back here to book a lesson.',wrestler:true};
- if(!bookable().length)return {title:'Lessons are booked through the academy',text:'Private lessons can’t be booked online yet. Message the academy to arrange a lesson.'};
- if(!data.openings.length)return {title:'No open lesson times right now',text:'No coach has open lesson times right now. Coaches add new times often, so check back soon, or message the academy to ask about a lesson.'};
+ if(data.invite||(data.mine||[]).length)return null;
+ if(!['one-on-one','partner','small-group'].some(priced))return {title:'Lessons are booked through the academy',text:'Private lessons can’t be booked online yet. Message the academy to arrange a lesson.'};
+ const c=choices();if(!c.one.length&&!c.group.length&&!c.request.length)return {title:'No open lesson times right now',text:'No coach has open lesson times right now. Coaches add new times often, so check back soon, or message the academy to ask about a lesson.'};
  return null;
 }
+function inviteLink(code){return location.origin+'/lesson?join='+encodeURIComponent(code)}
+function rosterHtml(list){const state={paid:'Paid',paying:'Paying now',kept:'Kept for you · pay the academy'};return list.length?'<ul class="roster">'+list.map(r=>`<li><span>${esc(r.wrestler)}</span><span class="state">${state[r.status]||''}</span></li>`).join('')+'</ul>':''}
+function groupHtml(g){
+ const paid=(g.roster||[]).some(r=>r.status!=='kept');
+ return `<article class="group"><div class="group-head"><p><strong>${esc(nameOf(g.format))}</strong> with ${esc(g.coach)}</p><span class="spots">${g.spotsLeft?spotsText(g.spotsLeft,g.capacity):'Full'}</span></div><p class="muted" style="margin:4px 0 0">${esc(day(g.date))} · ${esc(clock(g.start))}–${esc(clock(g.end))}</p>
+ ${g.spotsLeft?`<div class="invite"><label><span>Invite link</span><input readonly value="${esc(inviteLink(g.inviteCode))}" id="link-${esc(g.id)}"></label><button type="button" class="primary" data-copy="${esc(g.id)}">Copy link</button></div>`:''}
+ ${rosterHtml(g.roster||[])}${paid?'':`<div class="go"><button type="button" data-cancel="${esc(g.id)}">Call off this group</button></div>`}</article>`;
+}
 function render(){
- const stop=blocker();
+ const stop=blocker(),c=choices();
  $('closed').hidden=!stop;
  if(stop){$('closedHeading').textContent=stop.title;$('closedText').textContent=stop.text;$('addWrestler').hidden=!stop.wrestler;$('messageAcademy').className=stop.wrestler?'button':'button primary';$('addWrestler').className=stop.wrestler?'button primary':'button'}
- $('intro').hidden=!!stop;$('stepType').hidden=$('stepWrestler').hidden=$('stepTime').hidden=!!stop||!data;
- $('formats').innerHTML=bookable().map(f=>`<button type="button" class="choice" data-format="${esc(f.id)}" aria-pressed="${f.id===format}"><b>${esc(f.name)}</b><span class="muted">${esc(f.description)}</span><br><strong>${money(f.cents)} per lesson</strong></button>`).join('');
- document.querySelectorAll('[data-format]').forEach(b=>b.onclick=()=>{format=b.dataset.format;review=null;render();check()});
- $('partnersLabel').hidden=!(format==='partner'||format==='small-group');
- const coach=$('coach').value,list=(data?.openings||[]).filter(o=>!coach||o.coachKey===coach);
+ const ready=!!data&&!stop,joining=ready&&path==='join';
+ $('intro').hidden=!!stop;
+ // Your private groups, with the invite link and who has joined.
+ const mine=ready?data.mine||[]:[];$('mine').hidden=!mine.length;
+ $('mineList').innerHTML=mine.map(groupHtml).join('');
+ document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyLink(b.dataset.copy));
+ document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>cancelGroup(b.dataset.cancel));
+ // An invite link opens straight to joining that group.
+ $('joinBox').hidden=!joining;
+ if(joining)renderJoin();
+ const hasPaths=ready&&!joining&&(c.one.length||c.group.length||c.request.length||!mine.length);
+ $('stepType').hidden=!hasPaths;
+ $('paths').innerHTML=PATHS.map(([id,title,text,price])=>{const n=c[id].length,avail=id==='group'?(n?n+' group'+(n===1?'':'s')+' with spots':'No groups right now'):(n?n+' open time'+(n===1?'':'s'):'No open times right now');
+  return `<button type="button" class="choice" data-path="${id}" aria-pressed="${id===path}"${n?'':' disabled'}><b>${title}</b><span class="muted">${text}</span><span class="price">${esc(price())}</span><span class="${n?'left':'muted'}">${avail}</span></button>`}).join('');
+ document.querySelectorAll('[data-path]').forEach(b=>b.onclick=()=>{path=b.dataset.path;opening='';review=null;kind=kind||defaultKind();render();check()});
+ const picking=hasPaths&&!!path;
+ $('stepWrestler').hidden=$('stepTime').hidden=!picking;
+ $('wrestlerLabel').hidden=path==='request';$('requestOptions').hidden=path!=='request';
+ if(path==='request'){
+  $('kinds').innerHTML=['partner','small-group'].filter(priced).map(f=>`<button type="button" class="choice" data-kind="${f}" aria-pressed="${f===kind}"><b>${f==='partner'?'Partner':'Small group'}</b><span class="muted">${f==='partner'?'2 wrestlers':'3 to 6 wrestlers'}</span><span class="price">${money(fmt(f).cents)} per wrestler</span></button>`).join('');
+  document.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{kind=b.dataset.kind;review=null;render();check()});
+  $('spotsLabel').hidden=kind!=='small-group';
+ }
+ $('wrestlerHeading').textContent=path==='request'?'2. Group and wrestlers':'2. Wrestler';
+ const coach=$('coach').value,list=(picking?c[path]:[]).filter(o=>!coach||o.coachKey===coach);
  if(opening&&!list.some(o=>o.id===opening))opening='';
  const days=[...new Set(list.map(o=>o.date))];
- $('times').innerHTML=days.length?days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b>${esc(o.coach)}</button>`).join('')}</div>`).join(''):'<p class="muted">This coach has no open times right now. Choose Any coach to see every open time.</p>';
+ $('times').innerHTML=days.length?days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b><span>${esc(o.coach)}</span>${path==='group'?`<span>${esc(nameOf(o.format))}</span><span class="left">${spotsText(o.spotsLeft,o.capacity)}</span>`:''}</button>`).join('')}</div>`).join(''):'<p class="muted">This coach has no open times for this right now. Choose Any coach to see every open time.</p>';
  document.querySelectorAll('[data-opening]').forEach(b=>b.onclick=()=>{opening=b.dataset.opening;review=null;render();check()});
- $('reviewBox').hidden=!review;
- if(review){
-  $('summary').innerHTML=`<p><strong>${esc(review.title)}</strong> with ${esc(review.coach)}<br>${esc(day(review.dates[0]))} · ${esc(clock(review.start))}–${esc(clock(review.end))}<br>For ${esc(review.wrestler)}${review.partners?' · Partners: '+esc(review.partners):''}</p><p><strong>${money(review.cents)}</strong></p>${review.message?`<p class="muted">${esc(review.message)}</p>`:''}`;
-  $('payArea').hidden=!review.paymentsEnabled;$('notOpen').hidden=!!review.paymentsEnabled;$('pay').disabled=!$('acceptTerms').checked;
+ renderReview();
+}
+function defaultKind(){return ['partner','small-group'].find(priced)||''}
+function ownChosen(){return [...document.querySelectorAll('[data-own]')].filter(i=>i.checked).map(i=>i.dataset.own)}
+function renderReview(){
+ const show=!!review;$('reviewBox').hidden=!show;if(!show)return;
+ $('reviewHeading').textContent=path==='join'?'Review':'4. Review';
+ $('requestArea').hidden=review.kind!=='request';
+ if(review.kind==='request'){
+  $('summary').innerHTML=`<p><strong>Private ${esc(nameOf(review.format).toLowerCase())}</strong> with ${esc(review.coach)}</p><p>${esc(day(review.date))} · ${esc(clock(review.start))}–${esc(clock(review.end))}</p><p>${review.capacity} spots: ${esc(review.names.join(' and '))}${review.capacity>review.names.length?' and '+(review.capacity-review.names.length)+' for families you invite':''}</p><p><strong>${money(review.cents)} per wrestler</strong>${review.names.length>1?' · '+money(review.cents*review.names.length)+' for your '+review.names.length+' wrestlers':''}</p>`;
+  $('payArea').hidden=true;$('notOpen').hidden=true;return;
  }
+ const group=review.capacity>1;
+ $('summary').innerHTML=`<p><strong>${esc(review.title)}</strong> with ${esc(review.coach)}</p><p>${esc(day(review.dates[0]))} · ${esc(clock(review.start))}–${esc(clock(review.end))}</p><p>For ${esc(review.wrestler)}${group?' · '+spotsText(review.spotsLeft,review.capacity):''}</p><p><strong>${money(review.cents)}</strong>${group?' per wrestler':''}</p>${review.message?`<p class="muted">${esc(review.message)}</p>`:''}`;
+ $('payArea').hidden=!review.paymentsEnabled;$('notOpen').hidden=!!review.paymentsEnabled;$('pay').disabled=!$('acceptTerms').checked;
+}
+function renderJoin(){
+ const g=data.invite,mine=g.mine,free=(family.wrestlers||[]).filter(w=>!(g.booked||[]).includes(w.id));
+ $('joinHeading').textContent=mine?'This is your group':'Join '+(g.organizer||'a family')+'’s group';
+ $('joinInfo').innerHTML=`<div class="summary"><p><strong>Private ${esc(nameOf(g.format).toLowerCase())}</strong> with ${esc(g.coach)}</p><p>${esc(day(g.date))} · ${esc(clock(g.start))}–${esc(clock(g.end))}</p><p>${g.spotsLeft?spotsText(g.spotsLeft,g.capacity):'This group is full.'}${priced(g.format)?' · '+money(fmt(g.format).cents)+' per wrestler':''}</p></div>`+(mine?'<p class="calm">Its invite link and who has joined are under Your private groups below.</p>':(g.booked||[]).length?'<p class="calm">Your wrestler is booked into this group.</p>':'');
+ const sel=$('joinWrestler'),before=sel.value;
+ sel.innerHTML=free.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');sel.value=free.some(w=>w.id===before)?before:free[0]?.id||'';
+ $('joinWrestlerLabel').hidden=mine||!g.spotsLeft||!free.length;
 }
 let checking=0;
 async function check(){
  // Re-render only when something changes: rebuilding the buttons mid-click would swallow the click.
- if(!format||!opening||!$('wrestler').value){if(review){review=null;render()}if(opening&&!format)$('status').textContent='Choose a lesson type.';return}
- const ticket=++checking;$('status').textContent='Checking this time…';
- try{const d=await call('/api/booking-review',{type:'lesson',wrestlerId:$('wrestler').value,format,openingId:opening,partners:$('partners').value});if(ticket!==checking)return;review={...d.review,paymentsEnabled:d.paymentsEnabled};$('status').textContent='This time is available.'}
- catch(e){if(ticket!==checking)return;review=null;$('status').textContent=e.message;if(/no longer available|just booked/.test(e.message))await reload()}
+ if(path==='request')return checkRequest();
+ const wrestlerId=path==='join'?$('joinWrestler').value:$('wrestler').value,openingId=path==='join'?data.invite?.id:opening;
+ if(!openingId||!wrestlerId||(path==='join'&&(data.invite.mine||!data.invite.spotsLeft))){if(review){review=null;render()}return}
+ const ticket=++checking;$('status').textContent='Checking this spot…';
+ try{const d=await call('/api/booking-review',{type:'lesson',wrestlerId,openingId,...(path==='one'?{format:'one-on-one'}:{}),...(path==='join'?{invite:joinCode}:{})});if(ticket!==checking)return;review={...d.review,paymentsEnabled:d.paymentsEnabled};$('status').textContent=review.capacity>1?'This spot is available.':'This time is available.'}
+ catch(e){if(ticket!==checking)return;review=null;$('status').textContent=e.message;if(/no longer available|just booked|full/.test(e.message))await reload()}
  render();
 }
-async function reload(){data=await call('/api/lessons');render()}
+function checkRequest(){
+ const o=(data.openings||[]).find(x=>x.id===opening),names=ownChosen().map(id=>(family.wrestlers||[]).find(w=>w.id===id)?.name).filter(Boolean);
+ const capacity=kind==='partner'?2:Number($('spots').value);
+ review=null;
+ if(!kind){$('status').textContent='Choose a partner lesson or a small group.'}
+ else if(!names.length){$('status').textContent='Choose your wrestler.'}
+ else if(names.length>capacity){$('status').textContent='This group has '+capacity+' spots. Choose fewer wrestlers or more spots.'}
+ else if(o){review={kind:'request',format:kind,coach:o.coach,date:o.date,start:o.start,end:o.end,capacity,names,cents:fmt(kind).cents};$('status').textContent=''}
+ else $('status').textContent=''
+ renderReview();
+}
+function renderOwn(){$('ownWrestlers').innerHTML=(family.wrestlers||[]).map((w,i)=>`<label class="check"><input type="checkbox" data-own="${esc(w.id)}"${i===0?' checked':''}> ${esc(w.name)}</label>`).join('');document.querySelectorAll('[data-own]').forEach(i=>i.onchange=checkRequest)}
+async function reload(){const q=joinCode?'?join='+encodeURIComponent(joinCode):'';data=await call('/api/lessons'+q);render()}
+async function copyLink(id){const input=$('link-'+id);try{await navigator.clipboard.writeText(input.value);$('status').textContent='Invite link copied. Send it to the families you want in the group.'}catch{input.focus();input.select();$('status').textContent='The link is selected. Copy it and send it to the families you want in the group.'}}
+async function cancelGroup(id){if(!confirm('Call off this private group? The time opens for other families again.'))return;try{await call('/api/lessons',{action:'cancel',openingId:id});await reload();$('status').textContent='Group called off.'}catch(e){$('status').textContent=e.message}}
+$('requestGroup').onclick=async()=>{if(!review||review.kind!=='request')return;$('requestGroup').disabled=true;$('status').textContent='Setting up your group…';
+ try{const d=await call('/api/lessons',{action:'request',openingId:opening,format:kind,spots:kind==='small-group'?Number($('spots').value):2,wrestlerIds:ownChosen()});
+  path='';opening='';review=null;await reload();$('status').textContent='Your private group is set up. Copy the invite link below and send it to the families you want in the group.';
+  const link=$('link-'+d.group.id);if(link?.scrollIntoView)link.scrollIntoView({block:'center'})}
+ catch(e){$('status').textContent=e.message;if(/no longer available|just took/.test(e.message)){opening='';await reload()}}
+ finally{$('requestGroup').disabled=false}};
 $('pay').onclick=async()=>{if(!review||!$('acceptTerms').checked)return;$('pay').disabled=true;$('status').textContent='Opening secure checkout…';
- try{const d=await call('/api/checkout',{source:'booking',type:'lesson',wrestlerId:$('wrestler').value,format,openingId:opening,partners:$('partners').value,acceptTerms:true});location.assign(d.url)}
- catch(e){$('status').textContent=e.message;$('pay').disabled=false;if(/booked|no longer available/.test(e.message)){opening='';review=null;await reload()}}};
+ try{const d=await call('/api/checkout',{source:'booking',type:'lesson',wrestlerId:path==='join'?$('joinWrestler').value:$('wrestler').value,openingId:path==='join'?data.invite.id:opening,...(path==='join'?{invite:joinCode}:{}),acceptTerms:true});location.assign(d.url)}
+ catch(e){$('status').textContent=e.message;$('pay').disabled=false;if(/booked|no longer available|full/.test(e.message)){opening='';review=null;await reload()}}};
 $('acceptTerms').onchange=()=>{$('pay').disabled=!$('acceptTerms').checked};
-$('wrestler').onchange=check;$('coach').onchange=()=>{render()};$('partners').onchange=check;
+$('wrestler').onchange=check;$('joinWrestler').onchange=check;$('coach').onchange=()=>{render()};$('spots').onchange=checkRequest;
 if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=$('status').textContent;$('cardHelp').hidden=!/USA Wrestling card/.test(t);$('waiverHelp').hidden=!/needs a signed .* before booking/.test(t)}).observe($('status'),{childList:true,characterData:true,subtree:true});
-(async()=>{try{
- const [l,f]=await Promise.all([call('/api/lessons'),call('/api/family')]);data=l;family=f.data;
- $('wrestler').innerHTML=(family.wrestlers||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
- const coaches=[...new Map(data.openings.map(o=>[o.coachKey,o.coach])).entries()];
- $('coach').innerHTML='<option value="">Any coach</option>'+coaches.map(([e,n])=>`<option value="${esc(e)}">${esc(n)}</option>`).join('');
- const q=new URLSearchParams(location.search);if(q.get('format')&&bookable().some(x=>x.id===q.get('format')))format=q.get('format');
- // With only one lesson type to choose from, it is already chosen.
- if(!format&&bookable().length===1)format=bookable()[0].id;
- render();
- $('status').textContent='';
-}catch(e){$('status').textContent=e.message}})();
+(async()=>{
+ const q=new URLSearchParams(location.search);joinCode=q.get('join')||'';
+ try{
+  const [l,f]=await Promise.all([call('/api/lessons'+(joinCode?'?join='+encodeURIComponent(joinCode):'')).catch(e=>{if(joinCode&&e.data?.openings){$('status').textContent=e.message;joinCode='';return e.data}throw e}),call('/api/family')]);
+  data=l;family=f.data;
+  if(data.invite)path='join';
+  $('wrestler').innerHTML=(family.wrestlers||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');$('wrestler').value=family.wrestlers?.[0]?.id||'';renderOwn();
+  const coaches=[...new Map(data.openings.map(o=>[o.coachKey,o.coach])).entries()];
+  $('coach').innerHTML='<option value="">Any coach</option>'+coaches.map(([e,n])=>`<option value="${esc(e)}">${esc(n)}</option>`).join('');
+  // Links from the calendar name a lesson type: open the path that offers it.
+  const c=choices(),want=q.get('format');
+  if(!path&&want==='one-on-one'&&c.one.length)path='one';
+  if(!path&&(want==='partner'||want==='small-group')){path=c.group.some(o=>o.format===want)?'group':c.request.length&&priced(want)?'request':'';if(path==='request')kind=want}
+  // With only one way to book, it is already chosen.
+  const ways=['one','group','request'].filter(p=>c[p].length);if(!path&&ways.length===1&&!(data.mine||[]).length)path=ways[0];
+  if(path==='request'&&!kind)kind=defaultKind();
+  if(!/Invite|invite/.test($('status').textContent))$('status').textContent='';
+  render();
+  if(path==='join')check();
+ }catch(e){$('status').textContent=e.message}
+})();
 </script></body></html>

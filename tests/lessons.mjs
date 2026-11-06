@@ -101,10 +101,12 @@ assert.equal(r.body.paymentsOpen, false, 'lesson checkout is closed until CHECKO
 let q = await quotes.quoteBooking('p1', {type: 'lesson', wrestlerId: 'w-p1', format: 'one-on-one'});
 assert.equal(q.ok, true); assert.equal(q.charge, null, 'no time chosen: still an inquiry');
 for (const id of ['o2', 'o3', 'o4', 'nope']) assert.match((await book('p1', id)).error, /no longer available/, id);
-assert.match((await book('p1', 'o1', 'partner')).error, /not open for online booking/);
+// Issue #177: a partner or small group at an open time starts with a family's request; typed-in partners are gone.
+assert.match((await book('p1', 'o1', 'partner')).error, /ask for a private group first/);
 q = await book('p1', 'o1', 'one-on-one', {partners: 'x'.repeat(300)});
+assert.equal(q.charge.pricing.partners, undefined, 'no free-text partners');
 assert.equal(q.ok, true); assert.equal(q.charge.kind, 'lesson'); assert.equal(q.charge.amountCents, 6000); assert.equal(q.charge.itemId, 'o1');
-assert.equal(JSON.stringify(q.charge.dates), JSON.stringify([tomorrow])); assert.equal(q.charge.pricing.slots, 1); assert.equal(q.charge.pricing.partners.length, 200);
+assert.equal(JSON.stringify(q.charge.dates), JSON.stringify([tomorrow])); assert.equal(q.charge.pricing.slots, 1);
 assert.match(q.charge.itemLabel, /^One-on-one lesson with Coach Dana, [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · 4:00 PM$/, "lesson label reads like Mon, Nov 9 · 4:00 PM");
 assert.equal(q.charge.dedupeKey, `p1|w-p1|lesson|o1`, 'per family, so one family cannot cancel another family\'s checkout');
 // The card must cover the lesson date, not just today.
@@ -145,8 +147,9 @@ assert.equal((await call(payments, 'GET')).body.payments.length, 1, 'lesson paym
 as('coach');
 r = await call(coachApi, 'GET');
 const o1 = r.body.openings.find(o => o.id === 'o1');
-assert.equal(o1.booking.wrestler, 'Wrestler p1'); assert.equal(o1.booking.format, 'One-on-one lesson'); assert.equal(o1.booking.parent, 'Parent p1'); assert.equal(o1.booking.phone, '555-011');
-assert.equal(r.body.openings.find(o => o.id === 'o5').booking, null);
+assert.equal(o1.roster[0].wrestler, 'Wrestler p1'); assert.equal(o1.formatName, 'One-on-one lesson'); assert.equal(o1.roster[0].parent, 'Parent p1'); assert.equal(o1.roster[0].phone, '555-011');
+assert.equal(o1.roster[0].status, 'paid'); assert.equal(o1.spotsLeft, 0);
+assert.deepEqual(r.body.openings.find(o => o.id === 'o5').roster, []);
 assert.equal((await call(coachApi, 'POST', {action: 'remove', id: 'o1'})).status, 409);
 // Reading the page links openings saved before coach emails were stored.
 assert.equal(sqlite.prepare("SELECT coach_email FROM coach_openings WHERE id='o2'").get().coach_email, 'dana@example.test');

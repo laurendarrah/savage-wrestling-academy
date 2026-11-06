@@ -291,8 +291,10 @@ await step('coach adds an opening; owner sets prices; family reviews a lesson; o
   await coach.click('#opening button'); await waitText(coach, '#status', /Opening saved/);
   await owner.goto(BASE + '/lesson-settings'); await owner.waitForSelector('[data-price="one-on-one"]');
   await owner.fill('[data-price="one-on-one"]', '60'); await owner.click('#prices button'); await waitText(owner, '#status', /prices saved/);
-  await family.goto(BASE + '/lesson'); await family.waitForSelector('[data-format="one-on-one"]');
-  await family.click('[data-format="one-on-one"]'); await family.locator('[data-opening]').first().click();
+  // Only one-on-ones have a price so far, so that is the one way to book and it is already chosen (issue #177).
+  await family.goto(BASE + '/lesson'); await family.waitForSelector('[data-path="one"][aria-pressed="true"]');
+  expect(await family.isDisabled('[data-path="group"]') && await family.isDisabled('[data-path="request"]'), 'unpriced group lessons are not offered');
+  await family.locator('[data-opening]').first().click();
   await waitText(family, '#summary', /One-on-one lesson[\s\S]*Coach Dana[\s\S]*\$60\.00/);
   expect(await family.isVisible('#notOpen'), 'lesson payment should say not open yet');
   const body = await family.content(); expect(!body.includes('coach.dana@example.test'), 'coach email leaked to family page');
@@ -348,6 +350,82 @@ await step('camp fills; family 2 joins the waitlist from the booking page; owner
   await family2.goto(BASE + '/booking?type=event&id=winter-camp'); await family2.waitForSelector('#submit'); await family2.click('#submit');
   await family2.waitForFunction(() => /\$160\.00/.test(document.body.textContent), null, {timeout: 30000});
   expect(rid, 'riley id');
+});
+
+// ---------- Partner and small-group lessons (issue #177) ----------
+// The owner records a lesson payment for a family's wrestler in the lesson whose label matches.
+async function recordLesson(familyLabel, wrestler, lesson) {
+  await owner.goto(BASE + '/payments'); await owner.waitForFunction(l => [...document.querySelectorAll('#family option')].some(o => o.textContent === l), familyLabel);
+  await owner.selectOption('#family', {label: familyLabel});
+  await owner.selectOption('#wrestler', {label: (await owner.$$eval('#wrestler option', (os, w) => os.map(o => o.textContent).find(t => t.startsWith(w)), wrestler))});
+  await owner.selectOption('#kind', 'lesson');
+  await owner.waitForFunction(re => [...document.querySelectorAll('#opening option')].some(o => new RegExp(re).test(o.textContent)), lesson.source);
+  const value = await owner.$$eval('#opening option', (os, re) => os.find(o => new RegExp(re).test(o.textContent)).value, lesson.source);
+  await owner.selectOption('#opening', value);
+  await owner.waitForFunction(() => document.querySelector('#format option')?.value);
+  await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record');
+  await waitText(owner, '#status', /recorded/i);
+}
+await step('coach posts a small group with 4 spots; two families each book a wrestler; the roster shows both', async () => {
+  await owner.goto(BASE + '/lesson-settings'); await owner.waitForSelector('[data-price="small-group"]');
+  await waitText(owner, 'h2', /Price per wrestler/);
+  await owner.fill('[data-price="partner"]', '45'); await owner.fill('[data-price="small-group"]', '35'); await owner.click('#prices button'); await waitText(owner, '#status', /prices saved/);
+  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#opening');
+  await coach.fill('#opening [name=date]', ny(5)); await coach.fill('#opening [name=start]', '10:00'); await coach.fill('#opening [name=end]', '11:00');
+  await coach.selectOption('#format', 'small-group'); await coach.selectOption('#spots', '4');
+  await coach.click('#opening button.primary'); await waitText(coach, '#status', /Opening saved/);
+  await waitText(coach, '#slots', /Small-group lesson[\s\S]*4 of 4 spots left[\s\S]*Coach-hosted/);
+  // Each family sees the group with its spots and books their own wrestler at the price per wrestler.
+  for (const [page, name, left] of [[family, 'Sam Example', '4 of 4'], [family2, 'Riley Two', '3 of 4']]) {
+    await page.goto(BASE + '/lesson'); await page.waitForSelector('[data-path="group"]:not([disabled])');
+    await waitText(page, '#paths', /Join a partner or small group[\s\S]*1 group with spots/);
+    await page.click('[data-path="group"]'); await waitText(page, '#times', new RegExp(`Small-group lesson[\\s\\S]*${left} spots left`));
+    await page.locator('[data-opening]').first().click();
+    await waitText(page, '#summary', new RegExp(`Small-group lesson[\\s\\S]*Coach Dana[\\s\\S]*For ${name} · ${left} spots left[\\s\\S]*\\$35\\.00[\\s\\S]*per wrestler`));
+    expect(await page.isVisible('#notOpen'), 'pay at the academy while lesson checkout is closed');
+    if (page === family) await shot(family, 'lesson-join-group');
+    await recordLesson(page === family ? 'Pat Example · family.a@example.test' : 'Riley Parent · family.b@example.test', name, /Small-group lesson · \d of 4 spots left/);
+  }
+  await coach.goto(BASE + '/coach');
+  await waitText(coach, '#slots', /Small-group lesson[\s\S]*2 of 4 spots left[\s\S]*Coach-hosted[\s\S]*Sam Example[\s\S]*Parent: Pat Example · 555-0100[\s\S]*Riley Two[\s\S]*Parent: Riley Parent/);
+  await shot(coach, 'coach-group-roster');
+  // Coach pay sums per wrestler: the one-on-one and the small group are 2 lessons with 3 wrestlers.
+  const pay = await api(owner, `/api/coach-pay?from=${ny(0)}&to=${ny(30)}`);
+  expect(pay.body.coaches[0]?.lessons === 2 && pay.body.coaches[0]?.wrestlers === 3 && pay.body.coaches[0]?.grossCents === 6000 + 2 * 3500, 'coach pay: ' + JSON.stringify(pay.body.coaches[0]));
+});
+await step('a family starts a private partner lesson; a second family joins through the invite link; the lesson is full', async () => {
+  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#opening');
+  await coach.fill('#opening [name=date]', ny(6)); await coach.fill('#opening [name=start]', '16:00'); await coach.fill('#opening [name=end]', '17:00');
+  await coach.click('#opening button.primary'); await waitText(coach, '#status', /Opening saved/);
+  await family.goto(BASE + '/lesson'); await family.waitForSelector('[data-path="request"]:not([disabled])');
+  await family.click('[data-path="request"]'); await family.click('[data-kind="partner"]');
+  expect(await family.isChecked('[data-own]'), 'the family’s wrestler is in the group');
+  await family.locator('[data-opening]').first().click();
+  await waitText(family, '#summary', /Private partner lesson[\s\S]*2 spots: Sam Example and 1 for families you invite[\s\S]*\$45\.00 per wrestler/);
+  await shot(family, 'lesson-request');
+  await family.click('#requestGroup'); await waitText(family, '#status', /private group is set up/);
+  await waitText(family, '#mineList', /Partner lesson[\s\S]*1 of 2 spots left[\s\S]*Sam Example[\s\S]*Kept for you/);
+  const link = await family.inputValue('#mineList input');
+  expect(/\/lesson\?join=[A-Za-z0-9_-]{32}$/.test(link), 'invite link: ' + link);
+  await family.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: BASE});
+  await family.click('#mineList [data-copy]'); await waitText(family, '#status', /Invite link copied|link is selected/);
+  await shot(family, 'lesson-my-group');
+  // Never listed: another family sees no sign of it until they open the link.
+  const listing = await api(family2, '/api/lessons');
+  expect(!JSON.stringify(listing.body).includes(link.split('join=')[1]) && listing.body.openings.every(o => o.date !== ny(6)), 'a private group must not be listed');
+  await family2.goto(link); await family2.waitForSelector('#joinBox:not([hidden])');
+  await waitText(family2, '#joinHeading', /Join Pat Example’s group/);
+  await waitText(family2, '#summary', /Partner lesson[\s\S]*For Riley Two · 1 of 2 spots left[\s\S]*\$45\.00[\s\S]*per wrestler/);
+  expect(!(await family2.isVisible('#stepType')), 'an invite link opens straight to joining');
+  await shot(family2, 'lesson-invite-join');
+  await recordLesson('Riley Parent · family.b@example.test', 'Riley Two', /Partner lesson, private group of Pat Example · 1 of 2 spots left, 1 kept for their wrestlers/);
+  // Sam's spot is kept for him, so the owner can still record it although no other family can take it.
+  await recordLesson('Pat Example · family.a@example.test', 'Sam Example', /Partner lesson, private group of Pat Example · 0 of 2 spots left, 1 kept for their wrestlers/);
+  await family.goto(BASE + '/lesson'); await waitText(family, '#mineList', /Partner lesson[\s\S]*Full[\s\S]*Riley Two[\s\S]*Paid[\s\S]*Sam Example[\s\S]*Paid/);
+  const joined = await api(family2, '/api/lessons?join=' + link.split('join=')[1]);
+  expect(joined.body.invite?.spotsLeft === 0, 'the lesson is full: ' + JSON.stringify(joined.body.invite));
+  await coach.goto(BASE + '/coach');
+  await waitText(coach, '#slots', /Partner lesson[\s\S]*0 of 2 spots left[\s\S]*Family-requested private group, organised by Pat Example[\s\S]*Riley Two[\s\S]*Sam Example/);
 });
 
 // ---------- Transfers ----------

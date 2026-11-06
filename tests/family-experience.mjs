@@ -174,7 +174,7 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
 
 // ---------- Lessons (M2) ----------
 const lessonPage = (lessons, wrestlers = [{id: 'w', name: 'Sam'}]) => page('app/lesson/screen.html', {fetch: async url => json(url === '/api/lessons' ? lessons : {data: {wrestlers}})});
-const formats = [{id: 'one-on-one', name: 'One-on-one lesson', description: 'd', cents: 6000}, {id: 'partner', name: 'Partner lesson', description: 'd', cents: null}];
+const formats = [{id: 'one-on-one', name: 'One-on-one lesson', description: 'd', cents: 6000}, {id: 'partner', name: 'Partner lesson', description: 'd', cents: null}, {id: 'small-group', name: 'Small-group lesson', description: 'd', cents: null}];
 {
   const {el} = lessonPage({formats, openings: []}); await settle();
   assert.equal(el('closed').hidden, false); assert.equal(el('closedHeading').textContent, 'No open lesson times right now');
@@ -184,7 +184,7 @@ const formats = [{id: 'one-on-one', name: 'One-on-one lesson', description: 'd',
   assert.equal(el('status').textContent, '');
 }
 {
-  const {el} = lessonPage({formats: formats.map(f => ({...f, cents: null})), openings: [{id: 'o', date: '2026-11-09', start: '15:00', end: '16:00', coach: 'Coach Dana', coachKey: 'k'}]}); await settle();
+  const {el} = lessonPage({formats: formats.map(f => ({...f, cents: null})), openings: [{id: 'o', date: '2026-11-09', start: '15:00', end: '16:00', coach: 'Coach Dana', coachKey: 'k', format: null, capacity: 1, spotsLeft: 1}]}); await settle();
   assert.equal(el('closed').hidden, false); assert.match(el('closedText').textContent, /can’t be booked online yet/);
 }
 {
@@ -192,11 +192,13 @@ const formats = [{id: 'one-on-one', name: 'One-on-one lesson', description: 'd',
   assert.equal(el('closedHeading').textContent, 'Add your wrestler first'); assert.equal(el('addWrestler').hidden, false);
 }
 {
-  const {el, ctx} = lessonPage({formats, openings: [{id: 'o', date: '2026-11-09', start: '15:00', end: '16:00', coach: 'Coach Dana', coachKey: 'k'}]}); await settle();
+  // Only one-on-ones are priced and one open time exists, so that is the only way to book, already chosen (issue #177).
+  const {el, ctx} = lessonPage({formats, openings: [{id: 'o', date: '2026-11-09', start: '15:00', end: '16:00', coach: 'Coach Dana', coachKey: 'k', format: null, capacity: 1, spotsLeft: 1}], mine: []}); await settle();
   assert.equal(el('closed').hidden, true); assert.equal(el('stepType').hidden, false);
-  assert.match(el('formats').innerHTML, /One-on-one lesson[\s\S]*\$60\.00 per lesson/);
-  assert.doesNotMatch(el('formats').innerHTML, /Partner lesson|Ask the academy/, 'lesson types not bookable online are hidden');
-  assert.equal(vm.runInContext('format', ctx), 'one-on-one', 'the only lesson type is already chosen');
+  assert.match(el('paths').innerHTML, /Book a one-on-one[\s\S]*\$60\.00 per wrestler[\s\S]*1 open time/);
+  assert.match(el('paths').innerHTML, /data-path="group" aria-pressed="false" disabled><b>Join a partner or small group/, 'no group lessons to join');
+  assert.match(el('paths').innerHTML, /data-path="request" aria-pressed="false" disabled>/, 'partner and small group are not priced, so no private group');
+  assert.equal(vm.runInContext('path', ctx), 'one', 'the only way to book is already chosen');
   assert.match(el('times').innerHTML, /Mon, Nov 9[\s\S]*3:00 PM–4:00 PM/);
 }
 

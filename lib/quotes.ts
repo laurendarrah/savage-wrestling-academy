@@ -12,7 +12,7 @@ import {eventSlots, seatsLeft} from './capacity';
 import {cardProblem} from './usaw';
 import {dayDate, dayTime} from './datetime';
 import {waiverProblem} from './waivers';
-import {lessonOpening, lessonSettings} from './lessons';
+import {lessonOpening, lessonSettings, lessonHolders, mayJoin} from './lessons';
 import {settleOffers, activeOffer} from './waitlist';
 import {PROGRAM_ON} from './transfers';
 
@@ -33,7 +33,8 @@ export type Quote =
   | {ok: true; review: Record<string, unknown>; charge: Charge | null; wrestler: {id: string; name: string}}
   | {ok: false; status: number; error: string; extra?: Record<string, unknown>};
 
-export type QuoteOptions = {checkoutKinds?: ReadonlySet<string>};
+// ownerRecording: the owner is recording a payment taken at the academy, so a private lesson group needs no invite code.
+export type QuoteOptions = {checkoutKinds?: ReadonlySet<string>; ownerRecording?: boolean};
 // The review wording depends on whether this kind of purchase can be paid online yet.
 const tail = (opts: QuoteOptions | undefined, kind: ChargeKind | null) =>
   kind && opts?.checkoutKinds?.has(kind)
@@ -147,10 +148,11 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     return {ok: true, review, charge, wrestler};
   }
   if (input.type === 'lesson') {
-    const format = catalog.privateFormats.find(p => p.id === input.format);
-    if (!format) return fail(400, 'Choose an available lesson format.');
-    // Without a chosen opening this is an inquiry, as before. With one, it is a booking at the owner's price (issue #70).
+    // Without a chosen opening this is an inquiry, as before. With one, it is a booking for this one wrestler at the
+    // owner's per-wrestler price (issues #70, #177).
     if (input.openingId === undefined || input.openingId === null || input.openingId === '') {
+      const format = catalog.privateFormats.find(p => p.id === input.format);
+      if (!format) return fail(400, 'Choose an available lesson format.');
       const card = await cardProblem(userId, w, [today]);
       if (card) return fail(403, card, {usawRequired: true});
       const waiver = await waiverProblem(userId, w, [today]);
@@ -158,22 +160,32 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
       return {ok: true, wrestler, charge: null, review: {type: 'lesson', title: format.name, wrestler: w.name, cents: null, status: 'inquiry_review', message: 'The academy will confirm the coach, date and price with you. Nothing is reserved or charged yet.'}};
     }
     const opening = await lessonOpening(input.openingId, today);
-    if (!opening) return fail(409, 'This lesson time is no longer available. Choose another time.');
+    // A private group is only for its organiser, families with its invite link, and the owner recording a payment.
+    // Anyone else is told the same as for a time that does not exist.
+    if (!opening || (!opts?.ownerRecording && !mayJoin(opening, userId, input.invite))) return fail(409, 'This lesson time is no longer available. Choose another time.');
+    // An ordinary open time is a one-on-one; a partner or small group on it starts with a family's request.
+    const format = catalog.privateFormats.find(p => p.id === (opening.format ?? 'one-on-one'))!;
+    if (input.format !== undefined && input.format !== null && input.format !== '' && input.format !== format.id)
+      return fail(409, opening.format ? `This time is a ${format.name.toLowerCase()}.` : 'To book a partner or small-group lesson at this time, ask for a private group first.');
     const card = await cardProblem(userId, w, [opening.date]);
     if (card) return fail(403, card, {usawRequired: true});
     const waiver = await waiverProblem(userId, w, [opening.date]);
     if (waiver) return fail(403, waiver, {waiverRequired: true});
     const price = (await lessonSettings()).prices[format.id];
     if (typeof price !== 'number') return fail(409, `${format.name}s are not open for online booking yet. Contact the academy to arrange one.`);
-    if ((await seatsLeft(opening.id, [opening.date], 1, 'lesson')) <= 0) return fail(409, 'Another family just booked this lesson time. Choose another time.');
-    const partners = typeof input.partners === 'string' ? input.partners.trim().slice(0, 200) : '';
+    const holders = (await lessonHolders([opening.id])).get(opening.id)!;
+    if (holders.some(h => h.userId === userId && h.wrestlerId === w.id)) return fail(409, `${w.name} is already booked into this lesson. Check your family account.`);
+    const left = await seatsLeft(opening.id, [opening.date], opening.capacity, 'lesson', {userId, wrestlerId: w.id});
+    if (left <= 0) return fail(409, opening.capacity > 1 ? 'This lesson is full. Choose another time.' : 'Another family just booked this lesson time. Choose another time.');
+    const group = opening.closed ? 'family' : opening.capacity > 1 ? 'coach' : null;
     const label = `${format.name} with ${opening.coach}, ${dayTime(opening.date, opening.start)}`;
-    const review = {type: 'lesson', title: format.name, wrestler: w.name, coach: opening.coach, dates: [opening.date], start: opening.start, end: opening.end, cents: price, partners, status: 'registration_review',
+    const review = {type: 'lesson', title: format.name, wrestler: w.name, coach: opening.coach, dates: [opening.date], start: opening.start, end: opening.end, cents: price, perWrestler: true,
+      capacity: opening.capacity, spotsLeft: left, group, status: 'registration_review',
       // With lesson checkout closed, the lesson page itself says how to pay, so the review adds nothing.
-      message: opts?.checkoutKinds?.has('lesson') ? 'Once you continue to checkout, this time is held for you for 30 minutes while you pay.' : ''};
+      message: opts?.checkoutKinds?.has('lesson') ? 'Once you continue to checkout, this spot is held for you for 30 minutes while you pay.' : ''};
     const charge: Charge = {
       kind: 'lesson', program: null, itemId: opening.id, itemLabel: label, dates: [opening.date], baseCents: price, discountCents: 0, amountCents: price,
-      pricing: {format: format.id, formatName: format.name, coachEmail: opening.coachEmail, coachName: opening.coach, start: opening.start, end: opening.end, slots: 1, partners},
+      pricing: {format: format.id, formatName: format.name, coachEmail: opening.coachEmail, coachName: opening.coach, start: opening.start, end: opening.end, slots: opening.capacity, group, perWrestler: true},
       dedupeKey: [userId, w.id, 'lesson', opening.id].join('|')
     };
     return {ok: true, review, charge, wrestler};
