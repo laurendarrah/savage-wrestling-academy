@@ -36,21 +36,32 @@ export async function offerHolds(eventId: string, dates: string[], except?: Fami
   return held;
 }
 
+// Spots in a family-requested lesson group kept for the organising family's own wrestlers (issue #177), until each of
+// them is paid for (or held by a checkout). Like a waitlist offer, a wrestler's own kept spot is not counted against them.
+export async function lessonReserved(openingId: string, except?: Family | null, now = Date.now()) {
+  const o = await env.DB!.prepare('SELECT organizer_id,organizer_wrestlers FROM coach_openings WHERE id=?').bind(openingId).first<{organizer_id: string | null; organizer_wrestlers: string | null}>();
+  if (!o?.organizer_id) return 0;
+  const kept: string[] = JSON.parse(o.organizer_wrestlers || '[]');
+  const since = new Date(now - HOLD_MINUTES * 60000).toISOString();
+  const held = new Set((await env.DB!.prepare("SELECT wrestler_id FROM orders WHERE kind='lesson' AND item_id=? AND user_id=? AND (status='paid' OR (status='pending' AND created_at>=?))")
+    .bind(openingId, o.organizer_id, since).all<{wrestler_id: string}>()).results.map(r => r.wrestler_id));
+  return kept.filter(w => !held.has(w) && !(except && except.userId === o.organizer_id && except.wrestlerId === w)).length;
+}
+
 export async function seatsLeft(eventId: string, dates: string[], slots: number, kind: 'event' | 'lesson' = 'event', family?: Family | null) {
   const holders = await seatHolders(eventId, dates, Date.now(), kind);
   const offers = kind === 'event' ? await offerHolds(eventId, dates, family) : null;
-  return Math.min(...dates.map(d => slots - (holders.get(d)?.length ?? 0) - (offers?.get(d) ?? 0)));
+  const kept = kind === 'lesson' ? await lessonReserved(eventId, family) : 0;
+  return Math.min(...dates.map(d => slots - (holders.get(d)?.length ?? 0) - (offers?.get(d) ?? 0) - kept));
 }
 
 // After inserting a pending order: does it rank within the limit on every date it needs?
-// Lessons use the same rule with one seat: the opening itself (issue #70). Seats offered to other families
-// from the waitlist are reserved for them.
+// Lessons use the same rule with one seat per wrestler, up to the lesson's spots (issues #70, #177). Seats offered to
+// other families from the waitlist, and spots kept for an organising family's wrestlers, are reserved for them.
 export async function withinCapacity(orderId: string, eventId: string, dates: string[], slots: number, kind: 'event' | 'lesson' = 'event') {
   const holders = await seatHolders(eventId, dates, Date.now(), kind);
-  let offers: Map<string, number> | null = null;
-  if (kind === 'event') {
-    const own = await env.DB!.prepare('SELECT user_id AS userId,wrestler_id AS wrestlerId FROM orders WHERE id=?').bind(orderId).first<Family>();
-    offers = await offerHolds(eventId, dates, own);
-  }
-  return dates.every(d => { const i = holders.get(d)!.indexOf(orderId); return i >= 0 && i < slots - (offers?.get(d) ?? 0); });
+  const own = await env.DB!.prepare('SELECT user_id AS userId,wrestler_id AS wrestlerId FROM orders WHERE id=?').bind(orderId).first<Family>();
+  const offers = kind === 'event' ? await offerHolds(eventId, dates, own) : null;
+  const kept = kind === 'lesson' ? await lessonReserved(eventId, own) : 0;
+  return dates.every(d => { const i = holders.get(d)!.indexOf(orderId); return i >= 0 && i < slots - (offers?.get(d) ?? 0) - kept; });
 }

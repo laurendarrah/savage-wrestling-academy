@@ -2,7 +2,9 @@ import {env} from 'cloudflare:workers';
 import {strongAccount,sameOrigin,accountReply} from '../../../lib/account-auth';
 import {accountRole} from '../../../lib/access-control';
 import {securityEvent} from '../../../lib/security-events';
-import {coachSchedule, openingTaken} from '../../../lib/lessons';
+import {coachSchedule, openingTaken, lessonSpots, updateOpening} from '../../../lib/lessons';
+import {notify, quietly} from '../../../lib/notify';
+import {dayTime} from '../../../lib/datetime';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await strongAccount(request),access=await accountRole(auth.user);if(access.role!=='coach'||!auth.strong)return accountReply({error:'Coach access and authenticator verification required.'},403,auth.headers);
@@ -17,11 +19,19 @@ export async function POST(request:Request){
  const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large.'},413);let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}
  if(input?.action==='remove'&&typeof input.id==='string'){
  if(await openingTaken(input.id))return reply({error:'A family has booked this lesson (or is paying for it now). Ask the academy to move or refund it before removing the opening.'},409);
- await env.DB!.prepare('DELETE FROM coach_openings WHERE id=? AND user_id=?').bind(input.id,auth.user!.id).run();await securityEvent(auth.user!.id,'coach_opening_removed');return reply({ok:true});
+ // A family's private group request on this time is called off with it, and the family is told (issue #177).
+ const row=await env.DB!.prepare('DELETE FROM coach_openings WHERE id=? AND user_id=? RETURNING date,start,organizer_id').bind(input.id,auth.user!.id).first<{date:string;start:string;organizer_id:string|null}>();
+ if(row?.organizer_id){const fam=await env.DB!.prepare('SELECT email FROM family_accounts WHERE user_id=?').bind(row.organizer_id).first<{email:string}>();
+  if(fam)await quietly(()=>notify([{userId:row.organizer_id,email:fam.email,kind:'lesson_group_canceled',dedupeKey:`lesson-group-off:${input.id}`,link:'/lesson',subject:`Lesson called off: ${dayTime(row.date,row.start)}`,
+   body:`${access.staff!.name} can no longer teach at ${dayTime(row.date,row.start)}, so the private group you asked for is called off. Nothing was paid for it. Choose another time on the lesson page.`}]))}
+ await securityEvent(auth.user!.id,'coach_opening_removed');return reply({ok:true});
  }
+ if(input?.action==='update'){const r=await updateOpening(auth.user!.id,input);if(r.status!==200)return reply({error:r.error},r.status);await securityEvent(auth.user!.id,'coach_opening_changed');return reply({ok:true})}
  if(input?.action!=='add'||typeof input.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||!Number.isFinite(Date.parse(input.date))||new Date(input.date).toISOString().slice(0,10)!==input.date||typeof input.start!=='string'||typeof input.end!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.end))return reply({error:'Choose a valid date and times.'},400);
  const minutes=(t:string)=>+t.slice(0,2)*60+(+t.slice(3));if(minutes(input.end)-minutes(input.start)!==60)return reply({error:'Each opening must be exactly one hour.'},400);
- const id=crypto.randomUUID(),row=await env.DB!.prepare('INSERT INTO coach_openings (id,user_id,date,start,end,coach_email) SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM coach_openings WHERE user_id=? AND date=? AND start<? AND end>?) RETURNING id').bind(id,auth.user!.id,input.date,input.start,input.end,access.staff!.email,auth.user!.id,input.date,input.end,input.start).first();
+ // The lesson type (issue #177): blank is an ordinary open time; partner and small group are coach-hosted groups.
+ const type=lessonSpots(input.format,input.spots);if('error' in type)return reply({error:type.error},400);
+ const id=crypto.randomUUID(),row=await env.DB!.prepare('INSERT INTO coach_openings (id,user_id,date,start,end,coach_email,format,capacity) SELECT ?,?,?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM coach_openings WHERE user_id=? AND date=? AND start<? AND end>?) RETURNING id').bind(id,auth.user!.id,input.date,input.start,input.end,access.staff!.email,type.format,type.capacity,auth.user!.id,input.date,input.end,input.start).first();
  if(!row)return reply({error:'This opening overlaps one of your existing openings.'},409);
  await securityEvent(auth.user!.id,'coach_opening_added');return reply({ok:true});
 }

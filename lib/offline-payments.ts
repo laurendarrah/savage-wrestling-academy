@@ -35,7 +35,7 @@ export async function previewOffline(input: OfflineInput): Promise<Quote> {
   if (input.kind === 'event')
     return quoteBooking(input.userId, {type: 'event', wrestlerId: input.wrestlerId, id: input.eventId, option: input.option || 'full'});
   if (input.kind === 'lesson')
-    return quoteBooking(input.userId, {type: 'lesson', wrestlerId: input.wrestlerId, format: input.format, openingId: input.openingId});
+    return quoteBooking(input.userId, {type: 'lesson', wrestlerId: input.wrestlerId, format: input.format, openingId: input.openingId}, {ownerRecording: true});
   return quoteBooking(input.userId, {type: 'live', wrestlerId: input.wrestlerId, id: input.liveId, date: input.date});
 }
 
@@ -68,7 +68,7 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
   const slots = charge.kind === 'event' || charge.kind === 'lesson' ? charge.pricing.slots : null;
   if (typeof slots === 'number' && slots > 0 && !(await withinCapacity(id, charge.itemId, charge.dates, slots, charge.kind as 'event' | 'lesson'))) {
     await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=?").bind(at, id).run();
-    return {status: 409, error: charge.kind === 'lesson' ? 'This lesson time was just booked by another family. The payment was not recorded.' : 'This event just filled up. The payment was not recorded.'};
+    return {status: 409, error: charge.kind === 'lesson' ? 'This lesson just filled up. The payment was not recorded.' : 'This event just filled up. The payment was not recorded.'};
   }
   if (charge.kind === 'event') await acceptStatement(charge.itemId, input.userId, quote.wrestler.id, at).run();
   await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')

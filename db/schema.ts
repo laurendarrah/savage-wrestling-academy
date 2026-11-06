@@ -12,7 +12,13 @@ export const authAttempts=sqliteTable("auth_attempts",{id:text("id").primaryKey(
 
 export const staffAccess=sqliteTable("staff_access",{email:text("email").primaryKey(),name:text("name").notNull(),programs:text("programs").notNull(),active:integer("active").notNull(),updatedAt:text("updated_at").notNull()});
 // coach_email links an opening to the coach's staff record (name, active), so families can book it (issue #70).
-export const coachOpenings=sqliteTable("coach_openings",{id:text("id").primaryKey(),userId:text("user_id").notNull(),date:text("date").notNull(),start:text("start").notNull(),end:text("end").notNull(),coachEmail:text("coach_email")});
+// Partner and small-group lessons (issue #177): format null is an ordinary open time (one-on-one, or a family can ask
+// for a private group on it). capacity is the number of wrestlers. closed=1 marks a family-requested private group:
+// never listed, joined only with invite_code (random, 192 bits). organizer_wrestlers holds the organising family's own
+// wrestlers, whose spots are kept for them until they are paid for.
+export const coachOpenings=sqliteTable("coach_openings",{id:text("id").primaryKey(),userId:text("user_id").notNull(),date:text("date").notNull(),start:text("start").notNull(),end:text("end").notNull(),coachEmail:text("coach_email"),
+ format:text("format"),capacity:integer("capacity"),closed:integer("closed").notNull().default(0),inviteCode:text("invite_code"),organizerId:text("organizer_id"),organizerWrestlers:text("organizer_wrestlers")
+},t=>[uniqueIndex("coach_openings_invite").on(t.inviteCode)]);
 export const securityEvents=sqliteTable("security_events",{id:text("id").primaryKey(),actor:text("actor").notNull(),action:text("action").notNull(),target:text("target").notNull(),createdAt:text("created_at").notNull()});
 export const recoverySnapshots=sqliteTable("recovery_snapshots",{id:text("id").primaryKey(),payload:text("payload").notNull(),createdAt:text("created_at").notNull()});
 export const restoreGuard=sqliteTable("restore_guard",{id:text("id").primaryKey(),valid:integer("valid").notNull()},t=>[check('valid_restore',sql`${t.valid} = 1`)]);

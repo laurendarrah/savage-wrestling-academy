@@ -43,7 +43,7 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
   const slots = charge.kind === 'event' || charge.kind === 'lesson' ? charge.pricing.slots : null;
   if (typeof slots === 'number' && slots > 0 && !(await withinCapacity(id, charge.itemId, charge.dates, slots, charge.kind as 'event' | 'lesson'))) {
     await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=? AND status='pending'").bind(now(), id).run();
-    throw new CheckoutError(409, charge.kind === 'lesson' ? 'Another family just booked this lesson time. Nothing was charged. Choose another time.' : 'This event just filled up. Nothing was charged. Contact the academy about its waitlist.');
+    throw new CheckoutError(409, charge.kind === 'lesson' ? 'This lesson just filled up. Nothing was charged. Choose another time.' : 'This event just filled up. Nothing was charged. Contact the academy about its waitlist.');
   }
 
   let session;
