@@ -10,7 +10,8 @@ export type Item = {key: string; group: string; label: string; status: 'done' | 
 
 const json = (v: unknown) => { try { return typeof v === 'string' ? JSON.parse(v) : null; } catch { return null; } };
 
-export async function launchChecklist(db: D1Database, settings: Settings, today: string, now = Date.now()): Promise<{items: Item[]; ready: number; total: number}> {
+// `authenticators` is how many verified authenticators the signed-in owner has (issue #167); left out, the item is skipped.
+export async function launchChecklist(db: D1Database, settings: Settings, today: string, now = Date.now(), authenticators?: number): Promise<{items: Item[]; ready: number; total: number}> {
   const first = async <T>(sql: string, ...args: unknown[]) => { try { return await db.prepare(sql).bind(...args).first<T>(); } catch { return null; } };
   const academy = json((await first<{payload: string}>("SELECT payload FROM academy_state WHERE id='academy'"))?.payload) ?? {};
   const programs: any[] = Array.isArray(academy.programs) ? academy.programs : [];
@@ -61,6 +62,9 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
       detail: kinds.length ? `Open for ${kindList(kinds)}` : 'Closed. Families pay at the academy and you record it on Payments. Each purchase type opens after its terms are decided'},
     {key: 'backup', group: 'Safety', label: 'Recent backup', href: '/backups', status: backup && backup.created_at >= weekAgo ? 'done' : 'todo',
       detail: backup ? `Last downloaded ${when(backup.created_at)}${backup.created_at >= weekAgo ? '' : '. Download a fresh one'}` : 'Download an encrypted backup and keep it somewhere safe'},
+    ...(authenticators === undefined ? [] : [{key: 'authenticator', group: 'Safety', label: 'Backup authenticator', href: '/security',
+      status: authenticators >= 2 ? 'done' as const : 'todo' as const,
+      detail: authenticators >= 2 ? `${authenticators} authenticators can open the dashboard` : 'Add a second authenticator, on another phone or in a password manager, so a lost phone can’t lock you out'}]),
     {key: 'health', group: 'Safety', label: 'Site health', href: '/site-health', status: errors ? 'todo' : 'done',
       detail: errors ? `${errors} server error${errors === 1 ? '' : 's'} in the last 24 hours` : 'No server errors in the last 24 hours'},
     {key: 'families', group: 'Families', label: 'Families signed up', href: '/accounts', status: 'info', detail: `${families} famil${families === 1 ? 'y' : 'ies'}`},
