@@ -170,3 +170,8 @@ export const notifications=sqliteTable("notifications",{
 export const errorLog=sqliteTable("error_log",{
  id:text("id").primaryKey(),at:text("at").notNull(),method:text("method").notNull(),path:text("path").notNull(),status:integer("status").notNull(),message:text("message").notNull()
 },t=>[index("error_log_at").on(t.at)]);
+// Family data requests (issue #113): closure requests the owner handles and records.
+export const dataRequests=sqliteTable("data_requests",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),email:text("email").notNull(),kind:text("kind").notNull(),note:text("note").notNull(),status:text("status").notNull(),
+ createdAt:text("created_at").notNull(),resolvedAt:text("resolved_at"),resolvedBy:text("resolved_by"),resolution:text("resolution")
+},t=>[index("data_requests_status").on(t.status,t.createdAt),check("data_request_kind",sql`${t.kind} IN ('close')`),check("data_request_status",sql`${t.status} IN ('open','handled')`)]);
