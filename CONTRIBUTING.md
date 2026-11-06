@@ -16,7 +16,7 @@ Lauren and Justin both work in this repo, often with Claude Code. Everything goe
 6. **Checks must pass.** Tests, typecheck, build and the production audit run automatically.
 7. **The other person reviews.** Lauren reviews Justin's work and Justin reviews Lauren's. Nobody merges their own pull request without a review.
 8. **Squash and merge**, then delete the branch.
-9. **Publish to the live Site** after merging, until hosting moves off ChatGPT Sites. Note on the issue that it is live.
+9. **Publishing is automatic.** Once the Deploy workflow is switched on, every merge to `main` that passes all checks is published to the academy's Cloudflare account, after an encrypted backup of the live database. Check the Deploy run, then note on the issue that it is live.
 
 ## Decisions
 
@@ -60,7 +60,7 @@ The day-by-day plan is in [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md). When a pla
 
 ## Never
 
-- Edit code directly in ChatGPT Sites.
+- Edit or publish the site anywhere but through GitHub (the old ChatGPT Sites project is retired).
 - Push straight to `main`.
 - Commit secrets, `.env` files or production data.
 - Run anything against the production database or production Supabase project from a development machine.

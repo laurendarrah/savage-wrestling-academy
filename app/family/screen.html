@@ -98,7 +98,7 @@ function renderExamplePurchases(){const kind=$('samplePurchaseType').value||'all
 function toggleSampleReceipt(){const node=$('sampleReceipt');node.hidden=!node.hidden;if(!node.hidden){node.focus();node.scrollIntoView({behavior:'smooth',block:'nearest'})}}
 function toggleSampleManagement(){const node=$('sampleManage');node.hidden=!node.hidden}
 renderBillingExample();renderExamplePurchases();
-async function signout(){const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(r.ok)location.href='/signout-with-chatgpt?return_to=/login';else $('status').textContent='Sign-out failed. Please try again.'}async function checkoutReturn(){
+async function signout(){const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(r.ok)location.href='/login';else $('status').textContent='Sign-out failed. Please try again.'}async function checkoutReturn(){
  const q=new URLSearchParams((location&&location.search)||''),state=q.get('checkout'),id=q.get('order');
  if(!state||!id||!/^[0-9a-f-]{36}$/.test(id))return;
  if(state==='canceled'){$('status').textContent='Checkout canceled. Nothing was charged.';return}

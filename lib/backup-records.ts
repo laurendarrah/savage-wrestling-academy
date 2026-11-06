@@ -1,6 +1,8 @@
 import {env} from 'cloudflare:workers';
 import {validState} from './academy-validation';
 import {validFamily,cleanFamily} from './family-records';
+// Marks a backup as this academy's. It dates from the old Sites project and must stay unchanged, so backups downloaded
+// from the old site can still be restored on the new one (docs/GO_LIVE.md step 5).
 export const BACKUP_PROJECT='appgprj_6ad13665e8c881918c12b096132b4cae';
 export const METADATA_SQL=`SELECT COALESCE((SELECT revision FROM academy_state WHERE id='academy'),0) AS academy, COALESCE((SELECT group_concat(token,'|') FROM (SELECT user_id||':'||revision AS token FROM family_accounts ORDER BY user_id)),'') AS families, COALESCE((SELECT json_group_array(json_array(id,user_id,date,start,end)) FROM (SELECT id,user_id,date,start,end FROM coach_openings ORDER BY id)),'[]') AS openings`;
 export type Row=Record<string,string|number|null>;

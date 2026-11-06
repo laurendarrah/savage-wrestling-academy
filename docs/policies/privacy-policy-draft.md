@@ -53,7 +53,7 @@ We use only the cookies needed to keep you signed in securely. We do not use adv
 We use these companies to run the site. They process information on our behalf and only as needed:
 - **Supabase**: sign-in and account security.
 - **Stripe**: online card payments.
-- **Website hosting and database**: [Decision: currently ChatGPT Sites (OpenAI), which runs on Cloudflare; after the planned move, Cloudflare (#100)].
+- **Website hosting and database**: Cloudflare (the academy's own account).
 - **Email delivery**: [Decision: provider, see #87].
 
 [Attorney: confirm whether data processing agreements are needed with each provider, and where each stores data.]

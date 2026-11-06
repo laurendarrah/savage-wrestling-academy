@@ -10,10 +10,10 @@ MOCK="${STRIPE_MOCK:-$(go env GOPATH 2>/dev/null)/bin/stripe-mock}"
 SECRET=whsec_rehearsal_$(date +%s)
 pnpm build >/dev/null
 rm -rf .wrangler/e2e-pay
-for f in drizzle/*.sql; do node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/e2e-pay --file "$f" >/dev/null; done
+for f in drizzle/*.sql; do node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/e2e-pay --file "$f" >/dev/null; done
 "$MOCK" -http-port 12111 >.wrangler/stripe-mock.log 2>&1 &
 MOCK_PID=$!
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --persist-to .wrangler/e2e-pay --port $PORT --local \
+node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --persist-to .wrangler/e2e-pay --port $PORT --local \
   --var SUPABASE_URL:http://127.0.0.1:54321 --var SUPABASE_PUBLISHABLE_KEY:sb_publishable_e2e --var APP_ORIGIN:http://127.0.0.1:$PORT \
   --var CHECKOUT_KINDS:walkin,annual,monthly,event,live,lesson --var STRIPE_API_BASE:http://127.0.0.1:12111 \
   --var STRIPE_TEST_WEBHOOK_SECRET:$SECRET --var STRIPE_CONFIG_ENCRYPTION_KEY:$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") >.wrangler/e2e-pay-server.log 2>&1 &

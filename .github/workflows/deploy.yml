@@ -1,0 +1,78 @@
+name: Deploy
+
+# Publishes main to the academy's Cloudflare account (issue #119), only after the Checks workflow passes on a push to
+# main, or when started by hand. Does nothing until the repository variable DEPLOY_ENABLED is "true" and the secrets
+# below exist. Every run backs up the live database (encrypted) before changing it.
+#
+# Repository secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, BACKUP_PASSPHRASE
+# Repository variables: DEPLOY_ENABLED, D1_DATABASE_ID, APP_ORIGIN, WORKER_NAME (optional)
+on:
+  workflow_run:
+    workflows: [Checks]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+      WORKER_NAME: ${{ vars.WORKER_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check settings
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+        run: |
+          for v in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID D1_DATABASE_ID BACKUP_PASSPHRASE APP_ORIGIN; do [ -n "${!v}" ] || { echo "Missing $v"; exit 1; }; done
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Back up the live database before changing it
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          pnpm exec wrangler d1 export DB --remote --config dist/server/wrangler.json --output pre-deploy.sql
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in pre-deploy.sql -out pre-deploy.sql.enc -pass env:BACKUP_PASSPHRASE
+          rm pre-deploy.sql
+      - name: Keep the encrypted backup for 30 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-deploy-database-${{ github.run_number }}
+          path: pre-deploy.sql.enc
+          retention-days: 30
+      - name: Apply database migrations
+        run: pnpm exec wrangler d1 migrations apply DB --remote --config dist/server/wrangler.json
+      - name: Publish
+        run: pnpm exec wrangler deploy --config dist/server/wrangler.json
+      - name: Check the live site answers
+        run: |
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o health.json -w '%{http_code}' "${{ vars.APP_ORIGIN }}/api/health") && [ "$code" = 200 ] && cat health.json && exit 0
+            sleep 10
+          done
+          echo "Health check failed (last status $code)"; cat health.json 2>/dev/null; exit 1

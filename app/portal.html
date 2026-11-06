@@ -58,7 +58,7 @@ let liveWorkspace=true;
 let mode='admin',page='Dashboard',month=Number(academyToday().slice(5,7))-1,year=Number(academyToday().slice(0,4)),filter='All programs';
 function ensurePortalData(){data.events??=[];data.events.forEach(e=>{e.id??=crypto.randomUUID()});data.families??=[{id:'family-demo',name:'Jordan Demo family'},{id:'family-taylor',name:'Taylor Sample family'}];data.directMessages??=[];data.kids.forEach((k,i)=>{k.portalId??='athlete-'+(i+1);k.childAccess??={status:'disabled',email:''}})}ensurePortalData();
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let revision=0,cloudReady=false,saving=false,pending=null,saveBlocked=false;
-async function ownerSignout(){const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(r.ok)location.href='/signout-with-chatgpt?return_to=/login';else toast('Sign-out could not finish. Try again.')}
+async function ownerSignout(){const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(r.ok)location.href='/login';else toast('Sign-out could not finish. Try again.')}
 function syncStatus(text,error=false){const el=$('#syncStatus');el.textContent=text;el.style.color=error?'#b12c38':'#27764b'}
 const programBranding={
  Elementary:{name:'SWA Development',grades:'Grades K–6',description:'For new and returning younger wrestlers. Build fundamentals, confidence, and wrestling skills, with practice partners grouped by experience and readiness.'},

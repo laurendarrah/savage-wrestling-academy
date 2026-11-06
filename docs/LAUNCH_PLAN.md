@@ -30,7 +30,7 @@ Nothing in Launch 1 can be finished without these. Each one blocks a specific da
 | 4 | Who owns the live Stripe account, and who can see payouts | Owner | Going live (Thu) |
 | 5 | Waiver approach for the first weeks: paper, or an external waiver service link | Owner | Soft launch (Fri) |
 | 6 | Stay on the current web address, or move to a custom domain now | Owner | Thu |
-| 7 | Hosting stays on ChatGPT Sites for launch week. Moving hosting is a separate project after launch | Owner and Justin | Thu |
+| 7 | ~~Hosting stays on ChatGPT Sites for launch week~~ **Changed Nov 6:** the academy leaves ChatGPT Sites and ChatGPT; hosting moves to its own Cloudflare account before launch (#100, #119). Steps in [GO_LIVE](GO_LIVE.md) | Owner and Justin | Now |
 | 8 | Freeze direct edits in ChatGPT Sites. From now on every change goes through GitHub | Justin | Everything |
 
 Recommendation for 6 and 7: launch on the current address and current hosting. Changing domain or hosting during launch week adds risk and no customer value.
@@ -161,6 +161,6 @@ Drafts based on what the platform does are in [docs/policies](policies/README.md
 | Person | Role this week |
 |---|---|
 | Owner | Decisions 1 to 6, Stripe ownership, terms, soft-launch families |
-| Justin | Access, publishing to Sites, Supabase settings, decision 8 |
+| Justin | Cloudflare account, domain, Supabase and Stripe access, the live data export, decisions |
 | Lauren | Coordination, review and merge of each change |
 | Claude Code | Builds each day's work on a branch with tests, for review before merge |

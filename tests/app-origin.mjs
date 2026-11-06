@@ -14,14 +14,11 @@ function loadAuth(env){
   return module.exports;
 }
 
-const live='https://savage-registration-preview.justinaccordino546.chatgpt.site';
-
-// Default is the current live Sites deployment, not the retired wellrose34 host.
+// No default (issue #119): the old chatgpt.site address must never be used again, so a missing setting is an error.
 {
-  const auth=loadAuth({});
-  assert.equal(auth.DEFAULT_APP_ORIGIN,live);
-  assert.equal(auth.appOrigin(),live);
-  assert.equal(loadAuth({APP_ORIGIN:'   '}).appOrigin(),live,'blank setting falls back to the default');
+  assert.throws(()=>loadAuth({}).appOrigin(),/APP_ORIGIN is not set/);
+  assert.throws(()=>loadAuth({APP_ORIGIN:'   '}).appOrigin(),/APP_ORIGIN is not set/,'blank counts as missing');
+  assert.equal(loadAuth({}).DEFAULT_APP_ORIGIN,undefined);
 }
 
 // A configured origin wins and is normalized to scheme://host[:port].
