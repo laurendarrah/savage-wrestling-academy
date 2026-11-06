@@ -32,3 +32,32 @@ jobs:
         run: pnpm build
       - name: Production dependency audit
         run: pnpm audit --prod
+
+  e2e:
+    # The signed-in site in a real browser: owner, coach and two families through every feature, plus an
+    # accessibility check on every page. Uses a stand-in for Supabase sign-in and a throwaway local database.
+    name: Browser walkthrough
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Walkthrough and accessibility check
+        run: pnpm e2e e2e-screenshots
+      - name: Keep screenshots and server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            e2e-screenshots
+            .wrangler/e2e-server.log
+          retention-days: 7
+          if-no-files-found: ignore
