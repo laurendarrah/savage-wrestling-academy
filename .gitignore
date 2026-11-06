@@ -27,3 +27,6 @@ next-env.d.ts
 
 # Browser walkthrough output (pnpm e2e)
 e2e-screenshots/
+
+# Working copies made by Claude Code helpers; never part of the project.
+.claude/worktrees/
