@@ -8,7 +8,7 @@ export function GET(){
  const html=(portal.slice(0,at)+demo+'\nstartAdminDemo();'+portal.slice(at+boot.length))
   .replaceAll('crypto.randomUUID()','demoUUID()')
   .replace('<title>Savage | Owner Workspace</title>','<title>Savage Wrestling | Admin Demo</title>')
-  .replace('<strong>OWNER WORKSPACE</strong> · Parent view and Wrestler view show sample families, not your real ones','<strong>ADMIN DEMO</strong> · Fictional data · Changes stay in this tab and reset when you reload')
+  .replace('<body>','<body><div class="preview"><strong>ADMIN DEMO</strong> · Fictional data · Changes stay in this tab and reset when you reload</div>')
   .replace('<footer>Times are New York time. <button','<footer>Admin demo · Sample data only · Times are New York time. <button');
  return new Response(html,{headers:{
   'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',

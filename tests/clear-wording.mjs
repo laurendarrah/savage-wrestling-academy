@@ -20,6 +20,22 @@ function page(file, {fetch, search = '', extra = {}}) {
 const settle = () => new Promise(r => setImmediate(r));
 const reply = body => ({ok: true, status: 200, json: async () => body});
 
+// Coach home leads with today's practices and puts booked lessons before open times (issue #133).
+{
+  const fetch = async path => reply(path === '/api/roster'
+    ? {sessions: [{title: 'SWA Intermediate', start: '18:00', end: '19:30', entries: [{}, {}, {}, {}, {}], checkedIn: 3}]}
+    : {name: 'Coach Dana', programs: ['Intermediate'], openings: [{id: 'o2', date: '2026-11-10', start: '09:30', end: '10:30', booking: null},
+        {id: 'o1', date: '2026-11-09', start: '15:00', end: '16:00', booking: {format: 'One-on-one lesson', wrestler: 'Sam Example', parent: 'Pat Example'}}]});
+  const {el, html} = page('app/coach/screen.html', {fetch});
+  await settle(); await settle();
+  assert.match(el('sessions').innerHTML, /6:00 PM<\/span><span class="name">SWA Intermediate<\/span><span class="count">3 of 5 checked in/);
+  assert.ok(el('slots').innerHTML.indexOf('Booked:') < el('slots').innerHTML.indexOf('Open for families'), 'booked lessons come first');
+  assert.ok(html.indexOf('Today on the mat') < html.indexOf('Add a one-hour opening'), 'today comes before the opening form');
+  const empty = page('app/coach/screen.html', {fetch: async p => reply(p === '/api/roster' ? {sessions: []} : {name: 'C', programs: [], openings: []})});
+  await settle(); await settle();
+  assert.match(empty.el('sessions').innerHTML, /Nothing is on the mat for your programs today/);
+}
+
 // Coach home: no "workspace", no claim that booking is "still being connected", dates and times as people say them.
 {
   const {el, html} = page('app/coach/screen.html', {fetch: async () => reply({name: 'Coach Dana', programs: ['Intermediate'], openings: [
