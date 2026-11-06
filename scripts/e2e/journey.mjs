@@ -237,6 +237,8 @@ await step('camp fills; family 2 joins the waitlist from the booking page; owner
   await family2.click('#joinWaitlist'); await waitText(family2, '#status', /on the waitlist/);
   await owner.goto(BASE + '/waitlists'); await waitText(owner, '#events', /Riley Two/);
   await owner.locator('[data-offer]').first().click(); await waitText(owner, '#status', /Seat offered/);
+  // The camp was full, so the owner confirmed going over the limit; the page says so instead of a negative number.
+  await waitText(owner, '#events', /Full: 1 over the 1-seat limit/);
   await family2.goto(BASE + '/family'); await waitText(family2, '#waitlistList', /Seat held for you/);
   await family2.goto(BASE + '/booking?type=event&id=winter-camp'); await family2.waitForSelector('#submit'); await family2.click('#submit');
   await family2.waitForFunction(() => /\$160\.00/.test(document.body.textContent), null, {timeout: 30000});
@@ -409,7 +411,7 @@ await step('one family cannot see another family\'s data', async () => {
   const c = await api(family2, '/api/usaw-cards'); expect(c.status === 403, 'family reached owner cards');
 });
 await step('family pages fit a phone screen', async () => {
-  const phone = await (async () => { const p = await (await browser.newContext({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true})); const c = (await import('./fake-supabase.mjs')).sessionCookie('family', AUTH); await p.addCookies([{name: c.name, value: c.value, url: BASE}]); return p.newPage(); })();
+  const phone = await (async () => { const p = await (await browser.newContext({viewport: {width: 390, height: 844}, deviceScaleFactor: SHOTS ? 3 : 1, isMobile: true, hasTouch: true})); const c = (await import('./fake-supabase.mjs')).sessionCookie('family', AUTH); await p.addCookies([{name: c.name, value: c.value, url: BASE}]); return p.newPage(); })();
   for (const path of ['/help', '/family', '/register', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
     await phone.goto(BASE + path); await phone.waitForTimeout(700);
     const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
