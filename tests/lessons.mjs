@@ -7,7 +7,7 @@ import ts from 'typescript';
 import path from 'node:path';
 
 const sqlite = new DatabaseSync(':memory:');
-for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
+for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
 const DB = {
   prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }, async all() { return {results: sqlite.prepare(sql).all(...a)}; }, async run() { return {meta: sqlite.prepare(sql).run(...a)}; },
     _execute() { const s = sqlite.prepare(sql); return s.columns().length ? {results: s.all(...a)} : {results: [], meta: s.run(...a)}; }}; },
@@ -41,7 +41,7 @@ function load(file) {
 
 // --- The migration that allows lesson orders keeps every existing order ---
 {
-  const old = new DatabaseSync(':memory:'), files = readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort();
+  const old = new DatabaseSync(':memory:'), files = readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort();
   for (const f of files.filter(f => f < '0019')) old.exec(readFileSync('drizzle/' + f, 'utf8'));
   old.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,source)
     VALUES ('o-old','u','u@x','w','W','annual','Intermediate','Intermediate','Membership','[]',240000,0,240000,'usd','{}','{}','paid','k',0,'t','t','t','offline')`).run();

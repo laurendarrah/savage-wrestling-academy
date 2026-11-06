@@ -8,7 +8,7 @@ import {DatabaseSync} from 'node:sqlite';
 
 function freshDb(){
   const sqlite=new DatabaseSync(':memory:');
-  for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sqlite.exec(readFileSync('drizzle/'+f,'utf8'));
+  for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')&&!f.includes('_starter_')).sort())sqlite.exec(readFileSync('drizzle/'+f,'utf8'));
   const DB={prepare(sql){let args=[];return {bind(...v){args=v;return this},async first(){return sqlite.prepare(sql).get(...args)??null},async run(){return sqlite.prepare(sql).run(...args)},async all(){return {results:sqlite.prepare(sql).all(...args)}},_execute(){const st=sqlite.prepare(sql);return st.columns().length?{results:st.all(...args)}:{results:[],meta:st.run(...args)}}}},
     async batch(list){sqlite.exec('BEGIN');try{const r=list.map(s=>s._execute());sqlite.exec('COMMIT');return r}catch(e){sqlite.exec('ROLLBACK');throw e}}};
   return {sqlite,DB};

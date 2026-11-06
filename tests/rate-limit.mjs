@@ -7,7 +7,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 const sqlite = new DatabaseSync(':memory:');
-for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
+for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
 const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }, async run() { return {meta: sqlite.prepare(sql).run(...a)}; }}; }};
 const module = {exports: {}};
 vm.runInNewContext(ts.transpileModule(readFileSync('lib/rate-limit.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,

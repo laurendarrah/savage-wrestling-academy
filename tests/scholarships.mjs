@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import path from 'node:path';
 const sqlite=new DatabaseSync(':memory:');
-for(const file of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sqlite.exec(readFileSync('drizzle/'+file,'utf8'));
+for(const file of readdirSync('drizzle').filter(f=>f.endsWith('.sql')&&!f.includes('_starter_')).sort())sqlite.exec(readFileSync('drizzle/'+file,'utf8'));
 const DB={prepare(sql){let args=[];return {bind(...v){args=v;return this},async first(){return sqlite.prepare(sql).get(...args)??null},async all(){return {results:sqlite.prepare(sql).all(...args)}},async run(){return sqlite.prepare(sql).run(...args)}}}};
 let actor={id:'owner',email:'owner@example.test',email_confirmed_at:'yes',strong:true,owner:true};
 const cache=new Map();
