@@ -20,7 +20,7 @@
 
 /* Premium pass (issue #146): tighter condensed headings, soft cards, athletic buttons, textured black bands. */
 html{overflow-x:clip}
-html body{font-family:var(--swa-body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;background:var(--swa-ground);color:var(--swa-ink)}
+html body{font-family:var(--swa-body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 html body h1{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:-.4px;line-height:.98;font-size:clamp(38px,7.4vw,64px);text-wrap:balance}
 html body h2{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:.1px;line-height:1.04;font-size:clamp(23px,4.2vw,30px);text-wrap:balance}
 html body h3{font-family:var(--swa-body);font-weight:700;line-height:1.25;letter-spacing:-.1px}
