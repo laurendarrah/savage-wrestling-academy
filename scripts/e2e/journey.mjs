@@ -345,10 +345,13 @@ await step('owner downloads an encrypted backup and previews and restores it fro
 await step('owner dashboard shows today\'s real numbers', async () => {
   await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Sessions today/);
   await waitText(owner, '#todayTiles', /Collected this month/);
+  await waitText(owner, '#todayTiles', /Site errors, last 24 hours/);
+  const h = await owner.request.get(BASE + '/api/health'); expect(h.status() === 200 && (await h.json()).ok === true, 'health check');
   expect(!(await owner.isVisible('.sample-notice')), 'live dashboard must not show the sample-data notice');
   const bg = await owner.locator('a.button.primary').first().evaluate(el => getComputedStyle(el).backgroundColor);
   expect(bg !== 'rgb(255, 255, 255)' && bg !== 'rgba(0, 0, 0, 0)', 'primary button is invisible: ' + bg);
   await shot(owner, 'owner-dashboard');
+  await owner.goto(BASE + '/site-health'); await waitText(owner, '#now', /Site and database are answering/);
 });
 await step('backup export includes payments and signed waivers', async () => {
   const r = await api(owner, '/api/backups');
@@ -385,7 +388,7 @@ const a11yPages = {
   public: ['/calendar', '/login', '/membership-terms'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
   coach: ['/coach', '/roster'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {

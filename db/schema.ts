@@ -166,3 +166,7 @@ export const notifications=sqliteTable("notifications",{
  id:text("id").primaryKey(),userId:text("user_id"),email:text("email").notNull(),kind:text("kind").notNull(),subject:text("subject").notNull(),body:text("body").notNull(),
  dedupeKey:text("dedupe_key").notNull(),createdAt:text("created_at").notNull(),readAt:text("read_at"),emailStatus:text("email_status").notNull()
 },t=>[uniqueIndex("notifications_once").on(t.dedupeKey),index("notifications_user").on(t.userId,t.createdAt)]);
+// Server errors for the owner's site health page (issue #107). Transient: not backed up, last 500 kept.
+export const errorLog=sqliteTable("error_log",{
+ id:text("id").primaryKey(),at:text("at").notNull(),method:text("method").notNull(),path:text("path").notNull(),status:integer("status").notNull(),message:text("message").notNull()
+},t=>[index("error_log_at").on(t.at)]);
