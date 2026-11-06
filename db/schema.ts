@@ -161,3 +161,8 @@ export const bookingExceptions=sqliteTable("booking_exceptions",{
  startsOn:text("starts_on").notNull(),endsOn:text("ends_on").notNull(),reason:text("reason").notNull(),
  createdBy:text("created_by").notNull(),createdAt:text("created_at").notNull(),revokedAt:text("revoked_at"),revokedBy:text("revoked_by")
 },t=>[index("booking_exceptions_wrestler").on(t.userId,t.wrestlerId,t.rule),check("booking_exception_rule",sql`${t.rule} IN ('usaw','waiver')`)]);
+// Automatic notices to families and coaches (issue #105). dedupe_key makes each event notify once.
+export const notifications=sqliteTable("notifications",{
+ id:text("id").primaryKey(),userId:text("user_id"),email:text("email").notNull(),kind:text("kind").notNull(),subject:text("subject").notNull(),body:text("body").notNull(),
+ dedupeKey:text("dedupe_key").notNull(),createdAt:text("created_at").notNull(),readAt:text("read_at"),emailStatus:text("email_status").notNull()
+},t=>[uniqueIndex("notifications_once").on(t.dedupeKey),index("notifications_user").on(t.userId,t.createdAt)]);

@@ -4,6 +4,7 @@ import {accountRole} from '../../../lib/access-control';
 import {academyToday} from '../../../lib/public-schedule';
 import {rosterFor, checkIn, undoCheckIn, validDate, type Scope} from '../../../lib/roster';
 import {scanCheckIn} from '../../../lib/passes';
+import {dailyReminders, quietly} from '../../../lib/notify';
 import {academyMinutes} from '../../../lib/lessons';
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,7 @@ export async function GET(request: Request) {
   const today = academyToday(), date = new URL(request.url).searchParams.get('date') || today;
   if (!validDate(date)) return reply({error: 'Choose a valid date.'}, 400);
   if (s.scope.role === 'coach' && date !== today) return reply({error: 'Coaches can open today\'s roster only.'}, 403);
+  await quietly(() => dailyReminders());
   return reply({date, today, role: s.scope.role, sessions: await rosterFor(date, s.scope)});
 }
 

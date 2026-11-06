@@ -54,7 +54,7 @@ function load(file) {
     require(name) {
       if (name === 'cloudflare:workers') return {env};
       if (name === 'stripe') return StripeMock;
-      if (name.endsWith('/account-auth')) return {strongAccount: async () => ({user: actor, strong: actor?.strong, headers: new Headers()}), sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
+      if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',strongAccount: async () => ({user: actor, strong: actor?.strong, headers: new Headers()}), sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
       if (name.endsWith('/rate-limit')) return {rateLimited: async () => false};
       if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'));
       throw Error('unexpected import ' + name);

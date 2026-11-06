@@ -37,6 +37,7 @@ export const RECORD_TABLES:Record<string,Col[]>={
  announcement_recipients:[['announcement_id','text'],['user_id','text'],['email','text'],['read_at','text',true],['email_status','text']],
  family_messages:[['id','text'],['user_id','text'],['sender_role','text'],['body','text',false,BIG],['created_at','text'],['read_at','text',true],['email_status','text']],
  booking_exceptions:[['id','text'],['user_id','text'],['wrestler_id','text'],['rule','text'],['starts_on','text'],['ends_on','text'],['reason','text'],['created_by','text'],['created_at','text'],['revoked_at','text',true],['revoked_by','text',true]],
+ notifications:[['id','text'],['user_id','text',true],['email','text'],['kind','text'],['subject','text'],['body','text',false,20000],['dedupe_key','text'],['created_at','text'],['read_at','text',true],['email_status','text']],
 };
 // Tables whose primary key is not a single id column.
 export const RECORD_KEYS:Record<string,string[]>={subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};

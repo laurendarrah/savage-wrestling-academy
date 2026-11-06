@@ -3,12 +3,14 @@ import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-au
 import { validFamily, cleanFamily, emptyFamily } from '../../../lib/family-records';
 import { cardStatus, reviewFor } from '../../../lib/usaw';
 import { exceptionFor } from '../../../lib/exceptions';
+import { dailyReminders, quietly } from '../../../lib/notify';
 import { academyToday } from '../../../lib/public-schedule';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return accountReply({error:'Authenticator verification required.'},403,auth.headers);
  const row=await env.DB!.prepare('SELECT payload,revision,updated_at FROM family_accounts WHERE user_id=?').bind(auth.user.id).first<{payload:string;revision:number;updated_at:string}>();
+ await quietly(()=>dailyReminders());
  const data=row?JSON.parse(row.payload):emptyFamily(),today=academyToday(),cards:Record<string,unknown>={};
  // USA Wrestling card status per wrestler, including the owner's review, so the family sees what blocks booking.
  for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]);cards[w.id]={...cardStatus(w,await reviewFor(auth.user.id,w.id),today),exceptionUntil:x?.endsOn??null}}

@@ -21,7 +21,7 @@ function load(file) {
     {module, exports: module.exports, crypto, Intl, Date, URL, Response, Request, Headers, JSON, Map, Set, Object, Array, String, console,
       require(name) {
         if (name === 'cloudflare:workers') return {env: {DB}};
-        if (name.endsWith('/account-auth')) return {
+        if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',
           ownerIdentity: async () => ({owner: actor.kind === 'owner' && actor.strong !== false ? {userId: 'owner-id'} : null, mfaRequired: actor.kind === 'owner' && actor.strong === false, headers: new Headers()}),
           strongAccount: async () => ({user: actor.kind === 'none' ? null : {id: actor.id ?? 'someone', email: 'x@example.test', email_confirmed_at: 'yes'}, strong: actor.strong !== false, headers: new Headers()}),
           sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin,

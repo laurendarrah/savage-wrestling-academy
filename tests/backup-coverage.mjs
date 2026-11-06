@@ -56,11 +56,12 @@ function seed(sqlite){
   run("INSERT INTO announcements VALUES (?,?,?,?,?,?,?,?)",'an-1','Practice moved','Six thirty tonight.','{"type":"all"}','All families','owner',now,1);
   run("INSERT INTO announcement_recipients VALUES (?,?,?,?,?)",'an-1','parent-1','pat@example.test',null,'skipped');
   run("INSERT INTO family_messages VALUES (?,?,?,?,?,?,?)",'fm-1','parent-1','owner','Great practice.',now,null,'skipped');
+  run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?,?)",'nt-1','parent-1','pat@example.test','card_expiring','Card expires soon','Renew it.','card-soon:parent-1:w-1:2026-12-01',now,null,'skipped');
   run("INSERT INTO booking_exceptions VALUES (?,?,?,?,?,?,?,?,?,?,?)",'ex-1','parent-1','w-1','usaw','2026-11-05','2026-12-05','Renewal pending','owner',now,null,null);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {

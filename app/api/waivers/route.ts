@@ -1,6 +1,7 @@
 // Owner waiver settings (issue #69): publish the approved text as a new version, retire it, and see who has signed.
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {ownerWaivers, publishWaiver, retireWaiver} from '../../../lib/waivers';
+import {dailyReminders, quietly} from '../../../lib/notify';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
@@ -20,5 +21,6 @@ export async function POST(request: Request) {
   try { input = JSON.parse(raw); } catch { return reply({error: 'Invalid request.'}, 400); }
   const r = input?.action === 'publish' ? await publishWaiver(input.title, input.body, auth.owner.userId)
     : input?.action === 'retire' ? await retireWaiver(auth.owner.userId) : {status: 400, error: 'Choose publish or retire.'};
+  if (r.status === 200 && input.action === 'publish') await quietly(() => dailyReminders(true));
   return r.status === 200 ? reply({ok: true}) : reply({error: (r as any).error}, r.status);
 }

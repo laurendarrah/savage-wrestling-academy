@@ -3,6 +3,7 @@
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
 import {acceptStatement} from './waitlist';
+import {noticeLessonBooked, quietly} from './notify';
 import {membershipTerm, paidThroughAfter} from './membership-term';
 export {membershipTerm, paidThroughAfter};
 import {storedStripeKeyFor, stripeClientFor} from './stripe-test';
@@ -85,6 +86,8 @@ export async function applyStripeEvent(event: any): Promise<Outcome & {duplicate
   if (outcome.startsWith('rejected:'))
     await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
       .bind(crypto.randomUUID(), 'stripe', 'stripe_event_rejected', `${event.id} ${outcome}`, at).run();
+  // A paid lesson tells the coach and the family (issue #105); other notices are not needed for online payments.
+  if (outcome.startsWith('paid') && orderId) await quietly(() => noticeLessonBooked(orderId));
   return {outcome, orderId, duplicate: false};
 }
 
