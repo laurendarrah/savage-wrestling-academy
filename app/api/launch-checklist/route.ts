@@ -7,5 +7,6 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
-  return accountReply(await launchChecklist(env.DB!, env as never, academyToday()), 200, auth.headers);
+  const authenticators = (auth.user?.factors ?? []).filter(f => f.status === 'verified').length;
+  return accountReply(await launchChecklist(env.DB!, env as never, academyToday(), Date.now(), authenticators), 200, auth.headers);
 }

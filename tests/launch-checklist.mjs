@@ -69,6 +69,16 @@ for (const [o, ok] of [['http://register.savagewrestling.example', false], ['htt
   assert.equal(a.status, ok ? 'done' : 'todo', o); if (!ok) assert.match(a.detail, /must start with https/);
 }
 
+// Backup authenticator (issue #167): to do with one, done with two, left out when the caller doesn't say.
+{
+  const one = by(await launchChecklist(DB, settings, today, now, 1)).authenticator;
+  assert.equal(one.status, 'todo'); assert.equal(one.href, '/security'); assert.match(one.detail, /lost phone/);
+  assert.equal(by(await launchChecklist(DB, settings, today, now, 2)).authenticator.status, 'done');
+  assert.equal(by(await launchChecklist(DB, settings, today, now)).authenticator, undefined);
+}
+const routeText = readFileSync('app/api/launch-checklist/route.ts', 'utf8');
+assert.match(routeText, /factors \?\? \[\]\)\.filter\(f => f\.status === 'verified'\)/, 'counts only verified authenticators');
+
 // The page is owner-only and the dashboard shows it.
 const route = readFileSync('app/api/launch-checklist/route.ts', 'utf8');
 assert.match(route, /ownerIdentity/); assert.match(route, /if \(!auth\.owner\) return/);
