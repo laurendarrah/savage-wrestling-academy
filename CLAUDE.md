@@ -1,7 +1,7 @@
 # Savage Wrestling Academy platform
 
 Registration, scheduling, scholarship, and coaching platform for Savage Wrestling Academy.
-Cloudflare Worker built with Vinext and Vite, Cloudflare D1 for business data, Supabase for sign-in only, Stripe for payments, in test mode unless deliberately switched.
+Cloudflare Worker built with Vinext and Vite, on the academy's own Cloudflare account, Cloudflare D1 for business data, Supabase for sign-in only, Stripe for payments, in test mode unless deliberately switched.
 
 Read `handoff/README.md` and `handoff/docs/ARCHITECTURE.md` before larger changes.
 Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/ROADMAP.md`.
@@ -16,8 +16,9 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 
 ## Hard rules
 
-- Never publish or deploy from this repo. The live site is managed in ChatGPT Sites until a migration is approved.
-- `.openai/hosting.json` in this repo is a local stand-in with no project ID. Do not add the real Sites project ID without the owner's approval, because it publishes to the live site.
+- The site runs on the academy's Cloudflare account (#100, #119). The academy has left ChatGPT Sites and ChatGPT; do not add any Sites or ChatGPT dependency.
+- Production is published only by the **Deploy** GitHub workflow, from `main`, after all checks pass. Never run `wrangler deploy`, `wrangler d1 ... --remote` or `wrangler secret` against the academy's account from a local machine or a Claude Code session.
+- Never change the Deploy workflow's backup step, the `DEPLOY_ENABLED` switch or production settings without the owner's approval.
 - Never run migrations, queries, or scripts against the production D1 database or production Supabase project. Use a local D1 and a separate development Supabase project.
 - Never commit secrets. `.env*` and `.dev.vars*` are ignored for that reason.
 - Do not edit or reorder existing files in `drizzle/`. Add a new migration with `pnpm db:generate` instead.

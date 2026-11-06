@@ -28,7 +28,7 @@ async function step(name, fn) { current = name; try { await fn(); passed.push(na
 const expect = (c, m) => { if (!c) throw new Error(m); };
 const api = (page, url, body, method) => page.evaluate(async ([u, b, m]) => { const r = await fetch(u, b ? {method: m || 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b)} : {cache: 'no-store'}); return {status: r.status, body: await r.json().catch(() => null)}; }, [url, body, method]);
 const waitText = (page, sel, re, ms = 10000) => page.waitForFunction(([s, r]) => new RegExp(r).test(document.querySelector(s)?.textContent || ''), [sel, re.source], {timeout: ms});
-const sql = q => JSON.parse(execFileSync('node', ['--import', './scripts/sites-env.mjs', './node_modules/wrangler/bin/wrangler.js', 'd1', 'execute', 'DB', '--local', '--config', 'dist/server/wrangler.json', '--persist-to', '.wrangler/e2e-pay', '--json', '--command', q], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}))[0].results;
+const sql = q => JSON.parse(execFileSync('node', ['--import', './scripts/local-env.mjs', './node_modules/wrangler/bin/wrangler.js', 'd1', 'execute', 'DB', '--local', '--config', 'dist/server/wrangler.json', '--persist-to', '.wrangler/e2e-pay', '--json', '--command', q], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}))[0].results;
 let evt = 0;
 async function webhook(type, object) {
   const body = JSON.stringify({id: `evt_rehearsal_${++evt}`, object: 'event', type, livemode: false, created: Math.floor(Date.now() / 1000), data: {object}});

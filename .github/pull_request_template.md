@@ -16,6 +16,6 @@ Closes #
 
 ## After merge
 
-- [ ] Needs publishing to the live Site
+- [ ] Changes the database (a new migration runs on the next Deploy)
 - [ ] Needs a settings change (Supabase, Stripe, environment variable). Describe it:
 - [ ] Updates docs/LAUNCH_PLAN.md

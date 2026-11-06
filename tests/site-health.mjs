@@ -48,18 +48,17 @@ let handlerResult = null;
 // The Worker entry with a stand-in request handler.
 const worker = (() => {
   const module = {exports: {}};
-  vm.runInNewContext(ts.transpileModule(readFileSync('build/sites-worker.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText.replace(/import\.meta\.env\.DEV/g, 'false'),
+  vm.runInNewContext(ts.transpileModule(readFileSync('build/worker.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText.replace(/import\.meta\.env\.DEV/g, 'false'),
     {module, exports: module.exports, crypto, URL, Response, Request, Date, console, Error, String,
       require(name) {
         if (name === 'vinext/server/fetch-handler') return {default: {fetch: async () => { if (handlerResult instanceof Error) throw handlerResult; return handlerResult; }}};
-        if (name.endsWith('/connector-context')) return {runWithConnectorBinding: (b, fn) => fn()};
         if (name.endsWith('/site-health')) return load(path.resolve('lib/site-health.ts'));
         throw Error('unexpected ' + name);
       }});
   return module.exports.default;
 })();
 const pending = [];
-const ctx = {props: {}, waitUntil: p => pending.push(p)};
+const ctx = {waitUntil: p => pending.push(p)};
 const hit = async (url, result) => { handlerResult = result; pending.length = 0; let thrown = null; let res = null; try { res = await worker.fetch(new Request(url), {DB}, ctx); } catch (e) { thrown = e; } await Promise.all(pending); return {res, thrown}; };
 const rows = () => sqlite.prepare('SELECT * FROM error_log ORDER BY at').all();
 

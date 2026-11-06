@@ -6,8 +6,8 @@ cd "$(dirname "$0")/../.."
 PORT=8799
 pnpm build >/dev/null
 rm -rf .wrangler/e2e
-for f in drizzle/*.sql; do node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/e2e --file "$f" >/dev/null; done
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --persist-to .wrangler/e2e --port $PORT --local \
+for f in drizzle/*.sql; do node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/e2e --file "$f" >/dev/null; done
+node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --persist-to .wrangler/e2e --port $PORT --local \
   --var SUPABASE_URL:http://127.0.0.1:54321 --var SUPABASE_PUBLISHABLE_KEY:sb_publishable_e2e --var APP_ORIGIN:http://127.0.0.1:$PORT >.wrangler/e2e-server.log 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null; rm -rf .wrangler/e2e' EXIT

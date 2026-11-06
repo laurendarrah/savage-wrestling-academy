@@ -6,10 +6,11 @@ export const OWNER_EMAIL = 'savagewrestlingclub@gmail.com';
 // Origin used in sign-up, resend and password-reset email links.
 // Set APP_ORIGIN per environment (for example http://127.0.0.1:5173 locally, or a custom domain later).
 // Every origin used here must also be in the Supabase Auth redirect allowlist.
-export const DEFAULT_APP_ORIGIN = 'https://savage-registration-preview.justinaccordino546.chatgpt.site';
+// There is no default (issue #119): the site moved off its old chatgpt.site address, and an email link to the wrong
+// address is worse than a clear error. Set APP_ORIGIN on every deployment.
 export function appOrigin(): string {
  const configured = (env as {APP_ORIGIN?: string}).APP_ORIGIN?.trim();
- if (!configured) return DEFAULT_APP_ORIGIN;
+ if (!configured) throw new Error('APP_ORIGIN is not set. Set it to the site address, for example https://register.savagewrestling.com.');
  let url: URL;
  try { url = new URL(configured); } catch { throw new Error('APP_ORIGIN must be an absolute URL.'); }
  const loopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1';

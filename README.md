@@ -2,7 +2,7 @@
 
 Registration, scheduling, scholarships and coaching tools for Savage Wrestling Academy.
 
-- **Live site:** https://savage-registration-preview.justinaccordino546.chatgpt.site (hosted on ChatGPT Sites)
+- **Live site:** moving from ChatGPT Sites to the academy's Cloudflare account; see [docs/GO_LIVE.md](docs/GO_LIVE.md) (#100)
 - **Launch plan:** [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md)
 - **Publishing checklist:** [docs/GO_LIVE.md](docs/GO_LIVE.md)
 - **Policy drafts for attorney review:** [docs/policies/](docs/policies/README.md)
@@ -55,7 +55,7 @@ To run the built Worker against a local database:
 
 ```bash
 pnpm build
-for f in drizzle/*.sql; do node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file "$f"; done
+node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 migrations apply DB --local --config dist/server/wrangler.json --persist-to .wrangler/state
 pnpm start
 ```
 
@@ -90,8 +90,8 @@ Without Supabase settings, public pages work and every signed-in page refuses re
 
 ## Rules that protect the live site
 
-- Do not deploy from this repo. Publishing happens through the ChatGPT Sites project until hosting moves.
-- `.openai/hosting.json` here has no Sites project ID on purpose.
+- Production is published only by the **Deploy** GitHub workflow from `main` after every check passes. It backs up the live database first. Never deploy from your own machine.
+- The academy has left ChatGPT Sites; there is no Sites or ChatGPT code in this repo.
 - Never point local work at the production database or production Supabase project.
 - Never commit secrets.
 

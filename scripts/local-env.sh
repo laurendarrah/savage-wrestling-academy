@@ -44,7 +44,7 @@ if [[ "${1:-}" == "--" ]]; then
 fi
 
 if [[ "$#" -eq 0 ]]; then
-  echo "usage: scripts/sites-env.sh -- command [args...]" >&2
+  echo "usage: scripts/local-env.sh -- command [args...]" >&2
   exit 64
 fi
 
