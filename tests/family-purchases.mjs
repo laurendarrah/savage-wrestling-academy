@@ -26,6 +26,8 @@ let r = await get('');
 assert.equal(r.status, 200);
 assert.deepEqual(r.body.orders.map(o => o.id).sort(), [uuid(1), uuid(4)], 'own paid and refunded orders only; abandoned and canceled hidden');
 assert.ok(Array.isArray(r.body.orders[0].dates));
+// Issue #132: the booking page tells a family their wrestler is already registered, so each order names its item.
+assert.ok(r.body.orders.every(o => o.item_id === 'item'), 'orders carry the event, practice or lesson they are for');
 assert.equal(r.body.checkoutOpen, true, 'the page learns whether online payment is open');
 assert.equal((await get('?order=' + uuid(1))).body.order.status, 'paid');
 assert.equal((await get('?order=' + uuid(5))).status, 404, 'cannot read another family\'s order');

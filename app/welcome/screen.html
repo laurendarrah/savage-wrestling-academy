@@ -1,0 +1,100 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Welcome | Savage Wrestling Academy</title><meta name="description" content="Wrestling for kindergarten through 12th grade in Huntington Station, NY. See the programs and the practice calendar, then join online."><link rel="stylesheet" href="/responsive.css"><style>
+body{margin:0;background:#F4F5F7;color:#141416}
+.hero{background:#141416;color:#fff;padding:36px 16px 44px}
+.hero .in,main{max-width:1080px;margin:0 auto}
+.hero .in{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:center}
+.hero img{width:200px;height:200px;display:block}
+.eyebrow{font-weight:700;font-size:14px;letter-spacing:2.4px;text-transform:uppercase;color:#B9C4C9;margin:0}
+html body .hero h1{margin:8px 0 12px;color:#fff;font-size:clamp(40px,8vw,72px)}
+.hero p.lede{margin:0 0 24px;color:#D7DBE0;font-size:19px;max-width:44ch}
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+html body .actions a.button{min-height:50px;padding:0 22px;display:inline-flex;align-items:center;text-decoration:none;font-size:17px;font-weight:700}
+html body .actions a.button:not(.primary){background:transparent;border-color:#fff;color:#fff}
+html body .actions a.button:not(.primary):hover{background:#26272C}
+main{padding:36px 16px 56px;display:flex;flex-direction:column;gap:40px}
+main>section{display:flex;flex-direction:column;gap:16px}
+html body main>section.plain{background:none;border:0;border-radius:0}
+h2{margin:0}
+.programs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.program{padding:20px;display:flex;flex-direction:column;gap:8px}
+.program .swatch{width:22px;height:22px;border-radius:3px}
+.program h3{margin:0;font-size:21px}
+.program p{margin:0}
+.program .grades{color:#55585F;font-weight:600}
+.program .price{font-weight:700}
+.program .note{border-left:3px solid #C4222C;padding-left:10px;font-size:15px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));padding:0;margin:0;counter-reset:s;background:#fff;border:1px solid #E1E3E8;border-radius:6px;overflow:hidden}
+.steps li{list-style:none;padding:18px 20px;border-top:1px solid #E1E3E8;margin-top:-1px;display:flex;flex-direction:column;gap:4px;counter-increment:s}
+.steps li::before{content:counter(s);font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:32px;line-height:1;color:#C4222C}
+.week{overflow:hidden}
+.week .row{display:flex;gap:16px;align-items:flex-start;padding:14px 18px;border-top:1px solid #E1E3E8}
+.week .row:first-child{border-top:0}
+.week .when{width:130px;flex:none;font-weight:700;font-variant-numeric:tabular-nums}
+.week .when span{display:block;font-weight:400;color:#55585F}
+.week .what{flex:1;min-width:0;overflow-wrap:anywhere;display:flex;flex-direction:column;gap:4px}
+.week .item{display:flex;align-items:center;gap:10px}
+.dot{width:14px;height:14px;flex:none;border-radius:3px}
+.more{font-weight:700}
+footer{color:#55585F;font-size:15px;text-align:center;padding:0 16px 32px}
+@media (max-width:640px){.hero{padding:28px 16px 36px}.hero .in{grid-template-columns:1fr;gap:16px}.hero img{width:112px;height:112px;order:-1}.actions a.button{flex:1 1 auto;justify-content:center}.week .when{width:104px}.week .row{gap:12px;padding:12px 14px}}
+</style></head><body>
+<div class="hero"><div class="in"><div>
+<p class="eyebrow">Huntington Station, NY</p>
+<h1>Savage Wrestling Academy</h1>
+<p class="lede">Wrestling for kindergarten through 12th grade, from first-time wrestlers to experienced competitors.</p>
+<div class="actions"><a class="button primary" href="/login?mode=signup">Join the academy</a><a class="button" href="/login">Sign in</a></div>
+</div><img src="/brand/savage-logo-256.png" alt="Savage Wrestling Academy logo" width="200" height="200"></div></div>
+<main>
+<section class="plain" aria-labelledby="programsTitle"><h2 id="programsTitle">Programs</h2><div class="programs" id="programs"><p class="muted">Loading the programs…</p></div></section>
+<section class="plain" aria-labelledby="joinTitle"><h2 id="joinTitle">How to join</h2>
+<ol class="steps">
+<li><b>Create your account</b><span>Sign up with your email address, then confirm it from the email we send you.</span></li>
+<li><b>Add your wrestler</b><span>Enter their grade and their USA Wrestling card number and expiration date.</span></li>
+<li><b>Sign the waiver</b><span>When the academy asks for a waiver, sign it once for each wrestler, right on your phone.</span></li>
+<li><b>Choose training</b><span>Choose a membership or a single walk-in practice, then pay to confirm your spot.</span></li>
+</ol>
+<p>Every wrestler needs a current <a href="https://www.usawmembership.com" target="_blank" rel="noopener">USA Wrestling card</a> before they can book.</p>
+</section>
+<section class="plain" aria-labelledby="weekTitle"><h2 id="weekTitle">Coming up</h2><div class="week card" id="week"><div class="row muted">Loading the schedule…</div></div><a class="more" href="/calendar">See the full calendar</a></section>
+</main>
+<footer>Savage Wrestling Academy · Huntington Station, NY</footer>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const swatch={Elementary:'background:#fff;box-shadow:inset 0 0 0 2px #141416',Intermediate:'background:#B9C4C9',Advanced:'background:#141416'};
+// Program grades follow lib/program-approval.ts; the academy's own wording is used when it has one.
+const GRADES={Elementary:'Grades K–6',Intermediate:'Grades 7–12',Advanced:'Grades 7–12'};
+const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:c%100?2:0}).format(c/100);
+// Dates and times read like lib/datetime.ts: "Mon, Nov 9" and "3:00 PM".
+const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(String(t||''));if(!m)return '';const h=Number(m[1]);return (h%12||12)+':'+m[2]+' '+(h<12?'AM':'PM')};
+const dayLabel=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
+const nextMonth=ym=>{const [y,m]=ym.split('-').map(Number);return m===12?(y+1)+'-01':y+'-'+String(m+1).padStart(2,'0')};
+// Program cards come from the academy's own settings, so names and prices are always current.
+function programCard(p){
+ const grades=String(p.grades||GRADES[p.id]||'').replace(/\s*·\s*Coach approval required/i,'');
+ const prices=[p.monthlyCents!=null?money(p.monthlyCents)+' a month for a 12-month membership'+(p.annualCents!=null?', or '+money(p.annualCents)+' paid upfront':''):'',p.walkInCents!=null?money(p.walkInCents)+' for a single walk-in practice':''].filter(Boolean);
+ return '<article class="program card"><span class="swatch" aria-hidden="true" style="'+(swatch[p.id]||'background:#C4222C')+'"></span><h3>'+esc(p.name)+'</h3>'+(grades?'<span class="grades">'+esc(grades)+'</span>':'')+(p.description?'<p>'+esc(p.description)+'</p>':'')+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'</article>'}
+// The next sessions from today, soonest first: practices, extra practices and the first day of each event.
+function upcoming(schedules,today,limit=6){
+ const items=[],seen=new Set(),programs=schedules[0]?.programs||[];
+ for(const d of schedules){
+  for(const p of d.practices||[])if(p.date>=today&&!seen.has('p'+p.id)){seen.add('p'+p.id);items.push({date:p.date,start:p.start,title:(programs.find(x=>x.id===p.program)?.name||p.program)+' practice',color:swatch[p.program]})}
+  for(const l of d.liveClasses||[])if(l.date>=today&&!seen.has('l'+l.id+l.date)){seen.add('l'+l.id+l.date);items.push({date:l.date,start:l.start,title:l.name,color:'background:#C4222C'})}
+  for(const e of d.events||[]){const first=(e.dates||[]).find(x=>x>=today);if(first&&!seen.has('e'+e.id)){seen.add('e'+e.id);items.push({date:first,start:'',title:e.name+(e.type?' ('+e.type.toLowerCase()+')':''),color:'background:#C4222C'})}}
+ }
+ // Sessions at the same day and time share one row, so the list reaches further ahead.
+ const groups=[];for(const i of items.sort((a,b)=>(a.date+(a.start||'99')).localeCompare(b.date+(b.start||'99')))){const last=groups[groups.length-1];if(last&&last.date===i.date&&last.start===i.start)last.items.push(i);else groups.push({date:i.date,start:i.start,items:[i]})}
+ return groups.slice(0,limit)}
+function row(g){return '<div class="row"><span class="when">'+esc(dayLabel(g.date))+(g.start?'<span>'+esc(clock(g.start))+'</span>':'')+'</span><span class="what">'+g.items.map(i=>'<span class="item"><span class="dot" aria-hidden="true" style="'+(i.color||'background:#55585F')+'"></span>'+esc(i.title)+'</span>').join('')+'</span></div>'}
+async function get(url){const r=await fetch(url,{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'The schedule could not be loaded. Refresh the page to try again.');return d}
+async function load(){
+ try{
+  const now=await get('/api/public-schedule');
+  // Near the end of a month the next sessions are in next month, so read both.
+  let later=null;try{later=await get('/api/public-schedule?month='+nextMonth(now.month||now.today.slice(0,7)))}catch{}
+  $('programs').innerHTML=(now.programs||[]).map(programCard).join('')||'<p>The programs will be listed here soon.</p>';
+  const next=upcoming([now,later].filter(Boolean),now.today,5);
+  $('week').innerHTML=next.length?next.map(row).join(''):'<div class="row">Nothing is scheduled in the next few weeks. See the full calendar for later dates.</div>';
+ }catch(e){$('programs').innerHTML='<p>'+esc(e.message)+'</p>';$('week').innerHTML='<div class="row">'+esc(e.message)+'</div>'}
+}
+load();
+</script></body></html>

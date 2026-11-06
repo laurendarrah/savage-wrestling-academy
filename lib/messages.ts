@@ -90,6 +90,14 @@ export async function familyInbox(userId: string) {
 }
 
 export async function markRead(userId: string, input: any) {
+  // "Mark all as read" on the Messages page (issue #132): every notice, announcement and academy reply for this family only.
+  if (input?.all === true) {
+    const now = at();
+    await env.DB!.prepare('UPDATE notifications SET read_at=? WHERE user_id=? AND read_at IS NULL').bind(now, userId).run();
+    await env.DB!.prepare('UPDATE announcement_recipients SET read_at=? WHERE user_id=? AND read_at IS NULL').bind(now, userId).run();
+    await env.DB!.prepare("UPDATE family_messages SET read_at=? WHERE user_id=? AND sender_role='owner' AND read_at IS NULL").bind(now, userId).run();
+    return;
+  }
   if (input?.noticeId) await markNoticeRead(userId, input.noticeId);
   if (input?.announcementId) await env.DB!.prepare('UPDATE announcement_recipients SET read_at=? WHERE announcement_id=? AND user_id=? AND read_at IS NULL').bind(at(), String(input.announcementId), userId).run();
   if (input?.thread) await env.DB!.prepare("UPDATE family_messages SET read_at=? WHERE user_id=? AND sender_role='owner' AND read_at IS NULL").bind(at(), userId).run();
