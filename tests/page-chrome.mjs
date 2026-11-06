@@ -21,7 +21,7 @@ assert.doesNotMatch(topBar('/register'), /aria-current/);
 
 const u = p => new URL('https://x.test' + p);
 assert.equal(shouldDecorate(u('/family'), 'text/html; charset=utf-8'), true);
-for (const p of ['/', '/waiver-copy', '/scholarship-agreement', '/attendance-demo', '/api/family', '/calendar?embed=1']) assert.equal(shouldDecorate(u(p), 'text/html'), false, p);
+for (const p of ['/', '/waiver-copy', '/scholarship-agreement', '/api/family', '/calendar?embed=1']) assert.equal(shouldDecorate(u(p), 'text/html'), false, p);
 assert.equal(shouldDecorate(u('/family'), 'application/json'), false);
 
 const res = await decorateResponse(new Request('https://x.test/inbox'), new Response(page, {headers: {'Content-Type': 'text/html', 'Content-Length': '99', 'Cache-Control': 'private, no-store'}}));

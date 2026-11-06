@@ -31,9 +31,9 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 | Wrestler view | Built. `/wrestler?id=` shows the entry pass, what is coming up and anything blocking new bookings |
 | Messages | Built. Announcements and private threads on `/messages` and `/inbox`; email after #87 |
 | Automatic notices | Built. Card expiring or expired, waiver to sign, waitlist seat offered, SWA Advance decision, payment recorded, lesson booked (also to the coach), transfer. In the family inbox now; by email after #87 |
-| Owner workspace | Opens on today's real numbers and every real tool. Its old sample screens open the real pages; the public `/admin-demo` keeps fictional data |
+| Owner workspace | Opens on the launch checklist, today's real numbers and every real tool. Its editors (programs, schedules, camps and events, team codes) publish to the welcome page and calendar. No sample screens |
 
-The owner workspace (`app/portal.html`) opens on real records. Its family and wrestler previews, and the public `/admin-demo`, use sample records. Real family data lives in the `family_accounts`, `program_approvals` and `scholarship_awards` tables. The sample wrestlers in the workspace are not connected to them.
+The owner workspace (`app/portal.html`) runs on real records only. Real family data lives in the `family_accounts`, `program_approvals` and `scholarship_awards` tables. On a new site the owner publishes the programs from the launch checklist.
 
 ## Stack
 
@@ -73,7 +73,6 @@ Without Supabase settings, public pages work and every signed-in page refuses re
 | `pnpm audit --prod` | Security audit of production dependencies |
 | `pnpm e2e [screenshot-folder]` | Builds the site, runs it on a fresh local database with a stand-in for Supabase sign-in, and walks the owner, a coach and two families through every feature in Chromium. Then runs an accessibility check (axe-core) on every page. Fails on any page, console or server error or serious accessibility issue. Runs on every pull request; locally it needs Chromium (`pnpm exec playwright install chromium`). Never uses real accounts |
 | `pnpm e2e:payments` | Rehearses online payment in Stripe test mode against Stripe's official `stripe-mock` (checks every Stripe request against Stripe's API): key setup, walk-in checkout, payment and refund webhooks, a monthly membership with its 12-payment end date, a later installment and a failed one. Needs `go install github.com/stripe/stripe-mock@v0.197.0`. Runs on every pull request |
-| `pnpm crawl:demo [url]` | Clicks every control in `/admin-demo` with a real browser and reports page errors. Needs Playwright; run it against `pnpm start` |
 
 ## Where things are
 

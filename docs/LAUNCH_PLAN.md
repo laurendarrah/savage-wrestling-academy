@@ -107,7 +107,7 @@ Done when: Stripe test clocks show 12 charges then a stop, a failed card marks t
 
 - Owner roster page built from paid memberships and walk-ins for a given practice date. This replaces the sample roster for daily operations.
 - Simple manual check-in on that roster, saved to a real attendance table.
-- Sample-only pages in the owner workspace are labeled clearly, so staff do not rely on simulated data.
+- Sample-only pages in the owner workspace are labeled clearly, so staff do not rely on simulated data. Update, November 6 (#147): the sample screens, the family previews and `/admin-demo` are removed instead. Every workspace screen is real.
 - Full test pass in a separate test environment: every purchase type, failures, cancellations, refunds, scholarship families, Advance approvals, team codes.
 
 Done when: a test family's purchase appears on the correct practice roster and can be checked in.
@@ -154,7 +154,8 @@ Drafts based on what the platform does are in [docs/policies](policies/README.md
 - **Terms not final.** Charging a 12-month commitment without approved terms is a legal and refund risk. If decision 2 slips, launch with walk-ins and upfront payments only, and add monthly memberships when terms are approved.
 - **No staging today.** The Wednesday test environment must exist before any live key is added.
 - **One owner login.** Only one email can manage the academy, and there is no tested recovery if that login or its authenticator is lost. Set up a second authenticator before launch.
-- **Sample data looks real.** The owner workspace mixes real and sample records. Staff need a short walkthrough of which screens are real.
+- **Sample data looks real.** Resolved November 6 (#147): the owner workspace has no sample screens left.
+- **No programs on a new site.** Families see no programs until the owner chooses Publish the programs on the launch checklist. Check the practice days and times under Schedules before launch.
 
 ## Who does what
 

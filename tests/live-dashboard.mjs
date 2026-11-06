@@ -1,12 +1,11 @@
-// Issue #94: the signed-in owner workspace opens on real numbers and sends sample-only screens to their real pages.
-// The fictional-data admin demo keeps its sample screens.
+// Issue #94: the signed-in owner workspace opens on real numbers. Issue #147: it has no sample screens at all.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync('app/portal.html', 'utf8');
 let code = html.match(/<script>([\s\S]*)<\/script>/)[1];
-code = code.slice(0, code.indexOf("if(location.hash==='#policy')"));
+code = code.slice(0, code.indexOf('// Start-up'));
 const nodes = new Map(), node = s => { if (!nodes.has(s)) nodes.set(s, {value: '', style: {}, textContent: '', innerHTML: '', focus() {}, classList: {remove() {}, toggle() {}}, setAttribute() {}}); return nodes.get(s); };
 const responses = {
   '/api/roster': {sessions: [{entries: [{}, {}, {}], checkedIn: 2}, {entries: [{}], checkedIn: 0}]},
@@ -23,7 +22,7 @@ const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date,
 vm.runInContext(code, ctx);
 
 // Live dashboard: real tiles, every real tool, none of the sample counts.
-const page = vm.runInContext("mode='admin';page='Dashboard';dashboard()", ctx);
+const page = vm.runInContext("page='Dashboard';dashboard()", ctx);
 assert.match(page, /id="todayTiles"/); assert.match(page, /href="\/cards"/); assert.ok(!page.includes('Sample active members'), 'no sample stats');
 await vm.runInContext('loadToday()', ctx);
 const tiles = node('#todayTiles').innerHTML;
@@ -39,23 +38,25 @@ responses['/api/waivers'] = {current: null, wrestlers: []}; delete responses['/a
 await vm.runInContext('loadToday()', ctx);
 assert.ok(!node('#todayTiles').innerHTML.includes('Waiver not signed')); assert.ok(!node('#todayTiles').innerHTML.includes('Unread family messages'));
 
-// Sample-only screens open their real pages.
-for (const [p, href] of [['Families', '/accounts'], ['Attendance', '/roster'], ['Private lessons', '/lesson-settings'], ['Messages', '/messages'], ['Staff & settings', '/staff']]) {
-  location.href = ''; vm.runInContext(`mode='admin';go(${JSON.stringify(p)})`, ctx); assert.equal(location.href, href, p);
+// Sidebar items with their own page open it.
+for (const [p, href] of [['Families', '/accounts'], ['Roster & check-in', '/roster'], ['Private lessons', '/lesson-settings'], ['Messages', '/messages'], ['Scholarships', '/scholarships'], ['Coaches', '/staff']]) {
+  location.href = ''; vm.runInContext(`go(${JSON.stringify(p)})`, ctx); assert.equal(location.href, href, p);
 }
 
-// The admin demo keeps the sample dashboard and screens.
-vm.runInContext('liveWorkspace=false', ctx);
-assert.match(vm.runInContext("mode='admin';page='Dashboard';dashboard()", ctx), /Sample active members/);
-location.href = ''; try { vm.runInContext("go('Families')", ctx); } catch {} assert.equal(location.href, '', 'demo stays on the sample screen');
-assert.match(readFileSync('app/admin-demo/demo.js', 'utf8'), /function startAdminDemo\(\)\{\n liveWorkspace=false;/);
+// Issue #147: the launch checklist publishes the programs from the dashboard itself; other items open their page.
+responses['/api/launch-checklist'] = {ready: 1, total: 3, items: [
+  {key: 'programs', label: 'Programs on the welcome page and calendar', status: 'todo', action: 'publish-programs', detail: 'Families see no programs yet.'},
+  {key: 'waiver', label: 'Waiver', status: 'todo', href: '/waivers', detail: 'Publish the approved waiver.'},
+  {key: 'health', label: 'Site health', status: 'done', href: '/site-health', detail: 'No server errors'}]};
+await vm.runInContext('loadLaunch()', ctx);
+const launch = node('#launch').innerHTML;
+assert.match(launch, /data-launch="programs" data-status="todo"[\s\S]*?<button type="button" class="primary" onclick="publishPrograms\(\)">Publish the programs<\/button>/);
+assert.match(launch, /data-launch="waiver"[\s\S]*?href="\/waivers">Open/);
+assert.doesNotMatch(launch.split('data-launch="health"')[1], /<a class="button"|<button/, 'a ready item has no button');
 
-// Issue #32: the demo may load its web fonts, and still cannot call any API.
-const route = readFileSync('app/admin-demo/route.ts', 'utf8');
-assert.match(route, /style-src 'self' 'unsafe-inline' https:\/\/fonts\.googleapis\.com;/); assert.match(route, /font-src https:\/\/fonts\.gstatic\.com;/); assert.match(route, /connect-src 'none'/);
-assert.ok(!html.includes('OWNER WORKSPACE'), 'the live dashboard has no sample-preview banner (issue #133)');
-assert.match(route, /<body><div class="preview"><strong>ADMIN DEMO<\/strong> · Fictional data/, 'the demo adds its own banner');
-// Issue #133: the sample previews sit behind one menu that opens while previewing, so the way back stays visible.
-assert.match(html, /<details class="previewmenu" id="previewMenu"><summary>Preview what families see<\/summary>/);
-assert.match(html, /function setMode\(m\)\{closeMobileNav\(\);closeModal\(\);mode=m;const pm=document.getElementById\('previewMenu'\);if\(pm\)pm.open=m!=='admin';/);
+// No preview modes: the header links to what families really see.
+assert.match(html, /<nav class="family-links" aria-label="What families see">[^]*?<a href="\/welcome">Welcome page<\/a> <a href="\/calendar">Calendar<\/a><\/nav>/);
+for (const gone of ['previewMenu', 'Preview what families see', 'Parent view', 'Wrestler view', 'setMode', 'liveWorkspace', 'sampleDashboard', 'admin-demo', 'attendance-demo', 'qr-preview.js'])
+  assert.ok(!html.includes(gone), `portal still has ${gone}`);
+assert.ok(!html.includes('OWNER WORKSPACE'), 'the dashboard has no sample-preview banner (issue #133)');
 console.log('Live owner dashboard tests passed');

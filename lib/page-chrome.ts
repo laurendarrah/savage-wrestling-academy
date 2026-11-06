@@ -2,7 +2,7 @@
 // stylesheet, the browser icons and the same top bar (logo home link, Calendar, Home) everywhere, so no page needs its
 // own copy. "/" sends each person to their own home (owner dashboard, coach home, family home or the welcome page).
 // Left alone: the owner dashboard (it has its own menu), printable documents and pages shown inside other pages.
-const SKIP = new Set(['/', '/admin-demo', '/attendance-demo', '/scholarship-agreement', '/waiver-copy', '/scholarship-signature-preview']);
+const SKIP = new Set(['/', '/scholarship-agreement', '/waiver-copy', '/scholarship-signature-preview']);
 const HOMES = new Set(['/family', '/coach']);
 
 export function shouldDecorate(url: URL, contentType: string | null) {
