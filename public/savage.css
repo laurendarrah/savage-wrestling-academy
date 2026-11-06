@@ -11,46 +11,84 @@
 @font-face{font-family:'Barlow Condensed';src:url(/fonts/barlow-condensed-latin-900-italic.woff2) format('woff2');font-weight:900;font-style:italic;font-display:swap}
 
 :root{
-  --swa-ink:#141416; --swa-white:#FFFFFF; --swa-ground:#F4F5F7; --swa-line:#E1E3E8; --swa-muted:#55585F;
+  --swa-ink:#111113; --swa-ink-2:#1C1D21; --swa-white:#FFFFFF; --swa-ground:#F3F4F6; --swa-line:#E4E6EA; --swa-hair:rgba(17,17,19,.08); --swa-muted:#55585F;
   --swa-silver:#B9C4C9; --swa-red:#C4222C; --swa-red-dark:#A11B24; --swa-ok:#1F6F3A; --swa-ok-bg:#E6F2EA;
   --swa-body:Barlow,'Helvetica Neue',Arial,sans-serif; --swa-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --swa-shadow:0 1px 2px rgba(17,17,19,.05),0 10px 28px -12px rgba(17,17,19,.16);
+  --swa-texture:radial-gradient(90% 140% at 100% 0%,rgba(196,34,44,.22),transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 1px,transparent 1px 10px),linear-gradient(180deg,#141416,#0D0D0F);
 }
 
-/* Type and color */
-html body{font-family:var(--swa-body);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
-html body h1{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:.2px;line-height:1.02;font-size:clamp(34px,7vw,52px);text-wrap:balance}
-html body h2{font-family:var(--swa-display);font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.08;font-size:clamp(22px,4.4vw,28px);text-wrap:balance}
-html body h3{font-family:var(--swa-body);font-weight:700;line-height:1.25}
+/* Premium pass (issue #146): tighter condensed headings, soft cards, athletic buttons, textured black bands. */
+html{overflow-x:clip}
+html body{font-family:var(--swa-body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;background:var(--swa-ground);color:var(--swa-ink)}
+html body h1{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:-.4px;line-height:.98;font-size:clamp(38px,7.4vw,64px);text-wrap:balance}
+html body h2{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:.1px;line-height:1.04;font-size:clamp(23px,4.2vw,30px);text-wrap:balance}
+html body h3{font-family:var(--swa-body);font-weight:700;line-height:1.25;letter-spacing:-.1px}
 html body .muted{color:var(--swa-muted)}
-html body a{color:var(--swa-red);text-underline-offset:3px}
+html body a{color:var(--swa-red);text-underline-offset:3px;text-decoration-thickness:1px}
 html body a:hover{color:var(--swa-red-dark)}
-html body :focus-visible{outline:3px solid var(--swa-ink);outline-offset:2px}
-html body th{font-family:var(--swa-display);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;font-size:14px;color:var(--swa-muted)}
+html body :focus-visible{outline:3px solid var(--swa-red);outline-offset:2px}
+html body .eyebrow{font-family:var(--swa-body);font-weight:700;font-size:13px;letter-spacing:2.4px;text-transform:uppercase}
+html body table{border-collapse:collapse}
+html body th{font-family:var(--swa-body);font-weight:700;letter-spacing:1.4px;text-transform:uppercase;font-size:12px;color:var(--swa-muted);border-bottom:1px solid var(--swa-line)}
+html body td{border-bottom:1px solid #EEF0F2}
 html body td,html body th{font-variant-numeric:tabular-nums}
+html body ::selection{background:rgba(196,34,44,.18)}
 
-/* Cards */
-html body main>section,html body main section.card,html body .card{background:var(--swa-white);border:1px solid var(--swa-line);border-radius:6px;box-shadow:none}
+/* Cards: white, fine edge, soft shadow, more room */
+html body main>section,html body main section.card,html body .card{background:var(--swa-white);border:1px solid var(--swa-hair);border-radius:12px;box-shadow:var(--swa-shadow)}
+html body main>section,html body main>details.card{padding:clamp(18px,3.4vw,30px)}
+html body main>section.plain{background:none;border:0;box-shadow:none;padding-left:0;padding-right:0}
 
-/* Buttons: plain buttons are white with a dark edge; the page's main action is red. */
-html body button,html body .button,html body a.button{font-family:var(--swa-body);font-weight:600;font-size:16px;min-height:44px;border-radius:6px;border:1.5px solid var(--swa-ink);background:var(--swa-white);color:var(--swa-ink);cursor:pointer}
-html body button.primary,html body .primary,html body a.button.primary,html body button[type=submit].primary{background:var(--swa-red);border-color:var(--swa-red);color:#FFFFFF}
-html body button.primary:hover,html body .primary:hover{background:var(--swa-red-dark);border-color:var(--swa-red-dark);color:#FFFFFF}
-html body button:disabled,html body button[disabled]{opacity:.55;cursor:not-allowed}
-html body button.link{min-height:44px;border:0;background:none;color:var(--swa-red);text-decoration:underline;padding:0}
+/* Buttons: condensed uppercase labels; plain ones are quiet, the page's main action is red. */
+html body button,html body .button,html body a.button{font-family:var(--swa-display);font-weight:700;font-size:17px;letter-spacing:.7px;text-transform:uppercase;min-height:46px;border-radius:8px;border:1px solid #CDD0D6;background:var(--swa-white);color:var(--swa-ink);cursor:pointer;box-shadow:0 1px 2px rgba(17,17,19,.06);transition:border-color .15s,background-color .15s,box-shadow .15s,transform .05s}
+html body button:hover,html body .button:hover,html body a.button:hover{border-color:var(--swa-ink);color:var(--swa-ink)}
+html body button:active,html body .button:active{transform:translateY(1px)}
+html body button.primary,html body .primary,html body a.button.primary,html body button[type=submit].primary{background:var(--swa-red);border-color:var(--swa-red);color:#FFFFFF;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 8px 18px -8px rgba(196,34,44,.7)}
+html body button.primary:hover,html body .primary:hover,html body a.button.primary:hover{background:var(--swa-red-dark);border-color:var(--swa-red-dark);color:#FFFFFF}
+html body button:disabled,html body button[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
+html body button.link{min-height:44px;border:0;background:none;box-shadow:none;color:var(--swa-red);text-decoration:underline;padding:0;font-family:var(--swa-body);font-size:16px;letter-spacing:0;text-transform:none}
 
-/* Forms */
-html body input:not([type=checkbox]):not([type=radio]):not([type=file]),html body select,html body textarea{font-family:var(--swa-body);font-size:17px;min-height:46px;border:1.5px solid #C9CCD3;border-radius:6px;background:var(--swa-white);color:var(--swa-ink)}
-html body textarea{min-height:110px}
+/* Forms: taller fields, soft fill, red focus ring */
+html body input:not([type=checkbox]):not([type=radio]):not([type=file]),html body select,html body textarea{font-family:var(--swa-body);font-size:17px;min-height:50px;border:1px solid #D3D6DC;border-radius:8px;background:#FBFBFC;color:var(--swa-ink);box-shadow:inset 0 1px 2px rgba(17,17,19,.04);transition:border-color .15s,box-shadow .15s,background-color .15s}
+html body input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,html body select:focus,html body textarea:focus{outline:none;border-color:var(--swa-ink);background:#FFFFFF;box-shadow:0 0 0 4px rgba(196,34,44,.16)}
+html body textarea{min-height:120px}
 html body label{font-weight:600;font-size:15px}
 html body input[type=checkbox],html body input[type=radio]{width:22px;height:22px;accent-color:var(--swa-red)}
 
 /* Notes, badges and status */
-html body .notice,html body .note{border-radius:6px}
-html body .badge,html body .pill,html body .tag{font-family:var(--swa-display);font-weight:700;letter-spacing:.8px;text-transform:uppercase;border-radius:4px}
+html body .notice,html body .note{border-radius:8px}
+html body .badge,html body .pill,html body .tag,html body .billing-pill{font-family:var(--swa-body);font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:4px 10px}
 html body #status:empty{display:none}
 
+/* Number tiles (payments, cards and others): big condensed figures over a small-caps label */
+html body .tile{background:var(--swa-white);border:1px solid var(--swa-hair);border-radius:12px;box-shadow:var(--swa-shadow);padding:16px 18px;font-size:13px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--swa-muted)}
+html body .tile b{display:block;margin-top:6px;font-family:var(--swa-display);font-weight:800;font-size:34px;line-height:1;letter-spacing:0;text-transform:none;color:var(--swa-ink)}
+
+/* Sign-in and sign-up: the card floats on the textured black, with the logo above it */
+html body[data-swa-page="/login"]{background:var(--swa-texture) fixed}
+html body[data-swa-page="/login"] main::before{content:"";display:block;width:96px;height:96px;margin:8px auto 18px;background:url(/brand/savage-logo-256.png) center/contain no-repeat}
+html body[data-swa-page="/login"] main>section.card{border:0;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+html body[data-swa-page="/login"] main>p,html body[data-swa-page="/login"] main>footer,html body[data-swa-page="/login"] main>footer *{color:#B9C4C9}
+html body[data-swa-page="/login"] main>p a,html body[data-swa-page="/login"] main>footer a{color:#FFFFFF}
+
+/* Black page header band. The Worker moves a page's opening back link, heading and intro into .swa-head
+   (lib/page-chrome.ts); the family and welcome headers share the same texture and logo watermark. */
+html body .swa-head{position:relative;isolation:isolate;color:#FFFFFF;padding:40px 0 34px;margin:0 0 28px}
+html body .swa-head::before,html body .fam-hero::before{content:"";position:absolute;z-index:-2;top:-140px;bottom:0;left:50%;width:100vw;transform:translateX(-50%);background:var(--swa-texture);border-bottom:2px solid var(--swa-red)}
+html body .swa-head::after,html body .fam-hero::after{content:"";position:absolute;z-index:-1;right:0;top:14px;bottom:14px;aspect-ratio:1;max-width:38vw;background:url(/brand/savage-logo-256.png) center/contain no-repeat;opacity:.09;pointer-events:none}
+html body .fam-hero{position:relative;isolation:isolate;background:none;box-shadow:none;clip-path:none}
+html body .swa-head h1{color:#FFFFFF;margin:0 0 12px;max-width:24ch}
+html body .swa-head>p,html body .swa-head .muted{color:#C9CED4;font-size:18px;max-width:62ch;margin:0}
+html body .swa-head>p+p{margin-top:8px}
+html body .swa-head a{color:#FFFFFF}
+html body .swa-head>a:first-child,html body .swa-head>.swa-back{display:inline-flex;align-items:center;min-height:36px;margin:0 0 10px;color:var(--swa-silver);font-size:13px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;text-decoration:none}
+html body .swa-head>a:first-child:hover{color:#FFFFFF}
+html body .hero{background:var(--swa-texture)}
+@media (max-width:640px){html body .swa-head{padding:28px 0 26px;margin-bottom:20px}html body .swa-head::after,html body .fam-hero::after{right:-24px;opacity:.07}}
+
 /* The top bar on every page */
-.swa-bar{position:sticky;top:0;z-index:50;background:var(--swa-ink);color:#FFFFFF;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.swa-bar{position:sticky;top:0;z-index:50;background:#0D0D0F;border-bottom:1px solid rgba(255,255,255,.06);color:#FFFFFF;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
 .swa-bar__inner{max-width:1180px;margin:0 auto;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .swa-bar a{color:#FFFFFF;text-decoration:none}
 .swa-bar__home{display:flex;align-items:center;gap:10px;min-height:44px}

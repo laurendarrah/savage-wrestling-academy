@@ -22,12 +22,26 @@ export function topBar(pathname: string) {
 const HEAD = '<link rel="icon" href="/brand/favicon-32.png" sizes="32x32"><link rel="icon" href="/brand/favicon-64.png" sizes="64x64">'
   + '<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="stylesheet" href="/savage.css">';
 
+// The black page header (issue #146): a page that opens with optional back links, its heading and an intro paragraph
+// gets them wrapped in .swa-head. Status lines and notices stay outside; pages with their own header are left alone.
+const OPENING = /^(\s*(?:<a\b[^>]*>[^<]*<\/a>\s*)*<h1\b[^>]*>[\s\S]*?<\/h1>(?:\s*<p\b(?![^>]*(?:id="status"|role="status"|class="notice"))[^>]*>[\s\S]*?<\/p>)?)/;
+export function pageHead(html: string) {
+  if (/class="[^"]*\b(?:fam-hero|hero|swa-head)\b/.test(html)) return html;
+  const main = html.match(/<main\b[^>]*>/i);
+  if (!main || main.index === undefined) return html;
+  const at = main.index + main[0].length, open = html.slice(at).match(OPENING);
+  if (!open) return html;
+  return html.slice(0, at) + '<div class="swa-head">' + open[1] + '</div>' + html.slice(at + open[1].length);
+}
+
 export function decoratePage(html: string, pathname: string) {
   if (html.includes('class="swa-bar"')) return html;
   let out = html.includes('</head>') ? html.replace('</head>', HEAD + '</head>') : HEAD + html;
   const body = out.match(/<body[^>]*>/i);
-  out = body ? out.replace(body[0], body[0] + topBar(pathname)) : topBar(pathname) + out;
-  return out;
+  // data-swa-page lets the shared stylesheet give a page its own treatment (the sign-in page, for one).
+  const tagged = body ? body[0].replace(/^<body/i, `<body data-swa-page="${pathname.replace(/[^\w/-]/g, '')}"`) : '';
+  out = body ? out.replace(body[0], tagged + topBar(pathname)) : topBar(pathname) + out;
+  return pageHead(out);
 }
 
 export async function decorateResponse(request: Request, response: Response) {
