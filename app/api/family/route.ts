@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
-import { validFamily, cleanFamily, emptyFamily } from '../../../lib/family-records';
+import { validFamily, cleanFamily, emptyFamily, familyProblem } from '../../../lib/family-records';
 import { cardVerification, seasonOptions } from '../../../lib/usaw';
 import { checkChangedCards, familyLookup, lookupView, lookupsFor } from '../../../lib/usaw-check';
 import { exceptionFor } from '../../../lib/exceptions';
@@ -29,6 +29,8 @@ export async function PUT(request:Request){
  const raw=await request.text();if(raw.length>20000)return reply({error:'Profile is too large.'},413);
  let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid JSON.'},400)}
  if(!input||!Number.isInteger(input.revision)||input.revision<0||!validFamily(input.data))return reply({error:'Check the family profile fields.'},400);
+ // Contact and safety details are optional (issue #188); when given, they must make sense. Say which one to fix.
+ const problem=familyProblem(input.data,academyToday());if(problem)return reply({error:problem},400);
  const scholarships=await env.DB!.prepare("SELECT wrestler_id FROM scholarship_awards WHERE user_id=? AND status='active'").bind(auth.user.id).all<{wrestler_id:string}>();
  if(scholarships.results.some(a=>!input.data.wrestlers.some((w:{id:string})=>w.id===a.wrestler_id)))return reply({error:'An active scholarship wrestler must remain in the family profile. Contact SWA before removing this wrestler.'},409);
  const clean=cleanFamily(input.data),payload=JSON.stringify(clean),now=new Date().toISOString();
@@ -41,5 +43,6 @@ export async function PUT(request:Request){
  // A new or changed card number is checked on USA Wrestling's public verify page (issue #202). It never fails the save.
  let lookups:Record<string,string>={};
  try{lookups=await checkChangedCards(request,auth.user.id,before?JSON.parse(before.payload):null,clean)}catch{}
- return reply({revision:row.revision,updatedAt:now,lookups});
+ // The saved profile as stored (trimmed, state in capitals), so the page shows exactly what was kept.
+ return reply({revision:row.revision,updatedAt:now,lookups,data:clean});
 }

@@ -15,7 +15,11 @@ Accounts are created by a **parent or guardian** (or an adult wrestler). Childre
 
 **Information you give us**
 - Parent or guardian: name, email address, phone number, and your password (held by our sign-in provider; we never see it).
+- If you choose to add them: your home address and an emergency contact's name and phone number.
 - Each wrestler: name, school grade, USA Wrestling card number and expiration date.
+- If you choose to add them: each wrestler's birth date and any allergies or medical notes. This is health information about a child. Only the academy owner sees it, on the academy's family list; coaches do not see it on the site. You can change or remove it at any time.
+
+[Decision #197, question 14: which of these details are required, and whether coaches should see allergies and emergency contacts on the check-in roster. Attorney: confirm how allergy and medical notes about minors must be handled and disclosed.]
 - Signatures: when you sign a waiver or scholarship agreement, the drawing of your signature, your typed name, and the date and time.
 - Messages you send the academy, and notes you add to requests (for example, an account closure request).
 - Requests for SWA Advance approval, and the private conversation about them.
@@ -39,6 +43,7 @@ We use only the cookies needed to keep you signed in securely. We do not use adv
 - To run your registrations, memberships, camps, lessons and payments.
 - To check wrestlers in at the door and keep rosters for coaches.
 - To confirm that every wrestler has a current USA Wrestling card and a signed waiver before booking, as the academy requires.
+- To reach someone quickly and look after a wrestler who is hurt or unwell at practice, if you added an emergency contact or medical notes.
 - To send you notices and messages (for example, a card about to expire, a waitlist seat held for you, a payment received) in your account and, [Decision: once email is set up], by email.
 - To keep the site secure, prevent misuse and fix problems.
 - To keep records the academy needs for accounting, insurance and legal reasons.

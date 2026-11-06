@@ -28,7 +28,7 @@ const signature=JSON.stringify({version:1,signer:'Pat Parent',consent:true,terms
 
 function seed(sqlite){
   const run=(sql,...v)=>sqlite.prepare(sql).run(...v);
-  run("INSERT INTO family_accounts(user_id,email,payload,revision,updated_at) VALUES (?,?,?,?,?)",'parent-1','pat@example.test',JSON.stringify({parentName:'Pat Parent',phone:'555-0100',wrestlers:[{id:'w-1',name:'Sam Example',grade:'8'}]}),1,now);
+  run("INSERT INTO family_accounts(user_id,email,payload,revision,updated_at) VALUES (?,?,?,?,?)",'parent-1','pat@example.test',JSON.stringify({parentName:'Pat Parent',phone:'555-0100',homeAddress:'20 Railroad St',homeCity:'Huntington Station',homeState:'NY',homeZip:'11746',emergencyContactName:'Jordan Parent',emergencyContactPhone:'631-555-0199',wrestlers:[{id:'w-1',name:'Sam Example',grade:'8',birthDate:'2012-04-18',allergies:'Peanuts'}]}),1,now);
   run("INSERT INTO coach_openings(id,user_id,date,start,end,coach_email) VALUES (?,?,?,?,?,?)",'open-1','coach-1','2026-12-01','16:00','17:00','dana@example.test');
   run("INSERT INTO practice_curriculum_groups VALUES (?,?,?,?,?,?,?)",'grp-1','Advanced','Foundations','foundations',1,'owner',now);
   run("INSERT INTO practice_curricula(id,name,name_key,payload,revision,updated_by,updated_at,curriculum_id,lesson_order) VALUES (?,?,?,?,?,?,?,?,?)",'les-1','Lesson 1','lesson 1',JSON.stringify({title:'Stance',sections:[]}),1,'owner',now,'grp-1',1);
@@ -101,6 +101,8 @@ const result=await targetLib.restoreBackup(backup,fp,'owner');
 assert.ok(result,'restore accepted');
 for(const t of restorable){assert.equal(result.restored[t],1,`${t} restored count`);assert.deepEqual(dump(target.sqlite,t),dump(source.sqlite,t),`${t} identical after restore`)}
 assert.equal(dump(target.sqlite,'family_accounts').length,1);
+// Issue #188: contact and safety details travel inside the family profile and survive a restore.
+{const p=JSON.parse(dump(target.sqlite,'family_accounts')[0].payload);assert.equal(p.homeZip,'11746');assert.equal(p.emergencyContactPhone,'631-555-0199');assert.equal(p.wrestlers[0].birthDate,'2012-04-18');assert.equal(p.wrestlers[0].allergies,'Peanuts')}
 assert.equal(dump(target.sqlite,'coach_openings').length,1);
 assert.equal(dump(target.sqlite,'coach_openings')[0].coach_email,'dana@example.test','coach link restored');
 assert.equal(dump(target.sqlite,'staff_access').length,0,'restore never grants staff access');
