@@ -363,6 +363,21 @@ await step('backup export includes payments and signed waivers', async () => {
   expect(back.status === 200 && Object.values(back.body.restored).every(n => n === 0), 'restore round trip ' + JSON.stringify(back.body).slice(0, 300));
 });
 
+// ---------- Family data requests ----------
+await step('family downloads their data and asks to close the account; owner records how it was handled', async () => {
+  await family.goto(BASE + '/family'); await family.waitForSelector('#yourData');
+  const [dl] = await Promise.all([family.waitForEvent('download'), family.click('text=Download my family\'s data')]);
+  const why = await dl.failure(); expect(!why, 'download failed: ' + why + ' ' + dl.url());
+  const data = JSON.parse((await import('node:fs')).readFileSync(await dl.path(), 'utf8'));
+  expect(data.profile.parentName === 'Pat Example' && data.payments.length >= 3 && !JSON.stringify(data).includes('Riley'), 'export contents');
+  await family.click('summary:has-text("Ask to close my account")'); await family.fill('#closeNote', 'Moving away');
+  await family.click('#closeForm button'); await waitText(family, '#requestStatus', /The academy will contact you/);
+  await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Data requests/);
+  await owner.goto(BASE + '/data-requests'); await waitText(owner, '#list', /Pat Example[\s\S]*Moving away/);
+  await owner.fill('#list textarea', 'Kept payment records; family is staying after all.'); await owner.click('#list form button');
+  await waitText(owner, '#list', /Handled/);
+});
+
 // ---------- Guides ----------
 await step('each role has a guide linked from its home page; guides are role-only', async () => {
   await family.goto(BASE + '/family'); await family.click('text=Help'); await waitText(family, 'h1', /Help for families/);
@@ -397,7 +412,7 @@ const a11yPages = {
   public: ['/calendar', '/login', '/membership-terms', '/help'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
   coach: ['/coach', '/roster', '/help/coach'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {
