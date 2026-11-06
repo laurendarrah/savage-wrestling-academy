@@ -193,6 +193,21 @@ await step('a signed-out visitor lands on the welcome page with programs, steps 
   if (SHOTS) await visitor.screenshot({path: `${SHOTS}/phone-welcome.png`, fullPage: true});
   await visitor.context().close();
 });
+await step('the owner\'s first sign-in goes straight to a clear authenticator setup', async () => {
+  const first = await as('freshowner');
+  await first.goto(BASE + '/'); await first.waitForURL(/\/security/);
+  await waitText(first, '#authHeading', /Set up your authenticator/);
+  expect(await first.isVisible('#enroll') && await first.getAttribute('#enroll', 'class').then(c => /primary/.test(c || '')), 'Set up authenticator is the red main button');
+  expect(!(await first.isVisible('#codeForm')), 'no code box before setup starts');
+  expect(!(await first.isVisible('#backupNote')), 'the backup note waits until verified');
+  expect(await first.textContent('#home') === 'Back to sign in', 'no link that loops back to this page');
+  const closed = await first.request.get(BASE + '/api/launch-checklist'); expect(closed.status() === 403, 'dashboard data stays closed until the code is verified');
+  await first.click('#enroll'); await first.waitForSelector('#enrollment:not([hidden])');
+  expect(!(await first.isVisible('#enroll')) && await first.isVisible('#codeForm'), 'the QR step replaces the Set up button');
+  if (SHOTS) await first.screenshot({path: `${SHOTS}/owner-first-signin.png`, fullPage: true});
+  await first.context().close();
+});
+
 await step('a brand-new family sees a guided start, and lessons and booking say what to do first', async () => {
   const fresh = await phoneAs('newfam');
   await fresh.goto(BASE + '/family'); await fresh.waitForSelector('#start:not([hidden])');
