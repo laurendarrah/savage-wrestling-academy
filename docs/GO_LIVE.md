@@ -71,6 +71,7 @@ Logins do not move: the new Supabase project starts empty (#139). Families and t
 
 Signed in as the owner, with the authenticator:
 - [ ] `/` shows the **Launch checklist** and the Today panel. Work through anything the checklist marks as to do; `/site-health` says the site and database are answering
+- [ ] `/welcome` lists SWA Development, SWA Intermediate and SWA Advance. If the checklist offers **Publish the programs**, choose it, then check the practice days and times under Schedules
 - [ ] `/roster`, `/payments`, `/cards`, `/waivers`, `/messages`, `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load with the moved data
 
 With a test family (not a real family):

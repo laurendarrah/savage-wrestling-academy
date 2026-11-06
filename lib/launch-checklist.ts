@@ -5,7 +5,8 @@ import {kindList} from './purchase-kinds';
 
 type Settings = {APP_ORIGIN?: string; SUPABASE_URL?: string; SUPABASE_PUBLISHABLE_KEY?: string; EMAIL_API_KEY?: string; MAIL_FROM?: string;
   STRIPE_TEST_WEBHOOK_SECRET?: string; STRIPE_CONFIG_ENCRYPTION_KEY?: string; CHECKOUT_KINDS?: string};
-export type Item = {key: string; group: string; label: string; status: 'done' | 'todo' | 'waiting' | 'info'; detail: string; href?: string; section?: string};
+// `action` names a one-click fix on the dashboard itself (publish-programs: save the default programs, issue #147).
+export type Item = {key: string; group: string; label: string; status: 'done' | 'todo' | 'waiting' | 'info'; detail: string; href?: string; section?: string; action?: 'publish-programs'};
 
 const json = (v: unknown) => { try { return typeof v === 'string' ? JSON.parse(v) : null; } catch { return null; } };
 
@@ -23,7 +24,9 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
   const errors = Number((await first<{n: number}>('SELECT COUNT(*) AS n FROM error_log WHERE at>=?', dayAgo))?.n ?? 0);
   const families = Number((await first<{n: number}>('SELECT COUNT(*) AS n FROM family_accounts'))?.n ?? 0);
 
-  const priced = programs.filter(p => Number(p.priceCents) > 0 || Number(p.walkInPriceCents) > 0);
+  // The programs families see on the welcome page and calendar (the same three the registration catalog lists).
+  const listed = programs.filter(p => ['Elementary', 'Intermediate', 'Advanced'].includes(p?.id));
+  const priced = listed.filter(p => Number(p.priceCents) > 0 || Number(p.walkInPriceCents) > 0);
   const current = seasons.filter(s => s.end >= today && (s.weekly ?? []).length);
   const lessonPrices = Object.values(lessons.prices ?? {}).filter(v => Number(v) > 0).length;
   const origin = settings.APP_ORIGIN?.trim() ?? '';
@@ -31,8 +34,12 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
   const when = (iso: string) => new Date(iso).toLocaleDateString('en-US', {timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric'});
 
   const items: Item[] = [
-    {key: 'programs', group: 'Academy', label: 'Programs and prices', section: 'Programs & pricing',
-      status: priced.length ? 'done' : 'todo', detail: priced.length ? `${priced.length} program${priced.length === 1 ? '' : 's'} with prices` : 'Set a membership or walk-in price for each program'},
+    !listed.length
+      ? {key: 'programs', group: 'Academy', label: 'Programs on the welcome page and calendar', status: 'todo', action: 'publish-programs',
+        detail: 'Families see no programs yet. Publish SWA Development, SWA Intermediate and SWA Advance with the prices under Programs & pricing'}
+      : {key: 'programs', group: 'Academy', label: 'Programs on the welcome page and calendar', section: 'Programs & pricing',
+        status: priced.length ? 'done' : 'todo',
+        detail: priced.length ? `${listed.length} program${listed.length === 1 ? '' : 's'} listed, ${priced.length} with prices` : 'Listed without prices. Set a membership or walk-in price for each program'},
     {key: 'schedule', group: 'Academy', label: 'Practice schedule', section: 'Schedules',
       status: current.length ? 'done' : 'todo', detail: current.length ? `${current.length} program schedule${current.length === 1 ? '' : 's'} published` : 'Publish weekly practices so families can see and book them'},
     {key: 'waiver', group: 'Academy', label: 'Waiver', href: '/waivers',

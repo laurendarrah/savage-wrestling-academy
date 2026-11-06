@@ -35,8 +35,9 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 
 ## Things that look real but are not
 
-- The owner workspace in `app/portal.html` runs mostly on sample data stored in one JSON document. Its rosters, attendance, messages, transfers, waitlists, and payouts are simulations.
-- Real family data lives in `family_accounts`, `program_approvals`, and `scholarship_awards`. These are not linked to the sample wrestlers in the workspace.
+- The owner workspace in `app/portal.html` has no sample screens (#147). It edits the real academy settings document (programs, schedules, camps and events, team codes), which the welcome page and calendar read, and links to the real pages for everything else. Do not add sample, preview or demo screens back.
+- Older academy settings documents can still hold sample `kids`, `bookings`, `messages`, `offers` and `staff` from the old workspace. Nothing reads them. Real family data lives in `family_accounts`, `program_approvals`, and `scholarship_awards`.
+- A new site lists no programs until the owner publishes them from the launch checklist. The defaults in `hydratePrograms()` are not public until saved.
 - Online checkout exists but each purchase type stays closed until `CHECKOUT_KINDS` lists it. Never assume a purchase type is live.
 - Inline JavaScript in `.html` files is not typechecked. Passing `pnpm typecheck` says nothing about it. Add a test in `tests/` for any workspace function you change.
 
@@ -51,6 +52,6 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 ## Domain rules
 
 - Programs: SWA Development is grades K to 6. SWA Intermediate is grades 7 to 12. SWA Advance is grades 7 to 12 and every wrestler needs coach approval.
-- Server rules in `lib/program-approval.ts` are the source of truth. Sample workspace code must match them.
+- Server rules in `lib/program-approval.ts` are the source of truth. Workspace code must match them.
 - Kindergarten is stored as the string `"K"`. Other grades are numbers or numeric strings.
 - Email links use `appOrigin()` from `lib/account-auth.ts`. Never hard-code a hostname. Any new origin must also be added to the Supabase Auth redirect allowlist.

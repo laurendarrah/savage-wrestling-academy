@@ -41,6 +41,25 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({path: `${
 
 const owner = await as('owner'), family = await as('family'), family2 = await as('family2'), coach = await as('coach');
 
+// ---------- A fresh site: the owner publishes the programs from the launch checklist (issue #147) ----------
+await step('on a fresh site the owner publishes the programs with one click', async () => {
+  await owner.goto(BASE + '/'); await waitText(owner, '#syncStatus', /Nothing saved yet/);
+  const before = await api(owner, '/api/public-schedule');
+  expect(before.status === 200 && before.body.programs.length === 0, 'a fresh site should list no programs: ' + JSON.stringify(before.body?.programs));
+  const pub = await (await browser.newContext()).newPage();
+  await pub.goto(BASE + '/welcome'); await waitText(pub, '#programs', /listed here soon/);
+  await owner.waitForSelector('[data-launch="programs"][data-status="todo"]');
+  expect(!(await owner.isVisible('text=Preview what families see')), 'the sample preview menu is gone');
+  expect(await owner.isVisible('nav.family-links a[href="/welcome"]') && await owner.isVisible('nav.family-links a[href="/calendar"]'), 'header links to what families see');
+  await owner.click('#launch button:has-text("Publish the programs")');
+  await waitText(owner, '#syncStatus', /All changes saved/);
+  await owner.waitForSelector('[data-launch="programs"][data-status="done"]', {state: 'attached'});
+  const after = await api(owner, '/api/public-schedule');
+  expect(JSON.stringify(after.body.programs.map(p => [p.name, p.monthlyCents, p.annualCents, p.walkInCents])) === JSON.stringify([['SWA Development', 20000, 240000, 4000], ['SWA Intermediate', 20000, 240000, 4000], ['SWA Advance', 20000, 240000, 4000]]), 'published programs: ' + JSON.stringify(after.body.programs));
+  await pub.goto(BASE + '/welcome'); await waitText(pub, '#programs', /SWA Development[\s\S]*SWA Intermediate[\s\S]*SWA Advance/);
+  await shot(pub, 'welcome-programs'); await pub.close();
+});
+
 // ---------- Setup through the owner's real save paths ----------
 await step('owner saves the academy schedule, programs, camp and Friday Night Live', async () => {
   await owner.goto(BASE + '/');
@@ -442,7 +461,7 @@ await step('owner dashboard shows today\'s real numbers', async () => {
     expect(await owner.getAttribute(`[data-launch="${k}"]`, 'data-status') === 'done', `launch checklist: ${k} should be ready`);
   expect(await owner.getAttribute('[data-launch="email"]', 'data-status') === 'waiting', 'launch checklist: email waits on its decision');
   const h = await owner.request.get(BASE + '/api/health'); expect(h.status() === 200 && (await h.json()).ok === true, 'health check');
-  expect(!(await owner.isVisible('.sample-notice')), 'live dashboard must not show the sample-data notice');
+  expect(!(await owner.isVisible('.sample-notice')) && !(await owner.isVisible('#previewMenu')), 'the dashboard has no sample notices or previews');
   const bg = await owner.locator('a.button.primary').first().evaluate(el => getComputedStyle(el).backgroundColor);
   expect(bg !== 'rgb(255, 255, 255)' && bg !== 'rgba(0, 0, 0, 0)', 'primary button is invisible: ' + bg);
   await shot(owner, 'owner-dashboard');
@@ -533,7 +552,7 @@ await step('accessibility: no serious or critical axe-core issues on any page', 
 // Clicks every visible button (including ones that appear after a click, such as workspace tabs) and follows every
 // link. Fails on errors, server failures and broken links. Buttons where nothing at all happens (no page change, no
 // request, no navigation, no dialog) are listed, because a button that does nothing is a bug too.
-const SKIP = /sign ?out|log ?out|reset workspace|restore from|print/i;
+const SKIP = /sign ?out|log ?out|restore from|print/i;
 const sweepPages = {...a11yPages, coach: [...a11yPages.coach, '/practice-plans', '/security']};
 const dead = [], broken = [], clicks = {n: 0};
 await step('every button and link on every page responds', async () => {

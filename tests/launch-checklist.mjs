@@ -24,7 +24,15 @@ assert.equal(r.ready, 1, 'only site health is ready on a new site');
 for (const k of ['programs', 'schedule', 'waiver', 'coaches', 'lessons', 'address', 'signin', 'stripe', 'backup']) assert.equal(i[k].status, 'todo', k);
 assert.equal(i.email.status, 'waiting'); assert.equal(i.checkout.status, 'info'); assert.equal(i.health.status, 'done');
 assert.match(i.address.detail, /site address is not set/);
-assert.equal(i.programs.section, 'Programs & pricing'); assert.equal(i.waiver.href, '/waivers');
+// Issue #147: on a new site the programs item offers to publish the default programs, right on the dashboard.
+assert.equal(i.programs.label, 'Programs on the welcome page and calendar'); assert.equal(i.programs.action, 'publish-programs');
+assert.equal(i.programs.section, undefined); assert.match(i.programs.detail, /Families see no programs yet/);
+assert.equal(i.waiver.href, '/waivers');
+// Saved programs without any price still need attention, from Programs & pricing; nothing to publish.
+sqlite.prepare("INSERT INTO academy_state(id,payload,revision,updated_at,updated_by) VALUES ('academy',?,1,?,'owner')").run(JSON.stringify({programs: [{id: 'Elementary', priceCents: 0}]}), '2026-11-05T11:00:00Z');
+i = by(await launchChecklist(DB, {}, today, now));
+assert.equal(i.programs.status, 'todo'); assert.equal(i.programs.action, undefined); assert.equal(i.programs.section, 'Programs & pricing'); assert.match(i.programs.detail, /Listed without prices/);
+sqlite.exec("DELETE FROM academy_state");
 
 // Set up the academy, then check each item turns ready.
 const at = '2026-11-05T12:00:00Z';
@@ -40,7 +48,7 @@ const settings = {APP_ORIGIN: 'https://register.savagewrestling.example', SUPABA
   STRIPE_TEST_WEBHOOK_SECRET: 'whsec_must_not_leak', CHECKOUT_KINDS: 'walkin,event'};
 r = await launchChecklist(DB, settings, today, now); i = by(r);
 assert.equal(r.ready, r.total, JSON.stringify(r.items.filter(x => x.status === 'todo')));
-assert.match(i.programs.detail, /^1 program with prices/);
+assert.match(i.programs.detail, /^2 programs listed, 1 with prices/); assert.equal(i.programs.action, undefined);
 assert.match(i.schedule.detail, /^1 program schedule published/, 'a season that ended does not count');
 assert.match(i.waiver.detail, /Participation waiver/);
 assert.match(i.checkout.detail, /^Open for walk-ins and camps & events$/, 'plain names, not the CHECKOUT_KINDS ids');
