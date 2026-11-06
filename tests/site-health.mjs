@@ -53,6 +53,7 @@ const worker = (() => {
       require(name) {
         if (name === 'vinext/server/fetch-handler') return {default: {fetch: async () => { if (handlerResult instanceof Error) throw handlerResult; return handlerResult; }}};
         if (name.endsWith('/site-health')) return load(path.resolve('lib/site-health.ts'));
+        if (name.endsWith('/page-chrome')) return load(path.resolve('lib/page-chrome.ts'));
         if (name.endsWith('/notify')) return {dailyReminders: async () => { reminders++; if (reminderFails) throw Error('mail provider down'); return 0; }};
         throw Error('unexpected ' + name);
       }});

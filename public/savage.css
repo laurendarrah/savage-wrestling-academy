@@ -1,0 +1,70 @@
+/* Savage Wrestling Academy: one look for every page (issue #129).
+   Loaded after each page's own styles by the Worker (lib/page-chrome.ts), so it evens out fonts, colors, buttons,
+   forms, cards and spacing without touching each page. Brand: black, white and the logo's silver; red is the pop
+   (the main action on a page, events, and anything that needs attention). Fonts: Barlow and Barlow Condensed,
+   self-hosted under the SIL Open Font License (fonts/OFL-LICENSE.txt). */
+@font-face{font-family:Barlow;src:url(/fonts/barlow-latin-400-normal.woff2) format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:Barlow;src:url(/fonts/barlow-latin-600-normal.woff2) format('woff2');font-weight:500 600;font-style:normal;font-display:swap}
+@font-face{font-family:Barlow;src:url(/fonts/barlow-latin-700-normal.woff2) format('woff2');font-weight:700 900;font-style:normal;font-display:swap}
+@font-face{font-family:'Barlow Condensed';src:url(/fonts/barlow-condensed-latin-700-normal.woff2) format('woff2');font-weight:600 700;font-style:normal;font-display:swap}
+@font-face{font-family:'Barlow Condensed';src:url(/fonts/barlow-condensed-latin-800-normal.woff2) format('woff2');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'Barlow Condensed';src:url(/fonts/barlow-condensed-latin-900-italic.woff2) format('woff2');font-weight:900;font-style:italic;font-display:swap}
+
+:root{
+  --swa-ink:#141416; --swa-white:#FFFFFF; --swa-ground:#F4F5F7; --swa-line:#E1E3E8; --swa-muted:#55585F;
+  --swa-silver:#B9C4C9; --swa-red:#C4222C; --swa-red-dark:#A11B24; --swa-ok:#1F6F3A; --swa-ok-bg:#E6F2EA;
+  --swa-body:Barlow,'Helvetica Neue',Arial,sans-serif; --swa-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+}
+
+/* Type and color */
+html body{font-family:var(--swa-body);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
+html body h1{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:.2px;line-height:1.02;font-size:clamp(34px,7vw,52px);text-wrap:balance}
+html body h2{font-family:var(--swa-display);font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.08;font-size:clamp(22px,4.4vw,28px);text-wrap:balance}
+html body h3{font-family:var(--swa-body);font-weight:700;line-height:1.25}
+html body .muted{color:var(--swa-muted)}
+html body a{color:var(--swa-red);text-underline-offset:3px}
+html body a:hover{color:var(--swa-red-dark)}
+html body :focus-visible{outline:3px solid var(--swa-ink);outline-offset:2px}
+html body th{font-family:var(--swa-display);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;font-size:14px;color:var(--swa-muted)}
+html body td,html body th{font-variant-numeric:tabular-nums}
+
+/* Cards */
+html body main>section,html body main section.card,html body .card{background:var(--swa-white);border:1px solid var(--swa-line);border-radius:6px;box-shadow:none}
+
+/* Buttons: plain buttons are white with a dark edge; the page's main action is red. */
+html body button,html body .button,html body a.button{font-family:var(--swa-body);font-weight:600;font-size:16px;min-height:44px;border-radius:6px;border:1.5px solid var(--swa-ink);background:var(--swa-white);color:var(--swa-ink);cursor:pointer}
+html body button.primary,html body .primary,html body a.button.primary,html body button[type=submit].primary{background:var(--swa-red);border-color:var(--swa-red);color:#FFFFFF}
+html body button.primary:hover,html body .primary:hover{background:var(--swa-red-dark);border-color:var(--swa-red-dark);color:#FFFFFF}
+html body button:disabled,html body button[disabled]{opacity:.55;cursor:not-allowed}
+html body button.link{min-height:44px;border:0;background:none;color:var(--swa-red);text-decoration:underline;padding:0}
+
+/* Forms */
+html body input:not([type=checkbox]):not([type=radio]):not([type=file]),html body select,html body textarea{font-family:var(--swa-body);font-size:17px;min-height:46px;border:1.5px solid #C9CCD3;border-radius:6px;background:var(--swa-white);color:var(--swa-ink)}
+html body textarea{min-height:110px}
+html body label{font-weight:600;font-size:15px}
+html body input[type=checkbox],html body input[type=radio]{width:22px;height:22px;accent-color:var(--swa-red)}
+
+/* Notes, badges and status */
+html body .notice,html body .note{border-radius:6px}
+html body .badge,html body .pill,html body .tag{font-family:var(--swa-display);font-weight:700;letter-spacing:.8px;text-transform:uppercase;border-radius:4px}
+html body #status:empty{display:none}
+
+/* The top bar on every page */
+.swa-bar{position:sticky;top:0;z-index:50;background:var(--swa-ink);color:#FFFFFF;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.swa-bar__inner{max-width:1180px;margin:0 auto;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.swa-bar a{color:#FFFFFF;text-decoration:none}
+.swa-bar__home{display:flex;align-items:center;gap:10px;min-height:44px}
+.swa-bar__home img{width:42px;height:42px;display:block}
+.swa-bar__word{font-family:var(--swa-display);font-style:italic;font-weight:900;font-size:26px;letter-spacing:-.3px;line-height:1}
+.swa-bar__links{display:flex;align-items:center;gap:4px}
+.swa-bar__links a{font-family:var(--swa-display);font-weight:700;font-size:18px;letter-spacing:.6px;text-transform:uppercase;min-height:44px;display:flex;align-items:center;padding:0 12px;border-radius:6px}
+.swa-bar__links a:hover{background:#26272C}
+.swa-bar__links a[aria-current=page]{box-shadow:inset 0 -3px 0 var(--swa-red)}
+
+/* Phones: bigger tap targets for small links that act like buttons */
+@media (max-width:640px){
+  html body main>a:first-child,html body nav a,html body .links a{display:inline-flex;align-items:center;min-height:44px}
+  html body{font-size:17px}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@media print{.swa-bar{display:none}}

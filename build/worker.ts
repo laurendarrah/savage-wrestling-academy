@@ -2,6 +2,7 @@
 import handler from "vinext/server/fetch-handler";
 import { recordError } from "../lib/site-health";
 import { dailyReminders } from "../lib/notify";
+import { decorateResponse } from "../lib/page-chrome";
 
 export default {
   async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext) {
@@ -10,7 +11,8 @@ export default {
     try {
       const response = await handler.fetch(request, env, ctx);
       if (response.status >= 500) ctx.waitUntil(recordError(db, request, response.status, response.statusText || "Server error"));
-      return response;
+      // One look on every page (issue #129): shared stylesheet, icons and top bar.
+      return await decorateResponse(request, response);
     } catch (error) {
       ctx.waitUntil(recordError(db, request, 500, error instanceof Error ? error.message : String(error)));
       throw error;
