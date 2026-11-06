@@ -24,12 +24,17 @@ const HEAD = '<link rel="icon" href="/brand/favicon-32.png" sizes="32x32"><link 
 
 // The black page header (issue #146): a page that opens with optional back links, its heading and an intro paragraph
 // gets them wrapped in .swa-head. Status lines and notices stay outside; pages with their own header are left alone.
-const OPENING = /^(\s*(?:<a\b[^>]*>[^<]*<\/a>\s*)*<h1\b[^>]*>[\s\S]*?<\/h1>(?:\s*<p\b(?![^>]*(?:id="status"|role="status"|class="notice"))[^>]*>[\s\S]*?<\/p>)?)/;
+const OPENING = /^(\s*(?:<a\b[^>]*>[^<]*<\/a>\s*)*(?:<p class="eyebrow"[^>]*>[^<]*<\/p>\s*)?<h1\b[^>]*>[\s\S]*?<\/h1>(?:\s*<p\b(?![^>]*(?:id="status"|role="status"|class="notice"))[^>]*>[\s\S]*?<\/p>)?)/;
 export function pageHead(html: string) {
   if (/class="[^"]*\b(?:fam-hero|hero|swa-head)\b/.test(html)) return html;
   const main = html.match(/<main\b[^>]*>/i);
   if (!main || main.index === undefined) return html;
-  const at = main.index + main[0].length, open = html.slice(at).match(OPENING);
+  const at = main.index + main[0].length, rest = html.slice(at);
+  // Pages whose opening is already one block (the calendar's header, the Messages heading row) just get the class.
+  const block = rest.match(/^\s*<(header|div) (id="heading"|class="top")>/);
+  if (block && /^[\s\S]*?<h1\b/.test(rest.slice(0, rest.indexOf('</' + block[1] + '>'))))
+    return html.slice(0, at) + rest.replace(block[0], block[0].replace(/>$/, block[2] === 'class="top"' ? '' : ' class="swa-head">').replace('class="top"', 'class="top swa-head">'));
+  const open = rest.match(OPENING);
   if (!open) return html;
   return html.slice(0, at) + '<div class="swa-head">' + open[1] + '</div>' + html.slice(at + open[1].length);
 }
