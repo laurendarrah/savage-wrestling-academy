@@ -69,7 +69,7 @@ Without Supabase settings, public pages work and every signed-in page refuses re
 | `pnpm dev` | Local dev server on port 5173 |
 | `pnpm start` | Runs the built Worker locally on port 8787 |
 | `pnpm audit --prod` | Security audit of production dependencies |
-| `pnpm e2e [screenshot-folder]` | Builds the site, runs it on a fresh local database with a stand-in for Supabase sign-in, and walks the owner, a coach and two families through every feature in Chromium. Fails on any page, console or server error. Needs Playwright. Never uses real accounts |
+| `pnpm e2e [screenshot-folder]` | Builds the site, runs it on a fresh local database with a stand-in for Supabase sign-in, and walks the owner, a coach and two families through every feature in Chromium. Then runs an accessibility check (axe-core) on every page. Fails on any page, console or server error or serious accessibility issue. Runs on every pull request; locally it needs Chromium (`pnpm exec playwright install chromium`). Never uses real accounts |
 | `pnpm crawl:demo [url]` | Clicks every control in `/admin-demo` with a real browser and reports page errors. Needs Playwright; run it against `pnpm start` |
 
 ## Where things are
