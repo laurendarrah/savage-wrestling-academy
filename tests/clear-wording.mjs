@@ -100,7 +100,7 @@ for (const [role, destination, label] of [['family', '/family', 'Back to your fa
 {
   const {el} = page('app/inbox/screen.html', {fetch: async () => reply({notices: [{id: 'n', subject: 'Lesson booked', body: 'b', at: '2026-11-06T19:13:00Z', read: true}], announcements: [], thread: []})});
   await settle();
-  assert.match(el('notices').innerHTML, /Lesson booked <span class="muted when">· Fri, Nov 6 · 2:13 PM<\/span>/);
+  assert.match(el('notices').innerHTML, /Lesson booked<span class="muted when">Fri, Nov 6 · 2:13 PM<\/span>/);
 }
 
 // Family and coach pages carry no builder language.
