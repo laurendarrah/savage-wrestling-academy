@@ -17,4 +17,8 @@ assert.match(body, /<h2>Review your selection<\/h2>/);
 
 // Prices are never written into the page; they come from the server catalog and review.
 assert.doesNotMatch(body, /\$\d/, 'no hard-coded prices');
+// Before the academy publishes programs, one clear message replaces the empty form (issue #151).
+assert.match(body, /<section id="notOpen" hidden[^>]*><h2 id="notOpenHeading">Training opens soon<\/h2>/);
+const script = html.slice(html.indexOf('<script'));
+assert.match(script, /if\(!catalog\.programs\.length\)\{\$\('notOpen'\)\.hidden=false;[^}]*return\}/, 'no programs: show the message and stop');
 console.log('register-design ok');
