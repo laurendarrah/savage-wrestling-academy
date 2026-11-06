@@ -9,6 +9,7 @@ import {start, sessionCookie} from './fake-supabase.mjs';
 const require = createRequire(import.meta.url);
 const playwright = require('playwright');
 const BASE = process.env.E2E_BASE || 'http://127.0.0.1:8799', AUTH = 'http://127.0.0.1:54321', SECRET = process.env.E2E_WEBHOOK_SECRET;
+const SHOTS = process.env.E2E_SHOTS; // optional folder for screenshots of the money screens
 const auth = await start(54321), browser = await playwright.chromium.launch();
 const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 const problems = [], passed = [];
@@ -63,6 +64,7 @@ await step('family pays for a walk-in: checkout opens a Stripe session', async (
   await family.locator(`[data-day="${ny(1)}"]`).first().click(); await family.locator('[data-slot]').first().click();
   await family.click('#reviewButton'); await family.waitForSelector('#acceptTerms', {state: 'visible'});
   await family.check('#acceptTerms');
+  if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-review-walkin.png`, fullPage: true});
   await Promise.all([family.waitForURL(/checkout\.stripe\.com/, {timeout: 15000}), family.click('#payButton')]);
   const o = sql("SELECT id,status,amount_cents,stripe_session_id FROM orders WHERE kind='walkin'")[0];
   expect(o && o.status === 'pending' && o.amount_cents === 4000 && /^cs_test_/.test(o.stripe_session_id), 'pending order ' + JSON.stringify(o));
@@ -72,7 +74,8 @@ await step('Stripe reports the payment: the walk-in is paid and on the roster', 
   const o = sql(`SELECT stripe_session_id FROM orders WHERE id='${walkinOrder}'`)[0];
   let r = await webhook('checkout.session.completed', {id: o.stripe_session_id, object: 'checkout.session', client_reference_id: walkinOrder, metadata: {order_id: walkinOrder}, payment_status: 'paid', amount_total: 4000, currency: 'usd', livemode: false, payment_intent: 'pi_rehearsal_walkin', mode: 'payment'});
   expect(r.status === 200, 'webhook ' + JSON.stringify(r.body));
-  await family.goto(BASE + `/family?checkout=success&order=${walkinOrder}`); await waitText(family, '#status', /Payment confirmed/);
+  await family.goto(BASE + `/family?checkout=success&order=${walkinOrder}`); await waitText(family, '#paid', /Payment confirmed/);
+  if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-confirmed-family.png`, fullPage: true});
   await waitText(family, '#purchaseList', /walk-in[\s\S]*Paid/i);
   const roster = await api(owner, '/api/roster?date=' + ny(1));
   expect(roster.body.sessions.some(s => s.entries.some(e => e.name === 'Sam Example' && e.sources.includes('Walk-in paid'))), 'not on roster');
@@ -93,6 +96,7 @@ await step('family starts a 12-month membership paid monthly: a Stripe subscript
   await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
   await family.check('#plan-monthly'); await family.selectOption('#program', 'Intermediate');
   await family.click('#reviewButton'); await family.waitForSelector('#acceptTerms', {state: 'visible'}); await family.check('#acceptTerms');
+  if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-review-monthly.png`, fullPage: true});
   await Promise.all([family.waitForURL(/checkout\.stripe\.com/, {timeout: 15000}), family.click('#payButton')]);
   const o = sql("SELECT id,status,amount_cents FROM orders WHERE kind='monthly'")[0];
   expect(o && o.status === 'pending' && o.amount_cents === 20000, 'pending monthly order ' + JSON.stringify(o));

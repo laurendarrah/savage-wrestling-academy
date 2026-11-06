@@ -81,7 +81,8 @@ async function openFamily({search = '', orderStatuses = ['paid']}) {
 }
 {
   const {el} = await openFamily({search: `?checkout=success&order=${uuid(11)}`, orderStatuses: ['pending', 'pending', 'paid']});
-  assert.match(el('status').textContent, /^Payment confirmed: Takedown Camp for Sam Example\.$/, 'success shown only after the webhook marked it paid');
+  assert.equal(el('paid').hidden, false, 'success shown only after the webhook marked it paid');
+  assert.match(el('paid').innerHTML, /Payment confirmed<\/p><p><strong>Takedown Camp<\/strong> for Sam Example is paid and booked/, 'a clear green confirmation (issue #184)');
 }
 {
   const {el, polls} = await openFamily({search: `?checkout=success&order=${uuid(11)}`, orderStatuses: ['pending']});
