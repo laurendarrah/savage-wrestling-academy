@@ -1,0 +1,3 @@
+# Fonts load on sandboxed pages too (the scholarship signature sample has an opaque origin), issue #159.
+/fonts/*
+  Access-Control-Allow-Origin: *
