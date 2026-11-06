@@ -46,12 +46,13 @@ function page(file, {fetch, search = '', hidden = []}) {
   await settle();
   assert.deepEqual(calls.map(c => c.url), ['/api/public-schedule', '/api/public-schedule?month=2026-12'], 'this month and next month');
   const cards = el('programs').innerHTML;
-  assert.match(cards, /SWA Development<\/h3><span class="grades">Grades K–6/, 'grades fall back to the program rules');
+  assert.match(cards, /<span class="grades" style="[^"]*">Grades K–6<\/span><h3>SWA Development<\/h3>/, 'grades fall back to the program rules, shown as a label above the name');
+  assert.doesNotMatch(cards, /class="swatch"/, 'no colour square that looks like a checkbox (issue #171)');
   assert.match(cards, /\$200 a month for a 12-month membership, or \$2,400 paid upfront/);
   assert.match(cards, /\$40 for a single walk-in practice/);
   assert.match(cards, /\$225\.50 a month/, 'cents shown when the price has them');
   assert.equal((cards.match(/needs coach approval/g) || []).length, 1, 'only SWA Advance says coach approval');
-  assert.match(cards, /SWA Advance<\/h3><span class="grades">Grades 7–12<\/span>/, 'approval is said once, in the note');
+  assert.match(cards, /">Grades 7–12<\/span><h3>SWA Advance<\/h3>/, 'approval is said once, in the note');
   const week = el('week').innerHTML;
   assert.match(week, /Mon, Nov 30<span>6:00 PM<\/span>[\s\S]*SWA Development practice[\s\S]*SWA Intermediate practice/, 'same-time sessions share a row');
   assert.match(week, /Tue, Dec 1<span>3:00 PM<\/span>[\s\S]*SWA Advance practice/, 'next month is included');
