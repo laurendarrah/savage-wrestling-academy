@@ -21,7 +21,7 @@ function compile(file,deps){
 }
 function loadBackups(DB){
   const friday=compile('lib/friday-live.ts',{});
-  return compile('lib/backup-records.ts',{'cloudflare:workers':{env:{DB}},'./academy-validation':compile('lib/academy-validation.ts',{'./friday-live':friday}),'./family-records':compile('lib/family-records.ts',{})});
+  return compile('lib/backup-records.ts',{'cloudflare:workers':{env:{DB}},'./academy-validation':compile('lib/academy-validation.ts',{'./friday-live':friday,'./event-schedule':compile('lib/event-schedule.ts',{})}),'./family-records':compile('lib/family-records.ts',{})});
 }
 const now='2026-11-05T12:00:00.000Z';
 const signature=JSON.stringify({version:1,signer:'Pat Parent',consent:true,termsHash:'a'.repeat(64),strokes:[[[1,2],[3,4],[5,6]]],signedAt:now});

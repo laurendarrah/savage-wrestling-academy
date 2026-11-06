@@ -29,9 +29,12 @@ export function sessionsOn(state: any, date: string): Session[] {
   const live: Session[] = (s.liveClasses ?? []).filter((l: any) => l.date === date).map((l: any) => ({
     key: `live:${l.id}:${date}`, type: 'live', title: l.name, program: null, date, start: l.start, end: l.end
   }));
-  const events: Session[] = (s.events ?? []).filter((e: any) => e.dates.includes(date)).map((e: any) => ({
-    key: `event:${e.id}:${date}`, type: 'event', title: e.name, program: null, date, start: null, end: null
-  }));
+  // Camp, clinic and event days carry their own times when the owner set them (issue #189); otherwise null, which the
+  // screens show as "Time to be announced". The session key has no time, so attendance stays put if a time changes.
+  const events: Session[] = (s.events ?? []).filter((e: any) => e.dates.includes(date)).map((e: any) => {
+    const timed = (e.schedule ?? []).find((x: any) => x.date === date);
+    return {key: `event:${e.id}:${date}`, type: 'event', title: e.name, program: null, date, start: timed?.start ?? null, end: timed?.end ?? null};
+  });
   return [...practices, ...live, ...events].sort((a, b) => (a.start ?? '99') .localeCompare(b.start ?? '99') || a.title.localeCompare(b.title));
 }
 

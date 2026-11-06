@@ -67,13 +67,37 @@ await step('owner saves the academy schedule, programs, camp and Friday Night Li
   const state = {kids: [], bookings: [], messages: [], offers: [], staff: [], attendance: {}, settings: {},
     programs: [['Elementary', 'SWA Development'], ['Intermediate', 'SWA Intermediate'], ['Advanced', 'SWA Advance']].map(([id, name]) => ({id, name, description: '', priceCents: 20000, walkInPriceCents: 4000})),
     seasons: ['Elementary', 'Intermediate', 'Advanced'].map(program => ({program, start: ny(-30), end: ny(120), weekly, excludedDates: []})),
-    events: [{id: 'winter-camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], price: 160, day: 90, slots: 1, gradeRange: '', description: ''}],
+    events: [{id: 'winter-camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], schedule: [{date: ny(10), start: '09:00', end: '12:00'}], price: 160, day: 90, slots: 1, gradeRange: '', description: ''}],
     extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [ny(2)], enabled: true, start: '16:00', end: '17:00', memberCents: 1000, nonMemberCents: 2000}]};
   const got = await api(owner, '/api/academy');
   const r = await owner.evaluate(async ([s, rev]) => { const x = await fetch('/api/academy', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision: rev, data: s})}); return {status: x.status, body: await x.json()}; }, [state, got.body.revision]);
   expect(r.status === 200, 'save failed: ' + JSON.stringify(r.body));
   const staff = await api(owner, '/api/staff', {action: 'grant', email: 'coach.dana@example.test', name: 'Coach Dana', programs: ['Intermediate']});
   expect(staff.status === 200, 'coach access: ' + JSON.stringify(staff.body));
+});
+
+// ---------- Calendars: camp day times, holidays as labels, today highlighted (issue #189) ----------
+await step('camp times, holidays and today show on the public calendar and the coach home', async () => {
+  const pub = await (await browser.newContext()).newPage();
+  for (const month of [...new Set([today.slice(0, 7), ny(10).slice(0, 7)])]) {
+    await pub.goto(BASE + '/calendar?month=' + month); await pub.waitForSelector('#calendar .grid');
+    const grid = await pub.$eval('#calendar .grid', g => g.innerHTML);
+    if (month === ny(10).slice(0, 7)) expect(/Winter camp<\/strong><span>9:00 AM–12:00 PM/.test(grid), 'the first camp day shows its time');
+    if (month === ny(11).slice(0, 7)) expect(/Winter camp<\/strong><span>Time to be announced/.test(grid), 'a camp day without a time says so');
+    if (month === today.slice(0, 7)) expect(await pub.$eval('#calendar .grid .day.is-today', d => d.textContent).then(t => /Today/.test(t)), 'today is highlighted');
+    // Holidays are labels only: the practice that day is still on the calendar (only days off cancel practice).
+    const {body} = await api(pub, '/api/public-schedule?month=' + month);
+    for (const h of body.holidays) {
+      const day = await pub.$$eval('#calendar .grid .day', (ds, [n, name]) => ds.find(d => d.firstChild?.textContent === n && d.textContent.includes(name))?.innerHTML ?? '', [String(Number(h.date.slice(-2))), h.name]);
+      expect(day.includes('holiday-tag'), 'holiday label for ' + h.name);
+      expect(!/No practice/i.test(day), 'no "No practice" card on ' + h.name);
+      if (h.date >= today) expect(day.includes('SWA Development'), 'practice stays on ' + h.name);
+    }
+  }
+  await shot(pub, 'calendar-times-holidays');
+  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#week .wday.is-today');
+  expect(/Today/.test(await text(coach, '#week .wday.is-today')), 'coach week shows today');
+  await shot(coach, 'coach-week'); await pub.close();
 });
 
 // ---------- Family: profile and USA Wrestling cards ----------
@@ -336,6 +360,7 @@ await step('camp fills; family 2 joins the waitlist from the booking page; owner
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record'); await waitText(owner, '#status', /recorded/i);
   await family2.goto(BASE + '/booking?type=event&id=winter-camp'); await family2.waitForSelector('#submit');
   expect(!/\d{4}-\d{2}-\d{2}/.test(await family2.locator('main').innerText()), 'camp dates should be readable, not 2026-11-15');
+  await waitText(family2, '#description', /9:00 AM–12:00 PM[\s\S]*Time to be announced/);
   // The page is titled with the event and says where each wrestler stands (issue #132).
   await waitText(family2, 'h1', /Winter camp/); await waitText(family2, '#wrestlerStatus', /Riley Two is not registered yet/);
   await family2.click('#submit'); await waitText(family2, '#status', /Join the waitlist/);

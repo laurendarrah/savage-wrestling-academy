@@ -12,7 +12,7 @@ const load = (file, deps = {}) => {
   vm.runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText, {module, exports: module.exports, require, URL, Intl, Date, JSON, Math});
   return module.exports;
 };
-const {validState} = load('lib/academy-validation.ts', {'./friday-live': load('lib/friday-live.ts', {'./program-names': load('lib/program-names.ts')})});
+const {validState} = load('lib/academy-validation.ts', {'./friday-live': load('lib/friday-live.ts', {'./program-names': load('lib/program-names.ts')}), './event-schedule': load('lib/event-schedule.ts')});
 const {registrationCatalog} = load('lib/registration-catalog.ts', {'./program-names': load('lib/program-names.ts')});
 
 const files = readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort();
