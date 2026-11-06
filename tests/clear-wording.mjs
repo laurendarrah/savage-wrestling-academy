@@ -42,7 +42,7 @@ const reply = body => ({ok: true, status: 200, json: async () => body});
     {id: 'o1', date: '2026-11-09', start: '15:00', end: '16:00', booking: {format: 'One-on-one lesson', wrestler: 'Sam Example', parent: 'Pat Example', phone: '555-0100', email: 'pat@example.test'}},
     {id: 'o2', date: '2026-11-10', start: '09:30', end: '10:30', booking: null}]})});
   await settle();
-  assert.equal(el('heading').textContent, 'Coach Dana · Coach home');
+  assert.equal(el('heading').textContent, 'Coach Dana', 'the coach\'s name alone, so it fits a phone (issue #173)');
   assert.equal(el('programs').textContent, 'You coach SWA Intermediate.');
   const slots = el('slots').innerHTML;
   assert.match(slots, /<b>Mon, Nov 9<\/b><p>3:00 PM–4:00 PM<\/p>/);
