@@ -1,25 +1,41 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My family | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
 body{background:#F4F5F7;color:#141416;margin:0}
-main{max-width:820px;margin:auto;padding:20px 16px 56px}
+main{max-width:820px;margin:auto;padding:0 16px 56px}
+/* Savage band at the top (issue #141): full-width black, painted with a shadow so it never scrolls sideways. */
+.fam-hero{background:#141416;color:#fff;box-shadow:0 0 0 100vmax #141416;clip-path:inset(0 -100vmax);padding:28px 0 0;margin:0 0 8px}
+.fam-hero .eyebrow{font-weight:700;font-size:13px;letter-spacing:2.4px;text-transform:uppercase;color:#B9C4C9;margin:0}
+html body .fam-hero h1{color:#fff;font-size:clamp(38px,8vw,60px);margin:6px 0 6px;line-height:1}
+.fam-hero .lede{color:#D7DBE0;font-size:18px;margin:0 0 4px;max-width:46ch}
+.fam-hero .lede:empty{display:none}
 html body main>section,html body main>details.card{padding:22px;margin:18px 0}
 h1{margin:6px 0 2px}h2{margin:0 0 6px}
 .fam-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .fam-head>div{min-width:0}
 .fam-head #email{margin:0;overflow-wrap:anywhere}
 .account-menu{position:relative;flex:none;margin-top:8px}
-.account-menu summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;border:1.5px solid #141416;border-radius:6px;background:#fff;font-weight:600}
+.account-menu summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;border:1.5px solid #6B7076;border-radius:6px;background:transparent;color:#fff;font-weight:600}
+.account-menu summary:hover,.account-menu[open] summary{border-color:#fff}
+.account-menu .signed-in{margin:0 0 4px;padding:8px 12px 10px;border-bottom:1px solid #E1E3E8;font-size:14px;color:#55585F;overflow-wrap:anywhere}
+.account-menu .signed-in span{display:block;color:#141416;font-weight:600}
 .account-menu summary::-webkit-details-marker{display:none}
 .account-menu summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px)}
 .account-menu[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
 .account-menu .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:230px;background:#fff;border:1px solid #E1E3E8;border-radius:6px;box-shadow:0 10px 30px rgba(20,20,22,.14);padding:6px;display:flex;flex-direction:column}
 html body .account-menu .menu a,html body .account-menu .menu button{display:flex;align-items:center;min-height:44px;padding:0 12px;border:0;border-radius:4px;background:none;color:#141416;text-decoration:none;font-weight:600;font-size:16px;text-align:left;width:100%}
 html body .account-menu .menu a:hover,html body .account-menu .menu button:hover{background:#F4F5F7;color:#141416}
-.quick{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
-html body .quick a{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid #E1E3E8;border-radius:6px;background:#fff;color:#141416;text-decoration:none;font-weight:600;white-space:nowrap}
-html body .quick a:hover{border-color:#141416;color:#141416}
+.quick{display:flex;gap:2px;margin:18px 0 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.quick::-webkit-scrollbar{display:none}
+html body .quick a{display:inline-flex;align-items:center;min-height:48px;padding:0 14px;color:#B9C4C9;text-decoration:none;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;font-size:17px;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;box-shadow:inset 0 -3px 0 transparent}
+html body .quick a:first-child{padding-left:0}
+html body .quick a:hover,html body .quick a:focus-visible{color:#fff;box-shadow:inset 0 -3px 0 #C4222C}
 #status{font-weight:600;margin:12px 0 0;scroll-margin-top:80px}
 .steps{list-style:none;padding:0;margin:14px 0 0;counter-reset:step}
+.progress{height:6px;border-radius:3px;background:#E9ECEF;margin:12px 0 4px;overflow:hidden}
+.progress span{display:block;height:100%;background:#C4222C;border-radius:3px;transition:width .3s}
 .step{display:grid;grid-template-columns:36px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-top:1px solid #E1E3E8;counter-increment:step}
+.step:not(.current):not(.done) h3,.step:not(.current):not(.done) p{color:#6B7076}
+.step.current{background:#FBF4F4;border-radius:8px;border-top-color:transparent;padding:16px 14px;margin:2px -14px}
+.step.current+.step{border-top-color:transparent}
 .step:first-child{border-top:0}
 .step .mark{grid-row:span 3;width:32px;height:32px;border-radius:50%;border:2px solid #B9C4C9;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:19px;color:#55585F}
 .step .mark::before{content:counter(step)}
@@ -27,6 +43,7 @@ html body .quick a:hover{border-color:#141416;color:#141416}
 .step.done .mark::before{content:"✓"}
 .step.current .mark{border-color:#C4222C;color:#C4222C}
 .step h3{margin:4px 0 0;font-size:18px}
+.step.done p{color:#55585F}
 .step p{margin:0}
 .step .done-note{color:#1F6F3A;font-weight:600}
 .step .go{margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -106,11 +123,11 @@ main>section[id],#status{scroll-margin-top:80px}
  html body .quick a{padding:0 12px}
 }
 </style></head><body><main>
-<header class="fam-head"><div><h1 id="hello">Your family</h1><p class="muted" id="email"></p></div>
-<details class="account-menu" id="accountMenu"><summary>Account</summary><div class="menu"><a href="/help">Help</a><a href="/security">Account security</a><a href="/login?mode=change">Change password</a><button type="button" onclick="signout()">Sign out</button></div></details></header>
-<nav class="quick" aria-label="Family account sections"><a href="/inbox" id="inboxLink">Messages</a><a href="/register">Training</a><a href="/lesson">Private lessons</a><a href="#memberships">Memberships</a><a href="#purchaseHistory">Purchases</a></nav>
+<div class="fam-hero"><div class="fam-head"><div><p class="eyebrow">Savage Wrestling Academy</p><h1 id="hello">Your family</h1><p class="lede" id="heroLede"></p></div>
+<details class="account-menu" id="accountMenu"><summary>Account</summary><div class="menu"><p class="signed-in">Signed in as<span id="email"></span></p><a href="/help">Help</a><a href="/security">Account security</a><a href="/login?mode=change">Change password</a><a href="#yourData" id="yourDataLink">Your data</a><button type="button" onclick="signout()">Sign out</button></div></details></div>
+<nav class="quick" aria-label="Family account sections"><a href="/inbox" id="inboxLink">Messages</a><a href="/register">Training</a><a href="/lesson">Private lessons</a><a href="#memberships" id="membershipsLink">Memberships</a><a href="#purchaseHistory" id="purchasesLink">Purchases</a></nav></div>
 <p id="status" role="status" aria-live="polite">Loading…</p>
-<section id="start" class="card" hidden aria-labelledby="startHeading"><div class="section-title"><h2 id="startHeading">Get set up</h2><span class="billing-pill" id="startCount"></span></div><p class="muted">Four steps get your wrestler ready to train. Each one is checked off here when it’s done.</p><ol class="steps" id="startSteps"></ol></section>
+<section id="start" class="card" hidden aria-labelledby="startHeading"><div class="section-title"><h2 id="startHeading">Get set up</h2><span class="billing-pill" id="startCount"></span></div><div class="progress" aria-hidden="true"><span id="startBar" style="width:0"></span></div><p class="muted" id="startLede"></p><ol class="steps" id="startSteps"></ol></section>
 <section id="nextUp" class="card" hidden aria-labelledby="nextUpHeading"><h2 id="nextUpHeading">Next up</h2><div id="nextUpBody"></div></section>
 <section id="summary" class="card" hidden tabindex="-1" aria-labelledby="savedHeading"><h2 id="savedHeading">Your wrestlers</h2><div id="savedDetails"></div><p class="muted" id="savedTime"></p><div class="summary-actions"><button type="button" onclick="editProfile()">Edit family profile</button></div>
 <div class="training"><h3>Training</h3><p id="readyNote">Choose a 12-month membership or a single walk-in practice. Online payment isn’t open yet, so pay at the academy.</p><p id="notEnrolledNote"><strong>No payment recorded yet.</strong> When you pay at the academy, your membership or registration shows here once the academy records it.</p><ul><li><a href="/register">Choose a membership or walk-in →</a></li><li><a href="/lesson">Book a private lesson with a coach →</a></li><li><a href="/calendar?view=live">Book an extra practice, such as Friday Night Live →</a></li><li><a href="/register?program=Advanced">Ask a coach about SWA Advance →</a></li></ul></div></section>
@@ -241,7 +258,9 @@ function renderStart(){
  const steps=setupSteps(),left=steps.filter(s=>!s.done).length,current=steps.find(s=>!s.done);
  $('start').hidden=!left;
  $('startCount').textContent=(steps.length-left)+' of '+steps.length+' done';
- $('startSteps').innerHTML=steps.map(s=>'<li class="step'+(s.done?' done':s===current?' current':'')+'" data-step="'+s.key+'"><span class="mark" aria-hidden="true"></span><h3>'+esc(s.title)+(s.done?' <span class="done-note">· Done</span>':'')+'</h3><p>'+s.text+'</p>'+(s.done?'':'<div class="go">'+(s===current&&(s.key==='waiver'||s.key==='training'||$('editor').hidden)?s.button.replace('<button type="button"','<button type="button" class="primary"').replace('<a class="button"','<a class="button primary"'):s.button)+'</div>')+'</li>').join('');
+ const bar=$('startBar');if(bar&&bar.style)bar.style.width=Math.round(100*(steps.length-left)/steps.length)+'%';
+ $('startLede').textContent=['','One step','Two steps','Three steps','Four steps'][steps.length]+' get your wrestler ready to train. Each one is checked off when it’s done.';
+ $('startSteps').innerHTML=steps.map(s=>'<li class="step'+(s.done?' done':s===current?' current':'')+'" data-step="'+s.key+'"><span class="mark" aria-hidden="true"></span><h3>'+esc(s.title)+(s.done?' <span class="done-note">· Done</span>':'')+'</h3><p>'+s.text+'</p>'+(s.done||s!==current?'':'<div class="go">'+(s===current&&(s.key==='waiver'||s.key==='training'||$('editor').hidden)?s.button.replace('<button type="button"','<button type="button" class="primary"').replace('<a class="button"','<a class="button primary"'):s.button)+'</div>')+'</li>').join('');
  return !left;
 }
 function startDetails(){if($('editor').hidden)editProfile();$('familyForm').elements.parentName.focus();$('editor').scrollIntoView({behavior:'smooth',block:'start'});$('status').textContent='Add your name and phone number, then choose Save family profile.'}
@@ -267,8 +286,13 @@ function renderNextUp(setUp){
 }
 function renderHome(){
  const name=String((savedProfile||{}).parentName||'').trim().split(/\s+/)[0];
- $('hello').textContent=name?'Hi, '+name:'Your family';
+ $('hello').textContent=name?'Hi, '+name:'Welcome';
  const setUp=renderStart();renderNextUp(setUp);
+ $('heroLede').textContent=setUp?'':'A few quick steps and your wrestler is ready for the mat.';
+ // A family with nothing saved or paid yet doesn't need empty membership, purchase and data sections.
+ const fresh=!savedProfile&&!orders.length&&!scholarshipAwards.length;
+ for(const id of ['memberships','purchaseHistory','yourData','billingExample'])$(id).hidden=fresh;
+ $('membershipsLink').hidden=$('purchasesLink').hidden=$('yourDataLink').hidden=fresh;
 }
 let orders=[];
 // Dates read "Nov 9, 2026"; moments read "Mon, Nov 9 · 3:00 PM" in New York time (issue #127).
