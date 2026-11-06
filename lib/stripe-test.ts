@@ -3,7 +3,10 @@ import {env} from 'cloudflare:workers';
 import {stripeMode, type StripeMode} from './checkout-config';
 export const STRIPE_TEST_ACCOUNT='acct_1U8nF9PkPTNkVQBz';
 export function validTestKey(value:unknown):value is string{return typeof value==='string'&&/^rk_test_[A-Za-z0-9_]{16,512}$/.test(value)}
-export function stripeTestClient(key:string){if(!validTestKey(key))throw Error('A restricted test key is required.');return new Stripe(key,{apiVersion:'2026-09-30.endive',httpClient:Stripe.createFetchHttpClient(),maxNetworkRetries:1,timeout:15000})}
+// Local rehearsals only (issue #111): STRIPE_API_BASE sends TEST-mode calls to Stripe's stripe-mock server on this
+// machine. It is ignored in live mode and for any host that is not loopback, so it can never redirect real traffic.
+export function testApiOverride(mode:'test'|'live'='test'){const raw=(env as Cloudflare.Env&{STRIPE_API_BASE?:string}).STRIPE_API_BASE;if(mode!=='test'||!raw)return {};try{const u=new URL(raw);if(!['127.0.0.1','localhost'].includes(u.hostname))return {};return {host:u.hostname,port:u.port||(u.protocol==='https:'?'443':'80'),protocol:u.protocol.replace(':','') as 'http'|'https'}}catch{return {}}}
+export function stripeTestClient(key:string){if(!validTestKey(key))throw Error('A restricted test key is required.');return new Stripe(key,{apiVersion:'2026-09-30.endive',httpClient:Stripe.createFetchHttpClient(),...testApiOverride('test'),maxNetworkRetries:1,timeout:15000})}
 const aad=new TextEncoder().encode('savage:stripe-test:v1');
 async function encryptionKey(){const raw=(env as Cloudflare.Env&{STRIPE_CONFIG_ENCRYPTION_KEY?:string}).STRIPE_CONFIG_ENCRYPTION_KEY;if(!raw||! /^[a-f0-9]{64}$/.test(raw))throw Error('Secure storage is not configured.');return crypto.subtle.importKey('raw',Uint8Array.from(raw.match(/../g)!,x=>parseInt(x,16)),{name:'AES-GCM'},false,['encrypt','decrypt'])}
 export async function sealStripeKey(secret:string){if(!validTestKey(secret))throw Error('A restricted test key is required.');const key=await encryptionKey(),iv=crypto.getRandomValues(new Uint8Array(12)),encrypted=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad},key,new TextEncoder().encode(secret)));return JSON.stringify({v:1,iv:Array.from(iv),data:Array.from(encrypted)})}
@@ -22,7 +25,7 @@ export function expectedStripeAccount(): string {
 }
 export function stripeClientFor(mode: StripeMode, key: string) {
   if (!validKeyFor(mode, key)) throw Error(`A restricted ${mode} key is required.`);
-  return new Stripe(key, {apiVersion: '2026-09-30.endive', httpClient: Stripe.createFetchHttpClient(), maxNetworkRetries: 1, timeout: 15000});
+  return new Stripe(key, {apiVersion: '2026-09-30.endive', httpClient: Stripe.createFetchHttpClient(), maxNetworkRetries: 1, timeout: 15000, ...testApiOverride(mode)});
 }
 const labelFor = (mode: StripeMode) => new TextEncoder().encode(`savage:stripe-${mode}:v1`);
 export async function sealStripeKeyFor(mode: StripeMode, secret: string) {

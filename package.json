@@ -15,6 +15,7 @@
     "test": "node scripts/run-tests.mjs",
     "crawl:demo": "node scripts/crawl-admin-demo.mjs",
     "e2e": "bash scripts/e2e/run.sh",
+    "e2e:payments": "bash scripts/e2e/run-payments.sh",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {

@@ -51,6 +51,14 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Walkthrough and accessibility check
         run: pnpm e2e e2e-screenshots
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+      - name: Install stripe-mock
+        run: go install github.com/stripe/stripe-mock@v0.197.0
+      - name: Online payment rehearsal against stripe-mock
+        run: pnpm e2e:payments
       - name: Keep screenshots and server log
         if: always()
         uses: actions/upload-artifact@v4
