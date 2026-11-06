@@ -363,6 +363,15 @@ await step('backup export includes payments and signed waivers', async () => {
   expect(back.status === 200 && Object.values(back.body.restored).every(n => n === 0), 'restore round trip ' + JSON.stringify(back.body).slice(0, 300));
 });
 
+// ---------- Guides ----------
+await step('each role has a guide linked from its home page; guides are role-only', async () => {
+  await family.goto(BASE + '/family'); await family.click('text=Help'); await waitText(family, 'h1', /Help for families/);
+  await coach.goto(BASE + '/coach'); await coach.click('text=Coach help'); await waitText(coach, 'h1', /Help for coaches/);
+  await owner.goto(BASE + '/'); await owner.click('a.tool:has-text("Owner guide")'); await waitText(owner, 'h1', /Owner guide/);
+  const fc = await family.request.get(BASE + '/help/coach', {maxRedirects: 0}); expect(fc.status() !== 200, 'family opened the coach guide');
+  const fo = await family.request.get(BASE + '/help/owner', {maxRedirects: 0}); expect(fo.status() !== 200, 'family opened the owner guide');
+});
+
 // ---------- Isolation and phone layout ----------
 await step('one family cannot see another family\'s data', async () => {
   const r = await api(family2, '/api/wrestler?id=' + samId); expect(r.status === 404, 'wrestler view of another family');
@@ -371,7 +380,7 @@ await step('one family cannot see another family\'s data', async () => {
 });
 await step('family pages fit a phone screen', async () => {
   const phone = await (async () => { const p = await (await browser.newContext({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true})); const c = (await import('./fake-supabase.mjs')).sessionCookie('family', AUTH); await p.addCookies([{name: c.name, value: c.value, url: BASE}]); return p.newPage(); })();
-  for (const path of ['/family', '/register', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
+  for (const path of ['/help', '/family', '/register', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
     await phone.goto(BASE + path); await phone.waitForTimeout(700);
     const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(over <= 1, `${path} scrolls sideways by ${over}px on a phone`);
@@ -385,10 +394,10 @@ await step('family pages fit a phone screen', async () => {
 // ---------- Accessibility (axe-core) on every page, as each role ----------
 const axeSource = (await import('node:fs')).readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const a11yPages = {
-  public: ['/calendar', '/login', '/membership-terms'],
+  public: ['/calendar', '/login', '/membership-terms', '/help'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
-  coach: ['/coach', '/roster'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
+  coach: ['/coach', '/roster', '/help/coach'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {
