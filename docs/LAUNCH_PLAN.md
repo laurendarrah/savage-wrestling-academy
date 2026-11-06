@@ -144,6 +144,10 @@ Done when: the real purchase and refund appear correctly in Stripe, the database
 | Program transfers | **Built (#74).** `/transfers` moves a paid membership to another program from a chosen date, with eligibility checks and history. Price differences are settled separately on `/payments` or in Stripe |
 | Coach payouts and accounting | **Coach pay report built (#75):** `/coach-pay` totals each coach's paid lessons for a period at the share set on `/lesson-settings`, with CSV export. Paying coaches and bookkeeping stay outside the app |
 
+## Policies before launch
+
+Drafts based on what the platform does are in [docs/policies](policies/README.md): privacy policy, refund policy for single purchases, data retention, and a review checklist for the membership terms. Justin answers the marked decisions; the attorney reviews the wording. None is published until approved (#117).
+
 ## Risks to watch
 
 - **Two copies of the code.** If anyone edits in ChatGPT Sites after GitHub becomes the source, changes get lost. Decision 8 prevents this.
