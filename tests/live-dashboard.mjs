@@ -53,5 +53,9 @@ assert.match(readFileSync('app/admin-demo/demo.js', 'utf8'), /function startAdmi
 // Issue #32: the demo may load its web fonts, and still cannot call any API.
 const route = readFileSync('app/admin-demo/route.ts', 'utf8');
 assert.match(route, /style-src 'self' 'unsafe-inline' https:\/\/fonts\.googleapis\.com;/); assert.match(route, /font-src https:\/\/fonts\.gstatic\.com;/); assert.match(route, /connect-src 'none'/);
-assert.ok(html.includes('<strong>OWNER WORKSPACE</strong> · Parent view and Wrestler view show sample families, not your real ones'), 'banner the demo rewrites');
+assert.ok(!html.includes('OWNER WORKSPACE'), 'the live dashboard has no sample-preview banner (issue #133)');
+assert.match(route, /<body><div class="preview"><strong>ADMIN DEMO<\/strong> · Fictional data/, 'the demo adds its own banner');
+// Issue #133: the sample previews sit behind one menu that opens while previewing, so the way back stays visible.
+assert.match(html, /<details class="previewmenu" id="previewMenu"><summary>Preview what families see<\/summary>/);
+assert.match(html, /function setMode\(m\)\{closeMobileNav\(\);closeModal\(\);mode=m;const pm=document.getElementById\('previewMenu'\);if\(pm\)pm.open=m!=='admin';/);
 console.log('Live owner dashboard tests passed');
