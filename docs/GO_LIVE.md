@@ -8,7 +8,9 @@ Follow the steps in order. The old Sites site keeps running until the domain is 
 
 - [ ] Create a Cloudflare account in the academy's name (free plan to start; Workers Paid is $5/month if limits are reached). Add Lauren as an administrator.
 - [ ] Decide the site address, for example `register.savagewrestling.com`. Whoever controls the domain's DNS needs to be available on cut-over day.
-- [ ] Add Lauren to the Supabase project and the Stripe account.
+- [ ] Accept the invite to the new Supabase project (see below), and add Lauren to the Stripe account.
+
+**Supabase (#139).** The old site's Supabase project was set up through ChatGPT, and no one at the academy can sign in to it. Lauren has created a new project and invites Justin as Owner. Everyone, the owner included, creates their login again on the new site.
 
 ## 2. Cloudflare setup (Lauren with Claude Code)
 
@@ -18,7 +20,7 @@ Follow the steps in order. The old Sites site keeps running until the domain is 
 
 | Setting | Value |
 |---|---|
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | From the Supabase project (unchanged) |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | From the new Supabase project: Project Settings → API Keys (the publishable key starts `sb_publishable_`) and the Project URL |
 | `APP_ORIGIN` | **Required:** sign-up and reset emails fail without it. Until cut-over, the Cloudflare address (`https://<worker>.<account>.workers.dev`). On cut-over day, the real address, for example `https://register.savagewrestling.com` |
 | `STRIPE_CONFIG_ENCRYPTION_KEY` | A new random 64-character hex value. The Stripe key is re-entered on `/payment-setup` after the move; saved keys are never moved |
 | `STRIPE_TEST_WEBHOOK_SECRET` | From the new Stripe webhook (step 6) |
@@ -53,11 +55,15 @@ To publish by hand: Actions → Deploy → Run workflow.
 - [ ] **Preferred: a full database export.** If Sites offers a database export (SQL), Justin downloads it, and Lauren imports it into the new database with `wrangler d1 execute DB --remote --file export.sql` before anyone signs up on the new site.
 - [ ] **Otherwise:** Justin downloads an encrypted backup on the old site (owner workspace → Backups), and the owner restores it on the new site's `/backups` page. Then he re-creates any scholarship offers (families sign again), re-approves SWA Advance wrestlers, and re-enters practice plans and curricula. Check first how many of each exist.
 
-Family logins keep working either way: the Supabase project doesn't change, and records are keyed by Supabase user.
+Logins do not move: the new Supabase project starts empty (#139). Families and the owner sign up again on the new site. Family profiles in the backup stay linked to the old logins, so families re-enter their wrestlers when they sign up again. Ask Justin first how many real families have logins on the old site.
 
 ## 6. Supabase and Stripe
 
-- [ ] Supabase → Authentication → URL configuration: set the Site URL to the new address, add `https://<new address>/auth/confirm` to the redirect allowlist, and turn on leaked-password protection.
+- [ ] Supabase → Authentication → URL Configuration: set the Site URL to the new address, and add `https://<new address>/auth/confirm` and `https://<new address>/auth/confirm?next=change` to the redirect URLs.
+- [ ] Supabase → Authentication → Sign In / Providers → Email: keep **Confirm email** on.
+- [ ] Supabase → Authentication → Multi-Factor: keep **Authenticator app (TOTP)** on. The owner and coaches cannot sign in without it.
+- [ ] Leaked-password protection, if the Supabase plan allows it.
+- [ ] **Email sender.** Supabase's built-in sender delivers only to members of the Supabase project team, a few emails an hour. Testing with Lauren's and Justin's addresses works; families get no confirmation emails until a custom email sender (SMTP) is set under Authentication → Emails. This waits on the email decision (#87).
 - [ ] Stripe → Developers → Webhooks: add `https://<new address>/api/stripe-webhook` with `checkout.session.*`, `charge.refunded`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted`. Put its signing secret in `STRIPE_TEST_WEBHOOK_SECRET`.
 - [ ] As the owner on the new site, save the Stripe test key on `/payment-setup`.
 
