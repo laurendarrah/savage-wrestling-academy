@@ -18,7 +18,7 @@ const problems = [], passed = [];
 let current = '';
 
 async function as(name, viewport = {width: 1200, height: 900}) {
-  const ctx = await browser.newContext({viewport, ...(viewport.width < 500 ? {isMobile: true, hasTouch: true} : {})});
+  const ctx = await browser.newContext({viewport, deviceScaleFactor: SHOTS ? 2 : 1, ...(viewport.width < 500 ? {isMobile: true, hasTouch: true} : {})});
   const c = sessionCookie(name, AUTH);
   await ctx.addCookies([{name: c.name, value: c.value, url: BASE}]);
   const page = await ctx.newPage();
@@ -356,6 +356,11 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Sessions today/);
   await waitText(owner, '#todayTiles', /Collected this month/);
   await waitText(owner, '#todayTiles', /Site errors, last 24 hours/);
+  // Launch checklist: by now the walkthrough has set programs, schedule, waiver, coach and lesson prices.
+  await waitText(owner, '#launchCount', /\d+ of \d+ ready|Everything is set up/);
+  for (const k of ['programs', 'schedule', 'waiver', 'coaches', 'lessons', 'address', 'signin'])
+    expect(await owner.getAttribute(`[data-launch="${k}"]`, 'data-status') === 'done', `launch checklist: ${k} should be ready`);
+  expect(await owner.getAttribute('[data-launch="email"]', 'data-status') === 'waiting', 'launch checklist: email waits on its decision');
   const h = await owner.request.get(BASE + '/api/health'); expect(h.status() === 200 && (await h.json()).ok === true, 'health check');
   expect(!(await owner.isVisible('.sample-notice')), 'live dashboard must not show the sample-data notice');
   const bg = await owner.locator('a.button.primary').first().evaluate(el => getComputedStyle(el).backgroundColor);
@@ -452,6 +457,7 @@ await step('every button and link on every page responds', async () => {
     const page = pages[role], start = BASE + path;
     current = `sweep ${role} ${path}`;
     await page.goto(start, {waitUntil: 'load'}); await page.waitForTimeout(500);
+    if (SHOTS) await page.screenshot({path: `${SHOTS}/page-${role}-${path.split('?')[0].replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '') || 'home'}.png`});
     // Links: every same-site address must open (no 404, no server error).
     const links = await page.evaluate(() => [...document.querySelectorAll('a[href]')].map(a => a.href).filter(h => h.startsWith(location.origin) && !/\/(signout|logout)/.test(h)));
     for (const href of links) {

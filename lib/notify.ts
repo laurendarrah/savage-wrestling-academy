@@ -103,8 +103,8 @@ export async function noticeTransfer(orderId: string, toProgramName: string, eff
 }
 
 // --- Daily reminders ---
-// Runs at most once per academy day, on the first request that calls it. The current host has no scheduled jobs;
-// after the move to the academy's Cloudflare account (#100) a Cron Trigger can call it instead.
+// Runs at most once per academy day: every morning from the Cron Trigger (build/worker.ts, #123), or on the first
+// family or roster visit of the day if the schedule has not run yet. A per-day record stops a second send.
 export async function dailyReminders(force = false) {
   const today = academyToday();
   if (!force) {

@@ -64,13 +64,15 @@ Family logins keep working either way: the Supabase project doesn't change, and 
 ## 7. Check everything on the Cloudflare address
 
 Signed in as the owner, with the authenticator:
-- [ ] `/` shows the Today panel; `/site-health` says the site and database are answering
+- [ ] `/` shows the **Launch checklist** and the Today panel. Work through anything the checklist marks as to do; `/site-health` says the site and database are answering
 - [ ] `/roster`, `/payments`, `/cards`, `/waivers`, `/messages`, `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load with the moved data
 
 With a test family (not a real family):
 - [ ] Sign up with a new email, confirm it from the email, and land on the new site
 - [ ] `/family` saves a wrestler without a card and shows that booking is blocked; add a card and the walk-in review works
 - [ ] As the owner, record a $0 offline walk-in for the test wrestler, find them on `/roster`, scan their pass from `/pass` on a phone, then void the payment
+
+Daily card and waiver reminders now run every morning at 7:41 (8:41 in summer) New York time from a Cloudflare schedule. Nothing to set up; they appear under Workers → the worker → Settings → Triggers.
 
 ## 8. Cut over
 

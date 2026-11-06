@@ -53,10 +53,12 @@ const worker = (() => {
       require(name) {
         if (name === 'vinext/server/fetch-handler') return {default: {fetch: async () => { if (handlerResult instanceof Error) throw handlerResult; return handlerResult; }}};
         if (name.endsWith('/site-health')) return load(path.resolve('lib/site-health.ts'));
+        if (name.endsWith('/notify')) return {dailyReminders: async () => { reminders++; if (reminderFails) throw Error('mail provider down'); return 0; }};
         throw Error('unexpected ' + name);
       }});
   return module.exports.default;
 })();
+let reminders = 0, reminderFails = false;
 const pending = [];
 const ctx = {waitUntil: p => pending.push(p)};
 const hit = async (url, result) => { handlerResult = result; pending.length = 0; let thrown = null; let res = null; try { res = await worker.fetch(new Request(url), {DB}, ctx); } catch (e) { thrown = e; } await Promise.all(pending); return {res, thrown}; };
@@ -88,4 +90,12 @@ const siteApi = load(path.resolve('app/api/site-health/route.ts'));
 actor = {owner: false, id: 'p1'}; assert.equal((await siteApi.GET(new Request('https://a.test/x'))).status, 403);
 actor = {owner: true, id: 'owner-id'}; const s = await (await siteApi.GET(new Request('https://a.test/x'))).json();
 assert.equal(s.last24h, 3, 'three errors today'); assert.ok(s.errors.length >= 3); assert.equal(s.health.ok, true);
+// The daily schedule sends reminders; a failure is recorded for the owner instead of vanishing.
+pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
+assert.equal(reminders, 1, 'scheduled run should send daily reminders');
+reminderFails = true;
+pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
+const last = sqlite.prepare('SELECT * FROM error_log ORDER BY at DESC LIMIT 1').get();
+assert.equal(last.path, '/daily-reminders'); assert.match(last.message, /mail provider down/);
+assert.match(readFileSync('vite.config.ts', 'utf8'), /crons: \["41 12 \* \* \*"\]/);
 console.log('Site health tests passed');

@@ -17,6 +17,8 @@ const workerConfig = {
     // Relative to the generated dist/server/wrangler.json, which Wrangler reads when applying migrations.
     migrations_dir: "../../drizzle",
   }],
+  // Daily reminders at 7:41 AM New York time in winter (8:41 AM in summer): 12:41 UTC.
+  triggers: { crons: ["41 12 * * *"] },
   observability: { enabled: true },
 };
 
