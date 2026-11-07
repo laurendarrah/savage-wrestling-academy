@@ -50,7 +50,7 @@ await step('setup: schedule and a family with a current card', async () => {
   const got = await api(owner, '/api/academy');
   const r = await api(owner, '/api/academy', {revision: got.body.revision, data: state}, 'PUT'); expect(r.status === 200, 'academy ' + JSON.stringify(r.body));
   await family.goto(BASE + '/family');
-  const f = await api(family, '/api/family', {revision: 0, data: {parentName: 'Pat Example', phone: '', wrestlers: [{id: 'w-sam', name: 'Sam Example', grade: '8', usawNumber: 'AB-123456', usawExpires: ny(300)}]}}, 'PUT');
+  const f = await api(family, '/api/family', {revision: 0, data: {parentName: 'Pat Example', phone: '', homeAddress: '20 Railroad St', homeCity: 'Huntington Station', homeState: 'NY', homeZip: '11746', emergencyContactName: 'Jordan Emergency', emergencyContactPhone: '631-555-0188', wrestlers: [{id: 'w-sam', name: 'Sam Example', grade: '8', usawNumber: 'AB-123456', usawExpires: ny(300), birthDate: '2012-04-18', allergies: 'None'}]}}, 'PUT');
   expect(f.status === 200, 'family ' + JSON.stringify(f.body));
 });
 await step('owner saves a Stripe test key; Stripe confirms the account', async () => {

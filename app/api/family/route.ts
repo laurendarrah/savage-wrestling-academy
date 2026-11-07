@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
-import { validFamily, cleanFamily, emptyFamily, familyProblem } from '../../../lib/family-records';
+import { validFamily, cleanFamily, emptyFamily, familyProblem, missingDetails, missingMessage } from '../../../lib/family-records';
 import { cardVerification, seasonOptions } from '../../../lib/usaw';
 import { checkChangedCards, familyLookup, lookupView, lookupsFor } from '../../../lib/usaw-check';
 import { exceptionFor } from '../../../lib/exceptions';
@@ -29,7 +29,8 @@ export async function PUT(request:Request){
  const raw=await request.text();if(raw.length>20000)return reply({error:'Profile is too large.'},413);
  let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid JSON.'},400)}
  if(!input||!Number.isInteger(input.revision)||input.revision<0||!validFamily(input.data))return reply({error:'Check the family profile fields.'},400);
- // Contact and safety details are optional (issue #188); when given, they must make sense. Say which one to fix.
+ // Contact and safety details (issue #188) are required (#197, question 14) and must make sense. Say what to add or fix.
+ const missing=missingDetails(input.data);if(missing.length)return reply({error:missingMessage(missing),missing},400);
  const problem=familyProblem(input.data,academyToday());if(problem)return reply({error:problem},400);
  const scholarships=await env.DB!.prepare("SELECT wrestler_id FROM scholarship_awards WHERE user_id=? AND status='active'").bind(auth.user.id).all<{wrestler_id:string}>();
  if(scholarships.results.some(a=>!input.data.wrestlers.some((w:{id:string})=>w.id===a.wrestler_id)))return reply({error:'An active scholarship wrestler must remain in the family profile. Contact SWA before removing this wrestler.'},409);

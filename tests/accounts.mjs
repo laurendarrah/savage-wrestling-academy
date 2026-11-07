@@ -40,7 +40,8 @@ for(const action of ['reset','resend']){const r=await auth.POST(request('/api/au
 emailError={code:'smtp_error',status:500};
 for(const action of ['reset','resend']){const r=await auth.POST(request('/api/auth','POST',{action,email:'unavailable@example.test'}));assert.equal(r.status,502);assert.equal((await r.json()).message,undefined)}
 emailError=null;
-const state={parentName:'Alice',phone:'555-0100',wrestlers:[{id:'athlete-a',name:'Wrestler A',grade:'5'}]};
+// A complete profile: address, emergency contact, birth date and allergies are required to save (issue #188).
+const state={parentName:'Alice',phone:'555-0100',homeAddress:'1 Main St',homeCity:'Huntington',homeState:'NY',homeZip:'11746',emergencyContactName:'Jordan Parent',emergencyContactPhone:'631-555-0100',wrestlers:[{id:'athlete-a',name:'Wrestler A',grade:'5',birthDate:'2015-05-05',allergies:'None'}]};
 assert.equal((await family.PUT(request('/api/family','PUT',{revision:0,userId:'bob-uuid',data:state},'alice'))).status,200);
 assert.equal(sqlite.prepare('SELECT user_id FROM family_accounts').get().user_id,'alice-uuid');
 const alice=(await (await family.GET(request('/api/family','GET',null,'alice'))).json());assert.equal(alice.data.parentName,'Alice');

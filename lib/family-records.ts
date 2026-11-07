@@ -1,7 +1,9 @@
-// Family profile, stored as JSON in family_accounts.payload. Issue #188 adds optional contact and safety details:
-// a home address (street, city, state, ZIP), an emergency contact, and per wrestler a birth date and allergies or
-// medical notes. None of them is required (which ones should be is open in #197, question 14), so older profiles
-// stay valid. Profiles saved in ChatGPT Sites version 130 kept the whole address in homeAddress; it stays as the street.
+// Family profile, stored as JSON in family_accounts.payload. Issue #188 adds contact and safety details: a home
+// address (street, city, state, ZIP), an emergency contact, and per wrestler a birth date and allergies or medical
+// notes. Justin decided all four are required (#197, question 14); a family with none writes "None" (NO_NOTES).
+// Saving a profile requires them (missingDetails); stored profiles from before stay valid and readable, and the
+// family home asks them to finish. Profiles saved in ChatGPT Sites version 130 kept the whole address in homeAddress;
+// it stays as the street line.
 export type Wrestler={id:string;name:string;grade:string;usawNumber?:string;usawExpires?:string;birthDate?:string;allergies?:string};
 export type FamilyProfile={
  parentName:string;phone:string;wrestlers:Wrestler[];
@@ -58,6 +60,21 @@ export function cleanFamily(value:FamilyProfile):FamilyProfile{
  })};
  for(const k of FAMILY_DETAILS){const t=text(value[k]);if(t)out[k]=k==='homeState'&&t.length===2?t.toUpperCase():t}
  return out;
+}
+export const NO_NOTES='None';
+// Allergies or medical notes that say something, as opposed to empty or "None".
+export const hasMedicalNote=(v:unknown)=>{const t=text(v);return !!t&&!/^(none|n\/?a|no)\.?$/i.test(t)};
+// What a profile still needs before it can be saved, in plain words, in form order. Empty when complete.
+export function missingDetails(v:Partial<FamilyProfile>):string[]{
+ const out:string[]=[],add=(ok:unknown,label:string)=>{if(!text(ok))out.push(label)};
+ add(v.homeAddress,'the street address');add(v.homeCity,'the city');add(v.homeState,'the state');add(v.homeZip,'the ZIP code');
+ add(v.emergencyContactName,'the emergency contact’s name');add(v.emergencyContactPhone,'the emergency contact’s phone number');
+ for(const w of v.wrestlers??[]){const name=text(w?.name)||'your wrestler';add(w?.birthDate,`${name}’s birth date`);add(w?.allergies,`${name}’s allergies or medical notes`)}
+ return out;
+}
+export function missingMessage(missing:string[]){
+ const list=missing.length>1?missing.slice(0,-1).join(', ')+' and '+missing[missing.length-1]:missing[0];
+ return `Add ${list} before saving.`+(missing.some(m=>m.endsWith('medical notes'))?' If a wrestler has no allergies or medical needs, choose “No allergies or medical notes”.':'');
 }
 // The address as one or two lines for display: street, then "City, ST 12345".
 export function addressLines(f:Partial<FamilyProfile>){
