@@ -56,11 +56,12 @@ const worker = (() => {
         if (name.endsWith('/page-chrome')) return load(path.resolve('lib/page-chrome.ts'));
         if (name.endsWith('/owner-alerts')) return {alertOwner: async db => { alerts.push(db); return 'off'; }};
         if (name.endsWith('/notify')) return {dailyReminders: async () => { reminders++; if (reminderFails) throw Error('mail provider down'); return 0; }};
+        if (name.endsWith('/coach-retention')) return {cleanupRemovedCoaches: async () => { cleanups++; if (cleanupFails) throw Error('D1 busy'); return {}; }};
         throw Error('unexpected ' + name);
       }});
   return module.exports.default;
 })();
-let reminders = 0, reminderFails = false;
+let reminders = 0, reminderFails = false, cleanups = 0, cleanupFails = false;
 const alerts = [];
 const pending = [];
 const ctx = {waitUntil: p => pending.push(p)};
@@ -104,5 +105,12 @@ pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); aw
 const last = sqlite.prepare('SELECT * FROM error_log ORDER BY at DESC LIMIT 1').get();
 assert.equal(last.path, '/daily-reminders'); assert.match(last.message, /mail provider down/);
 assert.equal(alerts.length, before + 2, 'every scheduled run checks alerts, after a failure is recorded');
+// The removed-coach cleanup (#212) runs after the reminders, even when they fail; its own failure is recorded too.
+assert.equal(cleanups, 2, 'the cleanup runs every day, after the reminders');
+reminderFails = false; cleanupFails = true;
+pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
+const failed = sqlite.prepare('SELECT * FROM error_log ORDER BY at DESC LIMIT 1').get();
+assert.equal(failed.path, '/coach-retention'); assert.match(failed.message, /D1 busy/);
+assert.equal(alerts.length, before + 3, 'one alert check per run');
 assert.match(readFileSync('vite.config.ts', 'utf8'), /crons: \["41 12 \* \* \*"\]/);
 console.log('Site health tests passed');

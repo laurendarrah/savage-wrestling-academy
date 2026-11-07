@@ -54,6 +54,9 @@ export const RECORD_TABLES:Record<string,Col[]>={
  // an existing shift or request, so an approved month cannot be altered from a file.
  coach_time_entries:[['id','text'],['user_id','text'],['coach_email','text'],['coach_name','text'],['work_date','text'],['session_key','text',true],['session_title','text',true],['session_start','text',true],['session_end','text',true],['duty','text'],['source','text'],['clock_in','text'],['clock_out','text',true],['fixed_in','text',true],['fixed_out','text',true],['coach_note','text',true],['submitted_at','text',true],['owner_minutes','int',true],['owner_duty','text',true],['owner_note','text',true],['approved_at','text',true],['approved_by','text',true],['approved_minutes','int',true],['approved_duty','text',true],['approved_rate_cents','int',true],['approved_cents','int',true],['voided_at','text',true],['voided_by','text',true],['void_reason','text',true],['history','text',false,BIG],['revision','int'],['created_at','text']],
  coach_time_off:[['id','text'],['user_id','text'],['coach_email','text'],['coach_name','text'],['start_date','text'],['end_date','text'],['reason','text'],['status','text'],['programs','text'],['requested_at','text'],['decided_at','text',true],['decided_by','text',true],['decision_note','text',true],['revision','int']],
+ // Coaches removed for good and when (issue #212), so a restored file keeps each coach's 3-year clock. Added after version 3
+ // first shipped (V3_LATER). Restoring never overwrites a row, so a file cannot bring back an email the cleanup cleared.
+ removed_coaches:[['id','text'],['email_hash','text'],['email','text',true],['name','text',true],['removed_on','text'],['cleaned_at','text',true]],
 };
 // Tables whose primary key is not a single id column.
 export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
@@ -63,7 +66,7 @@ const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[[
 const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
 // Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
 // and still restores; a file that has the section is checked like any other.
-const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off'];
+const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches'];
 // Columns added to a version 3 table after it first shipped, with the value an older file's rows mean. A row may leave
 // them out and is restored with that value; a row that has one is checked like any other column. Issue #195: every
 // signed-document version in an older file is a waiver.

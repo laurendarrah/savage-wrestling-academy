@@ -32,11 +32,13 @@ details.change{margin-top:12px}details.change summary{cursor:pointer;min-height:
 <section aria-labelledby="staffTitle"><h2 id="staffTitle">Your coaches</h2><div id="staff" class="list"><p class="muted">Loading…</p></div></section>
 <section id="invitesBox" aria-labelledby="invitesTitle" hidden><h2 id="invitesTitle">Invitations not yet accepted</h2><div id="invites" class="list"></div></section>
 <section id="removedBox" aria-labelledby="removedTitle" hidden><h2 id="removedTitle">Removed coaches</h2><p class="muted">They can’t sign in as coaches. Their past lessons, payments and pay records stay in your reports.</p><div id="removed" class="list"></div></section>
+<section id="goneBox" aria-labelledby="goneTitle" hidden><h2 id="goneTitle">Removed permanently</h2><p class="muted">Their past lessons, payments, pay records, hours, time off and signed contract are kept for <span id="retentionYears">3</span> years from the day they were removed, then deleted. Payments and approved hours stay in your reports and books under “Former coach”.</p><div id="gone" class="list"></div></section>
 <p id="status" role="status" aria-live="polite"></p></main>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const PROGRAMS=[['Elementary','SWA Development'],['Intermediate','SWA Intermediate'],['Advanced','SWA Advance']];
 const programName=id=>(PROGRAMS.find(p=>p[0]===id)||[id,id])[1];
+const longDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'long',day:'numeric',year:'numeric'});
 const shortDate=iso=>new Date(iso).toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric'});
 const initials=n=>String(n||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('')||'?';
 const checks=(name,chosen=[])=>PROGRAMS.map(([v,n])=>`<label><input type="checkbox" name="${name}" value="${v}"${chosen.includes(v)?' checked':''}> ${n}</label>`).join('');
@@ -54,6 +56,8 @@ function coachCard(s){
 function removedCard(s){return `<article class="removed" data-coach="${esc(s.email)}"><div class="coach-head"><div class="avatar" aria-hidden="true">${esc(initials(s.displayName))}</div><div class="grow"><h3>${esc(s.displayName)}</h3><p class="muted">${esc(s.email)} · removed ${esc(shortDate(s.updatedAt))}</p></div></div>
  ${s.upcomingLessons?`<p class="warn">${s.upcomingLessons} booked lesson${s.upcomingLessons===1?'':'s'} still to come. Move or refund them before removing this coach for good.</p>`:''}
  <div class="actions"><button type="button" data-restore>Restore access</button><button type="button" data-delete>Remove permanently</button></div></article>`}
+// A coach removed for good (#212): when their records are deleted.
+function goneCard(g){return `<article class="removed"><h3>${esc(g.name)}</h3><p class="muted">${esc(g.email)} · removed permanently ${esc(longDate(g.removedOn))}</p><p>Records kept until <b>${esc(longDate(g.keepUntil))}</b>, then deleted.</p></article>`}
 function inviteCard(i){const expired=i.status==='expired';return `<article data-invite="${esc(i.id)}"><div class="invite-row"><div><h3>${esc(i.name)}</h3><p class="muted">${esc(i.email)} · ${esc(i.programs.map(programName).join(', ')||'No programs')}</p>
  <p><span class="state${expired?' expired':''}">${expired?'Expired':'Waiting'}</span> <span class="muted">${expired?'Ended':'Works until'} ${esc(shortDate(i.expiresAt))}</span></p></div>
  <div class="actions" style="margin:0"><button type="button" data-renew>New link</button>${expired?'':'<button type="button" data-cancel>Cancel invite</button>'}</div></div></article>`}
@@ -72,7 +76,7 @@ function bind(){
   card.querySelector('[data-remove]').onclick=()=>{if(!confirm('Remove coach access for '+email+'? They can no longer sign in as a coach. Their past lessons and pay records stay.'))return;act({action:'revoke',email},'Coach access removed.')}});
  document.querySelectorAll('#removed [data-coach]').forEach(card=>{const email=card.dataset.coach;
   card.querySelector('[data-restore]').onclick=()=>act({action:'restore',email},'Coach access restored.');
-  card.querySelector('[data-delete]').onclick=()=>{if(!confirm('Remove '+email+' permanently? Their profile and any open times they posted are deleted and they leave this list. Past lessons, payments and pay records are kept. This can’t be undone.'))return;act({action:'delete',email,confirmed:true},'Coach removed permanently. Their lesson and pay history is kept.')}});
+  card.querySelector('[data-delete]').onclick=()=>{if(!confirm('Remove '+email+' permanently? Their profile and any open times they posted are deleted and they leave this list. Past lessons, payments and pay records are kept for '+(state.retentionYears||3)+' years, then deleted. This can’t be undone.'))return;act({action:'delete',email,confirmed:true},'Coach removed permanently. Their lesson and pay history is kept for '+(state.retentionYears||3)+' years.')}});
  document.querySelectorAll('#invites [data-invite]').forEach(card=>{const id=card.dataset.invite;
   card.querySelector('[data-renew]').onclick=async()=>{try{const r=await call({action:'renew',id});showLink(r);await load()}catch(e){say(e.message)}};
   const cancel=card.querySelector('[data-cancel]');if(cancel)cancel.onclick=()=>{if(!confirm('Cancel this invite? The link stops working.'))return;act({action:'cancel-invite',id},'Invite canceled.')}});
@@ -85,6 +89,7 @@ async function load(){try{state=await call();$('inviteDays').textContent=state.i
  const active=state.staff.filter(s=>s.active),removed=state.staff.filter(s=>!s.active);
  $('staff').innerHTML=active.map(coachCard).join('')||'<p class="muted">No coaches yet. Invite your first coach above.</p>';
  $('removed').innerHTML=removed.map(removedCard).join('');$('removedBox').hidden=!removed.length;
+ const gone=state.removedForGood||[];$('gone').innerHTML=gone.map(goneCard).join('');$('goneBox').hidden=!gone.length;$('retentionYears').textContent=state.retentionYears||3;
  $('invites').innerHTML=state.invites.map(inviteCard).join('');$('invitesBox').hidden=!state.invites.length;
  $('selfBody').innerHTML=selfHtml(state.self);bind()}catch(e){say(e.message)}}
 $('invitePrograms').innerHTML=checks('programs');

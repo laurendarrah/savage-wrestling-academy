@@ -40,6 +40,7 @@ Don't make more changes until you know what happened.
 3. Where backups come from:
    - **Before every update**, Deploy saves an encrypted copy of the database. It's kept for 30 days: GitHub → **Actions → Deploy** → the run → **Artifacts** → `pre-deploy-database-<number>`. Unlock it with `BACKUP_PASSPHRASE`.
    - **Any time**, the owner can download one from **/backups**. Do this weekly and keep the file somewhere other than this computer.
+4. A restore never brings back the records of a coach removed permanently more than 3 years ago: the site cleans them again straight after restoring, and the daily job does after a database is rebuilt from the Deploy backup. A file made before a coach was removed permanently brings them back as they were then; check **Coaches** afterwards (`docs/policies/data-retention-draft.md`, "When a coach is removed permanently").
 
 ## Families say they never got the email
 

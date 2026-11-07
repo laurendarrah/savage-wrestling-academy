@@ -249,3 +249,10 @@ export const coachTimeOff=sqliteTable("coach_time_off",{
  requestedAt:text("requested_at").notNull(),decidedAt:text("decided_at"),decidedBy:text("decided_by"),decisionNote:text("decision_note"),revision:integer("revision").notNull().default(1)
 },t=>[index("coach_time_off_coach").on(t.coachEmail,t.startDate),index("coach_time_off_status").on(t.status,t.startDate),
  check("coach_time_off_status",sql`${t.status} IN ('pending','approved','declined','withdrawn')`),check("coach_time_off_range",sql`${t.startDate} <= ${t.endDate}`)]);
+// Coaches removed for good (issue #212; #197 Q18). Their records are kept for 3 years from removed_on (the academy's
+// date), then lib/coach-retention.ts deletes or anonymizes them in the daily job. email and name are cleared once that
+// is done; email_hash (see emailHash) stays, so records that a restored backup brings back are cleaned again. Rows that
+// are kept name the coach "former-coach-<id>", never by email. Backed up, so a restored file keeps the 3-year clock.
+export const removedCoaches=sqliteTable("removed_coaches",{
+ id:text("id").primaryKey(),emailHash:text("email_hash").notNull(),email:text("email"),name:text("name"),removedOn:text("removed_on").notNull(),cleanedAt:text("cleaned_at")
+},t=>[uniqueIndex("removed_coaches_email").on(t.emailHash)]);
