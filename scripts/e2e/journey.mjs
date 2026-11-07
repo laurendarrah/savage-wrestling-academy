@@ -574,7 +574,7 @@ await step('owner announces to SWA Intermediate; family reads it and replies; ow
   await owner.goto(BASE + '/messages'); await owner.waitForSelector('#audType');
   await owner.waitForSelector('#emailNote:not([hidden])'); expect(!(await owner.isVisible('#failedEmails')), 'no failed-email list when nothing failed');
   // Each choice asks the server for a count; the page shows only the latest choice's (issue #220).
-  await owner.selectOption('#audType', 'program'); await owner.selectOption('#program', 'Intermediate'); await at(owner, '#audCount', /^SWA Intermediate: 1 family$/);
+  await owner.selectOption('#audType', 'program'); await owner.selectOption('#program', 'Intermediate'); await at(owner, '#audCount', /^SWA Intermediate members: 1 family$/);
   await owner.fill('#subject', 'Practice moved'); await owner.fill('#body', 'Practice starts at 6:30 tonight.'); await owner.click('#send');
   await waitText(owner, '#status', /Sent to 1 family/);
   await family.goto(BASE + '/family'); await waitText(family, '#inboxLink', /\d+ new/);
