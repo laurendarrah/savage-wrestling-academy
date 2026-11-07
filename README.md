@@ -30,7 +30,7 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 | Waitlists | Built. Families join full events; owner offers seats on `/waitlists` |
 | Program transfers | Built. Owner moves a paid membership between programs on `/transfers` |
 | Wrestler view | Built. `/wrestler?id=` shows the entry pass, what is coming up and anything blocking new bookings |
-| Messages | Built. Announcements and private threads on `/messages` and `/inbox`; email after #87 |
+| Messages | Built. Announcements and private threads on `/messages` and `/inbox`; email after #87. Emails that didn't send are listed on `/messages` with the reason, to send again |
 | Automatic notices | Built. Card expiring or expired, waiver to sign, waitlist seat offered, SWA Advance decision, payment recorded, lesson booked (also to the coach), transfer. In the family inbox now; by email after #87 |
 | Owner workspace | Opens on the launch checklist, today's real numbers and every real tool. Its editors (programs, schedules, camps and events, team codes) publish to the welcome page and calendar. No sample screens |
 

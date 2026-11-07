@@ -26,7 +26,7 @@ Follow the steps in order. The old Sites site keeps running until the domain is 
 | `STRIPE_TEST_WEBHOOK_SECRET` | From the new Stripe webhook (step 6) |
 | `CHECKOUT_KINDS` | **Leave empty.** Online payment opens per purchase type after its terms are decided |
 | `STRIPE_MODE` | Leave unset (test) until live-mode day (#26) |
-| `EMAIL_API_KEY`, `MAIL_FROM` | Leave unset until the email decision (#87) |
+| `EMAIL_API_KEY`, `MAIL_FROM` | Leave unset until the email decision (#87). Once set, families get emails and the owner gets problem alerts from the site, at most one an hour (#47) |
 
 ## 3. Switch on the Deploy workflow (Lauren, in GitHub settings)
 

@@ -2,13 +2,14 @@
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {ownerMessages, ownerThread, sendAnnouncement, postMessage, resolveAudience} from '../../../lib/messages';
 import {emailConfigured} from '../../../lib/email';
+import {failedEmails, retryFailedEmails} from '../../../lib/email-failures';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
   const family = new URL(request.url).searchParams.get('family');
   if (family) return accountReply({thread: await ownerThread(family)}, 200, auth.headers);
-  return accountReply({...(await ownerMessages()), emailOn: emailConfigured()}, 200, auth.headers);
+  return accountReply({...(await ownerMessages()), emailOn: emailConfigured(), failedEmails: await failedEmails()}, 200, auth.headers);
 }
 export async function POST(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
@@ -31,6 +32,11 @@ export async function POST(request: Request) {
     if (typeof input.userId !== 'string') return reply({error: 'Choose a family.'}, 400);
     const r = await postMessage(input.userId, 'owner', input.body);
     return r.status === 200 ? reply({ok: true, thread: await ownerThread(input.userId)}) : reply({error: r.error}, r.status);
+  }
+  // Emails that didn't send (issue #35): try them again.
+  if (input?.action === 'retry') {
+    const r = await retryFailedEmails(input.items, auth.owner.userId);
+    return r.status === 200 ? reply({...r, failedEmails: await failedEmails()}) : reply({error: r.error}, r.status);
   }
   return reply({error: 'Unknown action.'}, 400);
 }

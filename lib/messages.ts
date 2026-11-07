@@ -5,12 +5,14 @@ import {appOrigin} from './account-auth';
 import {academyToday} from './public-schedule';
 import {PROGRAM_ON} from './transfers';
 import {programDetails} from './program-names';
-import {sendEmails} from './email';
+import {sendEmailsDetailed} from './email';
 import {familyNotices, markNoticeRead} from './notify';
 
 export type Audience = {type: 'all'} | {type: 'program'; program: string} | {type: 'event'; eventId: string};
 const at = () => new Date().toISOString();
-const footer = () => `\n\n—\nSavage Wrestling Academy\nRead and reply in your family account: ${appOrigin()}/inbox`;
+export const footer = () => `\n\n—\nSavage Wrestling Academy\nRead and reply in your family account: ${appOrigin()}/inbox`;
+// A private message is emailed as a notice with a link; the message itself stays in the account.
+export const messageNotice = () => ({subject: 'New message from Savage Wrestling Academy', text: 'You have a new message from the academy.' + footer()});
 
 async function academyState(): Promise<any> {
   const row = await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload: string}>();
@@ -52,14 +54,14 @@ export async function sendAnnouncement(ownerId: string, input: any) {
   if ('error' in audience) return {status: 400, error: audience.error};
   if (!audience.families.length) return {status: 409, error: 'No families match this audience yet.'};
   const id = crypto.randomUUID(), sentAt = at();
-  const statuses = await sendEmails(audience.families.map(f => ({to: f.email, subject: subject, text: body + footer()})));
+  const results = await sendEmailsDetailed(audience.families.map(f => ({to: f.email, subject: subject, text: body + footer()})));
   await env.DB!.batch([
     env.DB!.prepare('INSERT INTO announcements(id,subject,body,audience,audience_label,sent_by,sent_at,recipients) VALUES (?,?,?,?,?,?,?,?)')
       .bind(id, subject, body, JSON.stringify(input.audience), audience.label, ownerId, sentAt, audience.families.length),
-    ...audience.families.map((f, i) => env.DB!.prepare('INSERT INTO announcement_recipients(announcement_id,user_id,email,read_at,email_status) VALUES (?,?,?,NULL,?)').bind(id, f.userId, f.email, statuses[i])),
+    ...audience.families.map((f, i) => env.DB!.prepare('INSERT INTO announcement_recipients(announcement_id,user_id,email,read_at,email_status,email_error) VALUES (?,?,?,NULL,?,?)').bind(id, f.userId, f.email, results[i].status, results[i].reason)),
     env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'announcement_sent', `${id} ${audience.families.length}`, sentAt)
   ]);
-  return {status: 200, id, recipients: audience.families.length, emailed: statuses.filter(s => s === 'sent').length};
+  return {status: 200, id, recipients: audience.families.length, emailed: results.filter(r => r.status === 'sent').length};
 }
 
 // A message in a family's private thread with the academy. Emails carry a notice and a link, not the message itself.
@@ -68,11 +70,11 @@ export async function postMessage(userId: string, senderRole: 'owner' | 'family'
   if (!body) return {status: 400, error: 'Write a message.'};
   const fam = await env.DB!.prepare('SELECT email FROM family_accounts WHERE user_id=?').bind(userId).first<{email: string}>();
   if (!fam) return {status: 404, error: 'Family account not found.'};
-  const [status] = senderRole === 'owner'
-    ? await sendEmails([{to: fam.email, subject: 'New message from Savage Wrestling Academy', text: 'You have a new message from the academy.' + footer()}])
-    : ['skipped' as const];
-  await env.DB!.prepare('INSERT INTO family_messages(id,user_id,sender_role,body,created_at,read_at,email_status) VALUES (?,?,?,?,?,NULL,?)')
-    .bind(crypto.randomUUID(), userId, senderRole, body, at(), status).run();
+  const [sent] = senderRole === 'owner'
+    ? await sendEmailsDetailed([{to: fam.email, ...messageNotice()}])
+    : [{status: 'skipped' as const, reason: null}];
+  await env.DB!.prepare('INSERT INTO family_messages(id,user_id,sender_role,body,created_at,read_at,email_status,email_error) VALUES (?,?,?,?,?,NULL,?,?)')
+    .bind(crypto.randomUUID(), userId, senderRole, body, at(), sent.status, sent.reason).run();
   return {status: 200};
 }
 
@@ -106,7 +108,8 @@ export async function markRead(userId: string, input: any) {
 export async function ownerMessages() {
   const sent = (await env.DB!.prepare(`SELECT a.id,a.subject,a.audience_label,a.sent_at,a.recipients,
       (SELECT count(*) FROM announcement_recipients r WHERE r.announcement_id=a.id AND r.read_at IS NOT NULL) AS opened,
-      (SELECT count(*) FROM announcement_recipients r WHERE r.announcement_id=a.id AND r.email_status='sent') AS emailed
+      (SELECT count(*) FROM announcement_recipients r WHERE r.announcement_id=a.id AND r.email_status='sent') AS emailed,
+      (SELECT count(*) FROM announcement_recipients r WHERE r.announcement_id=a.id AND r.email_status='failed') AS failed
     FROM announcements a ORDER BY a.sent_at DESC LIMIT 100`).all<any>()).results;
   const families = (await env.DB!.prepare(`SELECT f.user_id,f.email,f.payload,
       (SELECT count(*) FROM family_messages m WHERE m.user_id=f.user_id AND m.sender_role='family' AND m.read_at IS NULL) AS unread,

@@ -54,12 +54,14 @@ const worker = (() => {
         if (name === 'vinext/server/fetch-handler') return {default: {fetch: async () => { if (handlerResult instanceof Error) throw handlerResult; return handlerResult; }}};
         if (name.endsWith('/site-health')) return load(path.resolve('lib/site-health.ts'));
         if (name.endsWith('/page-chrome')) return load(path.resolve('lib/page-chrome.ts'));
+        if (name.endsWith('/owner-alerts')) return {alertOwner: async db => { alerts.push(db); return 'off'; }};
         if (name.endsWith('/notify')) return {dailyReminders: async () => { reminders++; if (reminderFails) throw Error('mail provider down'); return 0; }};
         throw Error('unexpected ' + name);
       }});
   return module.exports.default;
 })();
 let reminders = 0, reminderFails = false;
+const alerts = [];
 const pending = [];
 const ctx = {waitUntil: p => pending.push(p)};
 const hit = async (url, result) => { handlerResult = result; pending.length = 0; let thrown = null; let res = null; try { res = await worker.fetch(new Request(url), {DB}, ctx); } catch (e) { thrown = e; } await Promise.all(pending); return {res, thrown}; };
@@ -69,10 +71,12 @@ const rows = () => sqlite.prepare('SELECT * FROM error_log ORDER BY at').all();
 await hit('https://swa.test/family', new Response('ok', {status: 200}));
 await hit('https://swa.test/api/x', new Response('nope', {status: 404}));
 assert.equal(rows().length, 0);
+assert.equal(alerts.length, 0, 'no alert without an error');
 // A 500 is recorded without the query string (invite links carry tokens).
 await hit('https://swa.test/scholarship?token=secret-invite-token', new Response('boom', {status: 500, statusText: 'Internal Server Error'}));
 assert.equal(rows().length, 1); assert.equal(rows()[0].path, '/scholarship'); assert.equal(rows()[0].status, 500);
 assert.ok(!JSON.stringify(rows()).includes('secret-invite-token'));
+assert.equal(alerts.length, 1, 'each recorded error checks whether to alert the owner (issue #47)'); assert.equal(alerts[0], DB);
 // An uncaught exception is recorded and still surfaces.
 const r = await hit('https://swa.test/api/roster', new Error('D1_ERROR: no such table: orders'));
 assert.ok(r.thrown); assert.match(rows().at(-1).message, /no such table: orders/);
@@ -92,11 +96,13 @@ actor = {owner: false, id: 'p1'}; assert.equal((await siteApi.GET(new Request('h
 actor = {owner: true, id: 'owner-id'}; const s = await (await siteApi.GET(new Request('https://a.test/x'))).json();
 assert.equal(s.last24h, 3, 'three errors today'); assert.ok(s.errors.length >= 3); assert.equal(s.health.ok, true);
 // The daily schedule sends reminders; a failure is recorded for the owner instead of vanishing.
+let before = alerts.length;
 pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
 assert.equal(reminders, 1, 'scheduled run should send daily reminders');
 reminderFails = true;
 pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
 const last = sqlite.prepare('SELECT * FROM error_log ORDER BY at DESC LIMIT 1').get();
 assert.equal(last.path, '/daily-reminders'); assert.match(last.message, /mail provider down/);
+assert.equal(alerts.length, before + 2, 'every scheduled run checks alerts, after a failure is recorded');
 assert.match(readFileSync('vite.config.ts', 'utf8'), /crons: \["41 12 \* \* \*"\]/);
 console.log('Site health tests passed');
