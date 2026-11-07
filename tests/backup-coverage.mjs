@@ -62,10 +62,12 @@ function seed(sqlite){
   run("INSERT INTO coach_profiles VALUES (?,?,?,?,?,?,?,?)",'dana@example.test','Coach Dana','Two-time state placer.','["Takedowns","Mat returns"]','555-0101',null,now,'owner');
   run("INSERT INTO coach_invites(id,token_hash,email,name,programs,created_by,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?)",'inv-1','INVITE-HASH','new.coach@example.test','New Coach','["Advanced"]','owner',now,'2026-12-01T00:00:00.000Z');
   run("INSERT INTO booking_exceptions VALUES (?,?,?,?,?,?,?,?,?,?,?)",'ex-1','parent-1','w-1','usaw','2026-11-05','2026-12-05','Renewal pending','owner',now,null,null);
+  // Issue #194: the owner's own entries in the books.
+  run("INSERT INTO financial_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",'fe-1','expense','2026-11-01',180000,'Rent','November rent','Check 1042',1,now,'owner',now,'owner',null,null);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {
@@ -146,8 +148,20 @@ bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad
   // A version 3 file made before coach profiles were added still restores; one that has them must have them right.
   b3=clone();delete b3.records.coach_profiles;assert.equal(lib.validBackup(b3),true,'v3 from before coach profiles');
   {const o3=freshDb(),o3Lib=loadBackups(o3.DB);const res=await o3Lib.restoreBackup(b3,await o3Lib.fingerprint(await o3Lib.metadata()),'owner');assert.equal(res.restored.orders,1);assert.equal(dump(o3.sqlite,'coach_profiles').length,0)}
+  // The same for the books (issue #194): a file made before them still restores and adds no entries.
+  b3=clone();delete b3.records.financial_entries;assert.equal(lib.validBackup(b3),true,'v3 from before the books');
+  {const o4=freshDb(),o4Lib=loadBackups(o4.DB);const res=await o4Lib.restoreBackup(b3,await o4Lib.fingerprint(await o4Lib.metadata()),'owner');assert.equal(res.restored.orders,1);assert.equal(dump(o4.sqlite,'financial_entries').length,0)}
   b3=clone();b3.records.coach_profiles[0].specialties='not json';assert.equal(lib.validBackup(b3),false,'coach profile specialties must be a list');
   b3=clone();b3.records.usaw_reviews.push({...b3.records.usaw_reviews[0]});assert.equal(lib.validBackup(b3),false,'duplicate composite key');
+}
+// Issue #194: a deleted or edited entry in the books is not undone by restoring an older file, and a deleted one comes back
+// only if its row is gone. Amounts must be whole cents.
+{
+  target.sqlite.prepare("UPDATE financial_entries SET amount_cents=190000,revision=2 WHERE id='fe-1'").run();
+  await targetLib.restoreBackup(backup,await targetLib.fingerprint(await targetLib.metadata()),'owner');
+  assert.equal(dump(target.sqlite,'financial_entries')[0].amount_cents,190000,'restore does not overwrite an edited entry');
+  let bad=clone();bad.records.financial_entries[0].amount_cents=1800.5;assert.equal(lib.validBackup(bad),false,'amounts are whole cents');
+  bad=clone();bad.records.financial_entries[0].amount_cents='180000';assert.equal(lib.validBackup(bad),false,'amounts are numbers');
 }
 // A backup never changes a payment that already exists.
 {

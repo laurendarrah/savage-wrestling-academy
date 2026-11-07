@@ -204,3 +204,13 @@ export const dataRequests=sqliteTable("data_requests",{
  id:text("id").primaryKey(),userId:text("user_id").notNull(),email:text("email").notNull(),kind:text("kind").notNull(),note:text("note").notNull(),status:text("status").notNull(),
  createdAt:text("created_at").notNull(),resolvedAt:text("resolved_at"),resolvedBy:text("resolved_by"),resolution:text("resolution")
 },t=>[index("data_requests_status").on(t.status,t.createdAt),check("data_request_kind",sql`${t.kind} IN ('close')`),check("data_request_status",sql`${t.status} IN ('open','handled')`)]);
+// The academy's books (issue #194). Only what the owner types in lives here: expenses and other income. Card and
+// offline payments are read from orders when the books are shown (lib/financials.ts), so they are never stored twice.
+// Amounts are whole cents. A deleted entry keeps its row (deleted_at) so the change history stays complete.
+export const financialEntries=sqliteTable("financial_entries",{
+ id:text("id").primaryKey(),kind:text("kind").notNull(),entryDate:text("entry_date").notNull(),amountCents:integer("amount_cents").notNull(),
+ category:text("category").notNull(),note:text("note").notNull(),receipt:text("receipt").notNull(),revision:integer("revision").notNull(),
+ createdAt:text("created_at").notNull(),createdBy:text("created_by").notNull(),updatedAt:text("updated_at").notNull(),updatedBy:text("updated_by").notNull(),
+ deletedAt:text("deleted_at"),deletedBy:text("deleted_by")
+},t=>[index("financial_entries_date").on(t.entryDate),check("financial_entry_kind",sql`${t.kind} IN ('expense','income')`),
+ check("financial_entry_amount",sql`${t.amountCents} BETWEEN 1 AND 100000000`)]);

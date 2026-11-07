@@ -1,0 +1,157 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Income and expenses | Savage Wrestling Academy</title><style>
+*{box-sizing:border-box}body{margin:0;background:var(--swa-ground,#F3F4F6);color:var(--swa-ink,#111113);font:16px/1.5 Arial,sans-serif}
+main{max-width:1100px;margin:auto;padding:20px 16px 60px}h1{margin:12px 0 4px}h2{margin:0 0 12px}h3{margin:0 0 10px;font-size:17px}
+section{background:#fff;border-radius:12px;padding:20px;margin:18px 0}.muted{color:var(--swa-muted,#55585F)}.small{font-size:14px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.notice{background:#FFF7E6;border:1px solid #F0D49C;padding:12px 14px;margin:12px 0}
+#status{font-weight:700;min-height:1.5em}
+/* Month controls and downloads, one row above everything they scope */
+.monthbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:8px 0 6px}.monthbar label{display:flex;flex-direction:column;gap:4px}
+.monthbar select{min-width:210px}.monthbar .arrow{min-width:48px;padding:0 12px}.monthbar .downloads{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+.monthbar a.button{display:inline-flex;align-items:center;padding:0 14px;text-decoration:none}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0}
+.tiles .tile b{white-space:nowrap;font-size:clamp(24px,7.4vw,34px)}.tile small{display:block;margin-top:6px;font-size:12px;letter-spacing:0;text-transform:none;font-weight:600}
+/* Charts: money in is steel blue, money out is the brand red (validated for colour-blind separation and 3:1 contrast) */
+.ledger{--in:#2F6FA3;--out:var(--swa-red,#C4222C);--grid:#E4E6EA}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 8px;font-size:14px;color:var(--swa-muted,#55585F)}.legend span{display:inline-flex;align-items:center;gap:6px}
+.key{display:inline-block;width:12px;height:12px;border-radius:3px}.key.in{background:var(--in)}.key.out{background:var(--out)}
+figure{margin:0;position:relative}#chart{display:block;width:100%;min-height:240px}#chart text{font:12px Barlow,Arial,sans-serif;fill:var(--swa-muted,#55585F)}#chart .selected{fill:var(--swa-ink,#111113);font-weight:700}
+#chart .band{fill:transparent}#chart .band:hover,#chart .band.on{fill:rgba(17,17,19,.04)}#chart .pick{fill:rgba(17,17,19,.06)}
+.tip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--swa-line,#E4E6EA);border-radius:8px;box-shadow:0 8px 24px -10px rgba(17,17,19,.3);padding:8px 12px;font-size:14px;min-width:170px;z-index:2}
+.tip b{display:block;margin-bottom:4px}.tip div{display:flex;align-items:center;gap:8px;justify-content:space-between}.tip i{display:inline-block;width:12px;height:2px;margin-right:6px;vertical-align:middle}
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+.catrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;margin:0 0 12px;font-size:15px}.catrow .bar{grid-column:1/-1;height:10px;background:#F1F2F4;border-radius:4px;overflow:hidden}
+.catrow .bar span{display:block;height:100%;border-radius:0 4px 4px 0;min-width:2px}.in .bar span{background:var(--in)}.out .bar span{background:var(--out)}.catrow b{font-variant-numeric:tabular-nums}
+.table{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:15px}th,td{text-align:left;padding:9px 8px;vertical-align:top}.right{text-align:right;white-space:nowrap}
+#monthsBody td,#monthsBody th{vertical-align:middle}tfoot td{font-weight:700;border-top:2px solid var(--swa-ink,#111113);border-bottom:0}td.neg{color:var(--swa-red-dark,#A11B24)}
+button.month{min-height:40px;padding:0;font-size:16px}button.month[aria-current=true]{color:var(--swa-ink,#111113);font-weight:700;text-decoration:none}
+.narrow,.abbr{display:none}
+.actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.actions button{min-height:40px;padding:0 12px;font-size:15px}
+form .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}form label{display:flex;flex-direction:column;gap:4px}
+fieldset{border:0;padding:0;margin:0 0 14px}legend{font-weight:600;font-size:15px;margin-bottom:6px}.choice{display:flex;gap:18px;flex-wrap:wrap}.choice label{flex-direction:row;align-items:center;gap:8px;min-height:44px}
+.formrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}#formError{color:var(--swa-red-dark,#A11B24);font-weight:700;min-height:1.5em;margin:10px 0 0}
+@media (max-width:640px){.wide{display:none}td.narrow,th.narrow{display:table-cell}span.narrow{display:block}span.abbr{display:inline}.tiles{grid-template-columns:1fr 1fr}table{font-size:14px}section{padding:16px}.monthbar .downloads{margin-left:0}.monthbar select{min-width:0;flex:1}.monthbar label{flex:1}th,td{padding:8px 4px}}
+@media print{.monthbar,form,.actions,#entrySection{display:none}}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main class="ledger"><h1>Income and expenses</h1><p>The academy's books by month. Card and offline payments are added on their own; add expenses and any other income below. This is a simple record for running the academy, not an accounting system, and card payments are shown before Stripe fees.</p>
+<p id="status" role="status" aria-live="polite">Loading…</p>
+<p id="testMode" class="notice" hidden>Stripe is in test mode, so card payments shown here are test payments, not real money. Once Stripe is live, only live card payments are counted.</p>
+<div class="monthbar"><button type="button" class="arrow" id="prevMonth" aria-label="Previous month">←</button><label>Month<select id="month"></select></label><button type="button" class="arrow" id="nextMonth" aria-label="Next month">→</button>
+<div class="downloads"><a class="button" id="csvMonth" href="/api/financials?format=csv">Download month (CSV)</a><a class="button" id="csvYear" href="/api/financials?format=csv">Download year (CSV)</a></div></div>
+<div class="tiles"><div class="tile">Money in<b id="tIn">–</b><small id="tInNote"></small></div><div class="tile">Refunds<b id="tRefunds">–</b></div><div class="tile">Expenses<b id="tExpenses">–</b></div><div class="tile">Net<b id="tNet">–</b><small id="tNetNote"></small></div></div>
+<section><h2 id="yearHeading">Month by month</h2><p class="legend" aria-hidden="true"><span><i class="key in"></i>Money in</span><span><i class="key out"></i>Money out (expenses and refunds)</span></p>
+<figure><div id="chart" aria-hidden="true"></div><div id="tip" class="tip" hidden></div><figcaption class="muted small">Each month's money in and money out. The table below has every figure; choose a month to see its details.</figcaption></figure>
+<div class="table"><table><caption class="sr" id="yearCaption">Month by month</caption><thead><tr><th scope="col">Month</th><th scope="col" class="right">Money in</th><th scope="col" class="right wide">Refunds</th><th scope="col" class="right wide">Expenses</th><th scope="col" class="right narrow">Money out</th><th scope="col" class="right">Net</th></tr></thead><tbody id="monthsBody"></tbody><tfoot id="yearFoot"></tfoot></table></div></section>
+<section><h2 id="catHeading">By category</h2><div class="cats"><div class="in"><h3>Money in</h3><div id="catIn"></div></div><div class="out"><h3>Money out</h3><div id="catOut"></div></div></div></section>
+<section id="entrySection"><h2 id="formHeading">Add an expense or other income</h2><p class="muted">Card payments and offline payments (cash, check, Venmo) are added on their own. Record offline payments on <a href="/payments">Payments</a>, not here, so they are not counted twice. Pay owed to coaches is on <a href="/coach-pay">Coach pay</a>; add it here as an expense once it is paid.</p>
+<form id="entry"><fieldset><legend>Type</legend><div class="choice"><label><input type="radio" name="kind" value="expense" checked> Expense</label><label><input type="radio" name="kind" value="income"> Other income</label></div></fieldset>
+<div class="grid"><label>Date<input id="date" type="date" required></label><label>Amount ($)<input id="amount" inputmode="decimal" autocomplete="off" placeholder="0.00" required></label>
+<label>Category<input id="category" list="categoryList" maxlength="60" autocomplete="off" required placeholder="Rent, equipment, insurance…"><datalist id="categoryList"></datalist></label>
+<label>Note (optional)<input id="note" maxlength="300" autocomplete="off" placeholder="What it was for"></label><label>Receipt reference (optional)<input id="receipt" maxlength="200" autocomplete="off" placeholder="Receipt or invoice number, or where it is filed"></label></div>
+<p id="formError" role="alert"></p><div class="formrow"><button type="submit" class="primary" id="saveEntry">Add entry</button><button type="button" id="stopEditing" hidden>Cancel editing</button></div></form></section>
+<section><h2 id="linesHeading">Everything this month</h2><div class="table"><table><thead><tr><th scope="col">Date</th><th scope="col">What</th><th scope="col" class="wide">Category</th><th scope="col" class="wide">From</th><th scope="col" class="right">Amount</th><th scope="col"><span class="sr">Change</span></th></tr></thead><tbody id="lines"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody></table></div></section>
+</main><script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);
+const shortDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric'});
+const minus=c=>c?'−'+money(c):money(0);
+const longDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'});
+const monthName=(m,style='long')=>new Date(m+'-01T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:style,...(style==='long'?{year:'numeric'}:{})});
+function namedMonthOptions(key,min='2020-01',max='2100-12'){
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(key))return '';
+ const [year,month]=key.split('-').map(Number),fmt=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric',timeZone:'UTC'});
+ return Array.from({length:25},(_,i)=>new Date(Date.UTC(year,month-13+i,1))).map(date=>[date.toISOString().slice(0,7),fmt.format(date)]).filter(([value])=>value>=min&&value<=max).map(([value,label])=>'<option value="'+value+'"'+(value===key?' selected':'')+'>'+label+'</option>').join('');
+}
+function shiftMonth(key,delta){const [y,m]=key.split('-').map(Number);return new Date(Date.UTC(y,m-1+delta,1)).toISOString().slice(0,7)}
+// Dollars as typed ("1,250", "$80.5") to whole cents, without floating-point rounding. Null if it is not an amount.
+function toCents(v){const s=String(v??'').replace(/[$,\s]/g,'');if(!/^\d{1,7}(\.\d{1,2})?$/.test(s))return null;const [d,f='']=s.split('.'),c=Number(d)*100+Number(f.padEnd(2,'0'));return c>=1&&c<=100000000?c:null}
+const centsText=c=>(c/100).toFixed(2);
+// Round the top of the axis up to a clean step: 1, 2 or 5 times a power of ten.
+function niceStep(max){if(!(max>0))return 10000;const raw=max/4,p=Math.pow(10,Math.floor(Math.log10(raw))),n=raw/p;return (n<=1?1:n<=2?2:n<=5?5:10)*p}
+const axisMoney=c=>{const d=c/100;return d>=10000?'$'+(d/1000).toLocaleString('en-US',{maximumFractionDigits:1})+'K':'$'+d.toLocaleString('en-US')};
+// Month-by-month columns: money in beside money out, 2px apart, 4px rounded tops on one baseline. Drawn at the real
+// width of the page so labels stay readable on a phone.
+function chartSvg(months,selected,width){
+ const W=Math.max(300,Math.round(width||720)),H=240,left=W<480?44:56,right=8,top=12,bottom=28,plotW=W-left-right,plotH=H-top-bottom;
+ const outOf=m=>m.refundsCents+m.expensesCents,max=Math.max(0,...months.map(m=>Math.max(m.incomeCents,outOf(m)))),step=niceStep(max),top4=step*Math.max(1,Math.ceil(max/step)),y=c=>top+plotH-plotH*c/top4;
+ const slot=plotW/months.length,bw=Math.max(3,Math.min(24,Math.floor((slot-8)/2)-1)),parts=[];
+ for(let t=0;t<=top4;t+=step)parts.push(`<line x1="${left}" x2="${W-right}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="var(--grid)" stroke-width="1"/><text x="${left-6}" y="${(y(t)+4).toFixed(1)}" text-anchor="end">${axisMoney(t)}</text>`);
+ const bar=(x,c,color)=>{if(c<=0)return '';const h=Math.max(1,plotH*c/top4),yy=top+plotH-h,r=Math.min(4,h,bw/2);return `<path fill="${color}" d="M${x},${top+plotH} V${(yy+r).toFixed(1)} Q${x},${yy.toFixed(1)} ${x+r},${yy.toFixed(1)} H${x+bw-r} Q${x+bw},${yy.toFixed(1)} ${x+bw},${(yy+r).toFixed(1)} V${top+plotH} Z"/>`};
+ months.forEach((m,i)=>{const x0=left+i*slot,cx=x0+slot/2,label=monthName(m.month,'short');
+  parts.push(`<rect class="band${m.month===selected?' pick':''}" data-i="${i}" x="${x0.toFixed(1)}" y="${top}" width="${slot.toFixed(1)}" height="${plotH}"/>`);
+  parts.push(bar(Math.round(cx-bw-1),m.incomeCents,'var(--in)')+bar(Math.round(cx+1),outOf(m),'var(--out)'));
+  parts.push(`<text x="${cx.toFixed(1)}" y="${H-8}" text-anchor="middle"${m.month===selected?' class="selected"':''}>${W<480?label.slice(0,1):label}</text>`)});
+ parts.push(`<line x1="${left}" x2="${W-right}" y1="${top+plotH}" y2="${top+plotH}" stroke="#B9BEC6" stroke-width="1"/>`);
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" focusable="false">${parts.join('')}</svg>`;
+}
+// Ranked bars, largest first, one colour per side. Text stays in ink; the bar carries the colour.
+function categoryBars(list,empty){if(!list.length)return `<p class="muted">${esc(empty)}</p>`;const max=list[0].cents;return list.map(c=>`<div class="catrow"><span>${esc(c.category)}</span><b>${money(c.cents)}</b><span class="bar" aria-hidden="true"><span style="width:${Math.max(1,Math.round(c.cents/max*100))}%"></span></span></div>`).join('')}
+const FROM={online:'Card payment',offline:'Offline payment',owner:'Entered by you'};
+function lineRow(l){
+ const out=l.type!=='income',from=l.type==='refund'?'Refund':FROM[l.source]||'',how=l.source==='owner'?(l.receipt?'Receipt: '+l.receipt:''):l.method;
+ const what=(l.source==='owner'?(l.note?esc(l.note):'<span class="muted">No note</span>'):esc(l.description))+(how?`<br><span class="muted small">${esc(how)}</span>`:'')+`<span class="narrow muted small">${esc(l.category)} · ${esc(from)}</span>`;
+ const change=l.entryId?`<div class="actions"><button type="button" data-edit="${esc(l.entryId)}" aria-label="Edit ${esc(l.category)} on ${esc(longDate(l.date))}">Edit</button><button type="button" data-delete="${esc(l.entryId)}" aria-label="Delete ${esc(l.category)} on ${esc(longDate(l.date))}">Delete</button></div>`:'';
+ return `<tr><td>${esc(shortDate(l.date))}</td><td>${what}</td><td class="wide">${esc(l.category)}</td><td class="wide">${esc(from)}</td><td class="right${out?' neg':''}">${out?minus(l.amountCents):money(l.amountCents)}</td><td>${change}</td></tr>`;
+}
+// Money in, refunds, expenses (or both as money out on a phone) and net, for a month or the year.
+function totalCells(t){return `<td class="right">${money(t.incomeCents)}</td><td class="right wide">${minus(t.refundsCents)}</td><td class="right wide">${minus(t.expensesCents)}</td><td class="right narrow">${minus(t.refundsCents+t.expensesCents)}</td><td class="right${t.netCents<0?' neg':''}">${money(t.netCents)}</td>`}
+function monthRow(m,selected){return `<tr><th scope="row"><button type="button" class="link month" data-month="${m.month}"${m.month===selected?' aria-current="true"':''}><span class="wide">${esc(monthName(m.month,'long').split(' ')[0])}</span><span class="abbr">${esc(monthName(m.month,'short'))}</span></button></th>${totalCells(m)}</tr>`}
+
+let report=null,editing=null,busy=false,loadVersion=0;
+const thisMonth=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}).slice(0,7);
+async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
+function drawChart(){if(!report)return;const box=$('chart');box.innerHTML=chartSvg(report.months,report.month,box.clientWidth||720);
+ box.querySelectorAll('.band').forEach(b=>{b.onpointermove=e=>showTip(+b.dataset.i,e);b.onpointerleave=hideTip})}
+function showTip(i,e){const m=report.months[i],tip=$('tip'),box=$('chart').getBoundingClientRect();tip.replaceChildren();
+ const head=document.createElement('b');head.textContent=monthName(m.month);tip.append(head);
+ [['Money in',m.incomeCents,'var(--in)'],['Money out',m.refundsCents+m.expensesCents,'var(--out)'],['Net',m.netCents,'']].forEach(([t,c,color])=>{const row=document.createElement('div'),name=document.createElement('span'),v=document.createElement('strong');if(color){const k=document.createElement('i');k.style.background=color;name.append(k)}name.append(t);v.textContent=money(c);row.append(name,v);tip.append(row)});
+ tip.hidden=false;const x=e.clientX-box.left,w=tip.offsetWidth;tip.style.left=Math.min(Math.max(0,x-w/2),box.width-w)+'px';tip.style.top=Math.max(0,e.clientY-box.top-tip.offsetHeight-14)+'px'}
+function hideTip(){$('tip').hidden=true}
+function render(){
+ const d=report,t=d.totals,label=monthName(d.month),short=monthName(d.month).split(' ')[0];
+ $('testMode').hidden=d.stripeMode!=='test';
+ $('month').innerHTML=namedMonthOptions(d.month,'2020-01',thisMonth());$('month').value=d.month;
+ $('prevMonth').disabled=d.month<='2020-01';$('nextMonth').disabled=d.month>=thisMonth();
+ $('csvMonth').href='/api/financials?format=csv&month='+d.month;$('csvYear').href='/api/financials?format=csv&year='+d.year;
+ $('csvMonth').textContent='Download '+short+' (CSV)';$('csvYear').textContent='Download '+d.year+' (CSV)';
+ $('tIn').textContent=money(t.incomeCents);$('tRefunds').textContent=minus(t.refundsCents);$('tExpenses').textContent=minus(t.expensesCents);$('tNet').textContent=money(t.netCents);
+ $('tInNote').textContent='in '+label;$('tNetNote').textContent=d.year+' so far: '+money(d.yearTotals.netCents);
+ $('yearHeading').textContent=d.year+' month by month';$('yearCaption').textContent='Money in, refunds, expenses and net for each month of '+d.year;
+ $('monthsBody').innerHTML=d.months.map(m=>monthRow(m,d.month)).join('');
+ $('yearFoot').innerHTML=`<tr><td>${esc(d.year)} total</td>${totalCells(d.yearTotals)}</tr>`;
+ $('catHeading').textContent=label+' by category';
+ $('catIn').innerHTML=categoryBars(d.categories.in,'No money in for '+label+'.');$('catOut').innerHTML=categoryBars(d.categories.out,'No money out for '+label+'.');
+ $('linesHeading').textContent='Everything in '+label;
+ $('lines').innerHTML=d.lines.length?d.lines.map(lineRow).join(''):`<tr><td colspan="6" class="muted">Nothing recorded for ${esc(label)} yet.</td></tr>`;
+ $('categoryList').innerHTML=suggestionOptions();
+ if(!editing)$('date').value=d.month===thisMonth()?d.today:d.month+'-01';$('date').max=d.today;
+ document.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>load(b.dataset.month));
+ document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>startEdit(b.dataset.edit));
+ document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>removeEntry(b.dataset.delete));
+ drawChart();
+}
+async function load(month){const version=++loadVersion;$('status').textContent='Loading…';
+ try{const d=await call('/api/financials?month='+encodeURIComponent(month));if(version!==loadVersion)return;report=d;render();$('status').textContent='';try{history.replaceState(null,'','?month='+d.month)}catch{}}
+ catch(e){if(version===loadVersion)$('status').textContent=e.message}}
+function suggestionOptions(){return ((report&&report.suggestions[kindValue()])||[]).map(s=>`<option value="${esc(s)}"></option>`).join('')}
+function kindValue(){const c=document.querySelector('input[name="kind"]:checked');return c?c.value:'expense'}
+function setKind(k){document.querySelectorAll('input[name="kind"]').forEach(r=>{r.checked=r.value===k})}
+function entryOf(id){return report&&report.lines.find(l=>l.entryId===id)}
+function startEdit(id){const l=entryOf(id);if(!l)return;editing={id,revision:l.revision};setKind(l.type==='income'?'income':'expense');$('date').value=l.date;$('amount').value=centsText(l.amountCents);$('category').value=l.category;$('note').value=l.note;$('receipt').value=l.receipt;
+ $('formHeading').textContent='Edit entry';$('saveEntry').textContent='Save changes';$('stopEditing').hidden=false;$('formError').textContent='';$('entrySection').scrollIntoView({behavior:'smooth',block:'start'});$('amount').focus()}
+function endEdit(){editing=null;$('entry').reset();$('formHeading').textContent='Add an expense or other income';$('saveEntry').textContent='Add entry';$('stopEditing').hidden=true;$('formError').textContent='';if(report){$('date').value=report.month===thisMonth()?report.today:report.month+'-01';$('categoryList').innerHTML=suggestionOptions()}}
+// What the form sends: whole cents and trimmed text. The server checks everything again.
+function formEntry(){const amountCents=toCents($('amount').value),date=$('date').value,category=$('category').value.trim();
+ if(!date)return {error:'Choose the date the money came in or went out.'};if(amountCents===null)return {error:'Enter an amount in dollars, such as 125.50.'};if(!category)return {error:'Enter a category, such as Rent.'};
+ return {kind:kindValue(),date,amountCents,category,note:$('note').value.trim(),receipt:$('receipt').value.trim()}}
+async function submitEntry(e){e.preventDefault();if(busy)return;const entry=formEntry();if(entry.error){$('formError').textContent=entry.error;return}
+ busy=true;$('saveEntry').disabled=true;$('formError').textContent='';
+ try{await call('/api/financials',editing?{action:'edit',id:editing.id,revision:editing.revision,...entry}:{action:'add',...entry});const was=!!editing;endEdit();$('status').textContent=was?'Entry saved.':'Entry added.';await load(entry.date.slice(0,7));$('status').textContent=was?'Entry saved.':'Entry added.'}
+ catch(err){$('formError').textContent=err.message}finally{busy=false;$('saveEntry').disabled=false}}
+async function removeEntry(id){const l=entryOf(id);if(!l||busy)return;if(!confirm('Delete this '+(l.type==='income'?'income':'expense')+' of '+money(l.amountCents)+' ('+l.category+') from '+longDate(l.date)+'?'))return;
+ busy=true;try{await call('/api/financials',{action:'delete',id,revision:l.revision});if(editing&&editing.id===id)endEdit();await load(report.month);$('status').textContent='Entry deleted.'}catch(err){$('status').textContent=err.message}finally{busy=false}}
+$('entry').onsubmit=submitEntry;$('stopEditing').onclick=endEdit;
+document.querySelectorAll('input[name="kind"]').forEach(r=>r.onchange=()=>{$('categoryList').innerHTML=suggestionOptions()});
+$('month').onchange=()=>load($('month').value);$('prevMonth').onclick=()=>report&&load(shiftMonth(report.month,-1));$('nextMonth').onclick=()=>report&&load(shiftMonth(report.month,1));
+let resizeTimer=0;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(drawChart,120)});
+const asked=new URLSearchParams(location.search).get('month');load(/^\d{4}-(0[1-9]|1[0-2])$/.test(asked||'')&&asked<=thisMonth()?asked:thisMonth());
+</script></body></html>

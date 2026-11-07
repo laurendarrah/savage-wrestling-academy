@@ -746,13 +746,35 @@ await step('family pages fit a phone screen', async () => {
   if (SHOTS) { await phone.locator('#editor').scrollIntoViewIfNeeded(); await phone.screenshot({path: `${SHOTS}/phone-family-editor.png`, fullPage: true}); }
 });
 
+// ---------- The books (issue #194): payments appear on their own; the owner adds an expense ----------
+await step('owner sees payments in the books and adds an expense', async () => {
+  expect((await api(family, '/api/financials')).status === 403, 'families cannot read the books');
+  await owner.goto(BASE + '/financials'); await waitText(owner, '#lines', /Offline payment/);
+  const before = await api(owner, '/api/financials');
+  expect(before.status === 200 && before.body.totals.incomeCents > 0, 'offline payments recorded earlier are income: ' + JSON.stringify(before.body?.totals));
+  expect(before.body.lines.filter(l => l.source !== 'owner').every(l => /^(payment|installment|refund):/.test(l.id)), 'automatic lines come from payments');
+  await owner.check('input[name=kind][value=expense]'); await owner.fill('#amount', '1,250.00'); await owner.fill('#category', 'Rent'); await owner.fill('#note', 'Mat room rent');
+  await owner.click('#saveEntry'); await waitText(owner, '#status', /Entry added/); await waitText(owner, '#lines', /Mat room rent/);
+  const after = await api(owner, '/api/financials');
+  expect(after.body.totals.expensesCents === before.body.totals.expensesCents + 125000, 'the expense is counted once in cents: ' + JSON.stringify(after.body.totals));
+  expect(after.body.totals.incomeCents === before.body.totals.incomeCents, 'income unchanged');
+  const csv = await owner.request.get(BASE + '/api/financials?format=csv');
+  expect(csv.status() === 200 && /Mat room rent/.test(await csv.text()), 'the download has the expense');
+  await shot(owner, 'financials');
+  const phone = await as('owner', {width: 375, height: 800});
+  await phone.goto(BASE + '/financials'); await waitText(phone, '#lines', /Mat room rent/);
+  const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(over <= 1, `/financials scrolls sideways by ${over}px on a phone`);
+  await shot(phone, 'phone-financials'); await phone.context().close();
+});
+
 // ---------- Accessibility (axe-core) on every page, as each role ----------
 const axeSource = (await import('node:fs')).readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const a11yPages = {
   public: ['/welcome', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
   coach: ['/coach', '/roster', '/help/coach', '/coach-profile'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {
