@@ -38,3 +38,6 @@ assert.doesNotMatch(css.match(/html body button,html body \.button,html body a\.
 const phone = css.match(/\/\* Phones: bigger tap targets[\s\S]*?\n\}/)[0];
 assert.match(phone, /html body footer a,html body \.swa-head \.bar a,html body a\.more\{[^}]*min-height:44px/);
 console.log('Shared styles: tokens, ground, watermark, texture, padding and tap targets ok');
+
+// Issue #236: the 18px intro rule (.swa-head>p) must not enlarge the small uppercase label in the band.
+assert.match(css, /html body \.swa-head>p\.eyebrow\{font-size:13px/);
