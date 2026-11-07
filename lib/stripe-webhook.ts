@@ -1,4 +1,5 @@
-// Verified Stripe webhooks (issue #19). This is the only code path that marks an order paid or refunded.
+// Verified Stripe webhooks (issue #19). This is the only code path that marks an order paid or refunded, and the only one
+// that records refund amounts (issue #42).
 // Each Stripe event id is stored once, so repeated, late or out-of-order deliveries cannot apply twice.
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
@@ -60,6 +61,32 @@ async function overLimit(order: OrderRow): Promise<string | null> {
     const row = await env.DB!.prepare("SELECT count(*) n FROM orders WHERE kind=? AND item_id=? AND status='paid' AND id<>? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)")
       .bind(order.kind, order.item_id, order.id, d).first<{n: number}>();
     if ((row?.n ?? 0) >= slots) return `${d}: ${(row?.n ?? 0) + 1} paid for ${slots} seats`;
+  }
+  return null;
+}
+
+type RefundOrder = {id: string; status: string; kind: string; amount_cents: number; livemode: number};
+const REFUND_ORDER = 'o.id,o.status,o.kind,o.amount_cents,o.livemode';
+
+// A refund of one monthly payment (issue #42). Its charge names only its PaymentIntent, which orders don't hold for
+// monthly memberships. Use the payment's recorded fee row if there is one; otherwise ask Stripe which invoice that
+// payment paid (Invoices read permission), and so which subscription. Only when there is a monthly membership in that
+// mode; a Stripe error is thrown so Stripe sends the event again.
+async function monthlyPaymentOrder(intent: string, live: boolean): Promise<RefundOrder | null> {
+  const known = await env.DB!.prepare(`SELECT ${REFUND_ORDER} FROM stripe_fees f JOIN orders o ON o.id=f.order_id WHERE f.payment_intent=?`).bind(intent).first<RefundOrder>();
+  if (known) return known;
+  const any = await env.DB!.prepare("SELECT 1 AS x FROM subscriptions s JOIN orders o ON o.id=s.order_id WHERE o.livemode=? LIMIT 1").bind(live ? 1 : 0).first();
+  if (!any) return null;
+  const mode = live ? 'live' : 'test';
+  const key = await storedStripeKeyFor(mode);
+  if (!key) throw new Error('Stripe key missing; let Stripe retry this event.');
+  const stripe: any = stripeClientFor(mode, key);
+  const found = await stripe.invoicePayments.list({payment: {type: 'payment_intent', payment_intent: intent}, expand: ['data.invoice'], limit: 3});
+  for (const p of found?.data ?? []) {
+    const sub = p?.invoice?.parent?.subscription_details?.subscription, id = typeof sub === 'string' ? sub : sub?.id;
+    if (typeof id !== 'string') continue;
+    const order = await env.DB!.prepare(`SELECT ${REFUND_ORDER} FROM subscriptions s JOIN orders o ON o.id=s.order_id WHERE s.stripe_subscription_id=?`).bind(id).first<RefundOrder>();
+    if (order) return order;
   }
   return null;
 }
@@ -181,13 +208,28 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
     ]};
   }
 
+  // Refunds (issue #42). amount_refunded is Stripe's running total for the payment, so it is stored as it is, never added
+  // up, with the event's own time: a replay is stored once (stripe_events), and a late or out-of-order event still lands
+  // in its place, so the books come out the same in any delivery order (lib/card-refunds.ts). A full refund of a
+  // one-time payment marks the order refunded, as before; a partial one leaves it paid. Refunding one monthly payment
+  // records the refund but does not end the membership.
   if (event.type === 'charge.refunded') {
-    const intent = typeof obj.payment_intent === 'string' ? obj.payment_intent : null;
+    const intent = typeof obj.payment_intent === 'string' ? obj.payment_intent : typeof obj.payment_intent?.id === 'string' ? obj.payment_intent.id : null;
     if (!intent) return none('ignored:no-payment-intent');
-    const order = await env.DB!.prepare("SELECT id,status,amount_cents FROM orders WHERE stripe_payment_intent=?").bind(intent).first<{id: string; status: string; amount_cents: number}>();
+    const live = Boolean(event.livemode ?? obj.livemode);
+    const order = await env.DB!.prepare(`SELECT ${REFUND_ORDER} FROM orders o WHERE o.stripe_payment_intent=? AND o.source='stripe'`).bind(intent).first<RefundOrder>()
+      ?? await monthlyPaymentOrder(intent, live);
     if (!order) return none('ignored:unknown-payment');
-    if (!obj.refunded || obj.amount_refunded !== order.amount_cents) return none('partial-refund', order.id);
-    return {outcome: 'refunded', orderId: order.id, writes: [
+    if (live !== Boolean(order.livemode)) return none('rejected:mode-mismatch', order.id);
+    const total = obj.amount_refunded;
+    if (!Number.isSafeInteger(total) || total < 0 || total > order.amount_cents) return none('rejected:refund-amount', order.id);
+    const refundedAt = Number.isSafeInteger(event.created) && event.created > 0 ? new Date(event.created * 1000).toISOString() : at;
+    const history = env.DB!.prepare('INSERT INTO payment_refunds(id,order_id,payment_intent,charge_id,amount_cents,refunded_cents,refunded_at,livemode,received_at) VALUES (?,?,?,?,?,?,?,?,?)')
+      .bind(event.id, order.id, intent, typeof obj.id === 'string' ? obj.id : null, order.amount_cents, total, refundedAt, order.livemode, at);
+    const full = obj.refunded === true && total === order.amount_cents;
+    if (order.kind === 'monthly') return {outcome: full ? 'installment-refunded' : 'installment-partial-refund', orderId: order.id, writes: [history]};
+    if (!full) return {outcome: 'partial-refund', orderId: order.id, writes: [history]};
+    return {outcome: 'refunded', orderId: order.id, writes: [history,
       env.DB!.prepare("UPDATE orders SET status='refunded',updated_at=? WHERE id=? AND status='paid'").bind(at, order.id)
     ]};
   }

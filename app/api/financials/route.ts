@@ -4,6 +4,7 @@ import {env} from 'cloudflare:workers';
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyToday, cleanEntry, ledgerCsv, ledgerLines, ledgerReport, periodBounds, validMonth} from '../../../lib/financials';
 import {rateLimited} from '../../../lib/rate-limit';
+import {feesWaiting, recordStripeFees} from '../../../lib/stripe-fees';
 export const dynamic = 'force-dynamic';
 
 const OWNER_ONLY = 'Owner sign-in and authenticator verification required.';
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
   }
   const month = q.get('month') ?? academyToday().slice(0, 7);
   if (!validMonth(month)) return reply({error: 'Choose a month.'}, 400);
-  return reply(await ledgerReport(month));
+  // feesWaiting: card payments whose Stripe fee is not recorded yet (issue #42), so the page can say the fees are incomplete.
+  return reply({...await ledgerReport(month), feesWaiting: await feesWaiting()});
 }
 
 export async function POST(request: Request) {
@@ -35,6 +37,13 @@ export async function POST(request: Request) {
   try { input = JSON.parse(raw); } catch { return reply({error: 'Invalid request.'}, 400); }
   if (await rateLimited(request, 'financials:' + auth.owner.userId, 60)) return reply({error: 'Too many changes. Please wait a minute.'}, 429);
   const action = input?.action, actor = auth.owner.userId, at = new Date().toISOString();
+  // Fetch Stripe's card fees now instead of waiting for the daily run (issue #42). Reads from Stripe only.
+  if (action === 'fees') {
+    if (await rateLimited(request, 'financials-fees:' + auth.owner.userId, 4)) return reply({error: 'Fees were just checked. Please wait a minute.'}, 429);
+    const run = await recordStripeFees();
+    if (run.skipped === 'no-key') return reply({...run, error: 'Save the restricted Stripe key on Payment setup first.'}, 409);
+    return reply({ok: !run.error, ...run});
+  }
   if (!['add', 'edit', 'delete'].includes(action)) return reply({error: 'Unknown action.'}, 400);
   const log = (what: string, id: string, detail: string) => env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) SELECT ?,?,?,?,? WHERE changes()=1')
     .bind(crypto.randomUUID(), actor, 'ledger_entry_' + what, `${id} ${detail}`.trim(), at);

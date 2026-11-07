@@ -17,7 +17,8 @@ export const ALERT_GAP_MS = 3600000;
 const LOOKBACK_MS = 86400000;
 // Scheduled jobs record their failures under these paths (build/worker.ts).
 export const SCHEDULED_JOBS: Record<string, string> = {'/daily-reminders': 'The morning reminders (card and waiver reminders to families)',
-  '/coach-retention': 'The daily cleanup of records of coaches removed more than 3 years ago'};
+  '/coach-retention': 'The daily cleanup of records of coaches removed more than 3 years ago',
+  '/stripe-fees': 'Reading card fees from Stripe for the books (Income and expenses)'};
 
 type Marker = {sentAt?: string; coveredUntil?: string; count?: number; status?: string; reason?: string | null};
 type ErrorRow = {at: string; path: string; status: number};

@@ -85,9 +85,29 @@ await step('Stripe reports the payment: the walk-in is paid and on the roster', 
 await step('the payment shows on /payments as online', async () => {
   await owner.goto(BASE + '/payments'); await waitText(owner, '#rows', /Sam Example[\s\S]*\$40\.00/);
 });
+await step('card fees are read from stripe-mock on request, without touching the payment (#42)', async () => {
+  await owner.goto(BASE + '/financials');
+  const r = await api(owner, '/api/financials', {action: 'fees'});
+  expect(r.status === 200 && r.body.mode === 'test' && r.body.recorded >= 1 && !r.body.error, 'fee run ' + JSON.stringify(r.body));
+  const f = sql("SELECT order_id,fee_cents,livemode FROM stripe_fees WHERE payment_intent='pi_rehearsal_walkin'")[0];
+  expect(f && f.order_id === walkinOrder && f.livemode === 0 && Number.isInteger(f.fee_cents), 'fee row ' + JSON.stringify(f));
+  expect(sql(`SELECT status FROM orders WHERE id='${walkinOrder}'`)[0].status === 'paid', 'reading fees changed the payment');
+  const csv = await owner.evaluate(async () => (await fetch('/api/payments?format=csv', {cache: 'no-store'})).text());
+  expect(/,Refunded,Refunded on,Card payments,Stripe fee,Net after Stripe fee\r\n/.test(csv), 'payments CSV has fee columns');
+});
+await step('a partial refund keeps the walk-in paid and shows on /payments (#42)', async () => {
+  const r = await webhook('charge.refunded', {id: 'ch_rehearsal_1', object: 'charge', payment_intent: 'pi_rehearsal_walkin', amount: 4000, refunded: false, amount_refunded: 1500, livemode: false});
+  expect(r.status === 200 && r.body.outcome === 'partial-refund', 'partial refund webhook ' + JSON.stringify(r.body));
+  expect(sql(`SELECT status FROM orders WHERE id='${walkinOrder}'`)[0].status === 'paid', 'a partial refund un-paid the walk-in');
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#rows', /\$15\.00 of \$40\.00 refunded/);
+  const books = await api(owner, '/api/financials');
+  expect(books.body.lines.some(l => l.type === 'refund' && l.amountCents === 1500), 'partial refund not in the books');
+});
 await step('a refund in Stripe marks the walk-in refunded and takes Sam off that roster', async () => {
-  const r = await webhook('charge.refunded', {id: 'ch_rehearsal_1', object: 'charge', payment_intent: 'pi_rehearsal_walkin', refunded: true, amount_refunded: 4000, livemode: false});
+  const r = await webhook('charge.refunded', {id: 'ch_rehearsal_1', object: 'charge', payment_intent: 'pi_rehearsal_walkin', amount: 4000, refunded: true, amount_refunded: 4000, livemode: false});
   expect(r.status === 200, 'refund webhook ' + JSON.stringify(r.body));
+  const refunds = (await api(owner, '/api/financials')).body.lines.filter(l => l.type === 'refund').map(l => l.amountCents).sort((a, b) => a - b);
+  expect(JSON.stringify(refunds) === '[1500,2500]', 'refunds in the books ' + JSON.stringify(refunds));
   await family.goto(BASE + '/family'); await waitText(family, '#purchaseList', /Refunded/);
   const roster = await api(owner, '/api/roster?date=' + ny(1));
   expect(!roster.body.sessions.some(s => s.entries.some(e => e.name === 'Sam Example')), 'still on roster after refund');
@@ -135,6 +155,12 @@ await step('a late Stripe event for an upfront order started before #210 still r
   const o = sql("SELECT status,term_start,term_end FROM orders WHERE id='late-upfront'")[0];
   expect(o.status === 'paid' && o.term_start && o.term_end > o.term_start, 'late upfront order ' + JSON.stringify(o));
   await family.goto(BASE + '/family'); await waitText(family, '#purchaseList', /paid upfront/);
+});
+
+await step('card fees for a monthly membership ask Stripe for its invoices; a run with nothing new is not an error (#42)', async () => {
+  // stripe-mock's invoices are not for the membership's amount, so no fee is recorded, but the calls must be valid.
+  const r = await api(owner, '/api/financials', {action: 'fees'});
+  expect(r.status === 200 && !r.body.error && r.body.failed === 0 && r.body.checked >= 0, 'fee run ' + JSON.stringify(r.body));
 });
 
 await browser.close(); auth.close();

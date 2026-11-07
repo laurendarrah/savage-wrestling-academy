@@ -33,6 +33,10 @@ export const RECORD_TABLES:Record<string,Col[]>={
  // The owner's own entries in the books (issue #194). Payments are not copied there, so orders above stay the only record of them.
  // Added after version 3 first shipped, so older version 3 files may lack it (V3_LATER).
  financial_entries:[['id','text'],['kind','text'],['entry_date','text'],['amount_cents','int'],['category','text'],['note','text'],['receipt','text'],['revision','int'],['created_at','text'],['created_by','text'],['updated_at','text'],['updated_by','text'],['deleted_at','text',true],['deleted_by','text',true]],
+ // Card refund totals and Stripe fees (issue #42). Refund rows are restored with the stripe_events they belong to, so a
+ // restored database still knows each refund and ignores a replay of its event. Added after version 3 first shipped (V3_LATER).
+ payment_refunds:[['id','text'],['order_id','text'],['payment_intent','text'],['charge_id','text',true],['amount_cents','int'],['refunded_cents','int'],['refunded_at','text'],['livemode','int'],['received_at','text']],
+ stripe_fees:[['payment_intent','text'],['order_id','text'],['charge_id','text'],['balance_transaction','text'],['amount_cents','int'],['fee_cents','int'],['net_cents','int'],['charged_at','text'],['livemode','int'],['recorded_at','text']],
  attendance:[['id','text'],['session_key','text'],['session_date','text'],['user_id','text'],['wrestler_id','text'],['wrestler_name','text'],['source','text'],['checked_in_at','text'],['checked_in_by','text']],
  usaw_reviews:[['user_id','text'],['wrestler_id','text'],['number','text'],['expires','text'],['status','text'],['note','text'],['reviewed_by','text'],['reviewed_at','text']],
  // kind (issue #195): waiver, parent_consent or coach_contract. Files made before it have none; see LATER_COLUMNS.
@@ -59,14 +63,14 @@ export const RECORD_TABLES:Record<string,Col[]>={
  removed_coaches:[['id','text'],['email_hash','text'],['email','text',true],['name','text',true],['removed_on','text'],['cleaned_at','text',true]],
 };
 // Tables whose primary key is not a single id column.
-export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
+export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],stripe_fees:['payment_intent'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
 const keysOf=(t:string)=>RECORD_KEYS[t]??['id'];
 // JSON columns must parse to the expected shape, so a damaged or tampered file cannot store data that crashes a page.
 const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[['specialties','array']],orders:[['dates','array'],['pricing','object'],['terms_accepted','object']],waitlist_entries:[['dates','array']],academy_settings:[['payload','object']],waiver_signatures:[['signature_record','object']],announcements:[['audience','object']],coach_time_entries:[['history','array']],coach_time_off:[['programs','array']]};
 const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
 // Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
 // and still restores; a file that has the section is checked like any other.
-const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches'];
+const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees'];
 // Columns added to a version 3 table after it first shipped, with the value an older file's rows mean. A row may leave
 // them out and is restored with that value; a row that has one is checked like any other column. Issue #195: every
 // signed-document version in an older file is a waiver.

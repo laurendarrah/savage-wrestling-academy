@@ -109,19 +109,22 @@ order('newyear', 'event', 9000, {status: 'paid', paid_at: '2026-01-01T04:59:00.0
 
 let r = (await get('?month=' + month)).json();
 const ids = r.lines.map(l => l.id).sort();
-assert.deepEqual(ids, ['installment:evt_inv_2', 'installment:evt_inv_3', 'payment:cash', 'payment:month', 'payment:partial', 'payment:walk', 'payment:year', 'refund:year'],
+assert.deepEqual(ids, ['installment:evt_inv_2', 'installment:evt_inv_3', 'payment:cash', 'payment:month', 'payment:partial', 'payment:walk', 'payment:year', 'refund:evt_partial_refund', 'refund:evt_year_refund'],
   'each payment once; refunds out; nothing unpaid, expired, voided, free or from the other Stripe mode');
 const line = id => r.lines.find(l => l.id === id);
 assert.equal(line('payment:walk').source, 'online'); assert.equal(line('payment:walk').method, 'Card online'); assert.equal(line('payment:walk').category, 'Walk-ins');
 assert.equal(line('payment:cash').source, 'offline'); assert.equal(line('payment:cash').method, 'Cash');
 assert.equal(line('payment:month').description, 'SWA Intermediate monthly membership (payment 1 of 12) · Sam month');
 assert.equal(line('installment:evt_inv_3').description, 'SWA Intermediate monthly membership (payment 3 of 12) · Sam month');
-assert.equal(line('refund:year').type, 'refund'); assert.equal(line('refund:year').amountCents, 240000); assert.equal(line('refund:year').category, 'Refunds');
-assert.equal(line('payment:partial').amountCents, 4000, 'partial refunds are not stored yet, so the payment stands');
+assert.equal(line('refund:evt_year_refund').type, 'refund'); assert.equal(line('refund:evt_year_refund').amountCents, 240000); assert.equal(line('refund:evt_year_refund').category, 'Refunds');
+// Issue #42: a partial refund leaves the payment in full and goes out as its own refund line.
+assert.equal(line('payment:partial').amountCents, 4000, 'the payment came in in full');
+assert.equal(line('refund:evt_partial_refund').amountCents, 1000); assert.match(line('refund:evt_partial_refund').description, /^Partial refund \(\$10\.00 of \$40\.00 refunded so far\): Walk-in practice/);
 assert.ok(r.lines.every(l => Number.isSafeInteger(l.amountCents) && l.amountCents > 0), 'whole, positive cents');
 const income = 4000 + 240000 + 4000 + 20000 * 3 + 5000;
-assert.deepEqual(r.totals, {incomeCents: income, refundsCents: 240000, expensesCents: 0, netCents: income - 240000});
-assert.deepEqual(r.categories.out, [{category: 'Refunds', cents: 240000}]);
+const refunded = 240000 + 1000;
+assert.deepEqual(r.totals, {incomeCents: income, refundsCents: refunded, expensesCents: 0, netCents: income - refunded});
+assert.deepEqual(r.categories.out, [{category: 'Refunds', cents: refunded}]);
 assert.equal(r.categories.in[0].category, 'Memberships, paid in full');
 assert.equal(r.categories.in.reduce((n, c) => n + c.cents, 0), income);
 
@@ -166,8 +169,8 @@ assert.equal(stored.category, 'Rent'); assert.equal(stored.note, 'November rent'
 
 r = (await get('?month=' + month)).json();
 const expenses = 180000 + 34999 + 100;
-assert.deepEqual(r.totals, {incomeCents: income + 25000, refundsCents: 240000, expensesCents: expenses, netCents: income + 25000 - 240000 - expenses});
-assert.deepEqual(r.categories.out.slice(0, 3), [{category: 'Refunds', cents: 240000}, {category: 'Rent', cents: 180000}, {category: 'Equipment', cents: 34999}]);
+assert.deepEqual(r.totals, {incomeCents: income + 25000, refundsCents: refunded, expensesCents: expenses, netCents: income + 25000 - refunded - expenses});
+assert.deepEqual(r.categories.out.slice(0, 3), [{category: 'Refunds', cents: refunded}, {category: 'Rent', cents: 180000}, {category: 'Equipment', cents: 34999}]);
 const rentLine = r.lines.find(l => l.entryId === rent.body.id);
 assert.equal(rentLine.source, 'owner'); assert.equal(rentLine.receipt, 'Check 1042'); assert.equal(rentLine.revision, 1);
 assert.equal(r.months[Number(month.slice(5)) - 1].netCents, r.totals.netCents, 'the month row matches the month');
