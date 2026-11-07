@@ -33,7 +33,7 @@ const programsItem = async () => (await launchChecklist(DB, {}, '2026-11-06')).i
 const nodes = new Map(), node = s => { if (!nodes.has(s)) nodes.set(s, {value: '', style: {}, textContent: '', innerHTML: '', classList: {remove() {}, toggle() {}}, setAttribute() {}}); return nodes.get(s); };
 const location = {hash: '', href: ''}, asked = [];
 let answer = false, puts = 0;
-const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date, JSON, Set, FormData, Promise, location,
+const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date, JSON, Set, FormData, Promise, location, history: {pushState(state, title, url) { location.hash = url.includes('#') ? url.slice(url.indexOf('#')) : ''; }},
   document: {querySelector: node, getElementById: id => ['semesterForm', 'holidayPlanner', 'extraPracticeCalendar'].includes(id) ? null : node('#' + id), addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {},
   confirm: text => { asked.push(text); return answer; },
   fetch: async (url, options) => {
@@ -84,15 +84,19 @@ assert.match(rules, /program==='Elementary'\)return \['K','1','2','3','4','5','6
 assert.match(rules, /program==='Intermediate'\)return \['7','8','9','10','11','12'\]/);
 assert.match(rules, /program==='Advanced'&&\['7','8','9','10','11','12'\]/);
 
-// Every sidebar item is a real page or a real settings editor, and nothing says sample, preview or demo.
-const nav = JSON.parse(run(`page='Dashboard';render();JSON.stringify([...$('#nav').innerHTML.matchAll(/go\\('([^']+)'\\)/g)].map(m=>m[1]))`));
-assert.deepEqual(nav, ['Dashboard', 'Families', 'Roster & check-in', 'Calendar', 'Schedules', 'Camps & events', 'Private lessons', 'Messages', 'Programs & pricing', 'Scholarships', 'Coaches']);
+// Every owner destination (lib/owner-nav.ts, the shell's sidebar, issue #261) is a real page or a real settings editor,
+// and nothing says sample, preview or demo. Sections open on the dashboard, each with its own address.
+const nav = JSON.parse(run('JSON.stringify(W.OWNER_NAV.flatMap(g=>g.items))'));
+assert.equal(nav.length, 30);
 const editors = {Dashboard: /Launch checklist|id="launch"/, Calendar: /PLAN FROM YOUR CALENDAR/, Schedules: /Plan a semester/, 'Camps & events': /YOUR CAMPS &amp; CLINICS|YOUR CAMPS & CLINICS/, 'Programs & pricing': /PROGRAMS &amp; PRICING|PROGRAMS & PRICING/};
-for (const p of nav) {
-  location.href = ''; run(`go(${JSON.stringify(p)})`);
-  if (editors[p]) { assert.equal(location.href, '', p); assert.match(node('#main').innerHTML, editors[p], p); }
-  else { assert.match(location.href, /^\/[a-z-]+$/, p); assert.ok(existsSync(`app${location.href}/route.ts`), `${p} opens ${location.href}, which exists`); }
-  assert.doesNotMatch(node('#main').innerHTML, /sample|preview|simulat|demo\b|fictional/i, p);
+assert.deepEqual(nav.filter(i => i.section).map(i => i.section).sort(), Object.keys(editors).sort());
+for (const item of nav) {
+  location.href = ''; run(`go(${JSON.stringify(item.section || item.label)})`);
+  if (item.section) {
+    assert.equal(location.href, '', item.label); assert.equal(run('page'), item.section); assert.match(node('#main').innerHTML, editors[item.section], item.label);
+    assert.equal(location.hash.split('?')[0], item.href.slice(1), item.label + ' has its own address');
+  } else { assert.equal(location.href, item.href, item.label); assert.ok(existsSync(`app${item.href}/route.ts`), `${item.label} opens ${item.href}, which exists`); }
+  assert.doesNotMatch(node('#main').innerHTML, /sample|preview|simulat|demo\b|fictional/i, item.label);
 }
 // The page and its typed modules (lib/workspace/, issue #45).
 for (const src of [html, workspaceCode]) assert.doesNotMatch(src, /[Ss]ample (data|famil|wrestler|workspace)|Demo|admin-demo|attendance-demo|Simulate|Reset workspace data|Import prior browser edits/);

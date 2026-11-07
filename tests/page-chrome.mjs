@@ -4,9 +4,16 @@ import {readFileSync, existsSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-const module = {exports: {}};
-vm.runInNewContext(ts.transpileModule(readFileSync('lib/page-chrome.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
-  {module, exports: module.exports, URL, Headers, Response, Request});
+// lib/page-chrome.ts and the owner shell it loads (lib/owner-shell.ts, lib/owner-nav.ts), transpiled as the build does.
+const loaded = new Map();
+function load(file) {
+  if (loaded.has(file)) return loaded.get(file);
+  const module = {exports: {}}; loaded.set(file, module.exports);
+  vm.runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
+    {module, exports: module.exports, URL, Headers, Response, Request, require: name => load('lib/' + name.replace('./', '') + '.ts')});
+  return module.exports;
+}
+const module = {exports: load('lib/page-chrome.ts')};
 const {decoratePage, decorateResponse, shouldDecorate, topBar} = module.exports;
 const page = '<!doctype html><html><head><title>X</title></head><body class="a"><main>Hi</main></body></html>';
 

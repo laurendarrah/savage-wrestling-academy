@@ -6,8 +6,11 @@ import * as pricing from './pricing';
 import * as programs from './programs';
 import * as schedule from './schedule';
 import * as settings from './settings';
+// The owner navigation (issue #261): the dashboard draws its tools card and opens its sections from the same list as
+// the owner shell's sidebar.
+import {OWNER_NAV} from '../owner-nav';
 
-const SwaWorkspace = {...programs, ...settings, ...schedule, ...events, ...pricing};
+const SwaWorkspace = {...programs, ...settings, ...schedule, ...events, ...pricing, OWNER_NAV};
 export type Workspace = typeof SwaWorkspace;
 
 (globalThis as typeof globalThis & {SwaWorkspace: Workspace}).SwaWorkspace = SwaWorkspace;

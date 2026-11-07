@@ -118,7 +118,7 @@ await step('on a fresh site the owner publishes the programs with one click', as
   await pub.goto(BASE + '/welcome'); await waitText(pub, '#programs', /listed here soon/);
   await owner.waitForSelector('[data-launch="programs"][data-status="todo"]');
   expect(!(await owner.isVisible('text=Preview what families see')), 'the sample preview menu is gone');
-  expect(await owner.isVisible('nav.family-links a[href="/welcome"]') && await owner.isVisible('nav.family-links a[href="/calendar"]'), 'header links to what families see');
+  expect(await owner.isVisible('.os-top nav.os-family a[href="/welcome"]') && await owner.isVisible('.os-top nav.os-family a[href="/calendar"]'), 'header links to what families see');
   await owner.click('#launch button:has-text("Publish the programs")');
   await waitText(owner, '#syncStatus', /All changes saved/);
   await owner.waitForSelector('[data-launch="programs"][data-status="done"]', {state: 'attached'});
@@ -1130,6 +1130,77 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   await owner.goto(BASE + '/site-health'); await waitText(owner, '#now', /Site and database are answering/);
   // Email is not set up locally: the page says so instead of promising alerts (issues #47, #35).
   await waitText(owner, '#emailOff', /Email isn’t set up yet, so families aren’t getting emails/); expect(await owner.isVisible('#emailOff'), 'email-off notice on site health');
+});
+// ---------- One owner shell (issue #261): the sidebar and header stay, only the middle changes ----------
+// What the shell looks like on a page: one sidebar and header, where they sit, what is marked, and the sidebar's links.
+const shellState = page => page.evaluate(() => {
+  const side = document.querySelector('.os-side'), top = document.querySelector('.os-top');
+  const box = e => { const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round).join(','); };
+  return {sides: document.querySelectorAll('.os-side').length, tops: document.querySelectorAll('.os-top').length, side: box(side), top: box(top),
+    current: [...document.querySelectorAll('.os-nav [aria-current="page"]')].map(a => a.getAttribute('href')).join(' '), crumb: document.querySelector('#swa-os-crumb')?.textContent,
+    h1: document.querySelector('main h1')?.textContent.trim(), focused: document.activeElement?.tagName, open: document.body.classList.contains('os-open'),
+    names: getComputedStyle(side).viewTransitionName + ' ' + getComputedStyle(top).viewTransitionName, links: side.querySelector('.os-nav').innerHTML.replace(/ aria-current="page"/g, ''),
+    stayed: window.__swaStayed === true, over: document.documentElement.scrollWidth - innerWidth};
+});
+await step('owner moves through the owner shell with the sidebar: dashboard, Payments, Income and expenses, a dashboard section', async () => {
+  for (const viewport of [{width: 1280, height: 860}, {width: 390, height: 844}]) {
+    const page = await as('owner', viewport), phone = viewport.width < 500, tag = phone ? 'phone' : 'desktop';
+    // Whether the browser ran a cross-document View Transition into each page.
+    await page.addInitScript(() => addEventListener('pagereveal', e => {
+      window.__swaTransition = !!e.viewTransition; window.__swaSettled = !e.viewTransition;
+      e.viewTransition?.finished.catch(() => {}).finally(() => { window.__swaSettled = true; });
+    }));
+    await page.goto(BASE + '/'); await waitText(page, 'main h1', /KEEP THE ACADEMY MOVING/);
+    const first = await shellState(page);
+    expect(first.sides === 1 && first.tops === 1 && first.current === '/', `${tag}: the dashboard has one shell with Dashboard marked: ` + JSON.stringify(first).slice(0, 200));
+    expect(first.names === 'swa-owner-side swa-owner-top', `${tag}: the sidebar and header are named for View Transitions: ${first.names}`);
+    // Opens a sidebar item (through the Menu drawer on a phone) and checks that only the middle changed.
+    const open = async (href, url, heading, crumb, samePage = false, prefetch = false) => {
+      if (phone) {
+        await page.click('#swa-os-menu');
+        await page.waitForFunction(() => document.body.classList.contains('os-open') && getComputedStyle(document.querySelector('.os-side')).visibility === 'visible');
+        expect(await page.getAttribute('#swa-os-menu', 'aria-expanded') === 'true' && await page.getAttribute('#swa-os-side', 'aria-modal') === 'true', `${tag}: the drawer is open as a dialog`);
+        expect(await page.evaluate(() => document.querySelector('.os-side').contains(document.activeElement)), `${tag}: focus moved into the drawer`);
+      }
+      if (samePage) await page.evaluate(() => { window.__swaStayed = true; });
+      // Hovering an owner link prefetches its page (Speculation Rules), and the click then uses it.
+      if (prefetch) await Promise.all([page.waitForRequest(r => r.url() === BASE + href && r.headers()['sec-purpose'] === 'prefetch', {timeout: 5000}), page.hover(`.os-nav a[href="${href}"]`)]);
+      await page.click(`.os-nav a[href="${href}"]`);
+      await page.waitForURL(url); await waitText(page, 'main h1', heading);
+      await page.waitForFunction(h => document.querySelector('.os-nav [aria-current="page"]')?.getAttribute('href') === h, href);
+      const s = await shellState(page);
+      expect(s.sides === 1 && s.tops === 1, `${tag} ${href}: one sidebar and one header`);
+      expect(s.current === href, `${tag} ${href}: the current item is ${s.current}`);
+      expect(s.crumb === crumb, `${tag} ${href}: the breadcrumb says ${s.crumb}`);
+      expect(s.links === first.links, `${tag} ${href}: the same sidebar`);
+      expect(s.top === first.top && (phone || s.side === first.side), `${tag} ${href}: the header${phone ? '' : ' and sidebar'} stayed where they were (${s.top} / ${first.top})`);
+      await page.waitForFunction(() => document.activeElement?.matches('main h1'), null, {timeout: 5000}).catch(() => {});
+      expect((await shellState(page)).focused === 'H1', `${tag} ${href}: focus moved to the page heading`);
+      expect(!s.open, `${tag} ${href}: the drawer closed`);
+      expect(s.over <= 1, `${tag} ${href}: scrolls sideways by ${s.over}px`);
+      if (samePage) expect(s.stayed, `${tag} ${href}: the dashboard section opened without loading the page again`);
+      else expect(await page.evaluate(() => window.__swaTransition), `${tag} ${href}: the page opened with a View Transition`);
+      if (prefetch) expect(await page.evaluate(() => performance.getEntriesByType('navigation')[0].deliveryType) === 'navigational-prefetch', `${tag} ${href}: the hovered page came from the prefetch`);
+      // Screenshots wait for the cross-fade and the drawer's slide to finish.
+      await page.waitForFunction(() => window.__swaSettled !== false && getComputedStyle(document.querySelector('.os-side')).visibility === (innerWidth > 900 ? 'visible' : 'hidden'));
+      await shot(page, `shell-${tag}-${href.replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '') || 'dashboard'}`);
+    };
+    await open('/payments', /\/payments$/, /^Payments$/, 'Every day / Payments');
+    await open('/financials', /\/financials$/, /^Income and expenses$/, 'Money / Income & expenses', false, !phone);
+    await open('/#programs', /\/#programs$/, /PROGRAMS & PRICING/, 'Schedule & programs / Programs & pricing');
+    await open('/#events', /\/#events$/, /CAMPS & CLINICS/, 'Schedule & programs / Camps & events', true);
+    await open('/', /\/$/, /KEEP THE ACADEMY MOVING/, 'Dashboard', true);
+    if (phone) {
+      // Escape closes the drawer and puts focus back on Menu.
+      await page.click('#swa-os-menu'); await page.waitForFunction(() => document.body.classList.contains('os-open'));
+      await page.keyboard.press('Escape');
+      expect(!(await page.evaluate(() => document.body.classList.contains('os-open'))) && await page.evaluate(() => document.activeElement?.id) === 'swa-os-menu', 'Escape closes the drawer');
+    }
+    await page.context().close();
+  }
+  // Coaches keep their own pages: no owner shell on the roster they share with the owner.
+  await coach.goto(BASE + '/roster'); await coach.waitForSelector('main h1');
+  expect(!(await coach.$('.os-side')) && !!(await coach.$('.swa-bar')), 'a coach sees the roster without the owner shell');
 });
 // Signed documents: Sam's waiver and Parent Consent Form, and the coach's contract (issue #195).
 await step('backup export includes payments and signed waivers', async () => {

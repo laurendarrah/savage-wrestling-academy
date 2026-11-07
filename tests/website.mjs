@@ -263,6 +263,6 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   assert.doesNotMatch(src, /type="color"|type="file"|type="url"|<img|\['(?:photo|image)'/i,'no colour editor, uploads or image links');
 }
 
-// The owner dashboard links to the editor.
-assert.match(readFileSync('app/portal.html', 'utf8'), /\['\/website','Public website'\]/);
+// The owner navigation (the shell's sidebar and the dashboard's tools, issue #261) links to the editor.
+assert.match(readFileSync('lib/owner-nav.ts', 'utf8'), /\{href: '\/website', label: 'Public website'\}/);
 console.log('Website tests passed: validation, escaping, empty sections hidden, coaches without phone or email, owner-only editing, publish and conflicts, SEO from appOrigin(), editor script');
