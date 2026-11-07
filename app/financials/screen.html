@@ -82,8 +82,9 @@ function chartSvg(months,selected,width){
 // Ranked bars, largest first, one colour per side. Text stays in ink; the bar carries the colour.
 function categoryBars(list,empty){if(!list.length)return `<p class="muted">${esc(empty)}</p>`;const max=list[0].cents;return list.map(c=>`<div class="catrow"><span>${esc(c.category)}</span><b>${money(c.cents)}</b><span class="bar" aria-hidden="true"><span style="width:${Math.max(1,Math.round(c.cents/max*100))}%"></span></span></div>`).join('')}
 const FROM={online:'Card payment',offline:'Offline payment',owner:'Entered by you'};
+// An offline payment says who collected it (issue #250): "Cash · Collected by Coach Dana".
 function lineRow(l){
- const out=l.type!=='income',from=l.type==='refund'?'Refund':FROM[l.source]||'',how=l.source==='owner'?(l.receipt?'Receipt: '+l.receipt:''):l.method;
+ const out=l.type!=='income',from=l.type==='refund'?'Refund':FROM[l.source]||'',how=l.source==='owner'?(l.receipt?'Receipt: '+l.receipt:''):l.method+(l.collectedBy?' · Collected by '+l.collectedBy:'');
  const what=(l.source==='owner'?(l.note?esc(l.note):'<span class="muted">No note</span>'):esc(l.description))+(how?`<br><span class="muted small">${esc(how)}</span>`:'')+`<span class="narrow muted small">${esc(l.category)} · ${esc(from)}</span>`;
  const change=l.entryId?`<div class="actions"><button type="button" data-edit="${esc(l.entryId)}" aria-label="Edit ${esc(l.category)} on ${esc(longDate(l.date))}">Edit</button><button type="button" data-delete="${esc(l.entryId)}" aria-label="Delete ${esc(l.category)} on ${esc(longDate(l.date))}">Delete</button></div>`:'';
  return `<tr><td>${esc(shortDate(l.date))}</td><td>${what}</td><td class="wide">${esc(l.category)}</td><td class="wide">${esc(from)}</td><td class="right${out?' neg':''}">${out?minus(l.amountCents):money(l.amountCents)}</td><td>${change}</td></tr>`;

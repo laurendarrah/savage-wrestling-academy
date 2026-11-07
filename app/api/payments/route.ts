@@ -6,6 +6,7 @@ import {rateLimited} from '../../../lib/rate-limit';
 import {findFamilies} from '../../../lib/family-search';
 import {pageSize} from '../../../lib/paging';
 import {unpaidCashBookings, receiveCash, cancelByOwner} from '../../../lib/cash-bookings';
+import {ownerCollector} from '../../../lib/collectors';
 export const dynamic = 'force-dynamic';
 const FAMILY_PICKER = 50;
 
@@ -20,7 +21,8 @@ export async function GET(request: Request) {
   }
   // Walk-ins and extra practices booked to pay cash at the academy and not paid yet (issue #248), to follow up or cancel.
   if (q.get('cash') === 'due') return reply(await unpaidCashBookings());
-  const filters = {from: q.get('from') ?? undefined, to: q.get('to') ?? undefined, status: q.get('status') ?? undefined, kind: q.get('kind') ?? undefined, source: q.get('source') ?? undefined};
+  const filters = {from: q.get('from') ?? undefined, to: q.get('to') ?? undefined, status: q.get('status') ?? undefined, kind: q.get('kind') ?? undefined, source: q.get('source') ?? undefined,
+    collector: q.get('collector') ?? undefined};
   // The spreadsheet has every matching payment, read in batches.
   if (q.get('format') === 'csv') {
     const rows = [];
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
     return r.status === 200 ? reply({ok: true}) : reply({error: r.error}, r.status);
   }
   if (input?.action === 'cash-received') {
-    const r = await receiveCash(input.bookingId, {id: auth.owner.userId, name: 'Owner', email: null}, {role: 'owner'});
+    const r = await receiveCash(input.bookingId, ownerCollector(auth.owner.userId), {role: 'owner'});
     return r.status === 200 ? reply({ok: true, orderId: r.orderId}) : reply({error: r.error}, r.status);
   }
   if (input?.action === 'cash-cancel') {

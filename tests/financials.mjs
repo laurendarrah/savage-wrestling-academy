@@ -204,7 +204,7 @@ assert.deepEqual(log, ['ledger_entry_added', 'ledger_entry_added', 'ledger_entry
 const csv = await get('?format=csv&month=' + month);
 assert.match(csv.type, /text\/csv/);
 const rows = csv.text.trim().split('\r\n');
-assert.equal(rows[0], 'Date,Type,From,Category,Description,Paid by,Money in,Money out,Receipt reference');
+assert.equal(rows[0], 'Date,Type,From,Category,Description,Paid by,Money in,Money out,Receipt reference,Collected by');
 r = (await get('?month=' + month)).json();
 assert.equal(rows.length, 1 + r.lines.length, 'one row per line in the books');
 const cents = s => s ? Math.round(Number(s) * 100) : 0, cells = l => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(c => c.replace(/,$/, ''));

@@ -168,7 +168,7 @@ as({kind: 'owner', id: 'owner-id'});
 let list = (await getJson(payApi, '/api/payments?kind=walkin&source=offline')).body;
 assert.equal(list.totals.offlineCents, 4000); assert.equal(list.totals.count, 1); assert.equal(list.payments[0].method, 'cash'); assert.equal(list.payments[0].wrestler, 'Jo One');
 const csv = (await getJson(payApi, '/api/payments?format=csv&source=offline')).body;
-assert.equal(csv.split('\r\n').filter(l => l.includes('Jo One') && l.includes(',cash,walkin,')).length, 1, 'one spreadsheet line');
+assert.equal(csv.split('\r\n').filter(l => l.includes('Jo One') && l.includes(',cash,Coach Dana,walkin,')).length, 1, 'one spreadsheet line, with who collected it');
 let ledger = (await financials.ledgerLines(ny(-1), ny(1))).filter(l => l.source === 'offline' && l.type === 'income');
 assert.equal(ledger.length, 1); assert.equal(ledger[0].amountCents, 4000); assert.equal(ledger[0].category, 'Walk-ins'); assert.equal(ledger[0].method, 'Cash');
 
@@ -215,7 +215,7 @@ assert.equal((await send(load('app/api/registration/route.ts'), '/api/registrati
 // The roster for that evening (the owner; coaches see program practices only).
 e = await entry(tomorrow, 'live:fnl:', 'Jo One');
 assert.equal(e.cash.status, 'due'); assert.equal(e.cash.cents, 2000); same(e.sources, ['Pay at the academy']);
-assert.equal((await cash.receiveCash(bLive, {id: 'coach-1', name: 'Coach Dana', email: 'dana@example.test'}, {role: 'coach', programs: ['Intermediate']}, tomorrow)).status, 403, 'coaches do not see extra practices');
+assert.equal((await cash.receiveCash(bLive, {id: 'coach-1', name: 'Coach Dana', email: 'dana@example.test'}, {role: 'coach', programs: ['Intermediate']})).status, 403, 'coaches: extra practices on the day only (issue #250)');
 as({kind: 'owner', id: 'owner-id'});
 r = await send(rosterApi, '/api/roster', {action: 'cash', date: tomorrow, bookingId: bLive4});
 assert.equal(r.status, 200, 'the owner records Friday Night Live cash at check-in');

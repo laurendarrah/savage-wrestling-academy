@@ -398,7 +398,7 @@ await step('family books today\'s walk-in to pay cash; the coach sees $40 due an
   await coach.goto(BASE + '/roster'); await at(coach, '#sessions', /Sam Example[\s\S]*Pay at the academy · \$40\.00 due/);
   await coach.locator('.row', {hasText: 'Sam Example'}).first().locator('[data-cash]').click();
   await at(coach, '#status', /Cash received: \$40\.00 for Sam Example/);
-  await at(coach, '#sessions', /Sam Example[\s\S]*Walk-in paid[\s\S]*Cash received/);
+  await at(coach, '#sessions', /Sam Example[\s\S]*Walk-in paid[\s\S]*Received by Coach Dana/);
   await shot(coach, 'roster-cash-received');
   await openPayments(owner);
   await at(owner, '#rows', /Sam Example[\s\S]*SWA Intermediate walk-in[\s\S]*Cash[\s\S]*\$40\.00/);
@@ -457,6 +457,50 @@ await step('a coach sees today\'s roster for their program only and can check in
   expect(!/SWA Development|SWA Advance/.test(t), 'coach sees other programs');
   expect(!/family\.a@example\.test/.test(t), 'coach must not see family emails');
   expect(/Sam Example[\s\S]*No allergies or medical notes[\s\S]*Emergency contact: Jordan Emergency/.test(t), 'a coach sees allergies and the emergency contact for their program');
+});
+
+// ---------- Coaches collect cash for extra practices too, and the site shows who received it (issue #250) ----------
+await step('a coach records Friday Night Live cash; the owner sees Collected by Coach Dana; the family sees paid in cash', async () => {
+  // Friday Night Live runs today for this step only; it goes back to its usual date at the end.
+  const saveFnl = async dates => {
+    const got = await api(owner, '/api/academy');
+    const data = {...got.body.data, extraPractices: got.body.data.extraPractices.map(x => x.id === 'fnl' ? {...x, dates} : x)};
+    const r = await owner.evaluate(async ([s, rev]) => { const x = await fetch('/api/academy', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision: rev, data: s})}); return {status: x.status, body: await x.json()}; }, [data, got.body.revision]);
+    expect(r.status === 200, 'saving Friday Night Live: ' + JSON.stringify(r.body));
+  };
+  await saveFnl([today, ny(2)]);
+  try {
+    const booked = await api(family, '/api/cash-bookings', {action: 'book', source: 'booking', type: 'live', id: 'fnl', date: today, wrestlerId: samId});
+    expect(booked.status === 200 && booked.body.booking.amountCents === 1000, 'Sam books Friday Night Live at the member price to pay cash: ' + JSON.stringify(booked.body));
+    // Coach Dana coaches SWA Intermediate only, and Friday Night Live belongs to no program: she sees it anyway.
+    await coach.goto(BASE + '/roster'); await at(coach, '#sessions', /Friday Night Live[\s\S]*Sam Example[\s\S]*Pay at the academy · \$10\.00 due/);
+    await coach.locator('.session', {hasText: 'Friday Night Live'}).locator('.row', {hasText: 'Sam Example'}).locator('[data-cash]').click();
+    await at(coach, '#status', /Cash received: \$10\.00 for Sam Example/);
+    await at(coach, '#sessions', /Friday Night Live[\s\S]*Sam Example[\s\S]*Received by Coach Dana · \d{1,2}:\d{2} [AP]M[\s\S]*Only the owner can undo cash/);
+    await shot(coach, 'roster-fnl-cash-received');
+    const paid = (await api(coach, '/api/roster')).body.sessions.find(x => x.type === 'live').entries.find(x => x.name === 'Sam Example').cash;
+    expect(paid.status === 'paid' && paid.collectedBy === 'Coach Dana', 'the roster says Coach Dana received it: ' + JSON.stringify(paid));
+    const undo = await api(coach, '/api/roster', {action: 'cash-undo', date: today, orderId: paid.orderId});
+    expect(undo.status === 403, 'only the owner can undo cash: ' + JSON.stringify(undo.body));
+    // The owner sees who collected it: the Payments list, the per-coach total for today, the filter and the spreadsheet.
+    await openPayments(owner);
+    await at(owner, '#rows', /Sam Example[\s\S]*Friday Night Live[\s\S]*Cash[\s\S]*Coach Dana/);
+    await owner.click('#today'); await at(owner, '#byCollector', /Coach Dana[\s\S]*\$50\.00 cash · 2 payments/);
+    await owner.selectOption('#fCollector', {label: 'Coach Dana'});
+    await owner.waitForFunction(() => [...document.querySelectorAll('#rows tr')].every(tr => /Coach Dana/.test(tr.textContent)) && document.querySelectorAll('#rows tr').length === 2);
+    await at(owner, '#tOffline', /\$50\.00/);
+    await at(owner, '#collectedRows', /Sam Example[\s\S]*Friday Night Live[\s\S]*Coach Dana/);
+    await shot(owner, 'payments-collected-by');
+    const csv = await owner.evaluate(async () => (await fetch(document.querySelector('#csv').href)).text());
+    expect(/^Paid on,Status,Paid via,Method,Collected by,/.test(csv) && /,cash,Coach Dana,live,/.test(csv) && !/coach\.dana@example\.test/.test(csv), 'the spreadsheet has Collected by: ' + csv.slice(0, 200));
+    const books = await api(owner, '/api/financials');
+    expect(books.body.lines.some(l => /Friday Night Live/.test(l.description) && l.collectedBy === 'Coach Dana'), 'Income and expenses shows who collected it');
+    // The family sees it was paid in cash at the academy, not who took it.
+    await family.goto(BASE + '/family'); await at(family, '#purchaseList', /Friday Night Live[\s\S]*Paid in cash at the academy on/);
+    expect(!/Coach Dana/.test(await text(family, '#purchaseList')), 'the family is not told which coach took the cash');
+  } finally {
+    await saveFnl([ny(2)]);
+  }
 });
 
 // ---------- Private lessons ----------

@@ -47,6 +47,16 @@ export function academyDay(at: string | number | Date): string {
   return new Intl.DateTimeFormat('en-CA', {timeZone: ACADEMY_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit'}).format(toDate(at));
 }
 
+// The instant a New York calendar day starts, as an ISO string: midnight is 04:00 UTC in summer time, 05:00 UTC otherwise
+// (clocks change at 2 AM, so midnight is always one or the other). Used to filter stored UTC instants by academy day, so
+// cash taken at a 7 PM practice counts on that day, not the next UTC day (issue #250).
+export function academyDayStart(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const at = (h: number) => new Date(Date.UTC(y, m - 1, d, h));
+  const hour = Number(new Intl.DateTimeFormat('en-US', {timeZone: ACADEMY_TIME_ZONE, hour: '2-digit', hourCycle: 'h23'}).format(at(4)));
+  return (hour === 0 ? at(4) : at(5)).toISOString();
+}
+
 // An instant -> "Mon, Nov 9 · 3:00 PM" in New York time. The year is added when it is not the current year.
 export function when(at: string | number | Date, now: Date = new Date()): string {
   const d = toDate(at);
