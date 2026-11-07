@@ -14,13 +14,16 @@ import {familyProfile} from './program-approval';
 import {securityEvent} from './security-events';
 
 export type LessonSettings = {prices: Record<string, number | null>; splits: Record<string, number>; defaultSplit: number | null};
-const EMPTY: LessonSettings = {prices: {}, splits: {}, defaultSplit: null};
+// Justin's decision on #197 (Q2): a lesson pays the coach 65% by default, for every lesson type. A share set for one
+// coach on /lesson-settings replaces it for that coach; clearing the default field goes back to 65%.
+export const DEFAULT_LESSON_SHARE = 65;
+const EMPTY: LessonSettings = {prices: {}, splits: {}, defaultSplit: DEFAULT_LESSON_SHARE};
 
 export async function lessonSettings(): Promise<LessonSettings> {
   const row = await env.DB!.prepare("SELECT payload FROM academy_settings WHERE id='lessons'").first<{payload: string}>();
   if (!row) return {...EMPTY, prices: {}, splits: {}};
   const p = JSON.parse(row.payload);
-  return {prices: p.prices ?? {}, splits: p.splits ?? {}, defaultSplit: p.defaultSplit ?? null};
+  return {prices: p.prices ?? {}, splits: p.splits ?? {}, defaultSplit: p.defaultSplit ?? DEFAULT_LESSON_SHARE};
 }
 
 const cents = (v: unknown) => v === null || v === '' || v === undefined ? null : Number.isSafeInteger(v) && (v as number) >= 50 && (v as number) <= 100000 ? v as number : undefined;

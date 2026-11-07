@@ -48,16 +48,20 @@ export const RECORD_TABLES:Record<string,Col[]>={
  // Coach profiles (issue #190). Added after version 3 first shipped, so older version 3 files may lack it (V3_LATER).
  coach_profiles:[['email','text'],['display_name','text'],['bio','text',false,2000],['specialties','text',false,2000],['phone','text'],['photo_key','text',true],['updated_at','text'],['updated_by','text']],
  data_requests:[['id','text'],['user_id','text'],['email','text'],['kind','text'],['note','text',false,2000],['status','text'],['created_at','text'],['resolved_at','text',true],['resolved_by','text',true],['resolution','text',true,2000]],
+ // Coach timesheets and time off (issue #193). Added after version 3 first shipped (V3_LATER). Restoring never changes
+ // an existing shift or request, so an approved month cannot be altered from a file.
+ coach_time_entries:[['id','text'],['user_id','text'],['coach_email','text'],['coach_name','text'],['work_date','text'],['session_key','text',true],['session_title','text',true],['session_start','text',true],['session_end','text',true],['duty','text'],['source','text'],['clock_in','text'],['clock_out','text',true],['fixed_in','text',true],['fixed_out','text',true],['coach_note','text',true],['submitted_at','text',true],['owner_minutes','int',true],['owner_duty','text',true],['owner_note','text',true],['approved_at','text',true],['approved_by','text',true],['approved_minutes','int',true],['approved_duty','text',true],['approved_rate_cents','int',true],['approved_cents','int',true],['voided_at','text',true],['voided_by','text',true],['void_reason','text',true],['history','text',false,BIG],['revision','int'],['created_at','text']],
+ coach_time_off:[['id','text'],['user_id','text'],['coach_email','text'],['coach_name','text'],['start_date','text'],['end_date','text'],['reason','text'],['status','text'],['programs','text'],['requested_at','text'],['decided_at','text',true],['decided_by','text',true],['decision_note','text',true],['revision','int']],
 };
 // Tables whose primary key is not a single id column.
 export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
 const keysOf=(t:string)=>RECORD_KEYS[t]??['id'];
 // JSON columns must parse to the expected shape, so a damaged or tampered file cannot store data that crashes a page.
-const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[['specialties','array']],orders:[['dates','array'],['pricing','object'],['terms_accepted','object']],waitlist_entries:[['dates','array']],academy_settings:[['payload','object']],waiver_signatures:[['signature_record','object']],announcements:[['audience','object']]};
+const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[['specialties','array']],orders:[['dates','array'],['pricing','object'],['terms_accepted','object']],waitlist_entries:[['dates','array']],academy_settings:[['payload','object']],waiver_signatures:[['signature_record','object']],announcements:[['audience','object']],coach_time_entries:[['history','array']],coach_time_off:[['programs','array']]};
 const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
 // Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
 // and still restores; a file that has the section is checked like any other.
-const V3_LATER=['coach_profiles','financial_entries'];
+const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off'];
 const V2_TABLES=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
 const ARCHIVE_COLS:Col[]=[['id','text'],['actor','text'],['action','text'],['target','text',false,2000],['created_at','text']];
 const ROW_LIMIT=20000,ARCHIVE_LIMIT=20000,EXPORT_LIMIT=12000000;

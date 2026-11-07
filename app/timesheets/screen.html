@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach hours | Savage Wrestling Academy</title><style>
+*{box-sizing:border-box}body{font:16px Arial,sans-serif;line-height:1.5;background:#f5f5f6;color:#18191c;margin:0}main{max-width:1000px;margin:auto;padding:20px 16px 60px}
+h1{line-height:1.15;margin:12px 0 4px}h2{margin:0 0 6px;font-size:20px}h3{margin:0;font-size:17px}a{color:#a92330}section{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;margin:18px 0}
+.muted{color:#626672}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{display:flex;flex-direction:column;font-weight:bold;font-size:14px;gap:4px}
+input,button,select{font:inherit}input,select{padding:9px;border:1px solid #ccc;border-radius:6px;font-weight:normal}
+button,a.button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#18191c;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}.primary{background:#c4222c;color:#fff;border-color:#c4222c}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}.tile{background:#fff;border:1px solid #ddd;border-radius:10px;padding:14px}.tile b{display:block;font-size:22px}
+.month-nav{display:flex;align-items:center;gap:6px}.month-nav b{min-width:9ch;text-align:center}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;align-items:baseline}
+.badge{display:inline-block;background:#eef0f2;color:#18191c}.badge.submitted{background:#141416;color:#fff}.badge.approved{background:#e6f2ea;color:#1f6f3a}.badge.open,.badge.not-submitted{background:#fdecee;color:#a11b24}
+.breakdown{margin:10px 0;padding:0;list-style:none}.breakdown li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #eef0f2;font-variant-numeric:tabular-nums}
+.shift{border:1px solid #e4e6ea;border-radius:10px;padding:12px 14px;margin:10px 0}.shift.voided{opacity:.6}.shift.voided .what{text-decoration:line-through}.shift p{margin:3px 0}
+.flags{margin:8px 0 0;padding:8px 12px 8px 28px;background:#fff7e6;border-radius:8px;color:#5c3b00;font-size:15px}.flags li+li{margin-top:4px}
+details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:#a92330}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;margin-top:8px}.form .wide{grid-column:1/-1}
+.history{margin:6px 0 0;padding-left:20px;font-size:14px;color:#626672}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+.warn{background:#fff7e6;border:1px solid #f0d49c;border-radius:8px;padding:10px 12px}
+.off{border-top:1px solid #eee;padding:14px 0}.off:first-of-type{border-top:0}.off p{margin:3px 0}.cover{margin:6px 0 0;padding-left:20px}.cover li{margin:2px 0}
+#status{font-weight:bold;min-height:1.5em}[hidden]{display:none!important}@media print{.row,a,button,details{display:none}section{border:0}}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main>
+<a href="/">← Owner dashboard</a>
+<h1>Coach hours</h1>
+<p>Review each coach’s month after they send it, fix anything with a reason, approve it, and download the month’s hours with lesson shares. Practices are paid for the scheduled practice time only, at the rate for the role the coach worked.</p>
+<section><div class="row"><div class="month-nav"><button type="button" id="prev" aria-label="Previous month">←</button><b id="monthLabel">–</b><button type="button" id="next" aria-label="Next month">→</button></div>
+<label>Coach<select id="coach"><option value="">All coaches</option></select></label>
+<a class="button" id="csv" href="#">Download hours (CSV)</a></div>
+<p class="muted" id="rates"></p>
+<p class="muted">The file lists hours and amounts only. It does not work out overtime or tax withholding, because whether coaches are employees or contractors has not been decided yet. Practice lines are approved shifts only; private lesson shares come from the <a href="/coach-pay">coach pay report</a>.</p></section>
+<p id="status" role="status" aria-live="polite">Loading…</p>
+<div class="tiles"><div class="tile"><span class="muted">Paid practice time</span><b id="tMinutes">–</b></div><div class="tile"><span class="muted">Practice amount</span><b id="tPractice">–</b></div><div class="tile"><span class="muted">Lesson shares</span><b id="tLessons">–</b></div><div class="tile"><span class="muted">Waiting for you</span><b id="tWaiting">–</b></div></div>
+<section id="offBox" aria-labelledby="offTitle"><h2 id="offTitle">Time off</h2><p class="muted">When you approve, the other coaches in the same programs get a notice (without the reason), and the coach’s practices and lessons in those dates are listed here for cover. Nothing is cancelled.</p><div id="offPending"></div><h3 id="coverTitle">Needs cover</h3><div id="offApproved"></div></section>
+<div id="coaches"></div></main>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1]%12||12)+':'+m[2]+' '+(+m[1]<12?'AM':'PM'):''};
+const money=c=>c===null||c===undefined?'—':'$'+(c/100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const span=m=>{const h=Math.floor(m/60),r=m%60;return h&&r?h+' h '+r+' min':h?h+' h':r+' min'};
+const dayText=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
+const atText=iso=>new Date(iso).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const PROGRAMS={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
+async function call(body,query=''){const r=await fetch('/api/timesheets'+query,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
+const STATE={empty:'No shifts','not-submitted':'Not sent yet',submitted:'Sent, waiting for you',approved:'Approved'};
+const BADGE={open:'Clocked in',draft:'Not sent',submitted:'Sent',approved:'Approved',voided:'Void'};
+function shiftHtml(s){
+ const what=(s.session?esc(s.session.title)+' · '+esc(clock(s.session.start))+'–'+esc(clock(s.session.end)):'No scheduled practice')+' · '+esc(s.dutyLabel);
+ const worked=s.outTime?'Clocked '+esc(clock(s.inTime))+' – '+esc(clock(s.outTime))+' ('+esc(span(s.clockedMinutes))+')':'Clocked in at '+esc(clock(s.inTime))+', no clock-out yet';
+ const paid=s.status==='voided'?'Void: '+esc(s.voidReason||''):'Paid '+esc(span(s.paidMinutes))+' at '+esc(money(s.rateCents))+' an hour · '+esc(money(s.amountCents))+(s.ownerSet?' · set by you: '+esc(s.ownerSet.note||''):'');
+ const fixable=s.status==='submitted'||s.status==='draft',h=Math.floor(s.paidMinutes/60),m=s.paidMinutes%60;
+ const correct=fixable?`<details><summary>Correct</summary><div class="form"><label>Hours<select id="h-${esc(s.id)}">${Array.from({length:13},(_,i)=>`<option${i===h?' selected':''}>${i}</option>`).join('')}</select></label><label>Minutes<select id="m-${esc(s.id)}">${Array.from({length:12},(_,i)=>i*5).concat(m%5?[m]:[]).sort((a,b)=>a-b).map(i=>`<option${i===m?' selected':''}>${i}</option>`).join('')}</select></label><label>Role<select id="d-${esc(s.id)}"><option value="head"${s.duty==='head'?' selected':''}>Head coach</option><option value="assistant"${s.duty==='assistant'?' selected':''}>Assistant coach</option></select></label><label class="wide">Reason<input id="r-${esc(s.id)}" maxlength="300"></label></div><div class="actions"><button type="button" class="primary" data-correct="${esc(s.id)}" data-rev="${s.revision}">Save correction</button></div></details>`:'';
+ const voidBox=s.status!=='voided'&&s.status!=='approved'?`<details><summary>Void this shift</summary><div class="form"><label class="wide">Reason<input id="v-${esc(s.id)}" maxlength="300" placeholder="For example: a test punch"></label></div><div class="actions"><button type="button" data-void="${esc(s.id)}" data-rev="${s.revision}">Void shift</button></div></details>`:'';
+ const hist=(s.history||[]).length>1?`<details><summary>History</summary><ul class="history">${s.history.map(x=>`<li>${esc(atText(x.at))}: ${esc(x.by==='owner'?'You':'Coach')} ${esc(x.action)}${x.from?' ('+esc(x.from)+' → '+esc(x.to)+')':''}${x.note?' · '+esc(x.note):''}</li>`).join('')}</ul></details>`:'';
+ return `<article class="shift ${esc(s.status)}"><div class="head"><h3>${esc(dayText(s.date))}</h3><span class="badge ${esc(s.status)}">${BADGE[s.status]||esc(s.status)}</span></div><p class="what">${what}</p><p>${worked}</p><p><b>${paid}</b></p>${s.flags&&s.flags.length&&s.status!=='voided'?'<ul class="flags">'+s.flags.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>':''}${correct}${voidBox}${hist}</article>`}
+function coachHtml(c,month,label){
+ const t=c.totals,approvedCents=c.shifts.filter(s=>s.status==='approved').reduce((n,s)=>n+s.amountCents,0);
+ const lessons=c.lessons?` · Private lessons: ${c.lessons.lessons}, share ${money(c.lessons.owedCents)}${c.lessons.splitPct===null?' (no share set)':' at '+c.lessons.splitPct+'%'}`:'';
+ const approve=c.state==='submitted'?`<button type="button" class="primary" data-approve="${esc(c.email)}">Approve ${esc(c.name)}’s ${esc(label)} (${esc(money(t.amountCents))})</button>`:'';
+ const undo=t.approved?`<details><summary>Undo the approval</summary><div class="form"><label class="wide">Reason<input id="u-${esc(c.email)}" maxlength="300"></label></div><div class="actions"><button type="button" data-unapprove="${esc(c.email)}">Undo approval</button></div></details>`:'';
+ const waiting=c.state==='not-submitted'?`<p class="warn">${esc(c.name)} has ${t.drafts+t.open} shift${t.drafts+t.open===1?'':'s'} not sent yet${t.open?', one still clocked in':''}. You can approve once the whole month is sent.</p>`:'';
+ return `<section class="coach"><div class="head"><h2>${esc(c.name)}${c.active?'':' (removed)'}</h2><span class="badge ${esc(c.state)}">${STATE[c.state]||esc(c.state)}</span></div>
+ <p class="muted">${c.programs.map(p=>PROGRAMS[p]||p).map(esc).join(', ')||'No programs'} · ${t.shifts} shift${t.shifts===1?'':'s'} · ${esc(span(t.minutes))} paid · ${esc(money(t.amountCents))}${t.approved?' ('+esc(money(approvedCents))+' approved)':''}${esc(lessons)}${t.flagged?' · '+t.flagged+' flagged':''}</p>
+ ${c.timeOff.length?'<p>Approved time off: '+c.timeOff.map(o=>esc(o.text)).join('; ')+'</p>':''}${waiting}
+ ${t.breakdown.length?'<ul class="breakdown">'+t.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)} · ${b.shifts} shift${b.shifts===1?'':'s'}</span><span>${esc(span(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('')+'</ul>':''}
+ ${c.shifts.map(shiftHtml).join('')||'<p class="muted">No practice shifts this month.</p>'}<div class="actions">${approve}</div>${undo}</section>`}
+function coverHtml(cover){if(!cover)return '';const p=cover.practices||[],l=cover.lessons||[];if(!p.length&&!l.length)return '<p class="muted">No practices or lessons in these dates.</p>';
+ return '<ul class="cover">'+p.map(x=>`<li>${esc(dayText(x.date))} · ${esc(x.time)} · ${esc(x.title)} practice</li>`).join('')+l.map(x=>`<li>${esc(dayText(x.date))} · ${esc(x.time)} · private lesson${x.booked?' · '+x.booked+' wrestler'+(x.booked===1?'':'s')+' booked':' (open time)'}</li>`).join('')+'</ul>'}
+function offHtml(r,pending){return `<div class="off"><p><b>${esc(r.coachName)}</b> · ${esc(r.text)}</p><p class="muted">Reason: ${esc(r.reason)}</p>${pending?'<p>Would need cover:</p>':''}${coverHtml(r.cover)}${pending?`<div class="form"><label class="wide">Note to the coach (optional)<input id="n-${esc(r.id)}" maxlength="300"></label></div><div class="actions"><button type="button" class="primary" data-off="${esc(r.id)}" data-rev="${r.revision}" data-decision="approve">Approve</button><button type="button" data-off="${esc(r.id)}" data-rev="${r.revision}" data-decision="decline">Decline</button></div>`:''}</div>`}
+let data=null,month='';
+function render(d){data=d;month=d.month;
+ $('monthLabel').textContent=d.monthLabel;$('csv').href='/api/timesheets?format=csv&month='+encodeURIComponent(d.month);
+ $('rates').textContent='Rates: '+d.rates.map(r=>r.label+' '+money(r.centsPerHour)+' an hour').join(', ')+'.';
+ const sel=$('coach'),keep=d.coach||'';sel.innerHTML='<option value="">All coaches</option>'+d.choices.map(c=>`<option value="${esc(c.email)}">${esc(c.name)}${c.active?'':' (removed)'}</option>`).join('');sel.value=keep;
+ $('tMinutes').textContent=span(d.overall.minutes);$('tPractice').textContent=money(d.overall.practiceCents);$('tLessons').textContent=money(d.overall.lessonCents);$('tWaiting').textContent=d.overall.waiting+' shift'+(d.overall.waiting===1?'':'s');
+ $('offPending').innerHTML=d.timeOff.pending.length?d.timeOff.pending.map(r=>offHtml(r,true)).join(''):'<p class="muted">No time off requests waiting.</p>';
+ $('offApproved').innerHTML=d.timeOff.approved.length?d.timeOff.approved.map(r=>offHtml(r,false)).join(''):'<p class="muted">No coach is away now or soon.</p>';
+ $('coaches').innerHTML=d.coaches.map(c=>coachHtml(c,d.month,d.monthLabel)).join('')||'<section><p class="muted">No coach hours or lessons in this month.</p></section>';
+ $('status').textContent=d.monthLabel+(d.overall.notSent?' · '+d.overall.notSent+' shift'+(d.overall.notSent===1?'':'s')+' not sent by coaches yet':'');
+ document.querySelectorAll('[data-correct]').forEach(b=>b.onclick=()=>{const id=b.dataset.correct;act({action:'correct',id,revision:Number(b.dataset.rev),hours:Number($('h-'+id).value),minutes:Number($('m-'+id).value),duty:$('d-'+id).value,reason:$('r-'+id).value},'Correction saved.')});
+ document.querySelectorAll('[data-void]').forEach(b=>b.onclick=()=>act({action:'void',id:b.dataset.void,revision:Number(b.dataset.rev),reason:$('v-'+b.dataset.void).value},'Shift voided.'));
+ document.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{const c=d.coaches.find(x=>x.email===b.dataset.approve);act(approveBody(c,d.month),r=>'Approved '+r.approved+' shift'+(r.approved===1?'':'s')+' ('+money(r.cents)+').')});
+ document.querySelectorAll('[data-unapprove]').forEach(b=>b.onclick=()=>act({action:'unapprove',coach:b.dataset.unapprove,month:d.month,reason:$('u-'+b.dataset.unapprove).value},'Approval undone.'));
+ document.querySelectorAll('[data-off]').forEach(b=>b.onclick=()=>act({action:'time-off',id:b.dataset.off,revision:Number(b.dataset.rev),decision:b.dataset.decision,note:$('n-'+b.dataset.off).value},r=>b.dataset.decision==='approve'?'Time off approved. '+r.told+' coach'+(r.told===1?' was':'es were')+' told.':'Time off declined.'))}
+// Approve exactly what is on screen: every sent shift with the revision the owner reviewed.
+const approveBody=(c,m)=>({action:'approve',coach:c.email,month:m,shifts:c.shifts.filter(s=>s.status==='submitted').map(s=>({id:s.id,revision:s.revision}))});
+async function load(m){const q=new URLSearchParams();if(m)q.set('month',m);if($('coach').value)q.set('coach',$('coach').value);try{render(await call(null,'?'+q))}catch(e){$('status').textContent=e.message}}
+async function act(body,done){try{const r=await call(body);await load(month);$('status').textContent=typeof done==='function'?done(r):done}catch(e){$('status').textContent=e.message}}
+$('prev').onclick=()=>data&&load(data.previous);$('next').onclick=()=>data&&load(data.next);$('coach').onchange=()=>load(month);
+load(new URLSearchParams(location.search).get('month')||'');
+</script></body></html>

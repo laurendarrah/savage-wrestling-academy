@@ -216,3 +216,30 @@ export const financialEntries=sqliteTable("financial_entries",{
  deletedAt:text("deleted_at"),deletedBy:text("deleted_by")
 },t=>[index("financial_entries_date").on(t.entryDate),check("financial_entry_kind",sql`${t.kind} IN ('expense','income')`),
  check("financial_entry_amount",sql`${t.amountCents} BETWEEN 1 AND 100000000`)]);
+// Coach timesheets (issue #193). One row per shift, keyed to the coach's staff email. A shift is tied to the practice
+// (session_key, title and times copied when it starts) when there is one. Paid time is the part of the shift inside the
+// scheduled practice (#197 Q4), unless the owner sets it (owner_minutes, with a reason). fixed_in and fixed_out are the
+// coach's own corrections; clock_in and clock_out keep the original punches. Approval copies the minutes, role, rate and
+// amount, so a later rate change never alters an approved month. Voided shifts are kept, never deleted. history is a
+// JSON list of every correction, void and approval with who, when and why.
+export const coachTimeEntries=sqliteTable("coach_time_entries",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),coachEmail:text("coach_email").notNull(),coachName:text("coach_name").notNull(),workDate:text("work_date").notNull(),
+ sessionKey:text("session_key"),sessionTitle:text("session_title"),sessionStart:text("session_start"),sessionEnd:text("session_end"),
+ duty:text("duty").notNull(),source:text("source").notNull(),clockIn:text("clock_in").notNull(),clockOut:text("clock_out"),fixedIn:text("fixed_in"),fixedOut:text("fixed_out"),coachNote:text("coach_note"),
+ submittedAt:text("submitted_at"),ownerMinutes:integer("owner_minutes"),ownerDuty:text("owner_duty"),ownerNote:text("owner_note"),
+ approvedAt:text("approved_at"),approvedBy:text("approved_by"),approvedMinutes:integer("approved_minutes"),approvedDuty:text("approved_duty"),approvedRateCents:integer("approved_rate_cents"),approvedCents:integer("approved_cents"),
+ voidedAt:text("voided_at"),voidedBy:text("voided_by"),voidReason:text("void_reason"),history:text("history").notNull().default('[]'),revision:integer("revision").notNull().default(1),createdAt:text("created_at").notNull()
+},t=>[uniqueIndex("coach_time_one_open").on(t.coachEmail).where(sql`${t.clockOut} IS NULL AND ${t.voidedAt} IS NULL`),index("coach_time_month").on(t.workDate,t.coachEmail),
+ check("coach_time_duty",sql`${t.duty} IN ('head','assistant') AND (${t.ownerDuty} IS NULL OR ${t.ownerDuty} IN ('head','assistant')) AND (${t.approvedDuty} IS NULL OR ${t.approvedDuty} IN ('head','assistant'))`),
+ check("coach_time_source",sql`${t.source} IN ('clock','hand')`),
+ check("coach_time_minutes",sql`(${t.ownerMinutes} IS NULL OR ${t.ownerMinutes} BETWEEN 0 AND 1440) AND (${t.approvedMinutes} IS NULL OR ${t.approvedMinutes} BETWEEN 0 AND 1440) AND (${t.approvedCents} IS NULL OR ${t.approvedCents} >= 0)`)]);
+// Coach time off (issue #193). A coach asks for dates with a reason; the owner approves or declines. On approval
+// (#197 Q7) the coaches in the same programs are told, the request shows on the coach's time history, and the coach's
+// practices and lessons in those dates are flagged for cover on the owner's pages. programs is the coach's programs
+// when it was approved. Nothing is cancelled automatically.
+export const coachTimeOff=sqliteTable("coach_time_off",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),coachEmail:text("coach_email").notNull(),coachName:text("coach_name").notNull(),
+ startDate:text("start_date").notNull(),endDate:text("end_date").notNull(),reason:text("reason").notNull(),status:text("status").notNull(),programs:text("programs").notNull().default('[]'),
+ requestedAt:text("requested_at").notNull(),decidedAt:text("decided_at"),decidedBy:text("decided_by"),decisionNote:text("decision_note"),revision:integer("revision").notNull().default(1)
+},t=>[index("coach_time_off_coach").on(t.coachEmail,t.startDate),index("coach_time_off_status").on(t.status,t.startDate),
+ check("coach_time_off_status",sql`${t.status} IN ('pending','approved','declined','withdrawn')`),check("coach_time_off_range",sql`${t.startDate} <= ${t.endDate}`)]);

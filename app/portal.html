@@ -198,7 +198,7 @@ function realTools(){
  const groups=[['Families',[['/accounts','Family accounts'],['/approvals','SWA Advance approvals'],['/scholarships','Scholarships'],['/waivers','Waivers'],['/waitlists','Waitlists'],['/transfers','Program transfers']]],
   ['Schedule & programs',[['#Schedules','Practice schedules'],['#Programs & pricing','Programs & pricing'],['#Camps & events','Camps & events'],['/practice-plans','Practice plans'],['/curricula','Curricula'],['/website','Public website']]],
   ['Coaches & lessons',[['/staff','Coaches'],['/coach','Coach view'],['/lesson-settings','Private lesson prices']]],
-  ['Money',[['/financials','Income & expenses'],['/coach-pay','Coach pay']]]];
+  ['Money',[['/financials','Income & expenses'],['/coach-pay','Coach pay'],['/timesheets','Coach hours']]]];
  const more=[['/payment-setup','Online payment setup'],['/backups','Backups'],['/site-health','Site health'],['/data-requests','Data requests'],['/security-log','Security activity'],['/help/owner','Owner guide']];
  const link=([href,t])=>href[0]==='#'?`<li><button type="button" class="toollink" onclick="go('${href.slice(1)}')">${t}</button></li>`:`<li><a class="toollink" href="${href}">${t}</a></li>`;
  return `<section class="card tools-card" style="margin-bottom:18px"><h2 style="margin-top:0">Run the academy</h2><div class="daily">${daily.map(([href,t,d])=>`<a class="tool" href="${href}"><b>${t}</b><span class="muted">${d}</span></a>`).join('')}</div><div class="toolgroups">${groups.map(([h,items])=>`<div><h3>${h}</h3><ul>${items.map(link).join('')}</ul></div>`).join('')}</div><details class="toolmore"><summary>Settings & records</summary><ul>${more.map(link).join('')}</ul></details></section>`}
