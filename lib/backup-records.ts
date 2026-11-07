@@ -29,6 +29,9 @@ export const RECORD_TABLES:Record<string,Col[]>={
  orders:[['id','text'],['user_id','text'],['email','text'],['wrestler_id','text'],['wrestler_name','text'],['kind','text'],['program','text',true],['item_id','text'],['item_label','text'],['dates','text',false,BIG],['base_cents','int'],['discount_cents','int'],['amount_cents','int'],['currency','text'],['pricing','text',false,BIG],['terms_accepted','text',false,BIG],['status','text'],['dedupe_key','text'],['stripe_session_id','text',true],['stripe_payment_intent','text',true],['livemode','int'],['created_at','text'],['updated_at','text'],['paid_at','text',true],['term_start','text',true],['term_end','text',true],['source','text']],
  stripe_events:[['id','text'],['type','text'],['order_id','text',true],['outcome','text'],['received_at','text']],
  subscriptions:[['order_id','text'],['stripe_subscription_id','text'],['status','text'],['payments_made','int'],['payments_total','int'],['term_start','text'],['term_end','text'],['paid_through','text'],['cancel_at','text'],['updated_at','text']],
+ // The owner's own entries in the books (issue #194). Payments are not copied there, so orders above stay the only record of them.
+ // Added after version 3 first shipped, so older version 3 files may lack it (V3_LATER).
+ financial_entries:[['id','text'],['kind','text'],['entry_date','text'],['amount_cents','int'],['category','text'],['note','text'],['receipt','text'],['revision','int'],['created_at','text'],['created_by','text'],['updated_at','text'],['updated_by','text'],['deleted_at','text',true],['deleted_by','text',true]],
  attendance:[['id','text'],['session_key','text'],['session_date','text'],['user_id','text'],['wrestler_id','text'],['wrestler_name','text'],['source','text'],['checked_in_at','text'],['checked_in_by','text']],
  usaw_reviews:[['user_id','text'],['wrestler_id','text'],['number','text'],['expires','text'],['status','text'],['note','text'],['reviewed_by','text'],['reviewed_at','text']],
  waiver_versions:[['id','text'],['title','text'],['body','text',false,BIG],['sha256','text'],['published_at','text'],['published_by','text'],['retired_at','text',true]],
@@ -54,7 +57,7 @@ const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[[
 const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
 // Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
 // and still restores; a file that has the section is checked like any other.
-const V3_LATER=['coach_profiles'];
+const V3_LATER=['coach_profiles','financial_entries'];
 const V2_TABLES=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
 const ARCHIVE_COLS:Col[]=[['id','text'],['actor','text'],['action','text'],['target','text',false,2000],['created_at','text']];
 const ROW_LIMIT=20000,ARCHIVE_LIMIT=20000,EXPORT_LIMIT=12000000;
