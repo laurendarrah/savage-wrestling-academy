@@ -342,7 +342,7 @@ await step('no year paid upfront anywhere; a membership paid upfront before the 
   const start = ny(-20);
   sql(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
     VALUES ('e2e-upfront-sam','e2e-family-a','family.a@example.test','${samId}','Sam Example','annual','Intermediate','Intermediate','SWA Intermediate: 12-month membership, paid upfront','[]',240000,0,240000,'usd','{"method":"check","note":"Check 1042","recordedBy":"e2e-owner"}','{"offline":true}','paid','e2e-upfront-sam',0,'${start}T12:00:00.000Z','${start}T12:00:00.000Z','${start}T12:00:00.000Z','${start}','${ny(344)}','offline')`);
-  await owner.goto(BASE + '/payments'); await waitText(owner, '#rows', /Sam Example[\s\S]*Membership \(paid upfront\)[\s\S]*\$2,400\.00/);
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#rows', /Sam Example[\s\S]*12-month membership, paid upfront[\s\S]*\$2,400\.00/);
 });
 await step('Sam is on today\'s roster; owner checks in, undoes, then a QR scan checks in once', async () => {
   await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Sam Example/);
