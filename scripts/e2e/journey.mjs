@@ -662,6 +662,69 @@ await step('owner edits the public website; a visitor sees the headline, mission
   if (SHOTS) await visitor.screenshot({path: `${SHOTS}/phone-team.png`, fullPage: true});
   await visitor.context().close();
 });
+// ---------- Coach hours and time off (issue #193) ----------
+await step('a coach clocks in and out of today\'s practice from coach home on a phone', async () => {
+  const phone = await as('coach', {width: 390, height: 844});
+  await phone.goto(BASE + '/coach'); await phone.waitForSelector('#clockCard [data-duty="head"]');
+  await at(phone, '#clockCard', /SWA Intermediate · 6:00 PM–7:30 PM/);
+  const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(over <= 1, `coach home scrolls sideways by ${over}px on a phone`);
+  await phone.click('#clockCard [data-cc="in"]'); await at(phone, '#clockCard .cc-status', /Choose Head coach or Assistant coach first/);
+  await phone.click('#clockCard [data-duty="head"]'); await phone.click('#clockCard [data-cc="in"]');
+  await at(phone, '#clockCard', /On the clock[\s\S]*SWA Intermediate[\s\S]*Head coach/);
+  const big = await phone.locator('#clockCard [data-cc="out"]').boundingBox();
+  expect(big && big.height >= 70 && big.width >= 300, 'a big clock-out button on a phone: ' + JSON.stringify(big));
+  await shot(phone, 'coach-clocked-in');
+  await phone.click('#clockCard [data-cc="out"]'); await at(phone, '#clockCard .cc-status', /Clocked out/);
+  await phone.goto(BASE + '/coach-time'); await at(phone, '#shifts', /SWA Intermediate · 6:00 PM–7:30 PM · Head coach/);
+  await at(phone, '#submitHelp', /its last day|Sends every shift/);
+  const over2 = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(over2 <= 1, `/coach-time scrolls sideways by ${over2}px on a phone`);
+  await shot(phone, 'coach-hours'); await phone.context().close();
+});
+// The last day of last month, in New York time: always on or after its last day, so it can be sent.
+const lastMonthEnd = new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, 0)).toISOString().slice(0, 10);
+await step('the coach adds a missed shift for last month and sends it; the owner corrects, approves and downloads the hours', async () => {
+  const month = lastMonthEnd.slice(0, 7);
+  await coach.goto(BASE + '/coach-time'); await coach.waitForSelector('#addBox');
+  await coach.click('#addBox summary'); await coach.fill('#addDate', lastMonthEnd);
+  await coach.waitForFunction(() => !/Choose a date first/.test(document.querySelector('#addSession').textContent));
+  await coach.selectOption('#addDuty', 'head'); await coach.fill('#addForm [name=in]', '18:00'); await coach.fill('#addForm [name=out]', '19:30');
+  await coach.fill('#addForm [name=reason]', 'Phone died at practice');
+  await coach.click('#addForm button.primary'); await at(coach, '#status', /Shift added/);
+  await coach.click('#prev'); await at(coach, '#shifts', /Added by hand, not clocked: Phone died at practice/);
+  await coach.click('#submit'); await at(coach, '#status', /1 shift sent to the academy/);
+  await at(coach, '#monthState', /Sent to the academy/);
+  await owner.goto(BASE + '/timesheets?month=' + month); await at(owner, '#coaches', /Coach Dana[\s\S]*Sent, waiting for you/);
+  const dana = owner.locator('section.coach', {hasText: 'Coach Dana'});
+  await dana.locator('summary', {hasText: 'Correct'}).click();
+  await dana.locator('select[id^="h-"]').selectOption('1'); await dana.locator('select[id^="m-"]').selectOption('30');
+  await dana.locator('select[id^="d-"]').selectOption('head'); await dana.locator('input[id^="r-"]').fill('Confirmed with the coach');
+  await dana.locator('[data-correct]').click(); await at(owner, '#status', /Correction saved/);
+  await owner.click('[data-approve="coach.dana@example.test"]'); await at(owner, '#status', /Approved 1 shift \(\$60\.00\)/);
+  await at(owner, '#coaches', /Coach Dana[\s\S]*Approved/);
+  const csv = await owner.evaluate(async m => (await fetch('/api/timesheets?format=csv&month=' + m)).text(), month);
+  expect(/Coach Dana,coach\.dana@example\.test,[\d-]+,Practice,[\d-]+,[^,]*,Head coach,1\.50,40\.00 per hour,60\.00,Confirmed with the coach/.test(csv), 'the file has the approved shift: ' + csv.slice(0, 400));
+  expect(!/wage|invoice|overtime|withhold/i.test(csv), 'hours and amounts only');
+  await shot(owner, 'owner-timesheets');
+});
+await step('a coach asks for time off; the owner approves; only coaches in the same program are told and practices are listed for cover', async () => {
+  // Lee coaches SWA Intermediate with Dana for this step; the owner coaches SWA Advance only.
+  expect((await api(owner, '/api/staff', {action: 'grant', email: 'coach.lee@example.test', name: 'Coach Lee', programs: ['Elementary', 'Intermediate']})).status === 200, 'Lee joins SWA Intermediate');
+  await coach.goto(BASE + '/coach-time'); await coach.waitForSelector('#offForm');
+  await coach.fill('#offForm [name=start]', ny(30)); await coach.fill('#offForm [name=end]', ny(31)); await coach.fill('#offForm [name=reason]', 'Family wedding');
+  await coach.click('#offForm button.primary'); await at(coach, '#status', /Time off requested/);
+  await at(coach, '#offList', /Waiting for the academy/);
+  await owner.goto(BASE + '/timesheets'); await at(owner, '#offPending', /Coach Dana[\s\S]*Family wedding[\s\S]*SWA Intermediate practice/);
+  await owner.click('#offPending [data-decision="approve"]'); await at(owner, '#status', /Time off approved\. 1 coach was told/);
+  await at(owner, '#offApproved', /Coach Dana[\s\S]*SWA Intermediate practice/);
+  const toldLee = await api(lee, '/api/coach-time');
+  expect(toldLee.body.notices.some(n => /^Coach Dana is away/.test(n.subject) && !/wedding/i.test(n.body)), 'Lee is told, without the reason');
+  const toldOwner = await api(owner, '/api/coach-time');
+  expect(!toldOwner.body.notices.some(n => /Coach Dana/.test(n.subject)), 'the owner (another program) is not told');
+  await coach.goto(BASE + '/coach-time'); await at(coach, '#offList', /Approved/); await at(coach, '#notices', /Time off approved/);
+  expect((await api(owner, '/api/staff', {action: 'grant', email: 'coach.lee@example.test', name: 'Coach Lee', programs: ['Elementary']})).status === 200, 'Lee back to SWA Development');
+});
 await step('family requests SWA Advance approval; owner approves; transfer to SWA Advance goes through', async () => {
   await family.goto(BASE + `/register?program=Advanced&wrestler=${samId}`); await family.waitForSelector('#requestApproval');
   await family.waitForFunction(() => !document.querySelector('#requestApproval').closest('[hidden]'), null, {timeout: 8000});
@@ -888,8 +951,8 @@ const axeSource = (await import('node:fs')).readFileSync(require.resolve('axe-co
 const a11yPages = {
   public: ['/welcome', '/team', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
-  coach: ['/coach', '/roster', '/help/coach', '/coach-profile'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
+  coach: ['/coach', '/roster', '/help/coach', '/coach-profile', '/coach-time'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/timesheets', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {
