@@ -57,7 +57,7 @@
     "@vitejs/plugin-rsc": "0.5.26",
     "axe-core": "4.14.0",
     "drizzle-kit": "0.31.10",
-    "eslint": "9.39.4",
+    "eslint": "9.39.5",
     "eslint-config-next": "16.3.8",
     "json-rpc-2.0": "1.7.1",
     "playwright": "1.63.0",
