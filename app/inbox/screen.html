@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Messages | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
-body{background:#F4F5F7;color:#141416;margin:0}
-main{max-width:760px;margin:auto;padding:20px 16px 56px}
+body{background:var(--swa-ground);color:#141416;margin:0}
+main{max-width:var(--swa-width-narrow);margin:auto;padding:20px 16px 56px}
 h1{margin:8px 0 4px}h2{margin:0 0 8px}
 html body main>section{padding:20px;margin:18px 0}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -11,7 +11,7 @@ summary{cursor:pointer;min-height:44px;padding:10px 0 8px;overflow-wrap:anywhere
 summary .when{display:block;font-size:15px;font-weight:400}
 summary.unread{font-weight:700}
 .body{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 10px}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#C4222C;margin-right:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--swa-red);margin-right:6px}
 .msg{border-radius:10px;padding:10px 12px;margin:8px 0;max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere}
 .msg.you{background:#141416;color:#fff;margin-left:auto}
 .msg.academy{background:#EEF0F3}
@@ -20,13 +20,19 @@ label{display:flex;flex-direction:column;gap:4px}
 #reply button{margin-top:10px;padding:0 20px}
 #status{font-weight:600;min-height:1.5em}
 .when{display:block;font-size:14px;font-weight:400;margin-top:2px}</style></head><body><main><div class="top"><h1>Messages</h1><button type="button" id="markAll" hidden>Mark all as read</button></div><p id="status" role="status" aria-live="polite">Loading…</p>
-<section id="noticesBox" hidden aria-labelledby="noticesHeading"><h2 id="noticesHeading">Notices</h2><div id="notices"></div><div class="pager" id="noticesMore" hidden><button type="button" data-more="notices">Show older notices</button></div></section><section aria-labelledby="announcementsHeading"><h2 id="announcementsHeading">Announcements</h2><div id="announcements"></div><div class="pager" id="announcementsMore" hidden><button type="button" data-more="announcements">Show older announcements</button></div></section>
+<section id="announcementsBox" aria-labelledby="announcementsHeading"><h2 id="announcementsHeading">Announcements</h2><div id="announcements"></div><div class="pager" id="announcementsMore" hidden><button type="button" data-more="announcements">Show older announcements</button></div></section><section id="noticesBox" hidden aria-labelledby="noticesHeading"><h2 id="noticesHeading">Notices</h2><div id="notices"></div><div class="pager" id="noticesMore" hidden><button type="button" data-more="notices">Show older notices</button></div></section>
 <section aria-labelledby="threadHeading"><h2 id="threadHeading">Your conversation with the academy</h2><p id="threadMore" hidden><button type="button" class="link" data-more="thread">Show earlier messages</button></p><div id="thread"></div><form id="reply"><label>Message the academy<textarea id="body" maxlength="5000" required></textarea></label><button class="primary">Send</button></form></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
 async function call(body){const r=await fetch('/api/inbox',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login';throw Error('Sign in again.')}const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
-// One message in a list: subject and time, opened to read the body. The newest one opens by itself (issue #132).
+// One message in a list: subject and time, opened to read the body. One item opens by itself (issue #132).
 function item(attr,subject,at,read,body,open){return `<details ${attr}${open?' open':''}><summary class="${read?'':'unread'}">${read?'':'<span class="dot" aria-label="Unread"></span>'}${esc(subject)}<span class="muted when">${esc(when(at))}</span></summary><div class="body">${esc(body)}</div></details>`}
+// Announcements come first, above the academy's automatic notices (issue #231). The item that opens by itself is the
+// newest unread announcement, else the newest unread notice, else the newest announcement, else the newest notice.
+function opensFirst(announcements,notices){
+ const a=announcements.findIndex(x=>!x.read),n=notices.findIndex(x=>!x.read);
+ return a>=0?{announcement:a,notice:-1}:n>=0?{announcement:-1,notice:n}:announcements.length?{announcement:0,notice:-1}:{announcement:-1,notice:0};
+}
 function markShown(el,payload){if(el.open&&el.querySelector('.unread'))call(payload).then(d=>{el.querySelector('summary').classList.remove('unread');el.querySelector('.dot')?.remove();showMarkAll(d)}).catch(()=>{})}
 function showMarkAll(d){$('markAll').hidden=!(d&&d.unread>0)}
 // The inbox shows the newest 50 notices and announcements and the latest 100 messages (issue #46); older ones load
@@ -39,10 +45,13 @@ function render(d){
  box=d;
  const notices=d.notices||[],announcements=d.announcements||[];
  $('noticesMore').hidden=!d.noticesNext;$('announcementsMore').hidden=!d.announcementsNext;$('threadMore').hidden=!d.threadEarlier;
+ const open=opensFirst(announcements,notices);
  $('noticesBox').hidden=!notices.length;
- $('notices').innerHTML=notices.map((n,i)=>item('data-notice="'+esc(n.id)+'"',n.subject,n.at,n.read,n.body,i===0)).join('');
+ // With no announcements, the notices lead the page instead of an empty Announcements box.
+ $('announcementsBox').hidden=!announcements.length&&!!notices.length;
+ $('notices').innerHTML=notices.map((n,i)=>item('data-notice="'+esc(n.id)+'"',n.subject,n.at,n.read,n.body,i===open.notice)).join('');
  document.querySelectorAll('details[data-notice]').forEach(el=>{el.ontoggle=()=>markShown(el,{action:'read',noticeId:el.dataset.notice})});
- $('announcements').innerHTML=announcements.map((a,i)=>item('data-id="'+esc(a.id)+'"',a.subject,a.sentAt,a.read,a.body,!notices.length&&i===0)).join('')||'<p class="muted">No announcements yet.</p>';
+ $('announcements').innerHTML=announcements.map((a,i)=>item('data-id="'+esc(a.id)+'"',a.subject,a.sentAt,a.read,a.body,i===open.announcement)).join('')||'<p class="muted">No announcements yet.</p>';
  document.querySelectorAll('details[data-id]').forEach(el=>{el.ontoggle=()=>markShown(el,{action:'read',announcementId:el.dataset.id})});
  $('thread').innerHTML=(d.thread||[]).map(m=>`<div class="msg ${m.from}">${esc(m.body)}<small>${m.from==='you'?'You':'Savage Wrestling Academy'} · ${esc(when(m.at))}</small></div>`).join('')||'<p class="muted">No messages yet. Questions about schedules, payments or your wrestler? Write to the academy here.</p>';
  showMarkAll(d);

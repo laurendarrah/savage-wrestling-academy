@@ -1,9 +1,10 @@
-// Issue #144: Choose training has the Savage band, three numbered steps, and one red button while choosing.
+// Issue #144: Choose training has the Savage band (the shared .swa-head since #231), three numbered steps, and one red
+// button while choosing.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const html = readFileSync('app/register/screen.html', 'utf8'), body = html.slice(html.indexOf('<body>'), html.indexOf('<script'));
-assert.match(body, /<div class="reg-hero"><p class="eyebrow">Savage Wrestling Academy<\/p><h1>Choose training<\/h1>/);
+assert.match(body, /<div class="swa-head"><p class="eyebrow">Savage Wrestling Academy<\/p><h1>Choose training<\/h1>/);
 assert.deepEqual([...body.matchAll(/<span class="num" aria-hidden="true">(\d)<\/span>/g)].map(m => m[1]), ['1', '2', '3'], 'three numbered steps');
 
 // While choosing, the only red button is Review selection. The approval request only shows for SWA Advance.

@@ -74,7 +74,9 @@ async function openFamily({search = '', orderStatuses = ['paid']}) {
   const list = el('purchaseList').innerHTML;
   assert.match(list, /Takedown Camp/); assert.match(list, /\$144\.00/); assert.match(list, /Includes \$16\.00 discount/);
   assert.match(list, /Checkout not finished/); assert.match(list, /Nothing has been charged/);
-  assert.equal(el('paymentsPill').textContent, 'Paid', 'not "online": a payment may have been recorded offline (issue #101)');
+  // "Paid", not "online": a payment may have been recorded offline (issue #101). Shown only for an active membership (#231).
+  assert.equal(el('paymentsPill').hidden, false, 'an active membership in good standing shows "Paid"');
+  assert.match(readFileSync('app/family/screen.html', 'utf8'), /id="paymentsPill" hidden>Paid<\/span>/);
   assert.equal(el('notEnrolledNote').hidden, true, 'no "nothing has been paid" notice for a family that has paid');
   assert.match(el('readyNote').textContent, /pay securely online/);
   assert.doesNotMatch(el('editorNotice').textContent, /still being connected/);

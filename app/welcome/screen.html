@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><!--slot:head--><link rel="stylesheet" href="/responsive.css"><style>
-body{margin:0;background:#F4F5F7;color:#141416}
+body{margin:0;background:var(--swa-ground);color:#141416}
 .hero{background:#141416;color:#fff;padding:36px 16px 44px}
-.hero .in,main{max-width:1080px;margin:0 auto}
+.hero .in,main{max-width:var(--swa-width-wide);margin:0 auto}
 .hero .in{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:center}
 .hero img{width:200px;height:200px;display:block}
-.eyebrow{font-weight:700;font-size:14px;letter-spacing:2.4px;text-transform:uppercase;color:#B9C4C9;margin:0}
+.eyebrow{font-weight:700;font-size:14px;letter-spacing:2.4px;text-transform:uppercase;color:var(--swa-silver);margin:0}
 html body .hero h1{margin:8px 0 12px;color:#fff;font-size:clamp(40px,8vw,72px)}
 .hero p.lede{margin:0 0 24px;color:#D7DBE0;font-size:19px;max-width:44ch}
 .actions{display:flex;flex-wrap:wrap;gap:12px}
@@ -20,44 +20,47 @@ h2{margin:0}
 
 .program h3{margin:0;font-size:21px}
 .program p{margin:0}
-.program .program .times{font-weight:700;font-size:15px;color:#141416}
-.program .times::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#C4222C;margin-right:8px;vertical-align:1px}
+.program .times{font-weight:700;font-size:15px;color:#141416}
+.program .times::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--swa-red);margin-right:8px;vertical-align:1px}
+/* A program with no practices published yet says so, quietly (issue #231). */
+.program .times.soon{font-weight:600;color:var(--swa-muted)}
+.program .times.soon::before{background:none;box-shadow:inset 0 0 0 1.5px var(--swa-muted)}
 .grades{align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;padding:5px 10px;border-radius:999px}
 .program .price{font-weight:700}
-.program .note{border-left:3px solid #C4222C;padding-left:10px;font-size:15px}
+.program .note{border-left:3px solid var(--swa-red);padding-left:10px;font-size:15px}
 .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));padding:0;margin:0;counter-reset:s;background:#fff;border:1px solid #E1E3E8;border-radius:6px;overflow:hidden}
 .steps li{list-style:none;padding:18px 20px;border-top:1px solid #E1E3E8;margin-top:-1px;display:flex;flex-direction:column;gap:4px;counter-increment:s}
-.steps li::before{content:counter(s);font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:32px;line-height:1;color:#C4222C}
+.steps li::before{content:counter(s);font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:32px;line-height:1;color:var(--swa-red)}
 .week{overflow:hidden}
 .week .row{display:flex;gap:16px;align-items:flex-start;padding:14px 18px;border-top:1px solid #E1E3E8}
 .week .row:first-child{border-top:0}
 .week .when{width:130px;flex:none;font-weight:700;font-variant-numeric:tabular-nums}
-.week .when span{display:block;font-weight:400;color:#55585F}
+.week .when span{display:block;font-weight:400;color:var(--swa-muted)}
 .week .what{flex:1;min-width:0;overflow-wrap:anywhere;display:flex;flex-direction:column;gap:4px}
 .week .item{display:flex;align-items:center;gap:10px}
 .dot{width:14px;height:14px;flex:none;border-radius:3px}
 .more{font-weight:700}
-footer{color:#55585F;font-size:15px;text-align:center;padding:0 16px 32px}
+footer{color:var(--swa-muted);font-size:15px;text-align:center;padding:0 16px 32px}
 /* The owner's website content (issue #196): mission, a look at the team, visit details. */
 html body .hero h1{overflow-wrap:anywhere}
-.herolink{display:inline-flex;align-items:center;min-height:44px;margin-top:14px;color:#B9C4C9!important;font-weight:700;font-size:14px;letter-spacing:1.4px;text-transform:uppercase;text-decoration:none}
+.herolink{display:inline-flex;align-items:center;min-height:44px;margin-top:14px;color:var(--swa-silver)!important;font-weight:700;font-size:14px;letter-spacing:1.4px;text-transform:uppercase;text-decoration:none}
 .herolink:hover{color:#fff!important}
-html body main>section.mission{border-left:4px solid #C4222C;display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 32px;align-items:start}
-html body .mission h2{color:#C4222C;margin:0}
+html body main>section.mission{border-left:4px solid var(--swa-red);display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 32px;align-items:start}
+html body .mission h2{color:var(--swa-red);margin:0}
 .mission__text p{margin:0 0 12px;font-size:clamp(19px,2.4vw,23px);line-height:1.5;color:#141416;overflow-wrap:anywhere}
 .mission__text p:last-child{margin:0}
-html body main>section.teaser{background:var(--swa-texture);color:#fff;border:0;border-bottom:2px solid #C4222C;padding:clamp(22px,4vw,36px)}
+html body main>section.teaser{background:var(--swa-texture);color:#fff;border:0;border-bottom:2px solid var(--swa-red);padding:clamp(22px,4vw,36px)}
 .teaser__in{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:20px 36px;align-items:center}
-html body .teaser .eyebrow{color:#B9C4C9;margin:0 0 6px}
+html body .teaser .eyebrow{color:var(--swa-silver);margin:0 0 6px}
 html body .teaser h2{color:#fff;margin:0}
 .teaser__count{margin:6px 0 0;color:#C9CED4}
 .teaser__names{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .teaser__names li{display:flex;align-items:center;gap:10px;font-weight:700;overflow-wrap:anywhere}
-.mono{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#141416;color:#fff;border:2px solid #C4222C;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:14px;letter-spacing:.5px}
+.mono{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#141416;color:#fff;border:2px solid var(--swa-red);font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:14px;letter-spacing:.5px}
 html body .teaser a.button{min-height:50px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}
 .visit__card{padding:18px 22px;display:flex;flex-wrap:wrap;gap:12px 40px}
 .visit__line{margin:0;display:flex;flex-direction:column;overflow-wrap:anywhere}
-.visit__label{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#55585F}
+.visit__label{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--swa-muted)}
 @media (max-width:760px){html body main>section.mission{grid-template-columns:1fr}.teaser__in{grid-template-columns:1fr}html body .teaser a.button{width:100%}}
 @media (max-width:640px){.hero{padding:28px 16px 36px}.hero .in{grid-template-columns:1fr;gap:16px}.hero img{width:112px;height:112px;order:-1}.actions a.button{flex:1 1 auto;justify-content:center}.week .when{width:104px}.week .row{gap:12px;padding:12px 14px}}
 </style></head><body>
@@ -87,7 +90,8 @@ html body .teaser a.button{min-height:50px;padding:0 22px;display:inline-flex;al
 <footer>Savage Wrestling Academy · Huntington Station, NY</footer>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const swatch={Elementary:'background:#fff;color:#141416;box-shadow:inset 0 0 0 1.5px #141416',Intermediate:'background:#B9C4C9;color:#141416',Advanced:'background:#141416;color:#fff'};
+// Program colors from the shared tokens (public/savage.css), as on the calendar: Development white, Intermediate gray, Advance black.
+const swatch={Elementary:'background:var(--swa-prog-development);color:var(--swa-prog-development-ink);box-shadow:inset 0 0 0 1.5px var(--swa-prog-development-line)',Intermediate:'background:var(--swa-prog-intermediate);color:var(--swa-prog-intermediate-ink)',Advanced:'background:var(--swa-prog-advance);color:var(--swa-prog-advance-ink)'};
 // Program grades follow lib/program-approval.ts; the academy's own wording is used when it has one.
 const GRADES={Elementary:'Grades K–6',Intermediate:'Grades 7–12',Advanced:'Grades 7–12'};
 const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:c%100?2:0}).format(c/100);
@@ -105,18 +109,20 @@ function weeklyTimes(id,schedules,today){
  const first=days=>Math.min(...[...days].map(d=>ORDER.indexOf(d)));
  return [...slots].sort((a,b)=>first(a[1])-first(b[1])||a[0].localeCompare(b[0])).map(([k,days])=>{const [st,en]=k.split('|'),names=ORDER.filter(d=>days.has(d)).map(d=>DAY[d]);return (names.length>1?names.slice(0,-1).join(', ')+' & '+names.at(-1):names[0])+' · '+span(st,en)})
 }
+// One line per weekly time, or "Practice times coming soon" until the academy publishes practices (issue #231).
+function timesLines(times){return times.length?times.map(t=>'<span class="times">'+esc(t)+'</span>').join(''):'<span class="times soon">Practice times coming soon</span>'}
 function programCard(p,schedules=[],today=''){
  const grades=String(p.grades||GRADES[p.id]||'').replace(/\s*·\s*Coach approval required/i,'');
  const prices=[p.monthlyCents!=null?money(p.monthlyCents)+' a month for a 12-month membership':'',p.walkInCents!=null?money(p.walkInCents)+' for a single walk-in practice':''].filter(Boolean);
- return '<article class="program card">'+(grades?'<span class="grades" style="'+(swatch[p.id]||'background:#C4222C;color:#fff')+'">'+esc(grades)+'</span>':'')+'<h3>'+esc(p.name)+'</h3>'+weeklyTimes(p.id,schedules,today).map(t=>'<span class="times">'+esc(t)+'</span>').join('')+(p.description?'<p>'+esc(p.description)+'</p>':'')+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'</article>'}
+ return '<article class="program card">'+(grades?'<span class="grades" style="'+(swatch[p.id]||'background:var(--swa-prog-event);color:var(--swa-prog-event-ink)')+'">'+esc(grades)+'</span>':'')+'<h3>'+esc(p.name)+'</h3>'+timesLines(weeklyTimes(p.id,schedules,today))+(p.description?'<p>'+esc(p.description)+'</p>':'')+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'</article>'}
 // The next sessions from today, soonest first: practices, extra practices and the first day of each event.
 function upcoming(schedules,today,limit=6){
  const items=[],seen=new Set(),programs=schedules[0]?.programs||[];
  for(const d of schedules){
   for(const p of d.practices||[])if(p.date>=today&&!seen.has('p'+p.id)){seen.add('p'+p.id);items.push({date:p.date,start:p.start,title:(programs.find(x=>x.id===p.program)?.name||p.program)+' practice',color:swatch[p.program]})}
-  for(const l of d.liveClasses||[])if(l.date>=today&&!seen.has('l'+l.id+l.date)){seen.add('l'+l.id+l.date);items.push({date:l.date,start:l.start,title:l.name,color:'background:#C4222C'})}
+  for(const l of d.liveClasses||[])if(l.date>=today&&!seen.has('l'+l.id+l.date)){seen.add('l'+l.id+l.date);items.push({date:l.date,start:l.start,title:l.name,color:'background:var(--swa-prog-event)'})}
   // An event day shows its own time (issue #189), or "Time to be announced" until the owner sets one.
-  for(const e of d.events||[]){const first=(e.dates||[]).find(x=>x>=today);if(first&&!seen.has('e'+e.id)){seen.add('e'+e.id);const t=(e.schedule||[]).find(x=>x.date===first);items.push({date:first,start:t?t.start:'',tba:!t,title:e.name+(e.type?' ('+e.type.toLowerCase()+')':''),color:'background:#C4222C'})}}
+  for(const e of d.events||[]){const first=(e.dates||[]).find(x=>x>=today);if(first&&!seen.has('e'+e.id)){seen.add('e'+e.id);const t=(e.schedule||[]).find(x=>x.date===first);items.push({date:first,start:t?t.start:'',tba:!t,title:e.name+(e.type?' ('+e.type.toLowerCase()+')':''),color:'background:var(--swa-prog-event)'})}}
  }
  // Sessions at the same day and time share one row, so the list reaches further ahead.
  const groups=[];for(const i of items.sort((a,b)=>(a.date+(a.start||'99')).localeCompare(b.date+(b.start||'99')))){const last=groups[groups.length-1];if(last&&last.date===i.date&&last.start===i.start)last.items.push(i);else groups.push({date:i.date,start:i.start,items:[i]})}

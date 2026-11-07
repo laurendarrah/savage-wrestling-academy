@@ -1,9 +1,9 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My family | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
-body{background:#F4F5F7;color:#141416;margin:0}
-main{max-width:820px;margin:auto;padding:0 16px 56px}
+body{background:var(--swa-ground);color:#141416;margin:0}
+main{max-width:var(--swa-width-narrow);margin:auto;padding:0 16px 56px}
 /* Savage band at the top (issue #141): full-width black, painted with a shadow so it never scrolls sideways. */
 .fam-hero{background:#141416;color:#fff;box-shadow:0 0 0 100vmax #141416;clip-path:inset(0 -100vmax);padding:28px 0 0;margin:0 0 8px}
-.fam-hero .eyebrow{font-weight:700;font-size:13px;letter-spacing:2.4px;text-transform:uppercase;color:#B9C4C9;margin:0}
+.fam-hero .eyebrow{font-weight:700;font-size:13px;letter-spacing:2.4px;text-transform:uppercase;color:var(--swa-silver);margin:0}
 html body .fam-hero h1{color:#fff;font-size:clamp(38px,8vw,60px);margin:6px 0 6px;line-height:1}
 .fam-hero .lede{color:#D7DBE0;font-size:18px;margin:0 0 4px;max-width:46ch}
 .fam-hero .lede:empty{display:none}
@@ -15,40 +15,40 @@ h1{margin:6px 0 2px}h2{margin:0 0 6px}
 .account-menu{position:relative;flex:none;margin-top:8px}
 .account-menu summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;border:1.5px solid #6B7076;border-radius:6px;background:transparent;color:#fff;font-weight:600}
 .account-menu summary:hover,.account-menu[open] summary{border-color:#fff}
-.account-menu .signed-in{margin:0 0 4px;padding:8px 12px 10px;border-bottom:1px solid #E1E3E8;font-size:14px;color:#55585F;overflow-wrap:anywhere}
+.account-menu .signed-in{margin:0 0 4px;padding:8px 12px 10px;border-bottom:1px solid #E1E3E8;font-size:14px;color:var(--swa-muted);overflow-wrap:anywhere}
 .account-menu .signed-in span{display:block;color:#141416;font-weight:600}
 .account-menu summary::-webkit-details-marker{display:none}
 .account-menu summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px)}
 .account-menu[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
 .account-menu .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:230px;background:#fff;border:1px solid #E1E3E8;border-radius:6px;box-shadow:0 10px 30px rgba(20,20,22,.14);padding:6px;display:flex;flex-direction:column}
 html body .account-menu .menu a,html body .account-menu .menu button{display:flex;align-items:center;min-height:44px;padding:0 12px;border:0;border-radius:4px;background:none;color:#141416;text-decoration:none;font-weight:600;font-size:16px;text-align:left;width:100%}
-html body .account-menu .menu a:hover,html body .account-menu .menu button:hover{background:#F4F5F7;color:#141416}
-.quick{display:flex;gap:2px;margin:18px 0 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.quick::-webkit-scrollbar{display:none}
-html body .quick a{display:inline-flex;align-items:center;min-height:48px;padding:0 14px;color:#B9C4C9;text-decoration:none;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;font-size:17px;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;box-shadow:inset 0 -3px 0 transparent}
-html body .quick a:first-child{padding-left:0}
-html body .quick a:hover,html body .quick a:focus-visible{color:#fff;box-shadow:inset 0 -3px 0 #C4222C}
-html body main>section.paid{background:#E6F2EA;border:1px solid #9FCFAE;border-left:6px solid #1F6F3A;box-shadow:none}
+html body .account-menu .menu a:hover,html body .account-menu .menu button:hover{background:var(--swa-ground);color:#141416}
+/* Section links under the greeting. They wrap onto a second line on a phone rather than scrolling sideways, so
+   Memberships and Purchases are never hidden off-screen (issue #231). */
+.quick{display:flex;flex-wrap:wrap;gap:0 24px;margin:18px 0 0}
+html body .quick a{display:inline-flex;align-items:center;min-height:48px;padding:0;color:var(--swa-silver);text-decoration:none;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;font-size:17px;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;box-shadow:inset 0 -3px 0 transparent}
+html body .quick a:hover,html body .quick a:focus-visible{color:#fff;box-shadow:inset 0 -3px 0 var(--swa-red)}
+html body main>section.paid{background:var(--swa-ok-bg);border:1px solid #9FCFAE;border-left:6px solid var(--swa-ok);box-shadow:none}
 .paid p{margin:0 0 6px}.paid .paid-title{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:26px;text-transform:uppercase;color:#195b33;display:flex;align-items:center;gap:10px}
-.paid .paid-title::before{content:'✓';display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#1F6F3A;color:#fff;font-size:18px}
+.paid .paid-title::before{content:'✓';display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--swa-ok);color:#fff;font-size:18px}
 #status{font-weight:600;margin:12px 0 0;scroll-margin-top:80px}
 .steps{list-style:none;padding:0;margin:14px 0 0;counter-reset:step}
 .progress{height:6px;border-radius:3px;background:#E9ECEF;margin:12px 0 4px;overflow:hidden}
-.progress span{display:block;height:100%;background:#C4222C;border-radius:3px;transition:width .3s}
+.progress span{display:block;height:100%;background:var(--swa-red);border-radius:3px;transition:width .3s}
 .step{display:grid;grid-template-columns:36px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-top:1px solid #E1E3E8;counter-increment:step}
 .step:not(.current):not(.done) h3,.step:not(.current):not(.done) p{color:#6B7076}
 .step.current{background:#FBF4F4;border-radius:8px;border-top-color:transparent;padding:16px 14px;margin:2px -14px}
 .step.current+.step{border-top-color:transparent}
 .step:first-child{border-top:0}
-.step .mark{grid-row:span 3;width:32px;height:32px;border-radius:50%;border:2px solid #B9C4C9;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:19px;color:#55585F}
+.step .mark{grid-row:span 3;width:32px;height:32px;border-radius:50%;border:2px solid var(--swa-silver);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:19px;color:var(--swa-muted)}
 .step .mark::before{content:counter(step)}
-.step.done .mark{background:#1F6F3A;border-color:#1F6F3A;color:#fff}
+.step.done .mark{background:var(--swa-ok);border-color:var(--swa-ok);color:#fff}
 .step.done .mark::before{content:"✓"}
-.step.current .mark{border-color:#C4222C;color:#C4222C}
+.step.current .mark{border-color:var(--swa-red);color:var(--swa-red)}
 .step h3{margin:4px 0 0;font-size:18px}
-.step.done p{color:#55585F}
+.step.done p{color:var(--swa-muted)}
 .step p{margin:0}
-.step .done-note{color:#1F6F3A;font-weight:600}
+.step .done-note{color:var(--swa-ok);font-weight:600}
 .step .go{margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 html body .step .go .button,html body .step .go button{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;text-decoration:none}
 .next-when{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:clamp(26px,6vw,34px);line-height:1.05;margin:6px 0 4px;text-transform:uppercase}
@@ -73,24 +73,24 @@ html body a.button{display:inline-flex;align-items:center;justify-content:center
 label{display:block;margin:14px 0}
 input,select,textarea{display:block;width:100%;margin-top:5px;box-sizing:border-box}
 /* Optional contact and safety details (issue #188) */
-.why-box{margin:22px 0 4px;padding:14px 16px;background:#F4F5F7;border-radius:8px;font-size:16px}
+.why-box{margin:22px 0 4px;padding:14px 16px;background:var(--swa-ground);border-radius:8px;font-size:16px}
 .why-box p{margin:0}
 .details-group{border:0;padding:0;margin:18px 0 0;min-width:0}
 .details-group legend{padding:0;font-weight:700;font-size:18px;display:flex;align-items:center;gap:10px}
 .safety label.check{display:flex;align-items:center;gap:10px;margin:8px 0 4px;font-weight:600}
 html body .safety label.check input{width:22px;height:22px;margin:0;flex:none}
 html body .safety textarea:disabled{opacity:.55}
-html body main>section.finish{border-left:6px solid #C4222C}
+html body main>section.finish{border-left:6px solid var(--swa-red)}
 .finish h2{margin:0 0 6px}.finish p{margin:0 0 12px}
 .field-hint{margin:4px 0 0;font-size:15px}
 .row.addr-row{grid-template-columns:2fr 1fr 1fr}
 .row.emergency-row{grid-template-columns:1fr 1fr}
 .birth input{max-width:260px}
 html body .safety textarea{min-height:76px}
-.kid-safety{margin:0 0 12px;padding:10px 12px;border-left:3px solid #B9C4C9;background:#F7F8F9;border-radius:0 6px 6px 0;font-size:16px;overflow-wrap:anywhere;white-space:pre-line}
+.kid-safety{margin:0 0 12px;padding:10px 12px;border-left:3px solid var(--swa-silver);background:#F7F8F9;border-radius:0 6px 6px 0;font-size:16px;overflow-wrap:anywhere;white-space:pre-line}
 .contact-lines{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 0}
 .contact-lines div{min-width:0}
-.contact-lines dt{font-size:14px;color:#55585F}
+.contact-lines dt{font-size:14px;color:var(--swa-muted)}
 .contact-lines dd{margin:3px 0 0;font-weight:600;overflow-wrap:anywhere}
 .row{display:grid;grid-template-columns:2fr 1fr;gap:14px}
 .card-row{grid-template-columns:1fr 1fr}
@@ -100,23 +100,22 @@ html body .safety textarea{min-height:76px}
 .card-check{margin-left:6px;min-height:36px;padding:4px 12px}
 .form-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .form-actions button,.athlete button{padding:0 16px}
-.notice{border-left:3px solid #C4222C;padding-left:14px}
+.notice{border-left:3px solid var(--swa-red);padding-left:14px}
 [hidden]{display:none!important}
+#familyFields{border:0;margin:0;padding:0;min-width:0}
 .section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .section-title h2,.section-title h3{margin:0}
 .billing-pill{font-size:13px;padding:3px 8px;background:#EEF0F3;border-radius:4px;display:inline-block;line-height:1.4;margin-right:4px}
-.billing-pill.active{background:#E6F2EA;color:#195b33}
-.billing-pill.warning{background:#FDECEC;color:#8E1A22}
+.billing-pill.active{background:var(--swa-ok-bg);color:var(--swa-ok)}
+.billing-pill.warning{background:var(--swa-warn-bg);color:var(--swa-warn-ink)}
 .member-card{border:1px solid #E1E3E8;border-radius:6px;padding:18px;margin:16px 0}
 .member-card p{margin:8px 0 12px}
 .member-details{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:18px 0}
 .member-details div{min-width:0}
-.member-details dt{font-size:14px;color:#55585F}
+.member-details dt{font-size:14px;color:var(--swa-muted)}
 .member-details dd{font-weight:600;margin:3px 0 0;overflow-wrap:anywhere}
 .billing-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .billing-actions button{padding:0 16px}
-html body .account-action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1.5px solid #141416;background:#fff;border-radius:6px;color:#141416;text-decoration:none;font-weight:600}
-html body .account-action.primary{color:#fff;background:#C4222C;border-color:#C4222C}
 .empty-billing{padding:12px 0}
 .empty-billing h3{margin-bottom:6px}
 .purchase-item{padding:16px 0;border-bottom:1px solid #E1E3E8}
@@ -124,7 +123,7 @@ html body .account-action.primary{color:#fff;background:#C4222C;border-color:#C4
 .purchase-item h4{margin:0 0 5px;font-size:17px}
 .purchase-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
 .purchase-top strong{white-space:nowrap}
-.billing-note{font-size:15px;color:#55585F}
+.billing-note{font-size:15px;color:var(--swa-muted)}
 #yourData summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;list-style:none}#yourData summary::-webkit-details-marker{display:none}#yourData summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);margin-left:12px;flex:none}#yourData details[open]>summary::after{transform:rotate(-135deg) translateY(-1px)}
 main>section[id],#status{scroll-margin-top:80px}
 @media(max-width:560px){
@@ -141,7 +140,8 @@ main>section[id],#status{scroll-margin-top:80px}
  .purchase-top{flex-wrap:wrap}
  .kid-links>*,.summary-actions>*{flex:1 1 auto}
  .later li b{min-width:0}
- html body .quick a{padding:0 12px}
+ .quick{gap:0 18px}
+ html body .quick a{min-height:44px}
 }
 </style></head><body><main>
 <div class="fam-hero"><div class="fam-head"><div><p class="eyebrow">Savage Wrestling Academy</p><h1 id="hello">Your family</h1><p class="lede" id="heroLede"></p></div>
@@ -153,10 +153,10 @@ main>section[id],#status{scroll-margin-top:80px}
 <section id="nextUp" class="card" hidden aria-labelledby="nextUpHeading"><h2 id="nextUpHeading">Next up</h2><div id="nextUpBody"></div></section>
 <section id="summary" class="card" hidden tabindex="-1" aria-labelledby="savedHeading"><h2 id="savedHeading">Your wrestlers</h2><div id="savedDetails"></div><p class="muted" id="savedTime"></p><div class="summary-actions"><button type="button" onclick="editProfile()">Edit family profile</button></div>
 <div class="training"><h3>Training</h3><p id="readyNote">Choose a 12-month membership or a single walk-in practice. Online payment isn’t open yet, so pay at the academy.</p><p id="notEnrolledNote"><strong>No payment recorded yet.</strong> When you pay at the academy, your membership or registration shows here once the academy records it.</p><ul><li><a href="/register">Choose a membership or walk-in →</a></li><li><a href="/lesson">Book a private lesson with a coach →</a></li><li><a href="/calendar?view=live">Book an extra practice, such as Friday Night Live →</a></li><li><a href="/register?program=Advanced">Ask a coach about SWA Advance →</a></li></ul></div></section>
-<section id="editor" class="card" aria-labelledby="editorHeading"><h2 id="editorHeading">Your family profile</h2><p class="notice" id="editorNotice">Add your name, phone number and each wrestler, then choose Save family profile. When you pay at the academy, the payment shows here once the academy records it.</p><form id="familyForm"><h3>Parent or guardian</h3><label>Your name<input name="parentName" maxlength="120" required autocomplete="name"></label><label>Phone number<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label><div class="why-box" id="detailsWhy"><p><strong>The academy needs these details for every family.</strong> They let us reach someone quickly and look after your wrestler if they get hurt or feel unwell at practice. The academy and your wrestler’s coaches see them at check-in, and you can update them at any time.</p></div><fieldset class="details-group"><legend>Home address</legend><label>Street address<input id="homeAddress" maxlength="300" autocomplete="address-line1" required></label><div class="row addr-row"><label>City<input id="homeCity" maxlength="100" autocomplete="address-level2" required></label><label>State<input id="homeState" maxlength="40" autocomplete="address-level1" required></label><label>ZIP code<input id="homeZip" maxlength="10" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" title="5 digits, for example 11746" required></label></div></fieldset><fieldset class="details-group"><legend>Emergency contact</legend><p class="muted field-hint" id="emergencyHint">Someone other than you that the academy can call if we can’t reach you.</p><div class="row emergency-row"><label>Name<input id="emergencyContactName" maxlength="120" autocomplete="off" aria-describedby="emergencyHint" required></label><label>Phone number<input id="emergencyContactPhone" type="tel" maxlength="40" autocomplete="off" aria-describedby="emergencyHint" required></label></div></fieldset><h3>Your wrestlers</h3><div id="wrestlers"></div><button type="button" onclick="addWrestler()">+ Add wrestler</button><p class="muted">Saving a wrestler doesn’t sign them up. Choose a membership or walk-in after you save.</p><div class="form-actions"><button class="primary" id="save">Save family profile</button><button id="cancelEdit" type="button" hidden onclick="cancelProfileEdit()">Cancel changes</button></div></form></section>
-<section id="memberships" class="card" aria-labelledby="membershipsHeading"><div class="section-title"><h2 id="membershipsHeading">Memberships</h2><span class="billing-pill" id="paymentsPill">Nothing paid yet</span></div><p class="billing-note">After you pay for a membership, each wrestler’s program, start date, payments and end date show here.</p><div id="membershipCards"><p>Loading your family…</p></div></section>
+<section id="editor" class="card" aria-labelledby="editorHeading"><h2 id="editorHeading">Your family profile</h2><p class="notice" id="editorNotice">Add your name, phone number and each wrestler, then choose Save family profile. When you pay at the academy, the payment shows here once the academy records it.</p><form id="familyForm"><fieldset id="familyFields" disabled><h3>Parent or guardian</h3><label>Your name<input name="parentName" maxlength="120" required autocomplete="name"></label><label>Phone number<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label><div class="why-box" id="detailsWhy"><p><strong>The academy needs these details for every family.</strong> They let us reach someone quickly and look after your wrestler if they get hurt or feel unwell at practice. The academy and your wrestler’s coaches see them at check-in, and you can update them at any time.</p></div><fieldset class="details-group"><legend>Home address</legend><label>Street address<input id="homeAddress" maxlength="300" autocomplete="address-line1" required></label><div class="row addr-row"><label>City<input id="homeCity" maxlength="100" autocomplete="address-level2" required></label><label>State<input id="homeState" maxlength="40" autocomplete="address-level1" required></label><label>ZIP code<input id="homeZip" maxlength="10" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" title="5 digits, for example 11746" required></label></div></fieldset><fieldset class="details-group"><legend>Emergency contact</legend><p class="muted field-hint" id="emergencyHint">Someone other than you that the academy can call if we can’t reach you.</p><div class="row emergency-row"><label>Name<input id="emergencyContactName" maxlength="120" autocomplete="off" aria-describedby="emergencyHint" required></label><label>Phone number<input id="emergencyContactPhone" type="tel" maxlength="40" autocomplete="off" aria-describedby="emergencyHint" required></label></div></fieldset><h3>Your wrestlers</h3><div id="wrestlers"></div><button type="button" onclick="addWrestler()">+ Add wrestler</button><p class="muted">Saving a wrestler doesn’t sign them up. Choose a membership or walk-in after you save.</p><div class="form-actions"><button class="primary" id="save">Save family profile</button><button id="cancelEdit" type="button" hidden onclick="cancelProfileEdit()">Cancel changes</button></div></fieldset></form></section>
+<section id="memberships" class="card" aria-labelledby="membershipsHeading"><div class="section-title"><h2 id="membershipsHeading">Memberships</h2><span class="billing-pill active" id="paymentsPill" hidden>Paid</span></div><p class="billing-note">After you pay for a membership, each wrestler’s program, start date, payments and end date show here.</p><div id="membershipCards"><p>Loading your family…</p></div></section>
 <section id="purchaseHistory" class="card" aria-labelledby="purchaseHeading"><h2 id="purchaseHeading">Purchase history</h2><p class="billing-note">Everything you pay for shows here: memberships, walk-ins, camps, clinics, events and private lessons. Extra practices such as Friday Night Live are separate purchases, with a lower price for members.</p><div id="purchaseList"><div class="empty-billing"><h3>No purchases yet</h3><p>Looking over a registration doesn’t charge you or hold a spot. Each payment shows here with its date and amount after you pay.</p></div></div></section>
-<section id="yourData" class="card" aria-labelledby="yourDataHeading"><h2 id="yourDataHeading">Your data</h2><p class="muted">Download everything the academy holds about your family: profile, payments, attendance, signed waivers, messages and more.</p><a class="account-action" href="/api/my-data?format=download" download>Download my family's data</a><details style="margin-top:14px"><summary>Ask to close my account</summary><form id="closeForm"><label>Anything the academy should know (optional)<textarea id="closeNote" maxlength="1000" rows="3"></textarea></label><button type="submit">Send request to the academy</button></form></details><p id="requestStatus" class="muted"></p></section>
+<section id="yourData" class="card" aria-labelledby="yourDataHeading"><h2 id="yourDataHeading">Your data</h2><p class="muted">Download everything the academy holds about your family: profile, payments, attendance, signed waivers, messages and more.</p><a class="button" href="/api/my-data?format=download" download>Download my family's data</a><details style="margin-top:14px"><summary>Ask to close my account</summary><form id="closeForm"><label>Anything the academy should know (optional)<textarea id="closeNote" maxlength="1000" rows="3"></textarea></label><button type="submit">Send request to the academy</button></form></details><p id="requestStatus" class="muted"></p></section>
 </main><script>
 let scholarshipAwards=[];
 // A paid checkout (issue #184): a clear green confirmation at the top, not a plain status line.
@@ -199,8 +199,11 @@ function readFields(){const f=$('familyForm');profile.parentName=f.elements.pare
 function draw(){const f=$('familyForm');f.elements.parentName.value=profile.parentName;f.elements.phone.value=profile.phone;for(const k of DETAILS)$(k).value=profile[k]||'';renderMembershipCards();$('wrestlers').innerHTML=profile.wrestlers.map((w,i)=>`<div class="athlete"><div class="row"><label>Wrestler ${i+1} name<input id="name${i}" value="${esc(w.name)}" maxlength="120" required></label><label>Grade<select id="grade${i}">${['K',...Array.from({length:12},(_,i)=>String(i+1)),'Adult'].map(g=>`<option value="${g}" ${g===w.grade?'selected':''}>${g==='K'?'Kindergarten':g}</option>`).join('')}</select></label></div><div class="row card-row"><label>USA Wrestling card number<input id="usaw${i}" value="${esc(w.usawNumber||'')}" maxlength="24" autocomplete="off" placeholder="From the USA Wrestling card"></label><div>${seasonField(w,i)}</div></div><p class="muted card-hint" id="usawHint${i}">Every USA Wrestling card expires on August 31, whatever month it was bought. New-season cards usually open in mid-August at <a href="https://www.usawmembership.com" target="_blank" rel="noopener">usawmembership.com</a>.</p><p class="muted card-line">${cardLine(w)}</p>${safetyFields(w,i)}<button type="button" onclick="removeWrestler(${i})">Remove wrestler</button></div>`).join('')||'<p class="muted">Add your first wrestler below.</p>'}
 function addWrestler(){if(!ready)return;readFields();if(profile.wrestlers.length>=20)return;profile.wrestlers.push({id:crypto.randomUUID(),name:'',grade:'K'});draw()}
 function removeWrestler(i){readFields();profile.wrestlers.splice(i,1);draw()}
-async function loadFamily(){ready=false;$('save').disabled=true;$('status').textContent='Loading…';try{const r=await fetch('/api/family',{cache:'no-store'}),body=await r.json();if(r.status===401){location.href='/login';return}if(!r.ok)throw Error(body.error||'We couldn’t load your family account. Refresh the page to try again.');profile=body.data;cards=body.cards||{};cardSeasons=Array.isArray(body.cardSeasons)?body.cardSeasons:[];renewalDays=Number(body.cardRenewalDays)||0;revision=body.revision;$('email').textContent=body.email;draw();ready=true;loadScholarships();loadOrders();loadWaiver();loadConsent();loadUnread();loadRequests();savedAt=body.updatedAt;savedProfile=body.updatedAt?JSON.parse(JSON.stringify(profile)):null;if(savedProfile)showSummary();else renderHome();loadNextUp();$('status').textContent=''}catch(e){$('status').textContent=e.message}finally{$('save').disabled=!ready}}
-$('familyForm').onsubmit=async e=>{e.preventDefault();if(!ready)return;$('save').disabled=true;$('status').textContent='Saving…';try{readFields();const r=await fetch('/api/family',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,data:profile})}),body=await r.json();if(!r.ok)throw Error(body.error||'Something went wrong.');revision=body.revision;savedAt=body.updatedAt;if(body.data&&Array.isArray(body.data.wrestlers))profile=body.data;savedProfile=JSON.parse(JSON.stringify(profile));renderMembershipCards();const found=Object.entries(body.lookups||{}).map(([id,o])=>{const w=profile.wrestlers.find(x=>x.id===id);return w?lookupMessage(w.name,o):''}).filter(Boolean);$('status').textContent='Your changes are saved.'+(found.length?' '+found.join(' '):'');showSummary(true);refreshCards();loadNextUp()}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth',block:'start'})}finally{$('save').disabled=false}};
+// The profile form stays disabled until the saved profile is in, and while it saves, so nothing typed meanwhile is
+// overwritten by the load (issues #220, #231). If it cannot load, it stays disabled and says why: saving then would
+// replace a profile the parent never saw.
+async function loadFamily(){ready=false;$('save').disabled=true;$('familyFields').disabled=true;$('status').textContent='Loading…';try{const r=await fetch('/api/family',{cache:'no-store'}),body=await r.json().catch(()=>({}));if(r.status===401){location.href='/login';return}if(!r.ok)throw Error(body.error||'We couldn’t load your family account. Refresh the page to try again.');profile=body.data;cards=body.cards||{};cardSeasons=Array.isArray(body.cardSeasons)?body.cardSeasons:[];renewalDays=Number(body.cardRenewalDays)||0;revision=body.revision;$('email').textContent=body.email;draw();ready=true;loadScholarships();loadOrders();loadWaiver();loadConsent();loadUnread();loadRequests();savedAt=body.updatedAt;savedProfile=body.updatedAt?JSON.parse(JSON.stringify(profile)):null;if(savedProfile)showSummary();else renderHome();loadNextUp();$('status').textContent=''}catch(e){$('status').textContent=e.message}finally{$('save').disabled=!ready;$('familyFields').disabled=!ready}}
+$('familyForm').onsubmit=async e=>{e.preventDefault();if(!ready)return;$('save').disabled=true;$('familyFields').disabled=true;$('status').textContent='Saving…';try{readFields();const r=await fetch('/api/family',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,data:profile})}),body=await r.json();if(!r.ok)throw Error(body.error||'Something went wrong.');revision=body.revision;savedAt=body.updatedAt;if(body.data&&Array.isArray(body.data.wrestlers))profile=body.data;savedProfile=JSON.parse(JSON.stringify(profile));renderMembershipCards();const found=Object.entries(body.lookups||{}).map(([id,o])=>{const w=profile.wrestlers.find(x=>x.id===id);return w?lookupMessage(w.name,o):''}).filter(Boolean);$('status').textContent='Your changes are saved.'+(found.length?' '+found.join(' '):'');showSummary(true);refreshCards();loadNextUp()}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth',block:'start'})}finally{$('save').disabled=false;$('familyFields').disabled=false}};
 async function loadScholarships(){
  try{const r=await fetch('/api/scholarship',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'We couldn’t load scholarship details. Refresh the page to try again.');scholarshipAwards=d.awards||[];renderMembershipCards();refreshHome()}catch(e){$('status').textContent=e.message}
 }
@@ -394,7 +397,6 @@ function renderStatusCopy(){
 function activeMembership(w){const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});return orders.find(o=>o.wrestler_id===w.id&&o.status==='paid'&&(o.kind==='annual'||o.kind==='monthly')&&o.term_start<=today&&o.term_end>=today)}
 function renderPurchases(){
  if(!Array.isArray(orders)||!orders.length)return;
- if($('paymentsPill'))$('paymentsPill').textContent='Paid';
  const label={paid:'Paid',refunded:'Refunded',pending:'Checkout not finished'},cls={paid:'active',refunded:'',pending:'warning'};
  $('purchaseList').innerHTML=orders.map(o=>`<article class="purchase-item"><div class="purchase-top"><div><h4>${esc(o.item_label)}</h4><span class="billing-pill ${cls[o.status]||''}">${esc(label[o.status]||o.status)}</span></div><strong>${dollars(o.amount_cents)}</strong></div><p>${esc(o.wrestler_name)}${o.dates&&o.dates.length?'<br>'+o.dates.map(longDate).map(esc).join(' · '):''}${o.discount_cents?'<br>Includes '+dollars(o.discount_cents)+' discount':''}</p><p class="muted">${o.status==='paid'?'Paid '+esc(longDate(o.paid_at)):o.status==='refunded'?'Refunded after payment on '+esc(longDate(o.paid_at)):'Started '+esc(longDate(o.created_at))+'. Nothing has been charged.'}</p></article>`).join('');
 }
@@ -405,8 +407,11 @@ function renderMembershipCards(){
   if(a)return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="billing-pill active">Active scholarship</span></div><p>${esc(names[a.program])} · <strong>$0.00 tuition</strong></p><p>Started ${esc(longDate(a.accepted_at))}. The scholarship continues under the agreement you accepted until it ends.</p><p class="billing-note">Additional paid practices, camps, clinics, travel, and private lessons are separate unless included in the final award.</p><details><summary>View your signed agreement</summary><p><a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View / print signed copy →</a> · <a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}&amp;download=1">Download copy</a></p><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(a.terms_text)}</p><p>Accepted by ${esc(a.signer)}.</p></details></article>`;
   const m=activeMembership(w);
   if(m)return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="billing-pill ${m.subscription_status==='past_due'?'warning':'active'}">${m.subscription_status==='past_due'?'Payment needs attention':'Active membership'}</span></div><p>${esc(names[m.program]||m.program)} · 12-month membership</p><dl class="member-details"><div><dt>Membership started</dt><dd>${esc(longDate(m.term_start))}</dd></div><div><dt>12-month term ends</dt><dd>${esc(longDate(m.membership_end||m.term_end))}</dd></div><div><dt>Payment</dt><dd>${m.kind==='annual'?dollars(m.amount_cents)+' paid upfront on '+esc(longDate(m.paid_at)):dollars(m.amount_cents)+' a month · '+esc(m.payments_made??1)+' of '+esc(m.payments_total??12)+' payments made'}</dd></div>${m.kind==='monthly'?`<div><dt>Paid through</dt><dd>${esc(longDate(m.paid_through||m.term_end))}</dd></div>`:''}</dl>${m.subscription_status==='past_due'?'<p class="notice"><strong>Payment needs attention.</strong> The latest monthly payment did not go through. Stripe will retry; access continues through the paid-through date.</p>':''}<p class="billing-note">The membership ends after 12 months. Continuing requires a new signup. Friday Night Live, camps, clinics and private lessons are separate purchases.</p></article>`;
-  return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="billing-pill">Not enrolled</span></div><p class="muted">${esc(gradeLabel(w.grade))}</p><p>No membership is recorded for this wrestler yet, so there is no start date or next payment.</p><div class="billing-actions"><a class="account-action" href="/register?plan=monthly&amp;wrestler=${encodeURIComponent(w.id)}">12 months, pay monthly →</a><a class="account-action" href="/register?plan=walkin&amp;wrestler=${encodeURIComponent(w.id)}">One practice, walk-in →</a></div></article>`;
+  return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="billing-pill">Not enrolled</span></div><p class="muted">${esc(gradeLabel(w.grade))}</p><p>No membership is recorded for this wrestler yet, so there is no start date or next payment.</p><div class="billing-actions"><a class="button" href="/register?plan=monthly&amp;wrestler=${encodeURIComponent(w.id)}">12 months, pay monthly →</a><a class="button" href="/register?plan=walkin&amp;wrestler=${encodeURIComponent(w.id)}">One practice, walk-in →</a></div></article>`;
  }).join(''):'<div class="empty-billing"><h3>Add your wrestler to get started</h3><p>Save a wrestler in your family profile, then choose a program. A profile alone does not start a membership.</p></div>';
+ // "Paid" beside Memberships only while a wrestler has an active membership in good standing (issue #231): a paid
+ // lesson, camp or walk-in is not a membership, and a past-due one says "Payment needs attention" on its card.
+ $('paymentsPill').hidden=!profile.wrestlers.some(w=>{const m=activeMembership(w);return m&&m.subscription_status!=='past_due'});
  const history=scholarshipAwards.filter(a=>a.accepted_at&&a.status!=='active');
  if(history.length)$('membershipCards').innerHTML+='<h3>Past scholarship agreements</h3>'+history.map(a=>`<p>${esc(a.wrestler_name)} · ${esc(a.status)}<br><a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View / print signed copy →</a> · <a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}&amp;download=1">Download copy</a></p>`).join('');
 

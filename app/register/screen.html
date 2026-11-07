@@ -1,15 +1,13 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Choose your training | Savage Wrestling Academy LLC</title><style>
-/* Choose training (issue #144): the family home's Savage band (painted full width with border-image, which never scrolls sideways), then one white card per step, and a black bar with the
-   price and the page's one red button. */
+/* Choose training (issue #144): the shared black header band (.swa-head in public/savage.css, issue #231), then one
+   white card per step, and a black bar with the price and the page's one red button. */
 *{box-sizing:border-box}
-body{margin:0;background:#F4F5F7;color:#141416}
-html body main{max-width:860px;margin:0 auto;padding:0 16px 40px}
+body{margin:0;background:var(--swa-ground);color:#141416}
+html body main{max-width:var(--swa-width-narrow);margin:0 auto;padding:0 16px 40px}
 [hidden]{display:none!important}
-.reg-hero{background:#141416;color:#fff;border-image:conic-gradient(#141416 0 0) fill 0/0/0 100vmax;padding:30px 0 34px;margin:0 0 20px}
-.reg-hero .eyebrow{font-weight:700;font-size:13px;letter-spacing:2.4px;text-transform:uppercase;color:#B9C4C9;margin:0}
-html body .reg-hero h1{color:#fff;font-size:clamp(38px,8vw,60px);margin:6px 0 8px;line-height:1}
-.reg-hero .lede{color:#D7DBE0;font-size:18px;margin:0;max-width:48ch}
-.paynote{margin:0 0 16px;padding:12px 16px;background:#fff;border:1px solid #E1E3E8;border-left:3px solid #B9C4C9;border-radius:6px;font-size:15px;color:#3A3D44}
+/* The band's small label stays small (the shared band sizes its paragraphs for the intro) */
+html body .swa-head>p.eyebrow{font-size:13px}
+.paynote{margin:0 0 16px;padding:12px 16px;background:#fff;border:1px solid #E1E3E8;border-left:3px solid var(--swa-silver);border-radius:6px;font-size:15px;color:#3A3D44}
 #status{font-weight:600;margin:0 0 14px}
 #cardHelp,#waiverHelp{margin:-6px 0 14px;font-weight:600}
 /* Steps: each one is its own card with a numbered heading. */
@@ -34,13 +32,13 @@ select,input{display:block;width:100%;margin-top:6px}
 .plan-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 html body .plan-card{position:relative;display:flex;flex-direction:column;gap:2px;margin:0;padding:18px 18px 16px;border:1.5px solid #E1E3E8;border-radius:8px;background:#fff;cursor:pointer;font-weight:400;min-height:44px;transition:border-color .15s,box-shadow .15s}
 html body .plan-card:hover{border-color:#8A9095}
-html body .plan-card:has(input:checked){border-color:#C4222C;box-shadow:inset 0 0 0 1px #C4222C;background:#fff}
+html body .plan-card:has(input:checked){border-color:var(--swa-red);box-shadow:inset 0 0 0 1px var(--swa-red);background:#fff}
 html body .plan-card:has(input:focus-visible){outline:3px solid #141416;outline-offset:2px}
 .plan-card input{position:absolute;top:16px;right:16px;margin:0;width:22px;height:22px}
 .plan-text{display:flex;flex-direction:column;gap:4px;min-width:0;padding-right:30px}
 .plan-name{font-weight:700;font-size:15px;line-height:1.3;color:#3A3D44}
 .plan-price{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:27px;line-height:1.05;color:#141416;margin-top:6px}
-.plan-term{font-size:14px;color:#55585F}
+.plan-term{font-size:14px;color:var(--swa-muted)}
 #monthly{margin-top:18px}
 #teamCodeHelp{font-size:14px;margin:6px 0 0}
 .included{margin:16px 0 0;border-top:1px solid #E1E3E8}
@@ -49,14 +47,14 @@ html body .plan-card:has(input:focus-visible){outline:3px solid #141416;outline-
 .included summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);margin-left:12px;flex:none}
 .included[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
 .included p{font-size:15px;color:#3A3D44}
-.calm{margin:18px 0 0;padding:12px 16px;border-left:3px solid #B9C4C9;background:#F7F8FA;border-radius:0 6px 6px 0}
-#approvalGate{margin:18px 0 0;padding:18px;border:1.5px solid #C4222C;border-radius:8px;background:#FFF7F7}
+.calm{margin:18px 0 0;padding:12px 16px;border-left:3px solid var(--swa-silver);background:#F7F8FA;border-radius:0 6px 6px 0}
+#approvalGate{margin:18px 0 0;padding:18px;border:1.5px solid var(--swa-red);border-radius:8px;background:#FFF7F7}
 html body #approvalGate h2{font-size:22px;margin:0 0 6px}
 #approvalGate .row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
-#approvalHelp{font-size:14px;color:#55585F;margin:0}
+#approvalHelp{font-size:14px;color:var(--swa-muted);margin:0}
 /* Calendar */
 .cal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
-.calendar-help{font-size:15px;color:#55585F;margin:0 0 4px;max-width:58ch}
+.calendar-help{font-size:15px;color:var(--swa-muted);margin:0 0 4px;max-width:58ch}
 .calendar-month-input{width:210px;font-size:14px}
 .calendar-month-input select{min-height:42px;font-size:16px}
 .calendar-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:18px 0 10px}
@@ -69,20 +67,20 @@ html body .calendar-day{min-width:0;min-height:56px;padding:6px 2px;border:1px s
 html body .calendar-day:disabled{background:transparent;border-color:transparent;color:#A3A8AE;opacity:1;font-weight:400}
 html body .calendar-day.has-practice:hover{border-color:#141416}
 .calendar-day small{display:block;font-size:10px;margin-top:2px;color:#6B7076;font-weight:600;letter-spacing:.3px}
-.calendar-day .practice-dot{height:6px;width:6px;display:block;margin:5px auto 0;border-radius:50%;background:#C4222C}
+.calendar-day .practice-dot{height:6px;width:6px;display:block;margin:5px auto 0;border-radius:50%;background:var(--swa-red)}
 html body .calendar-day[aria-pressed=true]{color:#fff;background:#141416;border-color:#141416}
 html body .calendar-day[aria-pressed=true] small{color:#D7DBE0}
 .calendar-legend{font-size:13px;margin:12px 0 0;color:#6B7076;display:flex;align-items:center;gap:8px}
-.calendar-legend span{display:inline-block;height:6px;width:6px;border-radius:50%;background:#C4222C}
+.calendar-legend span{display:inline-block;height:6px;width:6px;border-radius:50%;background:var(--swa-red)}
 #calendarAvailability{font-size:15px;margin:6px 0 0;color:#3A3D44}
 .practice-times{margin-top:16px}
 .practice-times h3{font-size:17px;margin:0 0 2px}
 .practice-times>p{margin:0 0 8px}
 html body .practice{display:block;width:100%;text-align:left;margin:8px 0;padding:14px 16px;border:1.5px solid #E1E3E8;border-radius:8px;background:#fff;color:#141416;font-weight:400;line-height:1.45}
 html body .practice:hover{border-color:#141416}
-html body .practice[aria-pressed=true]{border-color:#C4222C;box-shadow:inset 0 0 0 1px #C4222C}
+html body .practice[aria-pressed=true]{border-color:var(--swa-red);box-shadow:inset 0 0 0 1px var(--swa-red)}
 .practice strong{font-size:17px}
-.practice small{color:#55585F;font-size:14px}
+.practice small{color:var(--swa-muted);font-size:14px}
 .practice-selection{margin:12px 0 0;padding:12px 16px;background:#F7F8FA;border-left:3px solid #141416;border-radius:0 6px 6px 0;overflow-wrap:anywhere;font-weight:600}
 .calendar-error{color:#A11B24}
 /* The bar with the price and the page's one red button stays in view while choosing. */
@@ -96,11 +94,11 @@ html body #review h2{margin:0 0 14px}
 #reviewDetails>p:first-child{padding-top:0}
 #reviewDetails strong{font-weight:700}
 #reviewDetails .price,#review .price{border-bottom:0;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:34px;line-height:1.1;padding-top:16px}
-#payNotice{margin:16px 0;padding:12px 16px;background:#F7F8FA;border-left:3px solid #B9C4C9;border-radius:0 6px 6px 0}
+#payNotice{margin:16px 0;padding:12px 16px;background:#F7F8FA;border-left:3px solid var(--swa-silver);border-radius:0 6px 6px 0}
 #payBox label{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;font-size:16px}
 #payBox label input{flex:none;margin:2px 0 0;width:22px}
-#payBox .small{font-size:14px;color:#55585F}
-html body #payPending{background:#EEF0F3;border-color:#EEF0F3;color:#55585F;padding:0 18px}
+#payBox .small{font-size:14px;color:var(--swa-muted)}
+html body #payPending{background:#EEF0F3;border-color:#EEF0F3;color:var(--swa-muted);padding:0 18px}
 .review-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:20px}
 html body .review-actions button{padding:0 18px}
 html body a.button{display:inline-flex;align-items:center;padding:0 18px;text-decoration:none}
@@ -119,7 +117,7 @@ html body a.button{display:inline-flex;align-items:center;padding:0 18px;text-de
  html body main>section#review{padding:18px 16px}
 }
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
-<div class="reg-hero"><p class="eyebrow">Savage Wrestling Academy</p><h1>Choose training</h1><p class="lede">One practice or a full year on the mat. Pick your wrestler, a program and how you want to train.</p></div>
+<div class="swa-head"><p class="eyebrow">Savage Wrestling Academy</p><h1>Choose training</h1><p class="lede">One practice or a full year on the mat. Pick your wrestler, a program and how you want to train.</p></div>
 <p class="paynote" id="previewBanner">Online payment isn’t open yet. Choose here, then pay at the academy. Your registration is confirmed when the academy records your payment, and it then appears in your family account.</p>
 <p id="status" role="status" aria-live="polite">Loading your programs…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
 <section id="choices" hidden><form id="selection">
