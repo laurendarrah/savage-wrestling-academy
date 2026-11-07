@@ -64,10 +64,14 @@ function seed(sqlite){
   run("INSERT INTO booking_exceptions VALUES (?,?,?,?,?,?,?,?,?,?,?)",'ex-1','parent-1','w-1','usaw','2026-11-05','2026-12-05','Renewal pending','owner',now,null,null);
   // Issue #194: the owner's own entries in the books.
   run("INSERT INTO financial_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",'fe-1','expense','2026-11-01',180000,'Rent','November rent','Check 1042',1,now,'owner',now,'owner',null,null);
+  // Issue #193: an approved shift and approved time off.
+  run(`INSERT INTO coach_time_entries(id,user_id,coach_email,coach_name,work_date,session_key,session_title,session_start,session_end,duty,source,clock_in,clock_out,submitted_at,approved_at,approved_by,approved_minutes,approved_duty,approved_rate_cents,approved_cents,history,revision,created_at)
+    VALUES ('shift-1','coach-1','dana@example.test','Coach Dana','2026-11-02','practice:Intermediate:2026-11-02:18:00','SWA Intermediate','18:00','19:30','head','clock','2026-11-02T22:55:00.000Z','2026-11-03T00:35:00.000Z',?,?,'owner',90,'head',4000,6000,'[{"by":"coach","action":"clocked in"}]',4,?)`,now,now,now);
+  run("INSERT INTO coach_time_off(id,user_id,coach_email,coach_name,start_date,end_date,reason,status,programs,requested_at,decided_at,decided_by,decision_note,revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",'off-1','coach-1','dana@example.test','Coach Dana','2026-12-10','2026-12-12','Family wedding','approved','["Intermediate"]',now,now,'owner',null,2);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {
@@ -153,6 +157,10 @@ bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad
   // The same for the books (issue #194): a file made before them still restores and adds no entries.
   b3=clone();delete b3.records.financial_entries;assert.equal(lib.validBackup(b3),true,'v3 from before the books');
   {const o4=freshDb(),o4Lib=loadBackups(o4.DB);const res=await o4Lib.restoreBackup(b3,await o4Lib.fingerprint(await o4Lib.metadata()),'owner');assert.equal(res.restored.orders,1);assert.equal(dump(o4.sqlite,'financial_entries').length,0)}
+  // A version 3 file made before timesheets (issue #193) still restores; a shift's history must be a list.
+  b3=clone();delete b3.records.coach_time_entries;delete b3.records.coach_time_off;assert.equal(lib.validBackup(b3),true,'v3 from before timesheets');
+  b3=clone();b3.records.coach_time_entries[0].history='{}';assert.equal(lib.validBackup(b3),false,'shift history must be a list');
+  b3=clone();b3.records.coach_time_entries[0].approved_cents='6000';assert.equal(lib.validBackup(b3),false,'amounts are whole cents');
   b3=clone();b3.records.coach_profiles[0].specialties='not json';assert.equal(lib.validBackup(b3),false,'coach profile specialties must be a list');
   b3=clone();b3.records.usaw_reviews.push({...b3.records.usaw_reviews[0]});assert.equal(lib.validBackup(b3),false,'duplicate composite key');
 }
@@ -170,6 +178,10 @@ bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad
   target.sqlite.prepare("UPDATE orders SET status='refunded' WHERE id='ord-1'").run();
   await targetLib.restoreBackup(backup,await targetLib.fingerprint(await targetLib.metadata()),'owner');
   assert.equal(dump(target.sqlite,'orders')[0].status,'refunded','restore does not overwrite an existing order');
+  // Nor an approved shift: a file cannot change hours or amounts the owner approved.
+  target.sqlite.prepare("UPDATE coach_time_entries SET approved_cents=5000,approved_minutes=75 WHERE id='shift-1'").run();
+  await targetLib.restoreBackup(backup,await targetLib.fingerprint(await targetLib.metadata()),'owner');
+  assert.equal(dump(target.sqlite,'coach_time_entries')[0].approved_cents,5000,'restore does not overwrite an existing shift');
 }
 
 // 7. Version 1 backups from before this change still validate and restore.

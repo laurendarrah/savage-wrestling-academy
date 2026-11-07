@@ -67,10 +67,10 @@ actor = {owner: true, id: 'owner-id'};
 assert.equal((await get('?from=2026-10-31&to=2026-10-01')).status, 400);
 assert.equal((await get('?from=nope&to=2026-10-01')).status, 400);
 
-// No pay shares set: lessons and totals are shown, amounts owed are blank.
+// No pay shares saved: Justin's 65% default applies to every coach (#197 Q2), rounded per lesson.
 let r = JSON.parse((await get('?from=2026-10-01&to=2026-10-31')).text);
-assert.deepEqual(r.coaches.map(c => [c.coach, c.lessons, c.grossCents, c.owedCents]), [['Coach Dana', 3, 9999, null], ['Coach Lee', 1, 8000, null], ['Name from order', 1, 5000, null]]);
-assert.equal(r.totals.unsetCoaches, 3); assert.equal(r.totals.grossCents, 22999, 'refunded, voided, other kinds and other months excluded');
+assert.deepEqual(r.coaches.map(c => [c.coach, c.lessons, c.grossCents, c.splitPct, c.owedCents]), [['Coach Dana', 3, 9999, 65, 3 * 2166], ['Coach Lee', 1, 8000, 65, 5200], ['Name from order', 1, 5000, 65, 3250]]);
+assert.equal(r.totals.unsetCoaches, 0); assert.equal(r.totals.grossCents, 22999, 'refunded, voided, other kinds and other months excluded');
 
 // Default share and a per-coach share.
 assert.equal((await save({defaultSplit: 60, splits: {'dana@example.test': 70}})).status, 200);
@@ -80,6 +80,12 @@ assert.equal(dana.splitPct, 70); assert.equal(dana.owedCents, 3 * 2333, 'each le
 assert.equal(lee.splitPct, 60); assert.equal(lee.owedCents, 4800);
 assert.equal(r.totals.owedCents, 6999 + 4800 + 3000); assert.equal(r.totals.owedCents + r.totals.academyCents, r.totals.grossCents);
 assert.equal(dana.lines[2].source, 'offline');
+// Clearing the default goes back to 65%; a coach's own share stays.
+assert.equal((await save({defaultSplit: null})).status, 200);
+r = JSON.parse((await get('?from=2026-10-01&to=2026-10-31')).text);
+assert.equal(r.coaches.find(c => c.coach === 'Coach Lee').splitPct, 65); assert.equal(r.coaches.find(c => c.coach === 'Coach Dana').splitPct, 70);
+assert.equal((await save({defaultSplit: 60})).status, 200);
+r = JSON.parse((await get('?from=2026-10-01&to=2026-10-31')).text);
 
 // CSV matches the report and is safe to open in a spreadsheet.
 const csv = await get('?from=2026-10-01&to=2026-10-31&format=csv');
