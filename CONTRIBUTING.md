@@ -32,6 +32,7 @@ Business decisions are issues labeled `needs-decision`. Record the decision as a
 | `needs-decision` | Waiting on an owner or business decision |
 | `needs-access` | Waiting on access to an account or service |
 | `blocked` | Cannot start until something else is done |
+| `in-progress` | Someone, or someone's Claude, is building it now. Check the linked pull request before starting |
 | `area: *` | Which part of the platform it touches |
 
 ## Milestones
@@ -50,6 +51,8 @@ The day-by-day plan is in [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md). When a pla
 - Claude Code reads [CLAUDE.md](CLAUDE.md) automatically. Those rules apply to people too.
 - Ask it to branch, run `pnpm test`, `pnpm typecheck` and `pnpm build`, and push. Review its pull request like anyone else's.
 - Each of us uses our own Claude and GitHub accounts. Never share logins.
+- We often have more than one Claude working at once. Before starting, ask yours to check the open pull requests and the `in-progress` label, and to add that label to the issue it picks up. If two pull requests touch the same page, merge one, then have the other rebased before merging it.
+- Changes you make on the owner dashboard (programs, schedules, events) are saved straight to the live site and are never overwritten by code changes.
 
 ## Definition of done
 
