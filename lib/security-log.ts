@@ -42,6 +42,8 @@ const TITLES: Record<string, string> = {
   practice_plan_hidden: 'Practice plan hidden from coaches',
   coach_access_granted: 'Coach access given',
   coach_access_revoked: 'Coach access removed',
+  coach_permanently_removed: 'Coach removed permanently',
+  coach_records_deleted: 'Removed coaches’ records deleted after 3 years',
   waitlist_offer: 'Waitlist seat offered',
   pass_revoked: 'Entry pass replaced',
   usaw_card_valid: 'USA Wrestling card verified',
@@ -94,8 +96,14 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
   const order = (id: string) => names.orders[id];
   let detail = '';
   switch (row.action) {
-    case 'coach_access_granted': case 'coach_access_revoked':
-      detail = names.coaches[t.toLowerCase()] ? `${names.coaches[t.toLowerCase()]} (${t})` : t; break;
+    case 'coach_access_granted': case 'coach_access_revoked': case 'coach_permanently_removed':
+      detail = t.startsWith('former-coach-') ? 'A former coach' : names.coaches[t.toLowerCase()] ? `${names.coaches[t.toLowerCase()]} (${t})` : t; break;
+    case 'coach_records_deleted': {
+      // Counts only (issue #212): "finished:1 in-progress:0 deleted:12 anonymized:4".
+      const n = Object.fromEntries(t.split(' ').map(p => p.split(':')).map(([k, v]) => [k, Number(v) || 0]));
+      detail = [n.finished ? plural(n.finished, 'former coach', 'former coaches') + ' done' : '', n['in-progress'] ? 'more to do tomorrow' : '',
+        plural(n.deleted ?? 0, 'record', 'records') + ' deleted', plural(n.anonymized ?? 0, 'record', 'records') + ' kept without the coach’s name'].filter(Boolean).join(' · '); break;
+    }
     case 'practice_plan_shared': case 'practice_plan_draft': case 'practice_plan_hidden': {
       const [p, d] = t.split(':'); detail = d ? `${program(p)} · ${dayDate(d)}` : program(p); break;
     }
@@ -132,7 +140,7 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
       detail = [o ? `${o.wrestler} · ${o.item}` : '', m ? `${fullDate(m[1])}: ${m[2]} paid for ${plural(Number(m[3]), 'seat', 'seats')}. Refund one or move it.` : ''].filter(Boolean).join(' · '); break;
     }
   }
-  const who = row.actor === 'stripe' ? 'Stripe' : names.you.includes(row.actor) ? 'You' : names.people[row.actor] ?? 'Another account';
+  const who = row.actor === 'stripe' ? 'Stripe' : row.actor === 'system' ? 'The site' : row.actor.startsWith('former-coach-') ? 'A former coach' : names.you.includes(row.actor) ? 'You' : names.people[row.actor] ?? 'Another account';
   return {title: TITLES[row.action] ?? humanize(row.action), detail, who, at: when(row.created_at, now)};
 }
 

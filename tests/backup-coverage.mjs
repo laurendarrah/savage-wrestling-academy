@@ -68,10 +68,12 @@ function seed(sqlite){
   run(`INSERT INTO coach_time_entries(id,user_id,coach_email,coach_name,work_date,session_key,session_title,session_start,session_end,duty,source,clock_in,clock_out,submitted_at,approved_at,approved_by,approved_minutes,approved_duty,approved_rate_cents,approved_cents,history,revision,created_at)
     VALUES ('shift-1','coach-1','dana@example.test','Coach Dana','2026-11-02','practice:Intermediate:2026-11-02:18:00','SWA Intermediate','18:00','19:30','head','clock','2026-11-02T22:55:00.000Z','2026-11-03T00:35:00.000Z',?,?,'owner',90,'head',4000,6000,'[{"by":"coach","action":"clocked in"}]',4,?)`,now,now,now);
   run("INSERT INTO coach_time_off(id,user_id,coach_email,coach_name,start_date,end_date,reason,status,programs,requested_at,decided_at,decided_by,decision_note,revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",'off-1','coach-1','dana@example.test','Coach Dana','2026-12-10','2026-12-12','Family wedding','approved','["Intermediate"]',now,now,'owner',null,2);
+  // Issue #212: a coach removed for good, so a restored file keeps their 3-year clock.
+  run("INSERT INTO removed_coaches(id,email_hash,email,name,removed_on,cleaned_at) VALUES (?,?,?,?,?,?)",'gone-1','f'.repeat(64),'former.lee@example.test','Coach Gone','2026-10-01',null);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {
