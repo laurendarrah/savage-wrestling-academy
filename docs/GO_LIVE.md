@@ -76,7 +76,7 @@ Logins do not move: the new Supabase project starts empty (#139). Families and t
 - [ ] Stripe (test mode) → Developers → API keys → **Create restricted key**, named "Savage website test". Give it: reading account details; Checkout Sessions (write); Customers (write); Products and Prices (read); Subscriptions (write); Invoices, PaymentIntents and Charges (read); Balance (read, for card fees, #225); Customer Portal sessions (write). Nothing else. It starts `rk_test_`.
 - [ ] As the owner on the new site, paste it on `/payment-setup` and choose **Verify test key**. The page shows the name and id (`acct_…`) of the Stripe account the key belongs to. Check it is the academy's account and choose **Yes, connect this account**. The site records that account (and notes it in Security activity); from then on every test key, and later the live key, must come from it. The page then says "Connected to <account name> (acct_…)".
 - [ ] Connected the wrong account? Choose **Connect a different Stripe account** on the same page and confirm. It removes the saved key and forgets the account (also noted in Security activity), and the next test key decides again. This only works in test mode, and not when `STRIPE_ACCOUNT_ID` is set.
-- [ ] No Stripe account is built into the site any more. The old setup's account (`acct_1U8nF9…`) and the test prices listed in `config/stripe-test-catalog.json` aren't used: checkout sends each price from the program settings.
+- [ ] No Stripe account or price list is built into the site: checkout sends each price from the program settings, so there are no products or prices to create in Stripe. The old setup's Stripe account and its test price list are gone (#255).
 
 ## 7. Check everything on the Cloudflare address
 
@@ -89,6 +89,8 @@ With a test family (not a real family):
 - [ ] Sign up with a new email, confirm it from the email, and land on the new site
 - [ ] `/family` saves a wrestler without a card and shows that booking is blocked; add a card and the walk-in review works
 - [ ] As the owner, record a $0 offline walk-in for the test wrestler, find them on `/roster`, scan their pass from `/pass` on a phone, then void the payment
+
+Before families join, run the full launch test pass with a test family in Stripe test mode, then delete the test family: [docs/LAUNCH_TEST_PASS.md](LAUNCH_TEST_PASS.md) (#24). Restore Justin's first backup into a local copy to prove backups work: [docs/RESTORE_DRILL.md](RESTORE_DRILL.md) (#25).
 
 Daily card and waiver reminders now run every morning at 7:41 (8:41 in summer) New York time from a Cloudflare schedule. Nothing to set up; they appear under Workers → the worker → Settings → Triggers.
 
@@ -107,7 +109,7 @@ The full guide for problems after launch (site down, failed deploys, bad update,
 
 - **Before step 8:** nothing has changed for families. Fix and redeploy.
 - **A bad publish:** Cloudflare → Workers → the worker → Deployments → roll back to the previous version. Database changes are add-only, so the previous version keeps working.
-- **A data problem:** restore from the newest encrypted backup on `/backups`. Or decrypt the Deploy run's backup with `openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in pre-deploy.sql.enc -out restore.sql -pass pass:<BACKUP_PASSPHRASE>` and import it into a new D1 database.
+- **A data problem:** restore from the newest encrypted backup on `/backups` (practised in [the restore drill](RESTORE_DRILL.md)). Or decrypt the Deploy run's backup with `openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in pre-deploy.sql.enc -out restore.sql -pass pass:<BACKUP_PASSPHRASE>` and import it into a new D1 database.
 - **The new site is down after cut-over:** point the domain back to the old Sites site while it is fixed.
 
 ## Opening online payment later
@@ -117,4 +119,4 @@ Only after the matching decision is recorded on its issue:
 1. Refund policy decided (#3): set `CHECKOUT_KINDS=walkin,event,live`.
 2. Membership terms approved (#2): add `monthly`. A year paid upfront is not offered (#210).
 3. Lesson refund policy decided (#80): add `lesson`.
-4. Test with Stripe test cards first (#24), then follow the live steps on #26. The live key must come from the same Stripe account the test key connected (or `STRIPE_ACCOUNT_ID`, if set). Without either, `/payment-setup` refuses it: "Save your test key first so the site knows your Stripe account."
+4. Test with Stripe test cards first ([the launch test pass](LAUNCH_TEST_PASS.md), #24), then follow the live steps on #26. The live key must come from the same Stripe account the test key connected (or `STRIPE_ACCOUNT_ID`, if set). Without either, `/payment-setup` refuses it: "Save your test key first so the site knows your Stripe account."
