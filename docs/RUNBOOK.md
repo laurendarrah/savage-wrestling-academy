@@ -17,6 +17,7 @@ Keep these six things in the password manager. Every fix below depends on at lea
 - Sign-in: [nobody can sign in](#nobody-can-sign-in-or-sign-up) · [email limit reached](#sign-up-or-reset-emails-blocked-by-the-email-limit) · [the authenticator switch](#the-authenticator-switch-staff_mfa) · [lost authenticator](#someone-lost-the-phone-with-their-authenticator) · [owner locked out](#the-owner-is-locked-out)
 - Email: [families never got the email](#families-say-they-never-got-the-email)
 - [Who to call](#who-to-call)
+- Before launch: [the launch test pass](LAUNCH_TEST_PASS.md) (#24) · [the restore drill](RESTORE_DRILL.md) (#25)
 
 ## First, check site health
 
@@ -96,7 +97,7 @@ A Cloudflare rollback lasts only until the next Deploy, which publishes `main` a
 Don't make more changes until you know what happened.
 
 1. Open **/security-log** for recent sign-ins, payments recorded, backups and other sensitive changes, with who made them and when.
-2. To go back to an earlier copy, open **/backups → Restore**. Choose an encrypted backup file and enter its passphrase. This replaces the current data with the backup, so download a fresh backup first.
+2. To go back to an earlier copy, open **/backups → Restore**. To check a file first without touching the live site, restore it into a local copy ([the restore drill](RESTORE_DRILL.md)). Choose an encrypted backup file and enter its passphrase. This replaces the current data with the backup, so download a fresh backup first.
 3. Where backups come from:
    - **Before every update**, Deploy saves an encrypted copy of the database. It's kept for 30 days: GitHub → **Actions → Deploy** → the run → **Artifacts** → `pre-deploy-database-<number>`. Unlock it with `BACKUP_PASSPHRASE`.
    - **Any time**, the owner can download one from **/backups**. Do this weekly and keep the file somewhere other than this computer.

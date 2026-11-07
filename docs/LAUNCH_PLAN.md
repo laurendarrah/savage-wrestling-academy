@@ -109,12 +109,14 @@ Done when: Stripe test clocks show 12 charges then a stop, a failed card marks t
 - Simple manual check-in on that roster, saved to a real attendance table.
 - Sample-only pages in the owner workspace are labeled clearly, so staff do not rely on simulated data. Update, November 6 (#147): the sample screens, the family previews and `/admin-demo` are removed instead. Every workspace screen is real.
 - Full test pass in a separate test environment: every purchase type, failures, cancellations, refunds, scholarship families, Advance approvals, team codes.
+  Update, November 7 (#24, #259): the checklist is `docs/LAUNCH_TEST_PASS.md`, run on the live site in Stripe test mode before families join. It ends by deleting the test family with **Delete this family account** on Family accounts (payments stay for the books as "Deleted family").
 
 Done when: a test family's purchase appears on the correct practice roster and can be checked in.
 
 ### Thursday, November 12: switch to live
 
 - Restore drill: restore yesterday's backup into the test environment and confirm every record comes back.
+  Update, November 7 (#25): steps in `docs/RESTORE_DRILL.md`. `pnpm restore:drill` restores the file into a local copy on Lauren's computer, never production, and compares every table with the file.
 - Owner adds live Stripe keys through the owner page and registers the live webhook.
 - One real low-value purchase by staff, then refund it. Confirm the money and the refund appear in Stripe.
 - Publish to the live Site.
