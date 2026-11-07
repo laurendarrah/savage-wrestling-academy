@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><!--slot:head--><link rel="stylesheet" href="/responsive.css"><style>
+/* The team page (issue #196): coaches, wrestler achievements and alumni, filled in by lib/website.ts. Names only, no photos. */
+body{margin:0;background:#F4F5F7;color:#141416}
+.hero{position:relative;isolation:isolate;overflow:hidden;color:#fff;padding:44px 16px 48px;border-bottom:2px solid #C4222C}
+.hero::after{content:"";position:absolute;z-index:-1;right:-30px;top:12px;bottom:12px;aspect-ratio:1;max-width:46vw;background:url(/brand/savage-logo-256.png) center/contain no-repeat;opacity:.08;pointer-events:none}
+.hero .in,main{max-width:1080px;margin:0 auto}
+html body .hero .eyebrow{color:#B9C4C9;margin:0}
+html body .hero h1{margin:8px 0 12px;color:#fff;font-size:clamp(44px,9vw,80px)}
+.hero .lede{margin:0;color:#D7DBE0;font-size:19px;max-width:52ch}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+html body .jump a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.35);border-radius:999px;color:#fff;text-decoration:none;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;font-size:17px;letter-spacing:.7px;text-transform:uppercase}
+html body .jump a:hover{border-color:#fff;color:#fff;background:rgba(255,255,255,.06)}
+main{padding:40px 16px 56px;display:flex;flex-direction:column;gap:48px}
+.block{display:flex;flex-direction:column;gap:18px;scroll-margin-top:76px}
+.block__head .eyebrow{color:#C4222C;margin:0 0 4px}
+html body .block h2{margin:0}
+/* Coaches: a monogram until photos arrive (#192), name, specialties, bio. */
+.coaches{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.coach{padding:22px;display:flex;flex-direction:column;gap:12px;border-top:3px solid #141416!important}
+.coach__top{display:flex;align-items:center;gap:14px}
+html body .coach h3{margin:0;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.2px;line-height:1.05;overflow-wrap:anywhere}
+.mono{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:#141416;color:#fff;border:2px solid #C4222C;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:22px;letter-spacing:.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.chips li{background:#EEF0F2;border-radius:999px;padding:3px 11px;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.coach__bio p{margin:0 0 10px;color:#2A2B30;overflow-wrap:anywhere}
+.coach__bio p:last-child{margin:0}
+/* Achievements, grouped by season */
+.seasons{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;align-items:start}
+.season{padding:0;overflow:hidden}
+html body .season__label{margin:0;padding:14px 20px;background:#141416;color:#fff;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:24px;letter-spacing:.4px;text-transform:uppercase;border-bottom:2px solid #C4222C;overflow-wrap:anywhere}
+.results{list-style:none;margin:0;padding:0}
+.results li{display:flex;flex-direction:column;gap:2px;padding:14px 20px;border-top:1px solid #E4E6EA;overflow-wrap:anywhere}
+.results li:first-child{border-top:0}
+.results b{font-size:18px}
+.results span{color:#3A3C42}
+/* Alumni */
+.alumni{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+.alum{padding:20px 22px;display:flex;flex-direction:column;gap:6px;border-left:3px solid #B9C4C9!important}
+html body .alum h3{margin:0;font-size:20px;overflow-wrap:anywhere}
+.alum__years{margin:0;align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#55585F}
+.alum__next{margin:0;overflow-wrap:anywhere}
+.soon{margin:0;font-size:19px}
+/* Join band and visit details */
+html body main>section.cta{background:var(--swa-texture);color:#fff;border:0;border-bottom:2px solid #C4222C;padding:clamp(24px,4vw,40px);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px 32px;align-items:center}
+html body .cta .eyebrow{color:#B9C4C9;margin:0 0 6px}
+html body .cta h2{color:#fff;margin:0 0 8px}
+.cta p{margin:0;color:#C9CED4}
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+html body .actions a.button{min-height:50px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:17px;font-weight:700}
+html body .cta .actions a.button:not(.primary){background:transparent;border-color:#fff;color:#fff}
+html body .cta .actions a.button:not(.primary):hover{background:#26272C}
+.visit{display:flex;flex-direction:column;gap:16px}
+.visit__card{padding:18px 22px;display:flex;flex-wrap:wrap;gap:12px 40px}
+.visit__line{margin:0;display:flex;flex-direction:column;overflow-wrap:anywhere}
+.visit__label{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#55585F}
+footer{color:#55585F;font-size:15px;text-align:center;padding:0 16px 32px}
+@media (max-width:640px){.hero{padding:30px 16px 34px}.coaches,.seasons,.alumni{grid-template-columns:1fr}html body main>section.cta{grid-template-columns:1fr}.actions a.button{flex:1 1 auto}}
+</style></head><body>
+<div class="hero"><div class="in">
+<p class="eyebrow">Savage Wrestling Academy</p>
+<h1>The team</h1>
+<p class="lede"><!--slot:lede--></p>
+<!--slot:jump-->
+</div></div>
+<main>
+<!--slot:sections-->
+<section class="cta" aria-labelledby="ctaTitle"><div><p class="eyebrow">Train with us</p><h2 id="ctaTitle">Join the academy</h2><p>Programs for kindergarten through 12th grade. See the weekly times, then sign up online.</p></div><div class="actions"><a class="button primary" href="/login?mode=signup">Join the academy</a><a class="button" href="/welcome#programsTitle">See the programs</a></div></section>
+<!--slot:visit-->
+</main>
+<footer>Savage Wrestling Academy · Huntington Station, NY · <a href="/welcome">Home</a> · <a href="/calendar">Calendar</a> · <a href="/login">Sign in</a></footer>
+</body></html>

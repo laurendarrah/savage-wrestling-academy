@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Welcome | Savage Wrestling Academy</title><meta name="description" content="Wrestling for kindergarten through 12th grade in Huntington Station, NY. See the programs and the practice calendar, then join online."><link rel="stylesheet" href="/responsive.css"><style>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><!--slot:head--><link rel="stylesheet" href="/responsive.css"><style>
 body{margin:0;background:#F4F5F7;color:#141416}
 .hero{background:#141416;color:#fff;padding:36px 16px 44px}
 .hero .in,main{max-width:1080px;margin:0 auto}
@@ -38,15 +38,38 @@ h2{margin:0}
 .dot{width:14px;height:14px;flex:none;border-radius:3px}
 .more{font-weight:700}
 footer{color:#55585F;font-size:15px;text-align:center;padding:0 16px 32px}
+/* The owner's website content (issue #196): mission, a look at the team, visit details. */
+html body .hero h1{overflow-wrap:anywhere}
+.herolink{display:inline-flex;align-items:center;min-height:44px;margin-top:14px;color:#B9C4C9!important;font-weight:700;font-size:14px;letter-spacing:1.4px;text-transform:uppercase;text-decoration:none}
+.herolink:hover{color:#fff!important}
+html body main>section.mission{border-left:4px solid #C4222C;display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 32px;align-items:start}
+html body .mission h2{color:#C4222C;margin:0}
+.mission__text p{margin:0 0 12px;font-size:clamp(19px,2.4vw,23px);line-height:1.5;color:#141416;overflow-wrap:anywhere}
+.mission__text p:last-child{margin:0}
+html body main>section.teaser{background:var(--swa-texture);color:#fff;border:0;border-bottom:2px solid #C4222C;padding:clamp(22px,4vw,36px)}
+.teaser__in{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:20px 36px;align-items:center}
+html body .teaser .eyebrow{color:#B9C4C9;margin:0 0 6px}
+html body .teaser h2{color:#fff;margin:0}
+.teaser__count{margin:6px 0 0;color:#C9CED4}
+.teaser__names{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.teaser__names li{display:flex;align-items:center;gap:10px;font-weight:700;overflow-wrap:anywhere}
+.mono{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#141416;color:#fff;border:2px solid #C4222C;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:14px;letter-spacing:.5px}
+html body .teaser a.button{min-height:50px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}
+.visit__card{padding:18px 22px;display:flex;flex-wrap:wrap;gap:12px 40px}
+.visit__line{margin:0;display:flex;flex-direction:column;overflow-wrap:anywhere}
+.visit__label{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#55585F}
+@media (max-width:760px){html body main>section.mission{grid-template-columns:1fr}.teaser__in{grid-template-columns:1fr}html body .teaser a.button{width:100%}}
 @media (max-width:640px){.hero{padding:28px 16px 36px}.hero .in{grid-template-columns:1fr;gap:16px}.hero img{width:112px;height:112px;order:-1}.actions a.button{flex:1 1 auto;justify-content:center}.week .when{width:104px}.week .row{gap:12px;padding:12px 14px}}
 </style></head><body>
 <div class="hero"><div class="in"><div>
 <p class="eyebrow">Huntington Station, NY</p>
-<h1>Savage Wrestling Academy</h1>
-<p class="lede">Wrestling for kindergarten through 12th grade, from first-time wrestlers to experienced competitors.</p>
+<h1><!--slot:headline--></h1>
+<p class="lede"><!--slot:intro--></p>
 <div class="actions"><a class="button primary" href="/login?mode=signup">Join the academy</a><a class="button" href="/login">Sign in</a></div>
+<!--slot:herolink-->
 </div><img src="/brand/savage-logo-256.png" alt="Savage Wrestling Academy logo" width="200" height="200"></div></div>
 <main>
+<!--slot:mission-->
 <section class="plain" aria-labelledby="programsTitle"><h2 id="programsTitle">Programs</h2><div class="programs" id="programs"><p class="muted">Loading the programs…</p></div></section>
 <section class="plain" aria-labelledby="joinTitle"><h2 id="joinTitle">How to join</h2>
 <ol class="steps">
@@ -58,6 +81,8 @@ footer{color:#55585F;font-size:15px;text-align:center;padding:0 16px 32px}
 <p>Every wrestler needs a current <a href="https://www.usawmembership.com" target="_blank" rel="noopener">USA Wrestling card</a> before they can book.</p>
 </section>
 <section class="plain" aria-labelledby="weekTitle"><h2 id="weekTitle">Coming up</h2><div class="week card" id="week"><div class="row muted">Loading the schedule…</div></div><a class="more" href="/calendar">See the full calendar</a></section>
+<!--slot:team-->
+<!--slot:visit-->
 </main>
 <footer>Savage Wrestling Academy · Huntington Station, NY</footer>
 <script>

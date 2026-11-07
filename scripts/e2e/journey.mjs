@@ -600,6 +600,48 @@ await step('the owner adds himself as a coach, opens Coach view and posts an ope
   const listing = await api(family, '/api/lessons');
   expect(listing.body.openings.some(o => o.coach === 'Justin' && o.date === ny(10)), 'families can book the owner');
 });
+// ---------- The public website (issue #196): the owner edits and publishes; visitors see names only, no photos ----------
+await step('owner edits the public website; a visitor sees the headline, mission, coaches, achievements and alumni', async () => {
+  let visitor = await phoneAs(null);
+  await visitor.goto(BASE + '/team'); await at(visitor, '.hero', /listed here soon/);
+  expect(!(await visitor.isVisible('#coaches')), 'no coach is listed until the owner chooses them');
+  await owner.goto(BASE + '/'); await owner.click('a.toollink[href="/website"]'); await owner.waitForURL(/\/website$/);
+  await at(owner, '#achList', /No achievements yet/); await at(owner, '#alumList', /No alumni yet/);
+  await owner.fill('#headline', 'Built on the mat'); await owner.fill('#intro', 'Wrestling for kindergarten through 12th grade in Huntington Station.');
+  await owner.fill('#mission', 'Build tough, coachable wrestlers and good teammates.');
+  // Ticking a coach redraws the list, so click rather than check (which re-reads the old box).
+  await owner.click('#coachList label:has-text("Lee Tran") input'); await at(owner, '#coachList', /1Lee Tran/);
+  await owner.click('#coachList label:has-text("Justin") input');
+  await at(owner, '#coachList', /1[\s\S]*Lee Tran[\s\S]*2[\s\S]*Justin/);
+  await owner.click('text=Add an achievement');
+  await owner.fill('[aria-label="Wrestler’s name, achievement 1"]', 'Sam Example'); await owner.fill('[aria-label="Achievement, achievement 1"]', 'County champion, 1st place');
+  await owner.fill('[aria-label="Season or year, achievement 1"]', '2025–26');
+  await owner.click('text=Add an alumni entry');
+  await owner.fill('[aria-label="Name, alumni entry 1"]', 'Alex Moore'); await owner.fill('[aria-label="Years with the academy, alumni entry 1"]', '2014–2020');
+  await owner.fill('[aria-label="Where they went or what they did, alumni entry 1"]', 'Wrestles in college');
+  await owner.click('text=Preview team page'); await owner.waitForSelector('#previewBox:not([hidden])');
+  await at(owner, '#previewNote', /Not published until you save/);
+  await visitor.reload(); expect(!(await visitor.isVisible('#achievements')), 'the preview publishes nothing');
+  await owner.click('#saveButton'); await at(owner, '#status', /Saved and published/);
+  await shot(owner, 'website-editor');
+  // A new visitor: public pages may be cached for 20 seconds.
+  await visitor.context().close(); visitor = await phoneAs(null);
+  await visitor.goto(BASE + '/'); expect(new URL(visitor.url()).pathname === '/welcome', 'signed-out home is still /welcome');
+  await at(visitor, 'h1', /Built on the mat/); await at(visitor, '.mission', /Build tough, coachable wrestlers/);
+  await at(visitor, '#programs', /SWA Development/);
+  expect(await visitor.isVisible('.actions a[href="/login"]'), 'sign in stays on the home page');
+  expect(/Built on the mat \| Savage Wrestling Academy/.test(await visitor.title()), 'title from the headline');
+  expect((await visitor.getAttribute('link[rel=canonical]', 'href')) === BASE + '/welcome', 'canonical address from APP_ORIGIN');
+  await visitor.click('.teaser a[href="/team"]'); await visitor.waitForURL(/\/team$/);
+  await at(visitor, '#coaches', /Lee Tran[\s\S]*Ten years coaching folkstyle[\s\S]*Justin/);
+  await at(visitor, '#achievements', /2025–26[\s\S]*Sam Example[\s\S]*County champion/); await at(visitor, '#alumni', /Alex Moore[\s\S]*Wrestles in college/);
+  const body = await visitor.content();
+  expect(!/555-0199|@example\.test|savagewrestlingclub@/.test(body), 'no coach phone or email on the team page');
+  expect(!(await visitor.locator('main img').count()), 'no photos on the team page');
+  const over = await visitor.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); expect(over <= 1, `/team scrolls sideways by ${over}px`);
+  if (SHOTS) await visitor.screenshot({path: `${SHOTS}/phone-team.png`, fullPage: true});
+  await visitor.context().close();
+});
 await step('family requests SWA Advance approval; owner approves; transfer to SWA Advance goes through', async () => {
   await family.goto(BASE + `/register?program=Advanced&wrestler=${samId}`); await family.waitForSelector('#requestApproval');
   await family.waitForFunction(() => !document.querySelector('#requestApproval').closest('[hidden]'), null, {timeout: 8000});
@@ -789,10 +831,10 @@ await step('owner sees payments in the books and adds an expense', async () => {
 // ---------- Accessibility (axe-core) on every page, as each role ----------
 const axeSource = (await import('node:fs')).readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const a11yPages = {
-  public: ['/welcome', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
+  public: ['/welcome', '/team', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
   coach: ['/coach', '/roster', '/help/coach', '/coach-profile'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {
