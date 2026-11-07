@@ -65,7 +65,7 @@ assert.match(portal, /\.toollink\{display:flex;align-items:center;min-height:44p
 const back = '<a class="swa-back" href="/">← Owner dashboard</a>';
 const ownerPages = ['app/financials/screen.html', 'app/site-health/screen.html', 'app/messages/screen.html', 'app/cards/screen.html', 'app/payments/screen.html',
   'app/coach-pay/screen.html', 'app/timesheets/screen.html', 'app/website/screen.html', 'app/approvals/screen.html', 'app/scholarships/screen.html',
-  'app/waivers/screen.html', 'app/transfers/screen.html', 'app/lesson-settings/screen.html', 'app/data-requests/screen.html', 'app/accounts/route.ts'];
+  'app/waivers/screen.html', 'app/transfers/screen.html', 'app/lesson-settings/screen.html', 'app/data-requests/screen.html', 'app/payment-setup/screen.html', 'app/accounts/route.ts'];
 for (const f of ownerPages) {
   const html = read(f);
   assert.equal(html.split('class="swa-back"').length - 1, 1, f + ' has one back link');
