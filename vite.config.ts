@@ -14,8 +14,9 @@ const workerConfig = {
     binding: "DB",
     database_name: process.env.D1_DATABASE_NAME || "savage-wrestling-academy",
     database_id: process.env.D1_DATABASE_ID || LOCAL_DATABASE_ID,
-    // Relative to the generated dist/server/wrangler.json, which Wrangler reads when applying migrations.
-    migrations_dir: "../../drizzle",
+    // Relative to the project root. The Cloudflare Vite plugin rewrites it relative to the generated
+    // dist/server/wrangler.json, which Wrangler reads when applying migrations (issue #228).
+    migrations_dir: "drizzle",
   }],
   // Daily reminders at 7:41 AM New York time in winter (8:41 AM in summer): 12:41 UTC.
   triggers: { crons: ["41 12 * * *"] },
