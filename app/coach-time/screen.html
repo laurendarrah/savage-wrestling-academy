@@ -5,9 +5,11 @@ label{display:block;font-weight:600;margin:12px 0}input,select,textarea{display:
 button{font:inherit;padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;color:#141416}.primary{background:#c4222c;color:#fff;border-color:#c4222c}
 .muted{color:#55585f}#status{font-weight:600}[hidden]{display:none!important}
 .month-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}.month-head h2{margin:0}.month-nav{display:flex;gap:6px}.month-nav button{min-width:52px}
-.state{margin:8px 0 0;font-weight:600}.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}@media(max-width:520px){.tiles{grid-template-columns:1fr 1fr}}
+.state{margin:8px 0 0;font-weight:600}.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+/* Phones: paid time across the top, amount and shifts side by side under it, so no tile sits alone (issue #223). */
+@media(max-width:520px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:first-child{grid-column:1/-1}}
 .tile{background:#fff;border:1px solid #e1e3e8;border-radius:10px;padding:12px 14px}.tile b{display:block}
-.breakdown{margin:0 0 6px;padding:0;list-style:none}.breakdown li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #eef0f2;font-variant-numeric:tabular-nums}
+.breakdown{margin:0 0 6px;padding:0;list-style:none}.breakdown li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #eef0f2;font-variant-numeric:tabular-nums}.breakdown li span:last-child{white-space:nowrap}
 .shift{border:1px solid #e1e3e8;border-radius:10px;padding:14px 16px;margin:12px 0}.shift.voided{opacity:.6}.shift.voided .what{text-decoration:line-through}
 .shift-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.shift p{margin:4px 0}
 .badge{display:inline-block;background:#eef0f2;color:#141416}.badge.open{background:#fdecee;color:#a11b24}.badge.approved{background:#e6f2ea;color:#1f6f3a}.badge.submitted{background:#141416;color:#fff}
@@ -15,9 +17,12 @@ button{font:inherit;padding:10px 14px;border:1px solid #ccc;border-radius:6px;ba
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}@media(max-width:520px){.pair{grid-template-columns:1fr}}
 details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:#c4222c}
 .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}.send{margin-top:18px;padding-top:16px;border-top:1px solid #e1e3e8}.send button{width:100%;min-height:60px}
+/* Not open yet is not an error: a quiet grey button, with the hint under it saying when it opens (issue #223). */
+html body .send button.primary:disabled,html body .send button.primary:disabled:hover{background:#EEF0F2;border-color:#D7DADF;color:#55585F;opacity:1;box-shadow:none;cursor:not-allowed}
+#submitHelp{margin:8px 0 0;font-size:15px}
 .off{border-top:1px solid #e1e3e8;padding:12px 0}.off:first-child{border-top:0}.off p{margin:2px 0}.notice{border-top:1px solid #e1e3e8;padding:10px 0}.notice:first-child{border-top:0}.notice p{margin:2px 0}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
-<a href="/coach">← Coach home</a>
+<a class="swa-back" href="/coach">← Coach home</a>
 <h1>Your hours</h1>
 <p id="intro">Clock in at practice, check your month and send it to the academy once the month ends. Practices are paid for the scheduled practice time, by the role you coached.</p>
 <section id="clock" data-coach-clock data-link="off" aria-labelledby="clockTitle"><h2 id="clockTitle">Clock in</h2><p class="muted">Loading your clock…</p></section>
@@ -39,12 +44,12 @@ details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align
 <div id="offList"></div></section>
 <section aria-labelledby="noticeTitle"><h2 id="noticeTitle">Notices</h2><div id="notices"><p class="muted">Loading…</p></div></section>
 <p id="status" role="status" aria-live="polite"></p></main>
+<script src="/hours-text.js"></script>
 <script src="/coach-clock.js"></script>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1]%12||12)+':'+m[2]+' '+(+m[1]<12?'AM':'PM'):''};
 const money=c=>'$'+(c/100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-const span=m=>{const h=Math.floor(m/60),r=m%60;return h&&r?h+' h '+r+' min':h?h+' h':r+' min'};
 const dayText=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
 const atText=iso=>new Date(iso).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric'});
 async function call(body,query=''){const r=await fetch('/api/coach-time'+query,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
@@ -55,15 +60,18 @@ function monthText(d){const t=d.totals;if(!t.shifts)return 'No shifts in '+d.mon
  if(t.drafts)return t.drafts+' shift'+(t.drafts===1?'':'s')+' not sent yet.';
  if(t.submitted)return 'Sent to the academy. Waiting for approval.';
  return 'Approved by the academy.'}
-function submitHelp(d){if(d.canSubmit)return 'Sends every shift in '+d.monthLabel+' to the academy. After that, the academy makes any corrections.';
- if(!d.totals.drafts)return d.totals.shifts?'Nothing new to send.':'';
- if(d.totals.open)return 'Clock out first.';
- return 'You can send '+d.monthLabel+' from '+d.submitOpensText+', its last day.'}
+// Under the Send button: what it does, or why it is not open yet and when it opens.
+function submitHelp(d){const opens='You can send '+d.monthLabel+' from '+d.submitOpensText+', its last day.',early=!!d.today&&!!d.submitOpens&&d.today<d.submitOpens;
+ if(d.canSubmit)return 'Sends every shift in '+d.monthLabel+' to the academy. After that, the academy makes any corrections.';
+ if(d.totals.open)return 'Clock out first.'+(early?' '+opens:'');
+ if(early)return opens;
+ if(!d.totals.drafts)return d.totals.shifts?'Nothing new to send.':'No shifts to send for '+d.monthLabel+'.';
+ return opens}
 const editable=s=>s.status==='draft'||s.status==='open';
 function shiftHtml(s){
  const what=(s.session?esc(s.session.title)+' · '+esc(clock(s.session.start))+'–'+esc(clock(s.session.end)):'No scheduled practice')+' · '+esc(s.dutyLabel);
  const worked=s.outTime?'Clocked '+esc(clock(s.inTime))+' – '+esc(clock(s.outTime)):'Clocked in at '+esc(clock(s.inTime));
- const paid=s.status==='voided'?'Not paid'+(s.voidReason?': '+esc(s.voidReason):''):'Paid '+esc(span(s.paidMinutes))+' · '+esc(money(s.amountCents))+(s.ownerSet?' (set by the academy'+(s.ownerSet.note?': '+esc(s.ownerSet.note):'')+')':'');
+ const paid=s.status==='voided'?'Not paid'+(s.voidReason?': '+esc(s.voidReason):''):'Paid '+esc(hoursText(s.paidMinutes))+' · '+esc(money(s.amountCents))+(s.ownerSet?' (set by the academy'+(s.ownerSet.note?': '+esc(s.ownerSet.note):'')+')':'');
  const fix=editable(s)?`<details><summary>Fix the times</summary><div class="pair"><label>Start time<input type="time" id="fixIn-${esc(s.id)}" value="${esc(s.inTime)}"></label><label>End time<input type="time" id="fixOut-${esc(s.id)}" value="${esc(s.outTime||'')}"></label></div><label>Why did it change?<input id="fixWhy-${esc(s.id)}" maxlength="300"></label><div class="actions"><button type="button" class="primary" data-fix="${esc(s.id)}" data-rev="${s.revision}">Save times</button><button type="button" data-remove="${esc(s.id)}" data-rev="${s.revision}">Remove this shift</button></div></details>`:'';
  return `<article class="shift ${esc(s.status)}"><div class="shift-head"><h3>${esc(dayText(s.date))}</h3><span class="badge ${esc(s.status)}">${BADGE[s.status]||esc(s.status)}</span></div><p class="what">${what}</p><p>${worked}</p><p><b>${paid}</b></p>${s.flags&&s.flags.length&&s.status!=='voided'?'<ul class="flags">'+s.flags.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>':''}${fix}</article>`}
 const OFF={pending:'Waiting for the academy',approved:'Approved',declined:'Not approved',withdrawn:'Withdrawn'};
@@ -73,8 +81,8 @@ let current=null,data=null;
 function render(d){data=d;current=d.month;
  $('monthTitle').textContent=d.monthLabel;$('monthState').textContent=monthText(d);$('next').disabled=!d.next;
  $('rates').textContent='Rates: '+d.rates.map(r=>r.label+' '+money(r.centsPerHour)+' an hour').join(', ')+'. Only the scheduled practice time is paid.';
- $('tMinutes').textContent=span(d.totals.minutes);$('tAmount').textContent=money(d.totals.amountCents);$('tShifts').textContent=d.totals.shifts;
- $('breakdown').innerHTML=d.totals.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)}</span><span>${esc(span(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('');
+ $('tMinutes').textContent=hoursText(d.totals.minutes);$('tAmount').textContent=money(d.totals.amountCents);$('tShifts').textContent=d.totals.shifts;
+ $('breakdown').innerHTML=d.totals.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)}</span><span>${esc(hoursText(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('');
  $('timeOffNote').hidden=!d.timeOff.length;$('timeOffNote').textContent=d.timeOff.length?'Approved time off this month: '+d.timeOff.map(t=>t.text).join('; ')+'.':'';
  $('shifts').innerHTML=d.shifts.map(shiftHtml).join('')||'<p class="muted">No shifts this month.</p>';
  $('submit').textContent='Send '+d.monthLabel+' to the academy';$('submit').disabled=!d.canSubmit;$('submitHelp').textContent=submitHelp(d);
