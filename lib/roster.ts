@@ -7,6 +7,9 @@ import {PROGRAM_ON} from './transfers';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
 export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]};
+// Allergies or medical notes and the emergency contact (issue #188, decided in #197 question 14). The roster is for staff
+// only, and coaches get only their own programs' practices (canSee).
+export type SafetyDetails = {allergies: string | null; emergencyName: string | null; emergencyPhone: string | null};
 export type Scope = {role: 'owner'} | {role: 'coach'; programs: string[]};
 
 export const validDate = (d: unknown): d is string =>
@@ -91,7 +94,7 @@ export async function rosterFor(date: string, scope: Scope) {
 
   const result: (Session & {entries: Entry[]; checkedIn: number})[] = [];
   sessions.forEach((session, i) => {
-    const merged = new Map<string, Entry>();
+    const merged = new Map<string, Entry & SafetyDetails>();
     for (const r of lists[i]) {
       const k = `${r.userId}|${r.wrestlerId}`;
       if (merged.has(k)) { const e = merged.get(k)!; if (!e.sources.includes(r.source)) e.sources.push(r.source); continue; }
@@ -102,6 +105,7 @@ export async function rosterFor(date: string, scope: Scope) {
       merged.set(k, {
         userId: r.userId, wrestlerId: r.wrestlerId, name: w?.name ?? r.name, grade: w?.grade ?? null,
         parentName: f?.parentName || null, phone: f?.phone || null, email: scope.role === 'owner' ? f?.email ?? null : null,
+        allergies: w?.allergies || null, emergencyName: f?.emergencyContactName || null, emergencyPhone: f?.emergencyContactPhone || null,
         sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null,
         card: card.state, cardExpires: card.expires || null, cardNote: card.note,
         waiverSigned: waiver ? signedSet.has(`${k}|${String(w?.name ?? r.name).trim().toLowerCase()}`) : null,

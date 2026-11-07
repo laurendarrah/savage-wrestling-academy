@@ -15,7 +15,11 @@ Accounts are created by a **parent or guardian** (or an adult wrestler). Childre
 
 **Information you give us**
 - Parent or guardian: name, email address, phone number, and your password (held by our sign-in provider; we never see it).
+- Your home address, and an emergency contact's name and phone number.
 - Each wrestler: name, school grade, USA Wrestling card number and expiration date.
+- Each wrestler's birth date, and any allergies or medical notes (or that there are none). This is health information about a child. The academy owner sees it, and coaches see allergies and the emergency contact on the check-in roster for their own programs. You can update it at any time.
+
+[Decided in #197, question 14: these details are required, and coaches see allergies and emergency contacts on the check-in roster. Attorney: confirm how allergy and medical notes about minors must be handled and disclosed.]
 - Signatures: when you sign a waiver or scholarship agreement, the drawing of your signature, your typed name, and the date and time.
 - Messages you send the academy, and notes you add to requests (for example, an account closure request).
 - Requests for SWA Advance approval, and the private conversation about them.
@@ -39,6 +43,7 @@ We use only the cookies needed to keep you signed in securely. We do not use adv
 - To run your registrations, memberships, camps, lessons and payments.
 - To check wrestlers in at the door and keep rosters for coaches.
 - To confirm that every wrestler has a current USA Wrestling card and a signed waiver before booking, as the academy requires.
+- To reach someone quickly and look after a wrestler who is hurt or unwell at practice.
 - To send you notices and messages (for example, a card about to expire, a waitlist seat held for you, a payment received) in your account and, [Decision: once email is set up], by email.
 - To keep the site secure, prevent misuse and fix problems.
 - To keep records the academy needs for accounting, insurance and legal reasons.

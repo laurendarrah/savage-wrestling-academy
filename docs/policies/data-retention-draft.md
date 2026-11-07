@@ -12,7 +12,8 @@ How long the academy keeps each kind of record, and what happens when a family a
 | Attendance | Check-ins by date | [Decision: 3 years] | Safety and insurance questions |
 | USA Wrestling card details and reviews | Number, expiration, academy review | [Decision: until the account is closed] | Needed only while training |
 | USA Wrestling card checks (#202) | The latest check of each wrestler's card on USA Wrestling's public verify page: active or not, the name and state USA Wrestling shows, the date | Replaced by the next check; [Decision: removed when the account is closed] | Never their page. Not in backups: it is a one-day cache plus the latest result |
-| Family profile | Parent name, phone, wrestlers, grades | Until the account is closed | |
+| Family profile | Parent name, phone, wrestlers, grades, home address, emergency contact | Until the account is closed | |
+| Wrestler safety details | Birth date and allergies or medical notes | [Decision: until the account is closed, or sooner once the wrestler stops training] | Health information about a child: keep no longer than needed |
 | Messages, approvals, notices | Conversations and notices | [Decision: 2 years, or until closed] | Customer service |
 | Entry passes | Random QR codes | Until closed; replaced codes are kept revoked | Door security |
 | Security log | Sign-ins and sensitive actions | [Decision: 2 years] | Security investigations |

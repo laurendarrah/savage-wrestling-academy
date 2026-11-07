@@ -61,7 +61,7 @@ const registration=load(path.resolve('app/api/registration/route.ts'));
 assert.equal((await registration.POST(req({program:'Intermediate',wrestlerId:'kid',plan:'monthly'}))).status,409);
 assert.equal((await registration.POST(req({program:'Intermediate',wrestlerId:'kid',plan:'scholarship'}))).status,400);
 const profiles=load(path.resolve('app/api/family/route.ts'));
-const removeResponse=await profiles.PUT(req({revision:1,data:{parentName:'Alice Parent',phone:'',wrestlers:[]}}));
+const removeResponse=await profiles.PUT(req({revision:1,data:{parentName:'Alice Parent',phone:'',homeAddress:'1 Main St',homeCity:'Huntington',homeState:'NY',homeZip:'11746',emergencyContactName:'Jordan Parent',emergencyContactPhone:'631-555-0100',wrestlers:[]}}));
 assert.equal(removeResponse.status,409);
 const date=new Date(Date.now()+7*86400000).toISOString().slice(0,10),nextDate=new Date(Date.now()+8*86400000).toISOString().slice(0,10);
 state.extraPractices=[{id:'live-test',name:'Live wrestling',dates:[date],enabled:true,start:'18:00',end:'19:00',memberCents:1000,nonMemberCents:2000}];

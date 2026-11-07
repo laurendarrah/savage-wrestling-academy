@@ -42,8 +42,9 @@ const state = {programNamingVersion: 2,
   events: [{id: 'camp-1', name: 'Takedown Camp', type: 'Camp', dates: [today, tomorrow], price: 160, slots: 20}],
   extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [today], enabled: true, start: '17:00', end: '18:00', memberCents: 1000, nonMemberCents: 2000}]};
 sqlite.prepare('INSERT INTO academy_state VALUES (?,?,?,?,?)').run('academy', JSON.stringify(state), 1, 'owner', today);
-const fam = (uid, parent, phone, wrestlers) => sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(uid, uid + '@example.test', JSON.stringify({parentName: parent, phone, wrestlers}), 1, today);
-fam('p1', 'Pat One', '555-0101', [{id: 'w1', name: 'Avery Member', grade: '9'}]);
+const fam = (uid, parent, phone, wrestlers, extra = {}) => sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(uid, uid + '@example.test', JSON.stringify({parentName: parent, phone, wrestlers, ...extra}), 1, today);
+// Issue #188: allergies or medical notes and the emergency contact reach staff on the roster.
+fam('p1', 'Pat One', '555-0101', [{id: 'w1', name: 'Avery Member', grade: '9', birthDate: '2011-02-03', allergies: 'Peanut allergy'}], {emergencyContactName: 'Jordan One', emergencyContactPhone: '631-555-0111', homeAddress: '1 Main St'});
 fam('p2', 'Pat Two', '555-0102', [{id: 'w2', name: 'Blake Walkin', grade: '8'}]);
 fam('p3', 'Pat Three', '', [{id: 'w3', name: 'Casey Refunded', grade: '10'}]);
 fam('p4', 'Pat Four', '555-0104', [{id: 'w4', name: 'Dana Scholar', grade: 'K'}]);
@@ -73,6 +74,7 @@ let practice = find(r.body.sessions, 'practice:Intermediate:');
 assert.deepEqual(names(practice), ['Avery Member', 'Dana Scholar'], 'member and scholarship; refunded excluded; tomorrow\'s walk-in not today');
 assert.deepEqual([...practice.entries.find(e => e.name === 'Dana Scholar').sources], ['Scholarship']);
 assert.equal(practice.entries.find(e => e.name === 'Avery Member').phone, '555-0101');
+assert.deepEqual([practice.entries.find(e => e.name === 'Avery Member').allergies, practice.entries.find(e => e.name === 'Avery Member').emergencyPhone], ['Peanut allergy', '631-555-0111'], 'the owner sees allergies and the emergency contact');
 assert.equal(practice.entries.find(e => e.name === 'Avery Member').email, 'p1@example.test', 'owner sees email');
 assert.equal(practice.entries.find(e => e.name === 'Dana Scholar').grade, 'K');
 assert.deepEqual(names(find(r.body.sessions, 'live:fnl:')), ['Avery Member'], 'Friday Night Live: paid only');
@@ -109,12 +111,21 @@ assert.equal(row.wrestler_name, 'Dana Scholar'); assert.equal(row.source, 'Schol
 // --- Coach: assigned programs, today only, no email ---
 actor = {kind: 'coach', id: 'coach-id', programs: ['Advanced']};
 r = await get('');
+assert.equal(JSON.stringify(r.body).includes('Peanut allergy'), false, 'a coach of another program does not see them');
 assert.equal(r.status, 200); assert.equal(r.body.role, 'coach');
 assert.deepEqual(r.body.sessions.map(s => s.key.split(':').slice(0, 2).join(':')), ['practice:Advanced'], 'coach sees only assigned program practices');
 assert.equal((await get('?date=' + tomorrow)).status, 403, 'coach cannot open other dates');
 assert.equal((await post({action: 'checkin', date: today, sessionKey: key, userId: 'p1', wrestlerId: 'w1'})).status, 404, 'coach cannot check in for an unassigned program');
 actor = {kind: 'coach', id: 'coach-id', programs: ['Intermediate']};
 r = await get('');
+{
+  const avery = find(r.body.sessions, 'practice:Intermediate:').entries.find(e => e.wrestlerId === 'w1');
+  assert.equal(avery.allergies, 'Peanut allergy', 'a coach sees allergies for their own program');
+  assert.equal(avery.emergencyName, 'Jordan One'); assert.equal(avery.emergencyPhone, '631-555-0111');
+  assert.equal(JSON.stringify(r.body).includes('1 Main St') || JSON.stringify(r.body).includes('2011-02-03'), false, 'the roster carries no home address or birth date');
+  const blake = find(r.body.sessions, 'practice:Intermediate:').entries.find(e => e.wrestlerId === 'w2');
+  if (blake) assert.deepEqual([blake.allergies, blake.emergencyName, blake.emergencyPhone], [null, null, null], 'not given yet reads as empty');
+}
 assert.equal(find(r.body.sessions, 'practice:Intermediate:').entries.every(e => e.email === null && e.checkedInBy === null), true, 'coach does not see parent email or who checked in');
 r = await post({action: 'checkin', date: today, sessionKey: key, userId: 'p1', wrestlerId: 'w1'});
 assert.equal(r.status, 200);

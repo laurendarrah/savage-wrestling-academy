@@ -43,6 +43,13 @@ const text = async (page, sel) => (await page.locator(sel).first().textContent({
 const at = (page, sel, re, ms) => waitText(page, sel, re, ms).catch(async e => { throw new Error(`${sel} never matched ${re}: "${((await page.locator(sel).first().textContent().catch(() => '')) || '').slice(0, 160)}"`); });
 const waitText = async (page, sel, re, ms = 20000) => { await page.waitForFunction(([s, r]) => new RegExp(r).test(document.querySelector(s)?.textContent || ''), [sel, re.source], {timeout: ms}); };
 const api = async (page, url, body) => page.evaluate(async ([u, b]) => { const r = await fetch(u, b ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b)} : {cache: 'no-store'}); return {status: r.status, body: await r.json().catch(() => null)}; }, [url, body]);
+// Contact and safety details are required to save a profile (issue #188, #197 question 14). Wrestler i gets a birth
+// date and "No allergies or medical notes".
+const fillDetails = async (page, contact, kids = 1) => {
+  await page.fill('#homeAddress', '20 Railroad St'); await page.fill('#homeCity', 'Huntington Station'); await page.fill('#homeState', 'NY'); await page.fill('#homeZip', '11746');
+  await page.fill('#emergencyContactName', contact); await page.fill('#emergencyContactPhone', '631-555-0188');
+  for (let i = 0; i < kids; i++) { await page.fill('#birth' + i, '2012-04-18'); await page.check('#none' + i); }
+};
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({path: `${SHOTS}/${name}.png`, fullPage: true}); };
 
 const owner = await as('owner'), family = await as('family'), family2 = await as('family2'), coach = await as('coach');
@@ -112,6 +119,10 @@ await step('family saves a profile and wrestler without a card, and sees booking
   await family.waitForSelector('#familyForm');
   await family.fill('[name=parentName]', 'Pat Example'); await family.fill('[name=phone]', '555-0100');
   await family.click('text=+ Add wrestler'); await family.fill('#name0', 'Sam Example'); await family.selectOption('#grade0', '8');
+  // Without the required contact and safety details the form does not save.
+  await family.click('#save'); await family.waitForTimeout(300);
+  expect(await family.isVisible('#editor') && await family.$eval('#homeAddress', el => !el.validity.valid), 'the street address is required');
+  await fillDetails(family, 'Jordan Emergency');
   await family.click('#save');
   await waitText(family, '#status', /saved/);
   await waitText(family, '#savedDetails', /No USA Wrestling card[\s\S]*Booking is blocked/);
@@ -325,6 +336,8 @@ await step('owner records a cash membership on /payments', async () => {
 });
 await step('Sam is on today\'s roster; owner checks in, undoes, then a QR scan checks in once', async () => {
   await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Sam Example/);
+  // Staff see allergies or medical notes and the emergency contact at check-in (issue #188, #197 question 14).
+  await waitText(owner, '#sessions', /Sam Example[\s\S]*No allergies or medical notes[\s\S]*Emergency contact: Jordan Emergency · 631-555-0188/);
   await owner.locator('[data-checkin]').first().click(); await waitText(owner, '#status', /checked in/);
   await owner.locator('[data-undo]').first().click(); await waitText(owner, '#status', /Check-in removed/);
   const pass = (await api(family, '/api/passes')).body.passes[0].code;
@@ -353,6 +366,7 @@ await step('a coach sees today\'s roster for their program only and can check in
   const t = await text(coach, '#sessions');
   expect(!/SWA Development|SWA Advance/.test(t), 'coach sees other programs');
   expect(!/family\.a@example\.test/.test(t), 'coach must not see family emails');
+  expect(/Sam Example[\s\S]*No allergies or medical notes[\s\S]*Emergency contact: Jordan Emergency/.test(t), 'a coach sees allergies and the emergency contact for their program');
 });
 
 // ---------- Private lessons ----------
@@ -393,6 +407,7 @@ await step('coach removes an opening nobody booked; the booked one stays', async
 await step('camp fills; family 2 joins the waitlist from the booking page; owner offers; family 2 can book', async () => {
   await family2.goto(BASE + '/family'); await family2.waitForSelector('#familyForm');
   await family2.fill('[name=parentName]', 'Riley Parent'); await family2.click('text=+ Add wrestler'); await family2.fill('#name0', 'Riley Two'); await family2.selectOption('#grade0', '8');
+  await fillDetails(family2, 'Casey Emergency');
   await family2.fill('#usaw0', 'CD-5555'); await family2.selectOption('#usawSeason0', await latestSeason(family2)); await family2.click('#save'); await waitText(family2, '#status', /saved/);
   const rid = await wid(family2);
   await owner.goto(BASE + '/waivers'); await owner.selectOption('#show', 'all');
@@ -434,7 +449,12 @@ async function recordLesson(familyLabel, wrestler, lesson) {
   await owner.waitForFunction(re => [...document.querySelectorAll('#opening option')].some(o => new RegExp(re).test(o.textContent)), lesson.source);
   const value = await owner.$$eval('#opening option', (os, re) => os.find(o => new RegExp(re).test(o.textContent)).value, lesson.source);
   await owner.selectOption('#opening', value);
-  await owner.waitForFunction(() => document.querySelector('#format option')?.value);
+  // Choosing a time reloads the lesson types in the background; wait for the type that matches this time, or the
+  // preview can go out with the first time's type (a one-on-one) and be refused.
+  await owner.waitForFunction(() => {
+    const time = document.querySelector('#opening option:checked')?.textContent || '', type = document.querySelector('#format option');
+    return !!type?.value && type.textContent.startsWith((time.match(/Partner lesson|Small-group lesson/) || ['One-on-one lesson'])[0]);
+  });
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record');
   await waitText(owner, '#status', /recorded/i);
 }
@@ -717,6 +737,41 @@ await step('payment setup, security log and family accounts load with real recor
   await owner.goto(BASE + '/security-log'); expect(/offline_payment_recorded|waiver_published|Offline payment/i.test(await owner.content()), 'security log shows recent actions');
   await owner.goto(BASE + '/accounts'); const acc = await owner.content(); expect(/Pat Example/.test(acc) && /Riley Parent/.test(acc), 'accounts list both families');
   const fam = await family.request.get(BASE + '/accounts'); expect(fam.status() !== 200 || !/Riley Parent/.test(await fam.text()), 'a family opened the accounts list');
+});
+// Issue #188: contact and safety details. The family updates them on their profile; the owner sees them on Family
+// accounts, where the program filter narrows the list; coaches see allergies and the emergency contact on the roster.
+await step('family updates the address, emergency contact and allergies; the owner sees them on Family accounts', async () => {
+  await family.goto(BASE + '/family'); await family.click('text=Edit family profile'); await family.waitForSelector('#homeAddress');
+  expect(/needs these details for every family/i.test(await text(family, '#detailsWhy')), 'the form says why the academy needs the details');
+  expect(await family.isChecked('#none0') && await family.isDisabled('#allergies0'), '"No allergies or medical notes" was saved');
+  await family.fill('#homeState', 'ny');
+  await family.fill('#emergencyContactName', 'Jordan Example'); await family.fill('#emergencyContactPhone', '(631) 555-0199');
+  await family.uncheck('#none0'); await family.fill('#allergies0', 'Peanut allergy. EpiPen in the blue bag.');
+  // A ZIP code that is not 5 digits is stopped in the browser, and the server refuses it too.
+  await family.fill('#homeZip', '117'); await family.click('#save'); await family.waitForTimeout(400);
+  expect(await family.isVisible('#editor') && await family.$eval('#homeZip', el => !el.validity.valid), 'a short ZIP code is not accepted');
+  const bad = await family.evaluate(async () => { const g = await (await fetch('/api/family', {cache: 'no-store'})).json(); const r = await fetch('/api/family', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision: g.revision, data: {...g.data, homeZip: '117'}})}); return {status: r.status, body: await r.json()}; });
+  expect(bad.status === 400 && /ZIP/.test(bad.body.error), 'the server refuses a bad ZIP code: ' + JSON.stringify(bad));
+  await family.fill('#homeZip', '11746'); await family.click('#save');
+  await waitText(family, '#status', /saved/);
+  await waitText(family, '#savedDetails', /Huntington Station, NY 11746[\s\S]*Jordan Example · \(631\) 555-0199/);
+  expect(/Born Apr 18, 2012[\s\S]*Peanut allergy/.test(await text(family, '#savedDetails')), 'birth date and allergies on the saved profile');
+  await shot(family, 'family-contact-safety');
+  await owner.goto(BASE + '/accounts'); await owner.waitForSelector('#program');
+  const pat = owner.locator('#families article', {hasText: 'Pat Example'});
+  expect(/Medical note/.test(await pat.textContent()), 'the owner sees a medical-note marker');
+  await pat.locator('summary', {hasText: 'Contact and safety details'}).click();
+  const details = await pat.locator('.family-details').textContent();
+  expect(/20 Railroad St[\s\S]*Huntington Station, NY 11746/.test(details) && /Jordan Example · \(631\) 555-0199/.test(details) && /April 18, 2012 · age \d+/.test(details) && /Peanut allergy/.test(details), 'the owner sees the details: ' + details.slice(0, 200));
+  const programs = (await pat.getAttribute('data-programs')).split(' ');
+  expect(programs[0] !== 'none', 'Pat\'s wrestler is in a program today');
+  await owner.selectOption('#program', 'none'); expect(await pat.isHidden(), 'a family in a program is hidden under "No current program"');
+  await owner.selectOption('#program', programs[0]); expect(await pat.isVisible(), 'the family shows under its program');
+  expect(/families match/.test(await text(owner, '#count')), 'the count follows the filter');
+  await shot(owner, 'owner-accounts-details');
+  await owner.selectOption('#program', '');
+  const coachView = await coach.request.get(BASE + '/accounts'); expect(coachView.status() !== 200 || !/Peanut allergy/.test(await coachView.text()), 'a coach opened Family accounts');
+  const otherFamily = await family2.request.get(BASE + '/accounts'); expect(otherFamily.status() !== 200 || !/Peanut allergy/.test(await otherFamily.text()), 'another family saw the details');
 });
 await step('owner downloads an encrypted backup and previews and restores it from the file', async () => {
   await owner.goto(BASE + '/backups'); await owner.waitForSelector('#exportPassword');

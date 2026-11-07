@@ -43,7 +43,7 @@ function load(file) {
 
 
 
-const fam = (u, name) => sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(u, u + '@example.test', JSON.stringify({parentName: name, phone: '555', wrestlers: [{id: 'w-' + u, name: 'Wrestler ' + u, grade: '8'}]}), 1, '2026-11-01T00:00:00Z');
+const fam = (u, name) => sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(u, u + '@example.test', JSON.stringify({parentName: name, phone: '555', homeAddress: '1 Main St ' + u, homeZip: '11746', emergencyContactName: 'Contact ' + name, emergencyContactPhone: '631-555-0100', wrestlers: [{id: 'w-' + u, name: 'Wrestler ' + u, grade: '8', birthDate: '2012-04-18', allergies: 'Allergy ' + u}]}), 1, '2026-11-01T00:00:00Z');
 fam('p1', 'Pat One'); fam('p2', 'Pat Two');
 const order = (id, u, session) => sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,source,stripe_session_id,stripe_payment_intent)
   VALUES (?,?,'e',?,'W','walkin','Intermediate','x','Walk-in','["2026-11-10"]',4000,0,4000,'usd','{"secret":"internal"}','{}','paid',?,0,'t','t','t','stripe',?,?)`).run(id, u, 'w-' + u, id, session, 'pi_' + session);
@@ -63,9 +63,11 @@ as('p1');
 let r = await req(mine, 'GET', null, '?format=download');
 assert.equal(r.status, 200); assert.match(r.headers.get('content-disposition'), /attachment; filename="savage-family-data-\d{4}-\d{2}-\d{2}\.json"/);
 const text = await r.text(), data = JSON.parse(text);
-assert.equal(data.profile.parentName, 'Pat One'); assert.equal(data.payments.length, 1); assert.equal(data.attendance.length, 1);
+assert.equal(data.profile.parentName, 'Pat One');
+// Issue #188: the download includes the family's contact and safety details.
+assert.equal(data.profile.homeAddress, '1 Main St p1'); assert.equal(data.profile.emergencyContactName, 'Contact Pat One'); assert.equal(data.profile.wrestlers[0].birthDate, '2012-04-18'); assert.equal(data.profile.wrestlers[0].allergies, 'Allergy p1'); assert.equal(data.payments.length, 1); assert.equal(data.attendance.length, 1);
 assert.equal(data.messagesWithTheAcademy[0].body, 'Hello Pat One');
-for (const leak of ['Pat Two', 'Hello Pat Two', 'p2@example.test', 'cs_test_p1', 'pi_cs_test', 'TOKENp1', 'internal']) assert.ok(!text.includes(leak), 'export leaks ' + leak);
+for (const leak of ['Pat Two', 'Allergy p2', 'Contact Pat Two', 'Hello Pat Two', 'p2@example.test', 'cs_test_p1', 'pi_cs_test', 'TOKENp1', 'internal']) assert.ok(!text.includes(leak), 'export leaks ' + leak);
 as('nobody'); assert.equal((await req(mine, 'GET', null, '?format=download')).status, 404, 'no profile yet');
 
 // --- Closure request ---
