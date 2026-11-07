@@ -47,11 +47,14 @@ function setup(){
 // The server filters and pages the list (issue #46): counts cover everyone, the table holds the rows loaded so far and
 // "Show more" adds the next page. more: add the next page. keep: load again after a change, as many rows as shown now.
 const PAGE=50;let loading=0,typing;
+// Exceptions load beside the first page; each load renders once, after they are in, and only the latest load renders,
+// so a filter changed while the page opens never redraws the list under the owner.
+const exceptionsReady=DOC.rule?loadExceptions():Promise.resolve();
 const listKey=()=>DOC.coach?'coaches':'wrestlers';
 function docsUrl(o){const q=new URLSearchParams({show:$('show').value});if(DOC.kind!=='waiver')q.set('kind',DOC.kind);if($('q').value.trim())q.set('q',$('q').value.trim());if(o.cursor)q.set('cursor',o.cursor);if(o.limit>PAGE)q.set('limit',o.limit);return '/api/waivers?'+q}
 async function load(msg,more,keep){
  const ticket=++loading,k=listKey(),rows=keep&&data?(data[k]||[]).length:0;
- try{const r=await fetch(docsUrl(more?{cursor:data.next}:{limit:rows}),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load the '+DOC.name+'.');if(ticket!==loading)return;
+ try{const r=await fetch(docsUrl(more?{cursor:data.next}:{limit:rows}),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load the '+DOC.name+'.');await exceptionsReady;if(ticket!==loading)return;
   data={...d,[k]:more?(data[k]||[]).concat(d[k]||[]):(d[k]||[])};render();$('status').textContent=msg||''}catch(e){if(ticket===loading)$('status').textContent=e.message}
 }
 const search=()=>{clearTimeout(typing);typing=setTimeout(()=>load(),250)};
@@ -74,5 +77,5 @@ $('publishForm').onsubmit=async e=>{e.preventDefault();
  if(!confirm(DOC.publishAsk))return;
  $('publish').disabled=true;try{await post({action:'publish',title:$('wTitle').value,body:$('wBody').value});$('wBody').value='';await load(DOC.published)}catch(e){$('status').textContent=e.message}finally{$('publish').disabled=false}};
 async function retire(){if(!confirm(DOC.retireAsk))return;try{await post({action:'retire'});await load(DOC.retired)}catch(e){$('status').textContent=e.message}}
-setup();$('show').onchange=()=>load();$('q').oninput=search;$('more').onclick=()=>load('',true);(DOC.rule?loadExceptions():Promise.resolve()).then(()=>load());
+setup();$('show').onchange=()=>load();$('q').oninput=search;$('more').onclick=()=>load('',true);load();
 </script></body></html>

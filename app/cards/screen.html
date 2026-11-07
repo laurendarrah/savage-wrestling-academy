@@ -43,11 +43,13 @@ function foundLine(x){
 // loaded so far and "Show more" adds the next page. After a change the same number of rows is loaded again.
 function cardsUrl(o){const q=new URLSearchParams();if($('date').value)q.set('date',$('date').value);q.set('show',$('show').value);if($('q').value.trim())q.set('q',$('q').value.trim());if(o&&o.cursor)q.set('cursor',o.cursor);if(o&&o.limit)q.set('limit',o.limit);return '/api/usaw-cards?'+q}
 const PAGE=50;let loading=0;
+// Exceptions load beside the first page; each load renders once, after they are in, and only the latest load renders.
+const exceptionsReady=loadExceptions();
 // more: add the next page. keep: load again after a change, as many rows as are shown now.
 async function load(more,keep){
  const ticket=++loading,rows=keep?data.cards.length:0;$('status').textContent='Loading…';
  try{const r=await fetch(cardsUrl(more?{cursor:data.next}:rows>PAGE?{limit:rows}:{}),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load cards.');
-  if(ticket!==loading)return;
+  await exceptionsReady;if(ticket!==loading)return;
   data={...d,cards:more?data.cards.concat(d.cards):d.cards};if(!$('date').value)$('date').value=d.date;$('status').textContent=d.date===d.today?'Card status today.':'Card status on '+longDate(d.date)+'.';render()}catch(e){if(ticket===loading)$('status').textContent=e.message}
 }
 const reload=()=>load(false,true);
@@ -93,5 +95,5 @@ async function review(i,status){
  $('status').textContent='Saving…';
  try{const r=await fetch('/api/usaw-cards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:x.userId,wrestlerId:x.wrestlerId,number:x.number,expires:x.expires,status,note})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not save the review.');await reload();$('status').textContent=(status==='clear'?'Review cleared for ':status==='valid'?'Marked verified: ':'Marked not valid: ')+x.wrestler+'.'}catch(e){$('status').textContent=e.message}
 }
-$('date').onchange=()=>load();$('show').onchange=()=>load();$('q').oninput=search;$('more').onclick=()=>load(true);loadExceptions().then(()=>load());
+$('date').onchange=()=>load();$('show').onchange=()=>load();$('q').oninput=search;$('more').onclick=()=>load(true);load();
 </script></body></html>
