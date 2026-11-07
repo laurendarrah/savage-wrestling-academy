@@ -183,6 +183,8 @@ Batches A to I are defined in the next section. "Skip" means no port.
 
 ### 4. Batch C: Coach practice-plan drafts and the coach month calendar. Size M. No R2.
 
+**Outcome (#191):** the coach month calendar (entries 42 and 45) is built. Coach drafts (entries 49 and 52) were dropped: Justin answered #197 question 20 that coaches do not draft plans; he writes them.
+
 - **Entries:** 42, 45, 49, 52.
 - **What:**
   - Coaches draft plans for their assigned programs and submit them. The owner reviews, edits and publishes.

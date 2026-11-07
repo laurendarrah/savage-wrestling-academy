@@ -640,8 +640,23 @@ await step('owner shares a practice plan; the coach sees it', async () => {
   await owner.click('#save'); await owner.waitForTimeout(500);
   const st = await owner.locator('#status').first().textContent().catch(() => '');
   expect(/saved|shared|published/i.test(st || ''), 'plan save status: ' + st);
-  await coach.goto(BASE + '/coach'); await coach.click('text=Open practice plans');
+  await coach.goto(BASE + '/coach'); await coach.click('text=Your month and practice plans');
   await coach.waitForFunction(() => /Leg attacks and finishes/.test(document.body.textContent), null, {timeout: 10000});
+});
+// ---------- The coach's month calendar (issue #191) ----------
+await step('coach month calendar: practices, camp, today and the shared plan; fits a phone', async () => {
+  await coach.goto(BASE + '/practice-plans'); await coach.waitForSelector('#calendar .cal-day.is-today');
+  const todayCell = await text(coach, '#calendar .cal-day.is-today');
+  expect(/Today/.test(todayCell) && /Plan shared/.test(todayCell), 'today is ringed and shows the shared plan: ' + todayCell);
+  expect(!(await coach.locator('#calendar .p-Elementary').count()), 'only the coach’s own programs');
+  if (ny(10).slice(0, 7) === today.slice(0, 7)) expect(/Winter camp/.test(await text(coach, '#calendar')), 'the camp is on the calendar');
+  await coach.click(`#calendar [data-practice="Intermediate|${today}"]`); await waitText(coach, '#detail', /Leg attacks and finishes/);
+  await shot(coach, 'coach-practice-month');
+  const phone = await phoneAs('coach'); await phone.goto(BASE + '/practice-plans'); await phone.waitForSelector('#calendar .cal-day.is-today');
+  const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); expect(over <= 1, `/practice-plans scrolls sideways by ${over}px on a phone`);
+  expect(await phone.$eval('#calendar .cal-dow', d => getComputedStyle(d).display === 'none'), 'phones get a list of days, not the 7-column grid');
+  if (SHOTS) await phone.screenshot({path: `${SHOTS}/phone-coach-practice-month.png`, fullPage: true});
+  await phone.close();
 });
 await step('owner adds a curriculum lesson on /curricula', async () => {
   await owner.goto(BASE + '/curricula'); await owner.waitForSelector('#groupName');
