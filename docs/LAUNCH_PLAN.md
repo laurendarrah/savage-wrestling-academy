@@ -27,7 +27,7 @@ Nothing in Launch 1 can be finished without these. Each one blocks a specific da
 | 1 | Approve the Launch 1 scope in this document | Owner | Everything |
 | 2 | Membership terms: what happens after the 12th payment, early cancellation, missed payments, refunds | Owner, ideally with an attorney | Checkout (Mon) |
 | 3 | Camp, clinic and Friday Night Live refund policy | Owner | Checkout (Mon) |
-| 4 | Who owns the live Stripe account, and who can see payouts | Owner | Going live (Thu) |
+| 4 | ~~Who owns the live Stripe account, and who can see payouts~~ **Decided:** Justin creates and owns the academy's Stripe account himself. The site has no account built in: the first test key Justin saves and confirms on `/payment-setup` connects his account (#255) | Owner | Going live (Thu) |
 | 5 | Waiver approach for the first weeks: paper, or an external waiver service link | Owner | Soft launch (Fri) |
 | 6 | Stay on the current web address, or move to a custom domain now | Owner | Thu |
 | 7 | ~~Hosting stays on ChatGPT Sites for launch week~~ **Changed Nov 6:** the academy leaves ChatGPT Sites and ChatGPT; hosting moves to its own Cloudflare account before launch (#100, #119). Steps in [GO_LIVE](GO_LIVE.md) | Owner and Justin | Now |
@@ -42,7 +42,7 @@ Recommendation for 6 and 7: launch on the current address and current hosting. C
 | A way to publish GitHub changes to the live Site | Justin | Fixes and new features only reach families once published |
 | A separate development Supabase project | Justin or owner | Test sign-up, email links and MFA without touching real accounts |
 | Supabase production project | Lauren (done) | The old project can't be reached, so a new academy-owned project replaces it; Justin is invited as Owner (#139) |
-| Stripe test-mode team access | Owner | Build and test checkout |
+| ~~Stripe test-mode team access~~ Justin's own Stripe account, connected with a restricted test key on `/payment-setup` (#4, #255) | Justin | Build and test checkout |
 | Read access to the live database, or an export | Justin | Know how many real families and scholarships exist before changing anything |
 | The four files dropped from the Drive upload | Justin | `.gitignore`, `.npmrc`, `.openai/hosting.json`, `.env.example` |
 
@@ -169,6 +169,6 @@ Drafts based on what the platform does are in [docs/policies](policies/README.md
 | Person | Role this week |
 |---|---|
 | Owner | Decisions 1 to 6, Stripe ownership, terms, soft-launch families |
-| Justin | Cloudflare account, domain, Supabase and Stripe access, the live data export, decisions |
+| Justin | Cloudflare account, domain, Supabase, his own Stripe and Resend accounts (Lauren helps only if asked), the live data export, decisions |
 | Lauren | Coordination, review and merge of each change |
 | Claude Code | Builds each day's work on a branch with tests, for review before merge |

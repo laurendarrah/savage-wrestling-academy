@@ -9,7 +9,9 @@ Follow the steps in order. The old Sites site keeps running until the domain is 
 - [ ] Create a Cloudflare account in the academy's name (free plan to start; Workers Paid is $5/month if limits are reached). Add Lauren as an administrator.
   - **When to switch to Workers Paid:** the free plan allows about 50 database queries per page load or scheduled run, and Workers Paid allows 1,000. The academy is far below the free limit today. Load checks at 3,000 families (PRs #219 and #242) show the backup download, the daily reminders and the longest owner lists start needing more than 50 somewhere past about 1,000 families. **Warning signs:** a backup download that fails, missed morning reminders, or "too many subrequests" errors on `/site-health`. Switch at about 750 families, or as soon as any of those appear. Workers & Pages → Plans in Cloudflare.
 - [ ] Decide the site address, for example `register.savagewrestling.com`. Whoever controls the domain's DNS needs to be available on cut-over day.
-- [ ] Accept the invite to the new Supabase project (see below), and add Lauren to the Stripe account.
+- [ ] Accept the invite to the new Supabase project (see below).
+- [ ] Create the academy's Stripe account yourself (decided on #4): you own it, its payouts and its keys. Step 6 connects it to the site. Add Lauren to it only if you want her help.
+- [ ] Set up the email service (Resend) on your own account too, once the email decision (#87) is made. Lauren helps only if you ask.
 
 **Supabase (#139).** The old site's Supabase project was set up through ChatGPT, and no one at the academy can sign in to it. Lauren has created a new project and invites Justin as Owner. Everyone, the owner included, creates their login again on the new site.
 
@@ -27,7 +29,8 @@ Follow the steps in order. The old Sites site keeps running until the domain is 
 | `STRIPE_TEST_WEBHOOK_SECRET` | From the new Stripe webhook (step 6) |
 | `CHECKOUT_KINDS` | **Leave empty.** Online payment opens per purchase type after its terms are decided |
 | `STRIPE_MODE` | Leave unset (test) until live-mode day (#26) |
-| `EMAIL_API_KEY`, `MAIL_FROM` | Leave unset until the email decision (#87). Once set, families get emails and the owner gets problem alerts from the site, at most one an hour (#47) |
+| `STRIPE_ACCOUNT_ID` | **Optional; usually leave unset.** The first test key saved on `/payment-setup` tells the site the academy's Stripe account (step 6). Set it to the account id (`acct_…`) only to pin the account from the start; then every test and live key must belong to it, and the owner can't switch accounts from the page |
+| `EMAIL_API_KEY`, `MAIL_FROM` | Leave unset until the email decision (#87). They come from Justin's own Resend account, which he sets up himself (Lauren helps only if asked). Once set, families get emails and the owner gets problem alerts from the site, at most one an hour (#47) |
 
 ## 3. Switch on the Deploy workflow (Lauren, in GitHub settings)
 
@@ -66,8 +69,14 @@ Logins do not move: the new Supabase project starts empty (#139). Families and t
 - [ ] Supabase → Authentication → Emails → Templates: paste the Savage-branded emails from `docs/email-templates/` (steps in its README).
 - [ ] Leaked-password protection, if the Supabase plan allows it.
 - [ ] **Email sender.** Supabase's built-in sender delivers only to members of the Supabase project team, a few emails an hour. Testing with Lauren's and Justin's addresses works; families get no confirmation emails until a custom email sender (SMTP) is set under Authentication → Emails. This waits on the email decision (#87).
-- [ ] Stripe → Developers → Webhooks: add `https://<new address>/api/stripe-webhook` with `checkout.session.*`, `charge.refunded`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted`. Put its signing secret in `STRIPE_TEST_WEBHOOK_SECRET`.
-- [ ] As the owner on the new site, save the Stripe test key on `/payment-setup`.
+**Stripe is Justin's own account (#4).** Justin does these steps; Lauren helps only if asked. Everything here is in Stripe's **test mode**: no real money moves.
+
+- [ ] **Create the Stripe account** at [dashboard.stripe.com/register](https://dashboard.stripe.com/register) if it doesn't exist yet. Test mode works before the business details are finished.
+- [ ] Stripe (test mode) → Developers → Webhooks: add `https://<new address>/api/stripe-webhook` with `checkout.session.*`, `charge.refunded`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted`. Put its signing secret in `STRIPE_TEST_WEBHOOK_SECRET` on the Worker (Cloudflare → the worker → Settings → Variables and secrets).
+- [ ] Stripe (test mode) → Developers → API keys → **Create restricted key**, named "Savage website test". Give it: reading account details; Checkout Sessions (write); Customers (write); Products and Prices (read); Subscriptions (write); Invoices, PaymentIntents and Charges (read); Balance (read, for card fees, #225); Customer Portal sessions (write). Nothing else. It starts `rk_test_`.
+- [ ] As the owner on the new site, paste it on `/payment-setup` and choose **Verify test key**. The page shows the name and id (`acct_…`) of the Stripe account the key belongs to. Check it is the academy's account and choose **Yes, connect this account**. The site records that account (and notes it in Security activity); from then on every test key, and later the live key, must come from it. The page then says "Connected to <account name> (acct_…)".
+- [ ] Connected the wrong account? Choose **Connect a different Stripe account** on the same page and confirm. It removes the saved key and forgets the account (also noted in Security activity), and the next test key decides again. This only works in test mode, and not when `STRIPE_ACCOUNT_ID` is set.
+- [ ] No Stripe account is built into the site any more. The old setup's account (`acct_1U8nF9…`) and the test prices listed in `config/stripe-test-catalog.json` aren't used: checkout sends each price from the program settings.
 
 ## 7. Check everything on the Cloudflare address
 
@@ -108,4 +117,4 @@ Only after the matching decision is recorded on its issue:
 1. Refund policy decided (#3): set `CHECKOUT_KINDS=walkin,event,live`.
 2. Membership terms approved (#2): add `monthly`. A year paid upfront is not offered (#210).
 3. Lesson refund policy decided (#80): add `lesson`.
-4. Test with Stripe test cards first (#24), then follow the live steps on #26.
+4. Test with Stripe test cards first (#24), then follow the live steps on #26. The live key must come from the same Stripe account the test key connected (or `STRIPE_ACCOUNT_ID`, if set). Without either, `/payment-setup` refuses it: "Save your test key first so the site knows your Stripe account."

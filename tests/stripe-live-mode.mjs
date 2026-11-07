@@ -16,13 +16,13 @@ const DB = {
 };
 const TEST_SECRET = 'whsec_test_unit', LIVE_SECRET = 'whsec_live_unit';
 const env = {DB, STRIPE_CONFIG_ENCRYPTION_KEY: 'cd'.repeat(32), STRIPE_TEST_WEBHOOK_SECRET: TEST_SECRET, CHECKOUT_KINDS: 'event'};
-const ACCOUNT = 'acct_1U8nF9PkPTNkVQBz';
+const ACCOUNT = 'acct_JustinAcademy01';   // whatever account the owner's own test key belongs to (issue #255)
 let accountReturned = ACCOUNT, n = 0;
 const clientsMade = [];
 function StripeMock(key) {
   clientsMade.push(key);
   return {
-    accounts: {retrieve: async () => ({id: accountReturned})},
+    accounts: {retrieve: async id => { assert.equal(id, null, 'the key\'s own account is asked for'); return {id: accountReturned, settings: {dashboard: {display_name: 'Savage Wrestling Academy'}}}; }},
     checkout: {sessions: {create: async params => ({id: `cs_${key.startsWith('rk_live_') ? 'live' : 'test'}_${++n}`, url: 'https://checkout.stripe.test/' + n, livemode: key.startsWith('rk_live_'), params}), expire: async () => ({})}}
   };
 }
@@ -73,25 +73,48 @@ assert.deepEqual([...config.checkoutKinds()], ['event']);
 // --- Saving the live key ---
 assert.equal((await saveLive(TEST_KEY)).status, 400, 'a test key is not a live key');
 assert.equal((await saveLive('sk_live_' + 'x'.repeat(30))).status, 400, 'unrestricted live secret keys refused');
-accountReturned = 'acct_someoneelse';
-assert.equal((await saveLive(LIVE_KEY)).status, 400, 'wrong Stripe account refused');
-accountReturned = ACCOUNT;
+// No setting and no test key yet: the site doesn't know the academy's Stripe account, so no live key is accepted (#255).
 let r = await saveLive(LIVE_KEY);
-assert.equal(r.status, 200); assert.equal(r.body.mode, 'live');
+assert.equal(r.status, 400); assert.equal(r.body.error, 'Save your test key first so the site knows your Stripe account.');
+assert.equal(sqlite.prepare("SELECT count(*) n FROM integration_secrets WHERE id='stripe-live'").get().n, 0);
+// The owner saves the test key and confirms the account Stripe reports for it; that account is recorded.
+const saveTest = async body => { const res = await setup.POST(new Request('https://a.test/api/payment-setup', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)})); return {status: res.status, body: await res.json()}; };
+assert.equal((await saveTest({testKey: TEST_KEY})).body.confirmAccount, true);
+assert.equal((await saveTest({testKey: TEST_KEY, confirmAccount: true})).status, 200);
+assert.equal((await vault.recordedStripeAccount()).id, ACCOUNT);
+accountReturned = 'acct_someoneelse01';
+r = await saveLive(LIVE_KEY);
+assert.equal(r.status, 400, 'a live key from another Stripe account is refused'); assert.match(r.body.error, /different Stripe account/);
+accountReturned = ACCOUNT;
+r = await saveLive(LIVE_KEY);
+assert.equal(r.status, 200); assert.equal(r.body.mode, 'live'); assert.equal(r.body.account.id, ACCOUNT);
 assert.ok(!JSON.stringify(r.body).includes(LIVE_KEY));
 const row = sqlite.prepare("SELECT encrypted FROM integration_secrets WHERE id='stripe-live'").get();
 assert.ok(!row.encrypted.includes(LIVE_KEY), 'stored encrypted');
 assert.equal(await vault.storedStripeKeyFor('live'), LIVE_KEY);
-assert.equal(await vault.storedStripeKeyFor('test'), null, 'test slot untouched');
-// A live ciphertext placed in the test slot cannot be decrypted as a test key.
-sqlite.prepare("INSERT INTO integration_secrets VALUES ('stripe-test',?,?,?)").run(row.encrypted, 'x', 'x');
+assert.equal(await vault.storedStripeKeyFor('test'), TEST_KEY, 'the test slot keeps only the test key');
+// A live ciphertext placed in the test slot or the account slot cannot be decrypted there: separate labels.
+const testRow = sqlite.prepare("SELECT encrypted FROM integration_secrets WHERE id='stripe-test'").get().encrypted;
+const accountRow = sqlite.prepare("SELECT encrypted FROM integration_secrets WHERE id='stripe-account'").get().encrypted;
+sqlite.prepare("UPDATE integration_secrets SET encrypted=? WHERE id='stripe-test'").run(row.encrypted);
 await assert.rejects(() => vault.storedStripeKeyFor('test'), 'encryption labels separate modes');
-sqlite.prepare("UPDATE integration_secrets SET encrypted=? WHERE id='stripe-test'").run(await vault.sealStripeKeyFor('test', TEST_KEY));
-// Custom account for a separately owned live Stripe account.
-env.STRIPE_ACCOUNT_ID = 'acct_LiveOwner123'; accountReturned = 'acct_LiveOwner123';
+sqlite.prepare("UPDATE integration_secrets SET encrypted=? WHERE id='stripe-account'").run(row.encrypted);
+await assert.rejects(() => vault.recordedStripeAccount(), 'a live key cannot pass as the account record');
+sqlite.prepare("UPDATE integration_secrets SET encrypted=? WHERE id='stripe-test'").run(testRow);
+sqlite.prepare("UPDATE integration_secrets SET encrypted=? WHERE id='stripe-account'").run(accountRow);
+await assert.rejects(() => vault.sealStripeKeyFor('test', LIVE_KEY)); await assert.rejects(() => vault.sealStripeKeyFor('live', TEST_KEY));
+// The STRIPE_ACCOUNT_ID setting overrides the recorded account.
+env.STRIPE_ACCOUNT_ID = 'acct_LiveOwner123';
+assert.equal((await saveLive(LIVE_KEY)).status, 400, 'the recorded account is not enough when the setting names another');
+accountReturned = 'acct_LiveOwner123';
 assert.equal((await saveLive(LIVE_KEY)).status, 200);
-env.STRIPE_ACCOUNT_ID = 'not-an-account'; assert.equal(vault.expectedStripeAccount(), ACCOUNT, 'malformed setting falls back to the known account');
+// A malformed setting matches nothing, so every live key is refused (no fallback account).
+env.STRIPE_ACCOUNT_ID = 'not-an-account'; assert.equal(await vault.expectedStripeAccount(), 'invalid');
+assert.equal((await saveLive(LIVE_KEY)).status, 400, 'malformed setting refuses live keys');
 delete env.STRIPE_ACCOUNT_ID; accountReturned = ACCOUNT;
+// Changing the account is not possible while taking real payments.
+r = await saveTest({resetAccount: true}); assert.equal(r.status, 400);
+assert.equal(sqlite.prepare("SELECT count(*) n FROM integration_secrets").get().n, 3, 'test, account and live rows all kept');
 const status = plain(await (await setup.GET(new Request('https://a.test/api/payment-setup'))).json());
 assert.equal(status.mode, 'live'); assert.equal(status.liveConfigured, true); assert.equal(status.webhookConfigured, true);
 

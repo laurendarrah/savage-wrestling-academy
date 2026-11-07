@@ -53,10 +53,33 @@ await step('setup: schedule and a family with a current card', async () => {
   const f = await api(family, '/api/family', {revision: 0, data: {parentName: 'Pat Example', phone: '', homeAddress: '20 Railroad St', homeCity: 'Huntington Station', homeState: 'NY', homeZip: '11746', emergencyContactName: 'Jordan Emergency', emergencyContactPhone: '631-555-0188', wrestlers: [{id: 'w-sam', name: 'Sam Example', grade: '8', usawNumber: 'AB-123456', usawExpires: ny(300), birthDate: '2012-04-18', allergies: 'None'}]}}, 'PUT');
   expect(f.status === 200, 'family ' + JSON.stringify(f.body));
 });
-await step('owner saves a Stripe test key; Stripe confirms the account', async () => {
+// Issue #255: no Stripe account is built in. The first test key's own account is shown to the owner and recorded only
+// after the owner confirms it; later keys must come from it. stripe-mock answers "which account is this key?" (GET
+// /v1/account) with a new random acct_ id every time, so the rehearsal reads the recorded id from the page, and a second
+// key always looks like another account's key, which shows the refusal.
+let stripeAccount = '';
+await step('owner saves a Stripe test key: the site shows the key\'s own account, and records it once confirmed', async () => {
   await owner.goto(BASE + '/payment-setup'); await owner.waitForSelector('#testKey');
+  await waitText(owner, '#accountLine', /Not connected to a Stripe account yet/);
   await owner.fill('#testKey', 'rk_test_' + 'R'.repeat(24)); await owner.click('#keyForm button');
-  await owner.waitForFunction(() => /saved|connected|configured/i.test(document.body.textContent), null, {timeout: 10000});
+  await owner.waitForSelector('#confirmBox:not([hidden])', {timeout: 10000});
+  expect(/^This key belongs to acct_[A-Za-z0-9]+\. Is this the academy’s Stripe account\?$/.test(await owner.textContent('#confirmText')), 'the confirmation names the Stripe account: ' + await owner.textContent('#confirmText'));
+  expect(!sql("SELECT id FROM integration_secrets").length, 'nothing is stored before the owner confirms');
+  await owner.click('#confirmYes');
+  await waitText(owner, '#accountLine', /^Connected to acct_[A-Za-z0-9]+$/);
+  stripeAccount = (await owner.textContent('#accountLine')).match(/acct_[A-Za-z0-9]+/)[0];
+  await waitText(owner, '#status', new RegExp('^Connected to ' + stripeAccount + '\\. Your test key is saved'));
+  expect(await owner.isVisible('#changeSection') && !(await owner.isVisible('#confirmBox')), 'Connect a different Stripe account is offered');
+  expect(sql("SELECT id FROM integration_secrets ORDER BY id").map(r => r.id).join() === 'stripe-account,stripe-test', 'the key and the account are stored');
+  const log = sql("SELECT action,target FROM security_events WHERE action LIKE 'stripe_%'");
+  expect(log.some(e => e.action === 'stripe_account_recorded' && e.target === stripeAccount) && log.some(e => e.action === 'stripe_test_key_saved'), 'the account is in the security log ' + JSON.stringify(log));
+  await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', new RegExp('Stripe account connected[\\s\\S]*' + stripeAccount));
+});
+await step('a test key that Stripe reports for another account is refused, and the saved key stays', async () => {
+  const before = sql("SELECT encrypted FROM integration_secrets WHERE id='stripe-test'")[0].encrypted;
+  const r = await api(owner, '/api/payment-setup', {testKey: 'rk_test_' + 'S'.repeat(24), confirmAccount: true});
+  expect(r.status === 400 && /different Stripe account/.test(r.body.error) && r.body.error.includes(stripeAccount), 'refused: ' + JSON.stringify(r.body));
+  expect(sql("SELECT encrypted FROM integration_secrets WHERE id='stripe-test'")[0].encrypted === before, 'the saved key is unchanged');
 });
 await step('family pays for a walk-in: checkout opens a Stripe session', async () => {
   await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
@@ -180,6 +203,17 @@ await step('with online payment open, a family can still book a walk-in to pay c
   await waitText(owner, '#cashSummary', /Nothing is waiting to be paid at the academy/);
   const o = sql(`SELECT status,source,amount_cents,pricing FROM orders WHERE kind='walkin' AND dates LIKE '%${ny(3)}%'`)[0];
   expect(o && o.status === 'paid' && o.source === 'offline' && o.amount_cents === 4000 && JSON.parse(o.pricing).method === 'cash', 'cash recorded as an offline payment ' + JSON.stringify(o));
+});
+
+// Last, because it disconnects Stripe (issue #255).
+await step('owner chooses Connect a different Stripe account: after the confirmation the key and the account are cleared and logged', async () => {
+  await owner.goto(BASE + '/payment-setup'); await waitText(owner, '#accountLine', new RegExp('Connected to .*' + stripeAccount));
+  await owner.click('#changeAccount'); await owner.waitForSelector('#resetBox:not([hidden])');
+  await owner.click('#resetNo'); expect(sql("SELECT id FROM integration_secrets WHERE id='stripe-account'").length === 1, 'No keeps the account');
+  await owner.click('#changeAccount'); await owner.click('#resetYes');
+  await waitText(owner, '#accountLine', /Not connected to a Stripe account yet/); await waitText(owner, '#status', /Disconnected/);
+  expect(!sql("SELECT id FROM integration_secrets").length, 'test key and account cleared');
+  expect(sql("SELECT target FROM security_events WHERE action='stripe_account_reset'").some(e => e.target === stripeAccount), 'the reset is logged');
 });
 
 await browser.close(); auth.close();

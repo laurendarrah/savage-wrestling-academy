@@ -3,6 +3,8 @@
 # sends its Stripe calls to stripe-mock, and drives the money path in Chromium. Local only.
 # USA Wrestling card checks go to a closed local port, so they come back unavailable and never reach USA Wrestling.
 # Needs stripe-mock: go install github.com/stripe/stripe-mock@v0.197.0 (or set STRIPE_MOCK to its path).
+# No Stripe account is set (no STRIPE_ACCOUNT_ID), as on a new site: the first test key's own account, which stripe-mock
+# makes up (a new random acct_ id on every lookup), is confirmed by the owner and recorded (issue #255).
 # Ports, as in run.sh, so it can run beside another walkthrough: E2E_PORT, E2E_AUTH_PORT, E2E_STRIPE_PORT.
 set -e
 cd "$(dirname "$0")/../.."

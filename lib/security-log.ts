@@ -35,6 +35,8 @@ const TITLES: Record<string, string> = {
   lesson_group_canceled: 'Private lesson group called off',
   stripe_test_key_saved: 'Stripe test key saved',
   stripe_live_key_saved: 'Stripe live key saved',
+  stripe_account_recorded: 'Stripe account connected',
+  stripe_account_reset: 'Stripe account disconnected',
   program_approval_requested: 'SWA Advance approval requested',
   program_approval_approved: 'SWA Advance approved',
   program_approval_declined: 'SWA Advance declined',
@@ -156,6 +158,7 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     }
     case 'announcement_sent': detail = rest[0] ? 'Sent to ' + plural(Number(rest[0]), 'family', 'families') : ''; break;
     case 'emails_resent': detail = t; break;
+    case 'stripe_account_recorded': case 'stripe_account_reset': detail = /^acct_[A-Za-z0-9]{8,64}$/.test(t) ? 'Stripe account ' + t : ''; break;
     case 'account_closure_requested': detail = names.people[t] ?? ''; break;
     case 'data_request_handled': detail = names.requests[t] ?? ''; break;
     case 'program_curriculum_saved': case 'curriculum_lesson_created': case 'curriculum_lesson_updated': detail = names.curricula[t] ?? ''; break;
