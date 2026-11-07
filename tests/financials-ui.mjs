@@ -35,6 +35,9 @@ const ctx = vm.createContext({Intl, Date, JSON, Math, Number, String, Array, Obj
   location: {search: ''}, history: {replaceState() {}}, window: {addEventListener() {}},
   document: {getElementById: el, querySelectorAll: () => [], querySelector: sel => sel.includes(':checked') ? {value: kind} : null}});
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+// The shared month picker (issue #232) loads before the page script, as on the page.
+assert.match(html, /<script src="\/month-picker\.js"><\/script><script>/);
+vm.runInContext(readFileSync('public/month-picker.js', 'utf8'), ctx);
 vm.runInContext(script, ctx);
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(r => setImmediate(r)); };
 await settle();

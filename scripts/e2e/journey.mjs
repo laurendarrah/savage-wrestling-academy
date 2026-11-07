@@ -1034,9 +1034,10 @@ await step('owner sees payments in the books and adds an expense', async () => {
   const csv = await owner.request.get(BASE + '/api/financials?format=csv');
   expect(csv.status() === 200 && /Mat room rent/.test(await csv.text()), 'the download has the expense');
   await shot(owner, 'financials');
-  const phone = await as('owner', {width: 375, height: 800});
+  const phone = await as('owner', {width: 390, height: 844});
   await phone.goto(BASE + '/financials'); await waitText(phone, '#lines', /Mat room rent/);
-  const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  // Against the 390px screen, not innerWidth, which a phone widens to fit content that pokes out (issues #222, #232).
+  const over = await phone.evaluate(() => document.documentElement.scrollWidth - 390);
   expect(over <= 1, `/financials scrolls sideways by ${over}px on a phone`);
   await shot(phone, 'phone-financials'); await phone.context().close();
 });

@@ -75,7 +75,7 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
     ...(String(settings.STAFF_MFA ?? '').trim().toLowerCase() === 'off' ? [{key: 'mfa-off', group: 'Safety', label: 'Authenticator sign-in is turned off', status: 'todo' as const,
       detail: 'Anyone with the owner or a coach password can sign in without an authenticator code. Before families join, ask whoever maintains the site to delete the STAFF_MFA setting in Cloudflare'}] : []),
     {key: 'health', group: 'Safety', label: 'Site health', href: '/site-health', status: errors ? 'todo' : 'done',
-      detail: errors ? `${errors} server error${errors === 1 ? '' : 's'} in the last 24 hours` : 'No server errors in the last 24 hours'},
+      detail: errors ? `${errors} site error${errors === 1 ? '' : 's'} in the last 24 hours` : 'No site errors in the last 24 hours'},
     {key: 'families', group: 'Families', label: 'Families signed up', href: '/accounts', status: 'info', detail: `${families} famil${families === 1 ? 'y' : 'ies'}`},
   ];
   const counted = items.filter(i => i.status === 'done' || i.status === 'todo');
