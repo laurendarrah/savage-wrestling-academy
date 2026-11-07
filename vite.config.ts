@@ -1,6 +1,5 @@
 import vinext from "vinext";
 import { defineConfig, type Plugin } from "vite";
-import { readExecutionProfile } from "./scripts/execution-profile.mjs";
 import { WORKSPACE_SCRIPT, workspaceScript } from "./scripts/workspace-script.mjs";
 
 // The academy's Cloudflare Worker and its D1 database (issue #119). Locally the database is a throwaway Miniflare
@@ -23,8 +22,6 @@ const workerConfig = {
   triggers: { crons: ["41 12 * * *"] },
   observability: { enabled: true },
 };
-
-const managedLinux = readExecutionProfile() === "managed-linux";
 
 // The owner workspace's typed modules (lib/workspace/), bundled into /portal-workspace.js for app/portal.html (issue #45):
 // built fresh on each request in development, and written next to the other static files in the build.
@@ -60,7 +57,6 @@ export default defineConfig(async () => {
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import("@cloudflare/vite-plugin");
   return {
-    server: managedLinux ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] } : {},
     plugins: [
       ownerWorkspaceScript(),
       vinext(),
