@@ -50,7 +50,23 @@ jobs:
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
       - name: Walkthrough and accessibility check
-        run: pnpm e2e e2e-screenshots
+        id: walkthrough
+        # bash here also sets pipefail, so a failed walkthrough still fails the step through tee.
+        shell: bash
+        run: pnpm e2e e2e-screenshots 2>&1 | tee e2e-walkthrough.log
+      # When the walkthrough fails, keep its log, a screenshot of every open page at each failed step, and the server
+      # log, so the failure can be read without running it again (issue #247).
+      - name: Keep the failed walkthrough's log and screenshots
+        if: failure() && steps.walkthrough.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: walkthrough-failure
+          path: |
+            e2e-walkthrough.log
+            e2e-failures
+            .wrangler/e2e-server.log
+          retention-days: 7
+          if-no-files-found: ignore
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
