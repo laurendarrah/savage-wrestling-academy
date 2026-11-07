@@ -1,3 +1,4 @@
+import {validEventSchedule} from './event-schedule';
 import {validExtraPractices,validOfferingDetails} from './friday-live';
 export function validTeamCodes(codes:any):boolean{
  return Array.isArray(codes)&&codes.length<=200&&new Set(codes.map((c:any)=>c?.code)).size===codes.length&&new Set(codes.map((c:any)=>c?.id)).size===codes.length&&codes.every((c:any)=>c&&typeof c==='object'&&typeof c.id==='string'&&/^[A-Za-z0-9-]{1,80}$/.test(c.id)&&typeof c.code==='string'&&/^[A-Z0-9][A-Z0-9-]{2,31}$/.test(c.code)&&typeof c.name==='string'&&c.name.trim().length>0&&c.name.length<=80&&Number.isInteger(c.percent)&&c.percent>=1&&c.percent<=100&&typeof c.active==='boolean'&&Array.isArray(c.programs)&&c.programs.length>=1&&c.programs.length<=3&&new Set(c.programs).size===c.programs.length&&c.programs.every((id:unknown)=>['Elementary','Intermediate','Advanced'].includes(id as string)));
@@ -29,6 +30,8 @@ export function validState(d: any): boolean {
  // Retain older owner-created events so their dates can be edited in the new form.
  if(e.dates!==undefined){if(!Array.isArray(e.dates)||e.dates.length<(e.type==='Camp'?2:1)||e.dates.length>(e.type==='Camp'?366:1)||new Set(e.dates).size!==e.dates.length||e.dates.some((v:unknown)=>!realDate(v)))return false;}
  else if(typeof e.date!=='string'||e.date.length>10000)return false;
+ // Times for each day (issue #189) are optional: events saved without them, and older backups, stay valid.
+ if(e.schedule!==undefined&&(e.dates===undefined||!validEventSchedule(e.dates,e.schedule)))return false;
  }
  }
  for(const s of d.seasons) {

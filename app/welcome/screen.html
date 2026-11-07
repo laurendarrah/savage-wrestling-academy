@@ -90,12 +90,13 @@ function upcoming(schedules,today,limit=6){
  for(const d of schedules){
   for(const p of d.practices||[])if(p.date>=today&&!seen.has('p'+p.id)){seen.add('p'+p.id);items.push({date:p.date,start:p.start,title:(programs.find(x=>x.id===p.program)?.name||p.program)+' practice',color:swatch[p.program]})}
   for(const l of d.liveClasses||[])if(l.date>=today&&!seen.has('l'+l.id+l.date)){seen.add('l'+l.id+l.date);items.push({date:l.date,start:l.start,title:l.name,color:'background:#C4222C'})}
-  for(const e of d.events||[]){const first=(e.dates||[]).find(x=>x>=today);if(first&&!seen.has('e'+e.id)){seen.add('e'+e.id);items.push({date:first,start:'',title:e.name+(e.type?' ('+e.type.toLowerCase()+')':''),color:'background:#C4222C'})}}
+  // An event day shows its own time (issue #189), or "Time to be announced" until the owner sets one.
+  for(const e of d.events||[]){const first=(e.dates||[]).find(x=>x>=today);if(first&&!seen.has('e'+e.id)){seen.add('e'+e.id);const t=(e.schedule||[]).find(x=>x.date===first);items.push({date:first,start:t?t.start:'',tba:!t,title:e.name+(e.type?' ('+e.type.toLowerCase()+')':''),color:'background:#C4222C'})}}
  }
  // Sessions at the same day and time share one row, so the list reaches further ahead.
  const groups=[];for(const i of items.sort((a,b)=>(a.date+(a.start||'99')).localeCompare(b.date+(b.start||'99')))){const last=groups[groups.length-1];if(last&&last.date===i.date&&last.start===i.start)last.items.push(i);else groups.push({date:i.date,start:i.start,items:[i]})}
  return groups.slice(0,limit)}
-function row(g){return '<div class="row"><span class="when">'+esc(dayLabel(g.date))+(g.start?'<span>'+esc(clock(g.start))+'</span>':'')+'</span><span class="what">'+g.items.map(i=>'<span class="item"><span class="dot" aria-hidden="true" style="'+(i.color||'background:#55585F')+'"></span>'+esc(i.title)+'</span>').join('')+'</span></div>'}
+function row(g){return '<div class="row"><span class="when">'+esc(dayLabel(g.date))+(g.start?'<span>'+esc(clock(g.start))+'</span>':g.items.some(i=>i.tba)?'<span>Time to be announced</span>':'')+'</span><span class="what">'+g.items.map(i=>'<span class="item"><span class="dot" aria-hidden="true" style="'+(i.color||'background:#55585F')+'"></span>'+esc(i.title)+'</span>').join('')+'</span></div>'}
 async function get(url){const r=await fetch(url,{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'The schedule could not be loaded. Refresh the page to try again.');return d}
 async function load(){
  try{

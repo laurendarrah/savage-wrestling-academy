@@ -211,7 +211,7 @@ async function booking({orders = [], entries = []}) {
 {
   const {el, html} = await booking({});
   assert.equal(el('heading').textContent, 'Winter camp', 'the heading is the event name'); assert.equal(el('kind').textContent, 'Camp');
-  assert.equal(el('description').textContent, 'Mon, Nov 16 · Tue, Nov 17 · $160.00');
+  assert.equal(el('description').textContent, 'Mon, Nov 16 · Tue, Nov 17 · Time to be announced · $160.00', 'an event saved without times says so (issue #189)');
   assert.equal(el('wrestlerStatus').textContent, 'Sam Example is not registered yet.');
   assert.doesNotMatch(html, /← Calendar|Review only/, 'no own back link and no disclaimer first');
   assert.equal((html.match(/Online payment isn’t open yet/g) || []).length, 1, 'payment is explained once, at review');

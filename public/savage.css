@@ -105,6 +105,16 @@ html body .hero{background:var(--swa-texture)}
 .swa-bar__links a:hover{background:#26272C}
 .swa-bar__links a[aria-current=page]{box-shadow:inset 0 -3px 0 var(--swa-red)}
 
+/* Calendars and date grids (issue #189). Today gets a red ring (big day cells) or a red underline (small date buttons)
+   and a small "Today" tag, using the New York date. A holiday is a quiet label on its day: it never adds or removes a
+   practice, and a holiday with no practice shows only the label. */
+html body .is-today{box-shadow:inset 0 0 0 2px var(--swa-red)}
+html body .today-mark{text-decoration:underline 2px var(--swa-red);text-underline-offset:4px}
+html body .today-tag{display:inline-block;margin-left:6px;font-family:var(--swa-body);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--swa-red);vertical-align:1px}
+html body .holiday-tag{display:block;margin:4px 0 0;font-family:var(--swa-body);font-size:12px;font-weight:600;line-height:1.3;letter-spacing:0;text-transform:none;color:var(--swa-muted);overflow-wrap:anywhere}
+html body .holiday-tag::before{content:"";display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;border:1.5px solid var(--swa-muted);vertical-align:1px}
+html body .tba{color:var(--swa-muted);font-style:italic}
+
 /* Phones: bigger tap targets for small links that act like buttons */
 @media (max-width:640px){
   html body main>a:first-child,html body nav a,html body .links a{display:inline-flex;align-items:center;min-height:44px}

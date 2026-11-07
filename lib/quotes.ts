@@ -221,6 +221,8 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   const memberDiscount = member && event.type === 'Camp' && baseCents !== null ? Math.round(baseCents * .1) : 0;
   const review = {
     type: 'event', title: event.name, wrestler: w.name, dates: option === 'full' ? event.dates : [option], baseCents,
+    // Times of the chosen days, for the review only (issue #189). Days without one show "Time to be announced".
+    schedule: (event.schedule ?? []).filter((x: any) => eventDates.includes(x.date)),
     cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, seatsLeft: left, status: 'registration_review', offerExpiresAt: offer?.offer_expires_at ?? null,
     message: (memberDiscount ? 'Your membership is active, so the 10% member discount for camps is applied.' : 'The price shown is the full price for this event.') + tail(opts, baseCents === null ? null : 'event')
   };
