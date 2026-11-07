@@ -51,6 +51,23 @@ const launch = node('#launch').innerHTML;
 assert.match(launch, /data-launch="programs" data-status="todo"[\s\S]*?<button type="button" class="primary" onclick="publishPrograms\(\)">Publish the programs<\/button>/);
 assert.match(launch, /data-launch="waiver"[\s\S]*?href="\/waivers">Open/);
 assert.doesNotMatch(launch.split('data-launch="health"')[1], /<a class="button"|<button/, 'a ready item has no button');
+assert.match(launch, /data-launch="waiver"[\s\S]*?<a class="button" href="\/waivers">Open<\/a>/, 'the academy’s own pages open in the same tab');
+// Issue #252: email waits on its setup, not a decision; the Launch board in GitHub opens in a new tab; a section opens on the dashboard.
+responses['/api/launch-checklist'] = {ready: 0, total: 1, items: [
+  {key: 'email', label: 'Email notices', status: 'waiting', detail: 'Set up Resend on your account'},
+  {key: 'events', label: 'Camps and events', status: 'info', section: 'Camps & events', detail: '1 camp coming up'},
+  {key: 'decisions', label: 'Decisions and attorney review', status: 'info', href: 'https://github.com/laurendarrah/savage-wrestling-academy/issues/246', detail: 'See the Launch board in GitHub'},
+  {key: 'website', label: 'Public website', status: 'todo', href: '/website', detail: 'Write your public website'}]};
+await vm.runInContext('loadLaunch()', ctx);
+{
+  const l = node('#launch').innerHTML;
+  assert.match(l, /data-launch="email" data-status="waiting"><span aria-label="Waiting on setup"/); assert.ok(!l.includes('Waiting on a decision'));
+  assert.match(l, /data-launch="decisions"[\s\S]*?<a class="button" href="https:\/\/github\.com\/laurendarrah\/savage-wrestling-academy\/issues\/246" target="_blank" rel="noopener">Open<\/a>/);
+  assert.match(l, /data-launch="website"[\s\S]*?<a class="button" href="\/website">Open<\/a>/);
+  assert.match(l, /data-launch="events"[\s\S]*?<button type="button" onclick="go\('Camps &amp; events'\)">Open<\/button>/);
+  assert.ok(l.indexOf('data-launch="website"') < l.indexOf('data-launch="email"'), 'to-dos come before waiting items');
+  assert.match(l, /0 of 1 ready/);
+}
 
 // No preview modes: the header links to what families really see.
 assert.match(html, /<nav class="family-links" aria-label="What families see">[^]*?<a href="\/welcome">Welcome page<\/a> <a href="\/team">Team page<\/a> <a href="\/calendar">Calendar<\/a><\/nav>/);
