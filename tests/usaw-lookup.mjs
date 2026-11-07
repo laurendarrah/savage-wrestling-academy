@@ -194,7 +194,9 @@ const O = 'https://a.test';
 const req = (method, body, origin = O) => new Request(O + '/x', method === 'GET' ? {} : {method, headers: {'content-type': 'application/json', origin}, body: JSON.stringify(body)});
 const call = async (route, method, body, origin) => { const r = await route[method](req(method, body, origin)); return {status: r.status, body: await r.json()}; };
 const family = (id, wrestlers) => sqlite.prepare('INSERT OR REPLACE INTO family_accounts VALUES (?,?,?,?,?)').run(id, id + '@example.test', JSON.stringify({parentName: 'Pat', phone: '', wrestlers}), 1, 'x');
-const save = async (wrestlers) => { const rev = (await call(familyApi, 'GET')).body.revision; return call(familyApi, 'PUT', {revision: rev, data: {parentName: 'Pat Example', phone: '555', wrestlers}}); };
+// A complete profile: contact and safety details are required to save (issue #188).
+const details = {homeAddress: '1 Main St', homeCity: 'Huntington', homeState: 'NY', homeZip: '11746', emergencyContactName: 'Jordan Parent', emergencyContactPhone: '631-555-0100'};
+const save = async (wrestlers) => { const rev = (await call(familyApi, 'GET')).body.revision; return call(familyApi, 'PUT', {revision: rev, data: {parentName: 'Pat Example', phone: '555', ...details, wrestlers: wrestlers.map(w => ({birthDate: '2012-04-18', allergies: 'None', ...w}))}}); };
 const reviewRow = (u, w) => sqlite.prepare('SELECT * FROM usaw_reviews WHERE user_id=? AND wrestler_id=?').get(u, w);
 const lookupsSent = () => stub.seen.length;
 const sam = (number, expires = SEASON, name = 'Sam Example') => ({id: 'w1', name, grade: '8', usawNumber: number, usawExpires: expires});
