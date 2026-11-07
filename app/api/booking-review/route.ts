@@ -13,5 +13,6 @@ export async function POST(request:Request){
  const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large.'},413);let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}
  const kinds=checkoutKinds(),quote=await quoteBooking(auth.user.id,input,{checkoutKinds:kinds});
  if(!quote.ok)return reply({error:quote.error,...(quote.extra??{})},quote.status);
- return reply({review:quote.review,paymentsEnabled:!!quote.charge&&kinds.has(quote.charge.kind)});
+ // Friday Night Live and other extra practices with a price can be booked to pay cash at the academy (issue #248).
+ return reply({review:quote.review,paymentsEnabled:!!quote.charge&&kinds.has(quote.charge.kind),cashEnabled:quote.charge?.kind==='live'});
 }

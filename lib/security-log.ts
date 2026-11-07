@@ -17,6 +17,7 @@ export type SecurityNames = {
   requests: Record<string, string>;    // data request id -> family
   curricula: Record<string, string>;   // curriculum or curriculum group id -> name
   coaches: Record<string, string>;     // coach email -> name
+  cash?: Record<string, {wrestler: string; item: string}>;   // pay-at-the-academy booking id (issue #248)
 };
 export type SecurityEntry = {title: string; detail: string; who: string; at: string};
 
@@ -73,6 +74,8 @@ const TITLES: Record<string, string> = {
   booking_exception_removed: 'Booking exception removed',
   offline_payment_recorded: 'Offline payment recorded',
   offline_payment_voided: 'Offline payment voided',
+  cash_received: 'Cash received at the academy',
+  cash_booking_canceled: 'Pay-at-the-academy booking canceled',
   account_closure_requested: 'Family asked to close their account',
   data_request_handled: 'Data request handled',
   stripe_event_rejected: 'Stripe message refused',
@@ -132,10 +135,11 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
       const coach = first.startsWith('former-coach-') ? 'A former coach' : names.coaches[first.toLowerCase()] ?? first;
       detail = [coach, names.waivers[rest[0] ?? '']].filter(Boolean).join(' · '); break;
     }
-    case 'offline_payment_recorded': {
+    case 'offline_payment_recorded': case 'cash_received': {
       const o = order(first); detail = [o?.wrestler, o?.item, money(rest[1] ?? '')].filter(Boolean).join(' · '); break;
     }
     case 'offline_payment_voided': { const o = order(t); detail = o ? `${o.wrestler} · ${o.item}` : ''; break; }
+    case 'cash_booking_canceled': { const c = names.cash?.[t]; detail = c ? `${c.wrestler} · ${c.item}` : ''; break; }
     case 'membership_transferred': {
       const o = order(first), [from = '', to = ''] = (rest[0] ?? '').split('->');
       detail = `${o?.wrestler ? o.wrestler + ': ' : ''}${program(from)} → ${program(to)} from ${fullDate(rest[1] ?? '')}`; break;
@@ -175,7 +179,7 @@ export async function securityLogPage(ownerIds: string[], cursor?: unknown): Pro
   const page = await keysetPage<SecurityRow & {id: string}>({select: 'id,actor,action,target,created_at', from: 'FROM security_events',
     cols: [{expr: 'created_at', desc: true}, {expr: 'id', desc: true}], keyOf: r => [r.created_at, r.id], cursor, limit: SECURITY_PAGE});
   const rows = page.rows;
-  const names: SecurityNames = {people: {}, you: ownerIds, approvals: {}, waitlist: {}, orders: {}, waivers: {}, wrestlers: {}, requests: {}, curricula: {}, coaches: {}};
+  const names: SecurityNames = {people: {}, you: ownerIds, approvals: {}, waitlist: {}, orders: {}, waivers: {}, wrestlers: {}, requests: {}, curricula: {}, coaches: {}, cash: {}};
   const families = await allFamilies();
   for (const f of families) {
     let p: any = {}; try { p = JSON.parse(f.payload); } catch {}
@@ -185,10 +189,16 @@ export async function securityLogPage(ownerIds: string[], cursor?: unknown): Pro
   for (const c of await all<{email: string; name: string}>('SELECT email,name FROM staff_access')) names.coaches[c.email.toLowerCase()] = c.name;
   for (const o of await all<{user_id: string; coach_email: string | null}>('SELECT DISTINCT user_id,coach_email FROM coach_openings WHERE coach_email IS NOT NULL'))
     names.people[o.user_id] ??= names.coaches[o.coach_email!.toLowerCase()] ? `${names.coaches[o.coach_email!.toLowerCase()]} (${o.coach_email})` : o.coach_email!;
+  // Coaches who collected cash at the door (issue #248) are named from the payment they recorded.
+  for (const c of await all<{id: string; name: string; email: string}>(`SELECT DISTINCT json_extract(pricing,'$.recordedBy') AS id,json_extract(pricing,'$.collectedBy') AS name,json_extract(pricing,'$.collectedByEmail') AS email
+      FROM orders WHERE source='offline' AND json_extract(pricing,'$.collectedByEmail') IS NOT NULL AND json_extract(pricing,'$.recordedBy') IS NOT NULL`))
+    names.people[c.id] ??= c.email.startsWith('former-coach-') ? 'A former coach' : `${c.name} (${c.email})`;
   for (const a of await all<{id: string; wrestler_name: string}>('SELECT id,wrestler_name FROM program_approvals')) names.approvals[a.id] = a.wrestler_name;
   for (const w of await all<{id: string; wrestler_name: string}>('SELECT id,wrestler_name FROM waitlist_entries')) names.waitlist[w.id] = w.wrestler_name;
   for (const o of await all<{id: string; wrestler_name: string; item_label: string}>('SELECT id,wrestler_name,item_label FROM orders')) names.orders[o.id] = {wrestler: o.wrestler_name, item: o.item_label};
   for (const v of await all<{id: string; title: string}>('SELECT id,title FROM waiver_versions')) names.waivers[v.id] = v.title;
+  for (const c of await all<{id: string; wrestler_name: string; item_label: string; session_date: string}>("SELECT id,wrestler_name,item_label,session_date FROM cash_bookings WHERE status='canceled' AND canceled_by NOT IN ('stripe')"))
+    names.cash![c.id] = {wrestler: c.wrestler_name, item: `${c.item_label}, ${dayDate(c.session_date)}`};
   for (const r of await all<{id: string; user_id: string; email: string}>('SELECT id,user_id,email FROM data_requests')) names.requests[r.id] = names.people[r.user_id] ?? r.email;
   for (const c of await all<{id: string; name: string}>('SELECT id,name FROM practice_curricula UNION ALL SELECT id,name FROM practice_curriculum_groups')) names.curricula[c.id] = c.name;
   return {entries: rows.map(r => describeSecurityEvent(r, names)), next: page.next};

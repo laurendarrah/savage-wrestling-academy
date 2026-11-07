@@ -3,6 +3,7 @@ import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth
 import {quoteMembership, quoteBooking} from '../../../lib/quotes';
 import {checkoutKinds, startCheckout, CheckoutError} from '../../../lib/checkout';
 import {rateLimited} from '../../../lib/rate-limit';
+import {cashBookingDue} from '../../../lib/cash-bookings';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
   if (!quote.ok) return reply({error: quote.error, ...(quote.extra ?? {})}, quote.status);
   if (!quote.charge) return reply({error: 'This item cannot be paid online. Contact the academy.'}, 400);
   if (!kinds.has(quote.charge.kind)) return reply({error: 'Online payment for this is not open yet.'}, 403);
+  // Booked to pay cash at the academy (issue #248): one or the other, never both.
+  if (await cashBookingDue(quote.charge.dedupeKey))
+    return reply({error: 'This is already booked to pay cash at the academy. To pay online instead, cancel that booking in your family account first.'}, 409);
 
   try {
     const termsUrl = quote.charge.kind === 'monthly' ? '/membership-terms' : '/membership-terms#camps';

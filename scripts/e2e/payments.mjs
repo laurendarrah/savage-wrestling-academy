@@ -8,9 +8,9 @@ import {execFileSync} from 'node:child_process';
 import {start, sessionCookie} from './fake-supabase.mjs';
 const require = createRequire(import.meta.url);
 const playwright = require('playwright');
-const BASE = process.env.E2E_BASE || 'http://127.0.0.1:8799', AUTH = 'http://127.0.0.1:54321', SECRET = process.env.E2E_WEBHOOK_SECRET;
+const BASE = process.env.E2E_BASE || 'http://127.0.0.1:8799', AUTH = process.env.E2E_SUPABASE || 'http://127.0.0.1:54321', SECRET = process.env.E2E_WEBHOOK_SECRET;
 const SHOTS = process.env.E2E_SHOTS; // optional folder for screenshots of the money screens
-const auth = await start(54321), browser = await playwright.chromium.launch();
+const auth = await start(+new URL(AUTH).port), browser = await playwright.chromium.launch();
 const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 const problems = [], passed = [];
 let current = '';
@@ -161,6 +161,25 @@ await step('card fees for a monthly membership ask Stripe for its invoices; a ru
   // stripe-mock's invoices are not for the membership's amount, so no fee is recorded, but the calls must be valid.
   const r = await api(owner, '/api/financials', {action: 'fees'});
   expect(r.status === 200 && !r.body.error && r.body.failed === 0 && r.body.checked >= 0, 'fee run ' + JSON.stringify(r.body));
+});
+// Pay cash at the academy (issue #248): offered beside online payment, and the two never overlap.
+await step('with online payment open, a family can still book a walk-in to pay cash; checkout then refuses it; the owner records the cash', async () => {
+  await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${ny(3)}`);
+  await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family.click('#reviewButton'); await family.waitForSelector('#payChoice:not([hidden])');
+  expect(await family.isVisible('#payOnlineOption') && await family.isChecked('#payWayOnline') && await family.isVisible('#acceptTerms'), 'Pay online is offered and chosen first');
+  await family.check('#payWayCash'); await family.waitForSelector('#cashBox:not([hidden])');
+  expect(!(await family.isVisible('#payButton')), 'the checkout button is hidden while cash is chosen');
+  await family.click('#cashButton'); await waitText(family, '#cashDone', /Pay at the academy: \$40\.00 due/);
+  const practiceId = sql(`SELECT item_id FROM cash_bookings WHERE session_date='${ny(3)}'`)[0].item_id;
+  const r = await api(family, '/api/checkout', {source: 'membership', wrestlerId: 'w-sam', program: 'Intermediate', plan: 'walkin', date: ny(3), practiceId, acceptTerms: true});
+  expect(r.status === 409 && /already booked to pay cash/.test(r.body.error), 'checkout refused for a cash booking: ' + JSON.stringify(r.body));
+  expect(!sql(`SELECT id FROM orders WHERE kind='walkin' AND dates LIKE '%${ny(3)}%'`).length, 'no order was created');
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#cashRows', /Sam Example[\s\S]*\$40\.00 due/);
+  await owner.locator('[data-cash-paid]').first().click(); await waitText(owner, '#status', /Cash received for Sam Example/);
+  await waitText(owner, '#cashSummary', /Nothing is waiting to be paid at the academy/);
+  const o = sql(`SELECT status,source,amount_cents,pricing FROM orders WHERE kind='walkin' AND dates LIKE '%${ny(3)}%'`)[0];
+  expect(o && o.status === 'paid' && o.source === 'offline' && o.amount_cents === 4000 && JSON.parse(o.pricing).method === 'cash', 'cash recorded as an offline payment ' + JSON.stringify(o));
 });
 
 await browser.close(); auth.close();

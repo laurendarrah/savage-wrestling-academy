@@ -58,6 +58,7 @@ What the cleanup does with each kind of record. Anything a family or the academy
 | Notices to the coach | `notifications` | Deleted |
 | Their lesson pay share | `academy_settings` (`lessons`) | Moved to the "former-coach-…" key, so pay for past months adds up the same |
 | Team page listing | `academy_settings` (`website`) | Removed from the list of coaches shown |
+| Cash they collected at the door (pay at the academy, #248) | `orders` | Kept exactly as paid; "collected by" becomes "Former coach" and their account "former-coach-…" |
 | Check-ins they made | `attendance` | The check-in stays (the family's attendance); "checked in by" becomes "former-coach-…" |
 | Practice plans they edited | `practice_plans` | The plan stays; "last edited by" becomes "former-coach-…" |
 | Security log entries naming them | `security_events` | Kept; their email and, on coach actions, their account become "former-coach-…" |

@@ -65,6 +65,9 @@ source.sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')"
 source.sqlite.prepare("INSERT INTO coach_openings(id,user_id,date,start,end,coach_email,format,capacity,closed,invite_code,organizer_id,organizer_wrestlers) VALUES ('open-2','coach-1','2026-12-02','16:00','17:00','dana@example.test','small-group',4,0,?,NULL,NULL)").run('i'.repeat(32));
 // Issue #239: a signature the owner asked to be signed again (the old file predates the table).
 source.sqlite.prepare("INSERT INTO signature_reissues(signature_id,user_id,reason,reissued_by,reissued_at) VALUES ('ws-1','parent-1','Signed for the wrong wrestler','owner','2026-11-07T12:00:00.000Z')").run();
+// Issue #248: a walk-in booked to pay cash at the academy (the old file predates the table).
+source.sqlite.prepare(`INSERT INTO cash_bookings(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,session_date,start_time,end_time,base_cents,discount_cents,amount_cents,pricing,dedupe_key,status,order_id,created_at,updated_at,canceled_at,canceled_by,cancel_reason)
+  VALUES ('cash-1','parent-1','pat@example.test','w-1','Sam Example','live',NULL,'fnl','Friday Night Live on Fri, Nov 20','2026-11-20','17:00','18:00',2000,1000,1000,'{"member":true}','parent-1|w-1|live|fnl|2026-11-20','due',NULL,'2026-11-07T12:00:00.000Z','2026-11-07T12:00:00.000Z',NULL,NULL,NULL)`).run();
 const exported = await source.route.GET(new Request('https://swa.test/api/backups?mode=lines'));
 assert.equal(exported.status, 200); assert.match(exported.headers.get('content-type'), /application\/x-ndjson/); assert.equal(exported.headers.get('cache-control'), 'private, no-store');
 const made = await encryptLines(readLines(exported.body), NEW_PASS);

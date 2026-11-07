@@ -2,6 +2,7 @@
 import {env} from 'cloudflare:workers';
 import {strongAccount, accountReply} from '../../../lib/account-auth';
 import {checkoutKinds} from '../../../lib/checkout-config';
+import {familyCashBookings} from '../../../lib/cash-bookings';
 export const dynamic = 'force-dynamic';
 
 const FIELDS = 'o.id,o.kind,o.program,o.item_id,o.item_label,o.wrestler_id,o.wrestler_name,o.dates,o.base_cents,o.discount_cents,o.amount_cents,o.currency,o.status,o.created_at,o.paid_at,o.term_start,o.term_end,'
@@ -19,5 +20,6 @@ export async function GET(request: Request) {
     return row ? reply({order: {...row, dates: JSON.parse(String(row.dates))}}) : reply({error: 'Order not found.'}, 404);
   }
   const rows = await env.DB!.prepare(`SELECT ${FIELDS} ${FROM} WHERE o.user_id=? AND o.status IN ('pending','paid','refunded') ORDER BY o.created_at DESC`).bind(auth.user.id).all<Record<string, unknown>>();
-  return reply({orders: rows.results.map(r => ({...r, dates: JSON.parse(String(r.dates))})), checkoutOpen: checkoutKinds().size > 0});
+  // Walk-ins and extra practices booked to pay cash at the academy and not paid yet (issue #248).
+  return reply({orders: rows.results.map(r => ({...r, dates: JSON.parse(String(r.dates))})), checkoutOpen: checkoutKinds().size > 0, cashBookings: await familyCashBookings(auth.user.id)});
 }

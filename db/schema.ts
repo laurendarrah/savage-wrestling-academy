@@ -105,6 +105,29 @@ export const orders=sqliteTable("orders",{
  check("orders_livemode",sql`${t.livemode} IN (0,1)`)
 ]);
 
+// Walk-ins and extra practices booked to pay cash at the academy (issue #248). A booking holds the spot with the amount
+// due from lib/quotes.ts, worked out on the server when it was made. "Cash received" at the door records an ordinary
+// offline payment in orders (source 'offline', method cash) and links it here (order_id), so the payment counts once,
+// everywhere, through orders. Voiding that payment puts the booking back to 'due'. Nothing here is ever a charge.
+export const cashBookings=sqliteTable("cash_bookings",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull(),email:text("email").notNull(),
+ wrestlerId:text("wrestler_id").notNull(),wrestlerName:text("wrestler_name").notNull(),
+ kind:text("kind").notNull(),program:text("program"),itemId:text("item_id").notNull(),itemLabel:text("item_label").notNull(),
+ sessionDate:text("session_date").notNull(),startTime:text("start_time"),endTime:text("end_time"),
+ baseCents:integer("base_cents").notNull(),discountCents:integer("discount_cents").notNull(),amountCents:integer("amount_cents").notNull(),
+ pricing:text("pricing").notNull(),dedupeKey:text("dedupe_key").notNull(),status:text("status").notNull(),orderId:text("order_id"),
+ createdAt:text("created_at").notNull(),updatedAt:text("updated_at").notNull(),
+ canceledAt:text("canceled_at"),canceledBy:text("canceled_by"),cancelReason:text("cancel_reason")
+},t=>[
+ uniqueIndex("cash_bookings_open").on(t.dedupeKey).where(sql`${t.status} IN ('due','paid')`),
+ index("cash_bookings_status_date").on(t.status,t.sessionDate),
+ index("cash_bookings_user").on(t.userId),
+ index("cash_bookings_session").on(t.kind,t.itemId,t.sessionDate),
+ check("cash_bookings_kind",sql`${t.kind} IN ('walkin','live')`),
+ check("cash_bookings_status",sql`${t.status} IN ('due','paid','canceled')`),
+ check("cash_bookings_amounts",sql`${t.amountCents} >= 0 AND ${t.baseCents} >= 0 AND ${t.discountCents} >= 0 AND ${t.amountCents} = ${t.baseCents} - ${t.discountCents}`)
+]);
+
 // Every Stripe event id is recorded once, so a repeated delivery cannot be applied twice.
 export const stripeEvents=sqliteTable("stripe_events",{
  id:text("id").primaryKey(),type:text("type").notNull(),orderId:text("order_id"),outcome:text("outcome").notNull(),receivedAt:text("received_at").notNull()

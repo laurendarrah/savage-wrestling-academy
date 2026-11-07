@@ -1,4 +1,5 @@
-// Real rosters from paid orders and active scholarships (issue #22). No sample workspace data is used.
+// Real rosters from paid orders, active scholarships and walk-ins or extra practices booked to pay cash at the academy
+// (issues #22, #248). No sample workspace data is used.
 import {env} from 'cloudflare:workers';
 import {publicSchedule} from './public-schedule';
 import {cardStatus, type CardStatus} from './usaw';
@@ -8,7 +9,15 @@ import {PROGRAM_ON} from './transfers';
 import {fullDate} from './datetime';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
-export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]; checkInBlocked: string | null};
+// Pay at the academy (issue #248): a walk-in or extra practice booked to pay cash. 'due' shows "$40.00 due" and a Cash
+// received button; 'paid' shows when it was collected and by whom. An unpaid booking can still be checked in.
+export type CashInfo = {bookingId: string; status: 'due' | 'paid'; cents: number; orderId: string | null; collectedAt: string | null; collectedBy: string | null};
+export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]; checkInBlocked: string | null; cash: CashInfo | null};
+export const PAY_AT_ACADEMY = 'Pay at the academy';
+// The cash booking key for a session: walk-ins name the practice ("program:date:start"), extra practices their id.
+export function cashKey(session: Session) {
+  return session.type === 'practice' ? `walkin|${session.program}:${session.date}:${session.start}` : session.type === 'live' ? `live|${session.key.split(':')[1]}` : null;
+}
 // Allergies or medical notes and the emergency contact (issue #188, decided in #197 question 14). The roster is for staff
 // only, and coaches get only their own programs' practices (canSee).
 export type SafetyDetails = {allergies: string | null; emergencyName: string | null; emergencyPhone: string | null};
@@ -81,12 +90,17 @@ async function entitled(session: Session): Promise<Raw[]> {
       .bind(d, session.program, d, d).all<any>()).results, 'Member');
     add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind='walkin' AND program=? AND item_id=? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)`)
       .bind(session.program, practiceId, d).all<any>()).results, 'Walk-in paid');
+    add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM cash_bookings WHERE status='due' AND kind='walkin' AND program=? AND item_id=? AND session_date=?`)
+      .bind(session.program, practiceId, d).all<any>()).results, PAY_AT_ACADEMY);
     add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM scholarship_awards WHERE status='active' AND program=? AND user_id IS NOT NULL AND wrestler_id IS NOT NULL AND accepted_at IS NOT NULL AND substr(accepted_at,1,10)<=?`)
       .bind(session.program, d).all<any>()).results, 'Scholarship');
   } else {
     const [, id] = session.key.split(':');
     add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind=? AND item_id=? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)`)
       .bind(session.type, id, d).all<any>()).results, session.type === 'live' ? 'Paid' : 'Registered');
+    if (session.type === 'live')
+      add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM cash_bookings WHERE status='due' AND kind='live' AND item_id=? AND session_date=?`)
+        .bind(id, d).all<any>()).results, PAY_AT_ACADEMY);
   }
   return rows;
 }
@@ -99,12 +113,14 @@ export async function rosterFor(date: string, scope: Scope) {
   const userIds = [...new Set(lists.flat().map(r => r.userId))];
   // Everything per wrestler is loaded once for the whole day (issue #92), not queried entry by entry.
   const ids = JSON.stringify(userIds), waiver = await currentWaiver();
-  const [fams, reviews, signed, exceptions, attendance] = await env.DB!.batch([
+  const [fams, reviews, signed, exceptions, attendance, cashRows] = await env.DB!.batch([
     env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
     env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures s WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?)) AND ${LIVE_SIGNATURE}`).bind(waiver?.id ?? '', ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
-    env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date)
+    env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date),
+    env.DB!.prepare(`SELECT b.id,b.kind,b.item_id,b.user_id,b.wrestler_id,b.amount_cents,b.status,b.order_id,o.paid_at,json_extract(o.pricing,'$.collectedBy') AS collected_by
+      FROM cash_bookings b LEFT JOIN orders o ON o.id=b.order_id AND o.status='paid' WHERE b.session_date=? AND b.status IN ('due','paid')`).bind(date)
   ]);
   const families = new Map<string, any>((fams.results as any[]).map(r => [r.user_id, {email: r.email, ...JSON.parse(r.payload)}]));
   const review = new Map<string, any>((reviews.results as any[]).map(r => [`${r.user_id}|${r.wrestler_id}`, r]));
@@ -113,6 +129,9 @@ export async function rosterFor(date: string, scope: Scope) {
   for (const r of exceptions.results as any[]) { const k = `${r.user_id}|${r.wrestler_id}`; if (!excepted.has(k)) excepted.set(k, []); if (!excepted.get(k)!.includes(r.rule)) excepted.get(k)!.push(r.rule); }
   const checked = new Map<string, {checked_in_at: string; checked_in_by: string}>();
   for (const r of attendance.results as any[]) checked.set(`${r.session_key}|${r.user_id}|${r.wrestler_id}`, r);
+  const cashOf = new Map<string, CashInfo>();
+  for (const r of cashRows.results as any[]) cashOf.set(`${r.kind}|${r.item_id}|${r.user_id}|${r.wrestler_id}`,
+    {bookingId: r.id, status: r.status, cents: r.amount_cents, orderId: r.order_id, collectedAt: r.paid_at ?? null, collectedBy: r.collected_by ?? null});
 
   const result: (Session & {entries: Entry[]; checkedIn: number})[] = [];
   sessions.forEach((session, i) => {
@@ -125,7 +144,7 @@ export async function rosterFor(date: string, scope: Scope) {
       // Card status on the session date (issue #68). Only a verified card, or the owner's exception, allows check-in (#210).
       const card = w ? cardStatus(w, review.get(k) ?? null, date) : {state: 'missing' as const, expires: '', note: ''};
       const entryExceptions = ['usaw', 'waiver'].filter(x => excepted.get(k)?.includes(x));
-      const name = w?.name ?? r.name;
+      const name = w?.name ?? r.name, ck = cashKey(session);
       merged.set(k, {
         userId: r.userId, wrestlerId: r.wrestlerId, name, grade: w?.grade ?? null,
         parentName: f?.parentName || null, phone: f?.phone || null, email: scope.role === 'owner' ? f?.email ?? null : null,
@@ -134,7 +153,8 @@ export async function rosterFor(date: string, scope: Scope) {
         card: card.state, cardExpires: card.expires || null, cardNote: card.note,
         waiverSigned: waiver ? signedSet.has(`${k}|${String(w?.name ?? r.name).trim().toLowerCase()}`) : null,
         exceptions: entryExceptions,
-        checkInBlocked: checkInBlock({name, card: card.state, cardExpires: card.expires || null, cardNote: card.note, exceptions: entryExceptions}, scope)
+        checkInBlocked: checkInBlock({name, card: card.state, cardExpires: card.expires || null, cardNote: card.note, exceptions: entryExceptions}, scope),
+        cash: ck ? cashOf.get(`${ck}|${k}`) ?? null : null
       });
     }
     const entries = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -144,6 +164,8 @@ export async function rosterFor(date: string, scope: Scope) {
 }
 
 // Check-in only succeeds for a wrestler who is on that session's roster and whose USA Wrestling card allows it (#210).
+// A walk-in booked to pay at the academy and not paid yet can be checked in (issue #248): cash is often handed over at the
+// door, so the amount due stays on the roster instead of blocking the wrestler.
 export async function checkIn(date: string, sessionKey: string, userId: string, wrestlerId: string, scope: Scope, actor: string) {
   const sessions = await rosterFor(date, scope);
   const session = sessions.find(s => s.key === sessionKey);
