@@ -88,7 +88,7 @@ assert.equal(r.cardRenewalDays, 30);
   const listed = JSON.parse(JSON.stringify(usawLib.cardsPage(cards, {show: 'problems', onDate: today})));
   assert.equal(listed.totals.soon, 1); assert.deepEqual(listed.cards.map(c => c.wrestler), ['In30'], 'In31 is not on the list yet');
   const html = readFileSync('app/cards/screen.html', 'utf8'), script = html.slice(html.lastIndexOf('<script>') + 8, html.lastIndexOf('</script>'));
-  const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {id, value: '', textContent: '', innerHTML: '', hidden: false, className: '', previousElementSibling: {textContent: 'Expire within 30 days'}}); return nodes.get(id); };
+  const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {id, value: '', textContent: '', innerHTML: '', hidden: false, className: '', previousElementSibling: {textContent: 'Expire within 30 days'}, setAttribute() {}, removeAttribute() {}}); return nodes.get(id); };
   const run = async (renewalDays, page) => {
     nodes.clear(); el('show').value = 'problems';
     const data = {today, date: today, renewal: null, renewalDays, ...page};

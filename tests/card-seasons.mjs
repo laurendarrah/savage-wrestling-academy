@@ -141,7 +141,7 @@ function page(file, {fetch, hidden = [], extra = {}}) {
   const el = id => {
     if (!nodes.has(id)) nodes.set(id, {id, value: '', hidden: hidden.includes(id), checked: false, disabled: false, innerHTML: '', textContent: '', className: '', href: '', style: {}, dataset: {},
       elements: {parentName: {value: '', focus() {}}, phone: {value: ''}},
-      replaceChildren() {}, focus() { el('__focus').textContent = id; }, scrollIntoView() {}, setAttribute() {}, querySelector() { return null; }, classList: {add() {}, remove() {}, toggle() {}}});
+      replaceChildren() {}, focus() { el('__focus').textContent = id; }, scrollIntoView() {}, setAttribute() {}, removeAttribute() {}, querySelector() { return null; }, classList: {add() {}, remove() {}, toggle() {}}});
     return nodes.get(id);
   };
   const ctx = vm.createContext({Intl, Date, JSON, URLSearchParams, Promise, setTimeout: f => setImmediate(f), structuredClone, console, crypto: {randomUUID: () => 'new-id'},

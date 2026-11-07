@@ -53,9 +53,11 @@ const exceptionsReady=DOC.rule?loadExceptions():Promise.resolve();
 const listKey=()=>DOC.coach?'coaches':'wrestlers';
 function docsUrl(o){const q=new URLSearchParams({show:$('show').value});if(DOC.kind!=='waiver')q.set('kind',DOC.kind);if($('q').value.trim())q.set('q',$('q').value.trim());if(o.cursor)q.set('cursor',o.cursor);if(o.limit>PAGE)q.set('limit',o.limit);return '/api/waivers?'+q}
 async function load(msg,more,keep){
- const ticket=++loading,k=listKey(),rows=keep&&data?(data[k]||[]).length:0;
+ // The list is marked busy until the latest load has drawn it (issue #220), so a list about to be replaced is not used.
+ const ticket=++loading,k=listKey(),rows=keep&&data?(data[k]||[]).length:0;$('rows').setAttribute('aria-busy','true');
  try{const r=await fetch(docsUrl(more?{cursor:data.next}:{limit:rows}),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load the '+DOC.name+'.');await exceptionsReady;if(ticket!==loading)return;
   data={...d,[k]:more?(data[k]||[]).concat(d[k]||[]):(d[k]||[])};render();$('status').textContent=msg||''}catch(e){if(ticket===loading)$('status').textContent=e.message}
+ finally{if(ticket===loading)$('rows').removeAttribute('aria-busy')}
 }
 const search=()=>{clearTimeout(typing);typing=setTimeout(()=>load(),250)};
 function render(){

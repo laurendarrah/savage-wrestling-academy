@@ -49,10 +49,12 @@ const PAGE=50;let loading=0;
 const exceptionsReady=loadExceptions();
 // more: add the next page. keep: load again after a change, as many rows as are shown now.
 async function load(more,keep){
- const ticket=++loading,rows=keep?data.cards.length:0;$('status').textContent='Loading…';
+ // The list is marked busy until the latest load has drawn it (issue #220), so a list about to be replaced is not used.
+ const ticket=++loading,rows=keep?data.cards.length:0;$('status').textContent='Loading…';$('rows').setAttribute('aria-busy','true');
  try{const r=await fetch(cardsUrl(more?{cursor:data.next}:rows>PAGE?{limit:rows}:{}),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load cards.');
   await exceptionsReady;if(ticket!==loading)return;
   data={...d,cards:more?data.cards.concat(d.cards):d.cards};if(!$('date').value)$('date').value=d.date;$('status').textContent=d.date===d.today?'Card status today.':'Card status on '+longDate(d.date)+'.';render()}catch(e){if(ticket===loading)$('status').textContent=e.message}
+ finally{if(ticket===loading)$('rows').removeAttribute('aria-busy')}
 }
 const reload=()=>load(false,true);
 let typing;const search=()=>{clearTimeout(typing);typing=setTimeout(()=>load(),250)};

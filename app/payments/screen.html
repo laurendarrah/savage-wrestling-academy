@@ -23,17 +23,22 @@ async function findFamilies(){const ticket=++findTicket,q=$('familySearch').valu
 function renderFamilies(more){opts($('family'),families.length?families.map(f=>[f.userId,(f.parentName||f.email)+' · '+f.email]):[['','No matching family']],true);$('familyMore').hidden=!more;$('familyMore').textContent='Showing the first '+families.length+' families. Type more of a name or email to narrow the list.';renderWrestlers()}
 function renderWrestlers(){const f=families.find(f=>f.userId===$('family').value);opts($('wrestler'),f&&f.wrestlers.length?f.wrestlers.map(w=>[w.id,w.name+' · '+(w.grade==='K'?'Kindergarten':w.grade==='Adult'?'Adult':'Grade '+w.grade)]):[['','No saved wrestlers']],true);resetPreview()}
 async function loadSchedule(month){if(scheduleMonth===month&&schedule)return schedule;schedule=await call('/api/public-schedule?month='+month);scheduleMonth=month;return schedule}
-async function renderItemFields(){
+// Each change reloads the choices in the background (issue #220). Check price waits until the latest load is in, and a
+// load that finishes after a newer one is ignored, so a price is never checked, or a checked price hidden, by an older
+// load (for example the first time's lesson type after the owner picked a partner lesson).
+let itemTicket=0;
+async function renderItemFields(){const ticket=++itemTicket;resetPreview();$('preview').disabled=true;try{await fillItemFields(ticket)}finally{if(ticket===itemTicket)$('preview').disabled=false}}
+async function fillItemFields(ticket){
  const k=$('kind').value;
  $('programLabel').hidden=k!=='walkin';$('dateLabel').hidden=!(k==='walkin'||k==='live');$('practiceLabel').hidden=k!=='walkin';$('eventLabel').hidden=k!=='event';$('optionLabel').hidden=k!=='event';$('liveLabel').hidden=k!=='live';$('formatLabel').hidden=$('openingLabel').hidden=k!=='lesson';
  const date=$('date').value||today(),s=await loadSchedule(date.slice(0,7));
- opts($('program'),s.programs.map(p=>[p.id,p.name]),true);
+ if(ticket!==itemTicket)return;opts($('program'),s.programs.map(p=>[p.id,p.name]),true);
  if(k==='walkin'){const list=s.practices.filter(p=>p.date===date&&p.program===$('program').value);opts($('practice'),list.length?list.map(p=>[p.id||p.program+':'+p.date+':'+p.start,clock(p.start)+'–'+clock(p.end)]):[['','No practice that day']],true)}
  if(k==='event'){opts($('event'),s.events.length?s.events.map(e=>[e.id,e.name+' · '+e.dates.map(longDate).join(', ')]):[['','No events']],true);const e=s.events.find(e=>e.id===$('event').value);opts($('option'),e?[['full','All days'],...(e.type==='Camp'&&e.dayCents!==null?e.dates.map(d=>[d,longDate(d)+' only']):[])]:[],true)}
  if(k==='live'){const list=(s.liveClasses||[]).filter(l=>l.date===date);opts($('live'),list.length?list.map(l=>[l.id,l.name+' · '+clock(l.start)]):[['','No session that day']],true)}
  // Lessons (issue #177): pick the time or group, then the wrestler's spot is recorded at the price per wrestler. A group's
  // lesson type is fixed; an open time is a one-on-one. Groups show their spots left, and private groups who asked for them.
- if(k==='lesson'){const l=await call('/api/lessons'),name=id=>(l.formats.find(f=>f.id===id)||{}).name||'Lesson';
+ if(k==='lesson'){const l=await call('/api/lessons');if(ticket!==itemTicket)return;const name=id=>(l.formats.find(f=>f.id===id)||{}).name||'Lesson';
   opts($('opening'),l.openings.length?l.openings.map(o=>[o.id,longDate(o.date)+' '+clock(o.start)+' · '+o.coach+(o.capacity>1?' · '+name(o.format)+(o.closed?', private group of '+(o.organizer||'a family'):'')+' · '+o.spotsLeft+' of '+o.capacity+' spots left'+(o.kept?', '+o.kept+' kept for their wrestlers':''):o.format?' · '+name(o.format):' · open time')]):[['','No open lesson times']],true);
   const o=l.openings.find(o=>o.id===$('opening').value),allowed=l.formats.filter(f=>f.cents!==null&&f.id===((o&&o.format)||'one-on-one'));
   opts($('format'),allowed.length?allowed.map(f=>[f.id,f.name+' · '+money(f.cents)+' per wrestler']):[['','Set this lesson price first']],true)}
