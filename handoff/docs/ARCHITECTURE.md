@@ -4,7 +4,7 @@
 
 The live origin is `https://savage-registration-preview.justinaccordino546.chatgpt.site`. Despite the word preview in the hostname, it is the current published Sites deployment. No separate staging environment was verified.
 
-ChatGPT Sites publishes a Cloudflare Worker built with Vinext and Vite. The project uses Next.js App Router-compatible route files, but its main product screens are raw HTML/CSS/JavaScript returned from route handlers. `app/portal.html` is an approximately 155 KB monolithic owner workspace. Standalone account, registration, schedule, scholarship, and planning pages live in route-specific `screen.html` files. React and shadcn-style components are installed, while much of that component tree is starter scaffolding.
+ChatGPT Sites publishes a Cloudflare Worker built with Vinext and Vite. The project uses Next.js App Router-compatible route files, but its main product screens are raw HTML/CSS/JavaScript returned from route handlers. `app/portal.html` was an approximately 155 KB monolithic owner workspace. It is now about 84 KB: the sample screens are gone (#147), and its program, grade, schedule, holiday, event and price rules are typed modules in `lib/workspace/`, which the build bundles to `/portal-workspace.js` for the page and the tests import directly (#45). The page itself only draws and saves. Standalone account, registration, schedule, scholarship, and planning pages live in route-specific `screen.html` files. React and shadcn-style components are installed, while much of that component tree is starter scaffolding.
 
 ## Stack verified from package and lock files
 

@@ -1,5 +1,4 @@
-import {readFileSync} from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
-let code=readFileSync('app/portal.html','utf8').match(/<script>([\s\S]*)<\/script>/)[1];code=code.slice(0,code.indexOf('// Start-up'));
+import {readFileSync} from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import {portalCode as code} from './fixtures/portal-script.mjs';
 const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',value:'',style:{}});return nodes.get(id)};
 const ctx=vm.createContext({structuredClone,crypto,Intl,Date,JSON,URLSearchParams,Set,FormData,console,location:{hash:'',href:''},document:{querySelector:node,addEventListener(){}},window:{addEventListener(){}},setTimeout(){},confirm:()=>true});vm.runInContext(code,ctx);const run=s=>vm.runInContext(s,ctx);
 run(`hydratePrograms();page='Calendar';year=2026;month=11;render=()=>{};data.seasons=[{program:'Elementary',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Monday',start:'18:00',end:'19:30'}],excludedDates:['2026-12-28']}];calendarPlanSummaries['2026-12']={status:'ready',items:[{program:'Elementary',date:'2026-12-07',published:true,title:'Leg attacks'},{program:'Elementary',date:'2026-12-14',published:false,title:'Draft practice'}]}`);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {DatabaseSync} from 'node:sqlite';
 import ts from 'typescript';
+import {portalCode} from './fixtures/portal-script.mjs';
 
 const db=new DatabaseSync(':memory:');
 db.exec(readFileSync('drizzle/0000_jazzy_silvermane.sql','utf8'));
@@ -11,9 +12,7 @@ let identity=null;
 function loadTs(path){const module={exports:{}};const source=ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;vm.runInNewContext(source,{module,exports:module.exports,Response,Request,URL,console,require(name){if(name==='../../../lib/account-auth')return {ownerIdentity:async()=>({owner:identity?.email==='savagewrestlingclub@gmail.com'?{userId:identity.id,displayName:identity.email}:null,headers:new Headers({'Cache-Control':'private, no-store'})})};if(name==='cloudflare:workers')return {env:{DB}};if(name==='next/headers')return {headers:async()=>new Headers(identity?{'oai-authenticated-user-id':identity.id,'oai-authenticated-user-email':identity.email}:{})};if(name==='next/navigation')return {redirect(){throw Error('redirect')}};if(name==='../../chatgpt-auth')return loadTs('app/chatgpt-auth.ts');if(name.endsWith('/friday-live'))return loadTs('lib/friday-live.ts');if(name==='./event-schedule')return loadTs('lib/event-schedule.ts');if(name==='../../../lib/program-names')return loadTs('lib/program-names.ts');if(name==='../../../lib/academy-validation')return loadTs('lib/academy-validation.ts');throw Error(name)}});return module.exports}
 const module={exports:loadTs('app/api/academy/route.ts')};
 const {GET,PUT}=module.exports;
-const html=readFileSync('app/portal.html','utf8');
-let code=html.match(/<script>([\s\S]*)<\/script>/)[1];
-code=code.slice(0,code.indexOf('// Start-up'));
+const code=portalCode;
 const nodes=new Map();
 const node=s=>{if(!nodes.has(s))nodes.set(s,{textContent:'',style:{},innerHTML:'',value:'',className:''});return nodes.get(s)};
 const ctx=vm.createContext({console,structuredClone,crypto,URL,Intl,Date,JSON,Set,FormData,location:{hash:''},document:{querySelector:node,addEventListener(){}},window:{addEventListener(){}},setTimeout(){},confirm:()=>true});

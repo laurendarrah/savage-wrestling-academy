@@ -122,6 +122,8 @@ About 155 KB of raw HTML includes many UI and business functions. TypeScript doe
 
 Proposed work. Extract shared typed domain logic and modules incrementally; preserve callers and existing saved state. Strengthen relevant validation and add missing entry-point tests.
 
+Update (issue #45). The sample screens were removed (#147), and the program, grade, schedule, holiday, event, price and settings-document logic moved into typed modules in `lib/workspace/`. `pnpm typecheck` covers them, `tests/workspace-modules.mjs` checks them against the server's rules, and `tests/workspace-characterization.mjs` checks the page behaves as before. The page's remaining inline script draws the screens and saves the settings document.
+
 ## ARCH-02 Whole-document saves and broad list queries
 
 Priority P2. Evidence status Confirmed design; no load test.

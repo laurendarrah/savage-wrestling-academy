@@ -1,13 +1,15 @@
-// Issue #45: the owner workspace's program, schedule, pricing, event and settings logic moves out of app/portal.html
-// into typed modules. Before anything moved, this test ran the inline functions on representative inputs and froze
-// what they returned in tests/fixtures/workspace-before-45.json. The workspace must still return exactly the same.
+// Issue #45: the owner workspace's program, schedule, pricing, event and settings logic moved out of app/portal.html
+// into typed modules in lib/workspace/. Before anything moved, this test ran the page's inline functions on
+// representative inputs and froze what they returned in tests/fixtures/workspace-before-45.json. It now runs the page
+// as the browser does, with /portal-workspace.js built from those modules, and everything must still be the same.
 // It runs in several time zones, because the old planner and holiday code used the browser's local time.
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {readFileSync, writeFileSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
+import {portalCode} from './fixtures/portal-script.mjs';
 
 const FIXTURE = 'tests/fixtures/workspace-before-45.json';
 const ZONES = ['UTC', 'America/New_York', 'America/Los_Angeles', 'Pacific/Kiritimati', 'Pacific/Pago_Pago', 'Asia/Kolkata'];
@@ -24,8 +26,6 @@ if (!process.env.WORKSPACE_TZ_CHILD) {
 }
 
 // ---------- The page's script in a fake browser ----------
-const html = readFileSync('app/portal.html', 'utf8');
-const code = html.match(/<script>([\s\S]*)<\/script>/)[1].split('// Start-up')[0];
 const nodes = new Map();
 const node = s => { if (!nodes.has(s)) nodes.set(s, {innerHTML: '', textContent: '', value: '', hidden: false, style: {}, classList: {remove() {}, toggle() {}}, setAttribute() {}}); return nodes.get(s); };
 class Fields {
@@ -37,8 +37,11 @@ class Fields {
 let ids = 0;
 const ctx = vm.createContext({console, structuredClone, Intl, Date, JSON, Set, Map, URLSearchParams, FormData: Fields, crypto: {randomUUID: () => 'id-' + (++ids)},
   location: {hash: '', href: ''}, document: {querySelector: node, getElementById: () => null, addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {}, confirm: () => true});
-vm.runInContext(code, ctx);
+vm.runInContext(portalCode, ctx);
 const run = s => vm.runInContext(s, ctx);
+// Functions the page no longer needs itself are checked where they live now.
+const moved = {clockLabel: 'clockTime', extraPracticeDateLabel: 'fullDate', federalHolidays: 'federalHolidays', eventFormSchedule: 'eventFormSchedule'};
+for (const [was, now] of Object.entries(moved)) run(`if(typeof ${was}==='undefined')globalThis.${was}=SwaWorkspace.${now}`);
 const json = s => JSON.parse(run('JSON.stringify(' + s + ')') ?? 'null');
 
 // ---------- Inputs ----------
@@ -286,10 +289,6 @@ record('dashboard', run('dashboard()'));
 // ---------- Compare ----------
 const digest = v => { const s = JSON.stringify(v); return s.length > 300 ? {sha256: createHash('sha256').update(s).digest('hex'), length: s.length} : v; };
 const actual = Object.fromEntries(Object.entries(got).map(([k, v]) => [k, digest(v)]));
-if (process.env.RECORD_WORKSPACE_SNAPSHOT && process.env.TZ === 'UTC') {
-  writeFileSync(FIXTURE, JSON.stringify(actual, null, 1) + '\n');
-  console.log('Recorded ' + Object.keys(actual).length + ' cases in ' + FIXTURE);
-}
 const expected = JSON.parse(readFileSync(FIXTURE, 'utf8'));
 assert.deepEqual(Object.keys(actual).sort(), Object.keys(expected).sort(), 'the same cases');
 for (const k of Object.keys(expected)) assert.deepEqual(actual[k], expected[k], k + ' (' + process.env.TZ + ')');

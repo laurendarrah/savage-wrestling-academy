@@ -1,8 +1,7 @@
 // U.S. federal holidays, actual and observed, shown on the calendars as a label only (issue #189). A holiday never adds
 // or removes a practice: practices are cancelled only through the owner's days off (Schedules). Which holidays should
 // cancel practice is an open question for the owner (#197, question 19).
-// Same list and rules as federalHolidays() in app/portal.html (the owner's semester planner); tests/holidays.mjs checks
-// that the two agree.
+// The owner's semester planner and calendar use this same list (app/portal.html, through lib/workspace/schedule.ts).
 export type Holiday = {date: string; name: string};
 
 export function federalHolidays(year: number): Holiday[] {

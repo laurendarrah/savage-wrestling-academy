@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import ts from 'typescript';
+import {portalCode} from './fixtures/portal-script.mjs';
 
 // ---------- Server code ----------
 const cache = new Map();
@@ -55,13 +56,14 @@ assert.deepEqual(JSON.parse(JSON.stringify(holidaysInMonth('2027-12'))), [{date:
 assert.deepEqual(JSON.parse(JSON.stringify(holidaysInMonth('2027-05'))).map(h => h.date), ['2027-05-31'], 'Memorial Day is the last Monday');
 assert.deepEqual(JSON.parse(JSON.stringify(holidaysInMonth('2026-13'))), []);
 
-// The owner's planner and the shared list agree for every year from 2024 to 2040.
-let portal = readFileSync('app/portal.html', 'utf8').match(/<script>([\s\S]*)<\/script>/)[1]; portal = portal.slice(0, portal.indexOf('// Start-up'));
+// The owner's planner uses the shared list (issue #45): the page's holidays come from lib/holidays.ts.
+const portal = portalCode;
 const nodes = new Map(), node = id => { if (!nodes.has(id)) nodes.set(id, {innerHTML: '', textContent: '', value: '', hidden: false, style: {}}); return nodes.get(id); };
 class FormFields { constructor(f) { this.fields = f.fields ?? f; } *[Symbol.iterator]() { yield* this.fields; } getAll(name) { return this.fields.filter(([k]) => k === name).map(([, v]) => v); } }
 const owner = vm.createContext({structuredClone, crypto, Intl, Date, JSON, URLSearchParams, Set, FormData: FormFields, console, location: {hash: '', href: ''}, document: {querySelector: node, getElementById: () => null, addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {}, confirm: () => true});
 vm.runInContext(portal, owner); const run = s => vm.runInContext(s, owner);
-for (let y = 2024; y <= 2040; y++) assert.deepEqual(JSON.parse(run(`JSON.stringify(federalHolidays(${y}).map(h=>h.date+' '+h.name).sort())`)), JSON.parse(JSON.stringify(federalHolidays(y).map(h => h.date + ' ' + h.name).sort())), 'holidays ' + y);
+for (let y = 2024; y <= 2040; y++) assert.deepEqual(JSON.parse(run(`JSON.stringify(SwaWorkspace.federalHolidays(${y}).map(h=>h.date+' '+h.name).sort())`)), JSON.parse(JSON.stringify(federalHolidays(y).map(h => h.date + ' ' + h.name).sort())), 'holidays ' + y);
+assert.deepEqual(JSON.parse(run(`JSON.stringify(holidayNamesOn('2027-12-31'))`)), ['New Year’s Day (observed)'], 'the planner labels an observed holiday');
 
 // Public schedule: event times and the month's holidays. A holiday never adds or removes a practice.
 const state = {programs: [{id: 'Elementary', name: 'SWA Development', description: '', priceCents: 20000}],

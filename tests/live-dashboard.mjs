@@ -2,10 +2,9 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {portalCode as code} from './fixtures/portal-script.mjs';
 
 const html = readFileSync('app/portal.html', 'utf8');
-let code = html.match(/<script>([\s\S]*)<\/script>/)[1];
-code = code.slice(0, code.indexOf('// Start-up'));
 const nodes = new Map(), node = s => { if (!nodes.has(s)) nodes.set(s, {value: '', style: {}, textContent: '', innerHTML: '', focus() {}, classList: {remove() {}, toggle() {}}, setAttribute() {}}); return nodes.get(s); };
 const responses = {
   '/api/roster': {sessions: [{entries: [{}, {}, {}], checkedIn: 2}, {entries: [{}], checkedIn: 0}]},

@@ -7,6 +7,7 @@ import {dirname, join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
 import ts from 'typescript';
+import {portalCode as code, portalHtml as html, workspaceCode} from './fixtures/portal-script.mjs';
 
 const sqlite = new DatabaseSync(':memory:');
 for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
@@ -29,8 +30,6 @@ const publicSchedule = async () => (await schedule.GET(new Request('https://acad
 const programsItem = async () => (await launchChecklist(DB, {}, '2026-11-06')).items.find(i => i.key === 'programs');
 
 // The workspace script, with the real save path behind fetch.
-const html = readFileSync('app/portal.html', 'utf8');
-const code = html.match(/<script>([\s\S]*)<\/script>/)[1].split('// Start-up')[0];
 const nodes = new Map(), node = s => { if (!nodes.has(s)) nodes.set(s, {value: '', style: {}, textContent: '', innerHTML: '', classList: {remove() {}, toggle() {}}, setAttribute() {}}); return nodes.get(s); };
 const location = {hash: '', href: ''}, asked = [];
 let answer = false, puts = 0;
@@ -95,5 +94,6 @@ for (const p of nav) {
   else { assert.match(location.href, /^\/[a-z-]+$/, p); assert.ok(existsSync(`app${location.href}/route.ts`), `${p} opens ${location.href}, which exists`); }
   assert.doesNotMatch(node('#main').innerHTML, /sample|preview|simulat|demo\b|fictional/i, p);
 }
-assert.doesNotMatch(html, /[Ss]ample (data|famil|wrestler|workspace)|Demo|admin-demo|attendance-demo|Simulate|Reset workspace data|Import prior browser edits/);
+// The page and its typed modules (lib/workspace/, issue #45).
+for (const src of [html, workspaceCode]) assert.doesNotMatch(src, /[Ss]ample (data|famil|wrestler|workspace)|Demo|admin-demo|attendance-demo|Simulate|Reset workspace data|Import prior browser edits/);
 console.log('Real workspace: no sample screens; one click publishes the three programs with their prices to the welcome page and calendar');

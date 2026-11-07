@@ -1,5 +1,4 @@
-import {readFileSync} from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import ts from 'typescript';
-const html=readFileSync('app/portal.html','utf8');let code=html.match(/<script>([\s\S]*)<\/script>/)[1];code=code.slice(0,code.indexOf('// Start-up'));
+import {readFileSync} from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import ts from 'typescript';import {portalCode as code} from './fixtures/portal-script.mjs';
 const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',value:'',hidden:false,style:{}});return nodes.get(id)};
 class FormFields{constructor(f){this.fields=f.fields}*[Symbol.iterator](){yield* this.fields}getAll(name){return this.fields.filter(([k])=>k===name).map(([,v])=>v)}}
 const ctx=vm.createContext({console,structuredClone,crypto,Intl,Date,JSON,Set,FormData:FormFields,location:{hash:''},document:{querySelector:node,addEventListener(){}},window:{addEventListener(){}},setTimeout(){},confirm:()=>true});vm.runInContext(code,ctx);const run=s=>vm.runInContext(s,ctx);run('hydratePrograms();save=()=>{};render=()=>{};');
