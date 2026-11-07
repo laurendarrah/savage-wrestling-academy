@@ -1,0 +1,77 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Join as a coach | Savage Wrestling Academy</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;color:#141416;font:16px Arial,sans-serif;line-height:1.55}main{max-width:520px;margin:4vh auto;padding:24px 16px 48px}
+.card{background:#fff;border:1px solid #e1e3e8;border-radius:12px;padding:26px}h1{margin:6px 0 10px}p{margin:0 0 12px}
+label{display:block;margin:14px 0;font-weight:600}input{display:block;width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-top:6px;font:inherit}
+button{font:inherit;cursor:pointer;padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#141416}button.primary{width:100%;background:#c4222c;border-color:#c4222c;color:#fff}button:disabled{opacity:.55;cursor:wait}
+.who{background:#f4f5f7;border-radius:8px;padding:14px 16px;margin:14px 0}.who p{margin:0}.who p+p{margin-top:4px}
+.steps{list-style:none;padding:0;margin:18px 0 6px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;counter-reset:step}
+.steps li{counter-increment:step;font-size:13px;font-weight:700;line-height:1.25;color:#55585f;border-top:3px solid #e1e3e8;padding-top:8px}
+.steps li::before{content:counter(step) ". "}.steps li.on{color:#141416;border-top-color:#c4222c}.steps li.done{color:#1f6f3a;border-top-color:#1f6f3a}
+.switch{margin:14px 0 0}.switch button{border:0;background:none;padding:0;min-height:44px;color:#c4222c;text-decoration:underline;font-size:16px}
+#message{margin-top:16px;padding:12px 14px;border-radius:6px;background:#f4f5f7;font-weight:600}#message:empty{display:none}
+.notice{border-left:4px solid #c4222c;padding:10px 14px;background:#fff7f7;border-radius:0 6px 6px 0}
+footer{margin-top:20px;font-size:14px}[hidden]{display:none!important}
+html body[data-swa-page="/coach-join"]{background:var(--swa-texture) fixed}
+html body[data-swa-page="/coach-join"] main::before{content:"";display:block;width:88px;height:88px;margin:4px auto 16px;background:url(/brand/savage-logo-256.png) center/contain no-repeat}
+html body[data-swa-page="/coach-join"] main>section.card{border:0;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+html body[data-swa-page="/coach-join"] main>footer,html body[data-swa-page="/coach-join"] main>footer a{color:#B9C4C9}
+html body[data-swa-page="/coach-join"] .switch button.link{font-family:var(--swa-body);text-transform:none;letter-spacing:0;font-size:16px;box-shadow:none;min-height:44px}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main><section class="card" aria-labelledby="heading">
+<p class="eyebrow muted">Coach invitation</p>
+<h1 id="heading">Join the coaching staff</h1>
+<p id="intro">Checking your invitation…</p>
+<ol class="steps" id="steps" aria-label="Steps to join"><li id="step1">Your account</li><li id="step2">Confirm email</li><li id="step3">Authenticator</li><li id="step4">Coach home</li></ol>
+<div class="who" id="details" hidden></div>
+<div id="acceptBox" hidden><p>You’re signed in as <b id="signedAs"></b>. Accept to add coach access to this account.</p><button class="primary" id="acceptInvite" type="button">Accept and continue</button></div>
+<div id="otherBox" class="notice" hidden><p>You’re signed in as <b id="otherEmail"></b>, but this invitation is for <b id="otherFor"></b>.</p><button type="button" id="switchAccount">Sign out and use the invited email</button></div>
+<form id="signupForm" hidden><p>Create a password for your coach account. You’ll confirm your email next, then set up an authenticator app.</p>
+<label>Email<input id="signupEmail" type="email" readonly autocomplete="username"></label>
+<label>Password<input id="signupPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+<p class="muted">Use 12 to 128 characters. A long passphrase works well.</p>
+<label>Confirm password<input id="signupConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+<button class="primary" id="signupButton">Create coach account</button>
+<p class="switch"><button type="button" class="link" id="toSignin">I already have an account with this email</button></p></form>
+<form id="signinForm" hidden><p>Sign in with the invited email. Coach access is added to your account.</p>
+<label>Email<input id="signinEmail" type="email" readonly autocomplete="username"></label>
+<label>Password<input id="signinPassword" type="password" maxlength="128" autocomplete="current-password" required></label>
+<button class="primary" id="signinButton">Sign in and accept</button>
+<p class="switch"><button type="button" class="link" id="toSignup">I need to create an account</button></p></form>
+<div id="message" role="status" aria-live="polite"></div>
+</section><footer>Savage Wrestling Academy · Huntington Station, NY · <a href="/login">Sign in</a></footer></main>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const programName=id=>({Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'}[id]||id);
+const longDate=iso=>new Date(iso).toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'long',month:'long',day:'numeric'});
+// The invite token comes after # in the link, so it never reaches the server in a page request.
+const token=((new URLSearchParams(location.hash.slice(1)).get('invite'))||'').trim().toLowerCase();
+let invite=null;
+async function post(path,body){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(!r.ok){const e=Error(data.error||'Something went wrong. Please try again.');e.data=data;throw e}return data}
+const say=t=>{$('message').textContent=t};
+function steps(at){['step1','step2','step3','step4'].forEach((id,i)=>{$(id).className=i+1<at?'done':i+1===at?'on':''})}
+function show(box){['acceptBox','otherBox','signupForm','signinForm'].forEach(id=>{$(id).hidden=id!==box})}
+function detailsHtml(v){return `<p><b>${esc(v.name)}</b>, the academy invited you to coach${v.programs.length?' '+esc(v.programs.map(programName).join(', ')):''}.</p><p class="muted">For ${esc(v.email)} · ${v.status==='open'?'Works until '+esc(longDate(v.expiresAt)):''}</p>`}
+async function load(){
+ let r;try{r=await post('/api/coach-invite',{action:'check',token})}catch(e){r=e.data||{};if(!r.invite){$('intro').textContent=e.message;show('');steps(1);return}}
+ invite=r.invite;const me=r.signedIn;
+ if(!invite){$('intro').textContent=me?'There is no open coach invitation for '+me.email+'. If the academy sent you a link, open it on this device.':'Open the invitation link the academy sent you. If it has stopped working, ask the academy for a new one.';show('');$('steps').hidden=true;return}
+ $('details').innerHTML=detailsHtml(invite);$('details').hidden=false;
+ if(invite.status!=='open'){$('steps').hidden=true;show('');$('intro').textContent={used:'This invitation was already used. Sign in to open coach home.',expired:'This invitation has expired. Ask the academy for a new link.',canceled:'This invitation was canceled. Ask the academy for a new one.'}[invite.status]||'This invitation isn’t working.';return}
+ if(me&&me.matches){$('intro').textContent='Welcome, '+invite.name+'.';$('signedAs').textContent=me.email;show('acceptBox');steps(3);return}
+ if(me){$('intro').textContent='This invitation is for a different email.';$('otherEmail').textContent=me.email;$('otherFor').textContent=invite.email;show('otherBox');steps(1);return}
+ $('intro').textContent='Welcome, '+invite.name+'. Create your coach account to get started.';$('signupEmail').value=$('signinEmail').value=invite.email;show('signupForm');steps(1);
+}
+async function acceptAndGo(){const r=await post('/api/coach-invite',{action:'accept',token});say('Coach access added. '+(r.redirect==='/security'?'Next, set up your authenticator app.':'Opening coach home…'));location.assign(r.redirect)}
+$('acceptInvite').onclick=async()=>{$('acceptInvite').disabled=true;try{await acceptAndGo()}catch(e){say(e.message);$('acceptInvite').disabled=false}};
+$('switchAccount').onclick=async()=>{try{await post('/api/auth',{action:'logout'});location.reload()}catch(e){say(e.message)}};
+$('toSignin').onclick=()=>{show('signinForm');say('');$('signinPassword').focus()};
+$('toSignup').onclick=()=>{show('signupForm');say('');$('signupPassword').focus()};
+$('signupForm').onsubmit=async e=>{e.preventDefault();if($('signupPassword').value!==$('signupConfirm').value){say('The passwords do not match.');return}
+ $('signupButton').disabled=true;say('Please wait…');
+ try{await post('/api/auth',{action:'signup',email:invite.email,password:$('signupPassword').value});$('signupPassword').value=$('signupConfirm').value='';show('');steps(2);
+  say('Check '+invite.email+' for a confirmation link. Opening it brings you back here to finish: then you set up your authenticator app and land on coach home.')}
+ catch(err){say(err.message)}finally{$('signupButton').disabled=false}};
+$('signinForm').onsubmit=async e=>{e.preventDefault();$('signinButton').disabled=true;say('Please wait…');
+ try{await post('/api/auth',{action:'login',email:invite.email,password:$('signinPassword').value});$('signinPassword').value='';await acceptAndGo()}
+ catch(err){say(err.message)}finally{$('signinButton').disabled=false}};
+load();
+</script></body></html>

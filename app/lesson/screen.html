@@ -29,6 +29,9 @@ html body a.button{display:inline-flex;align-items:center;justify-content:center
 .roster{list-style:none;padding:0;margin:12px 0 0}.roster li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;padding:8px 0;border-top:1px solid #E1E3E8}.roster li>span:first-child{font-weight:600}
 .roster .state{color:#55585F;font-size:15px;text-align:right}
 fieldset{border:0;padding:0;margin:10px 0 0;min-width:0}legend{font-weight:700;padding:0;margin:0 0 4px}
+.about{display:flex;gap:14px;align-items:flex-start;margin:4px 0 12px;padding:14px 16px;border-radius:8px;background:#F4F5F7}
+.about .avatar{flex:none;width:48px;height:48px;border-radius:50%;background:#141416;color:#fff;display:grid;place-items:center;font:800 19px/1 'Barlow Condensed','Arial Narrow',Arial,sans-serif;text-transform:uppercase;border:2px solid #C4222C}
+.about p{margin:0}.about p+p{margin-top:4px}.about .bio{white-space:pre-line}.about .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}.about .chips li{background:#fff;border:1px solid #E1E3E8;border-radius:999px;padding:1px 10px;font-size:14px;font-weight:600}
 [hidden]{display:none!important}
 </style></head><body><main><h1>Book a private lesson</h1><p class="muted" id="intro">One-on-one, with a partner, or in a small group of up to six. Each family books and pays for their own wrestler at the price per wrestler. Times are New York time.</p>
 <section id="closed" class="closed" hidden aria-labelledby="closedHeading"><h2 id="closedHeading">No open lesson times right now</h2><p id="closedText">No coach has open lesson times right now. Coaches add new times often, so check back soon, or message the academy to ask about a lesson.</p><div class="go"><a class="button" href="/family" id="addWrestler" hidden>Add a wrestler</a><a class="button primary" href="/inbox" id="messageAcademy">Message the academy</a></div></section>
@@ -40,7 +43,7 @@ fieldset{border:0;padding:0;margin:10px 0 0;min-width:0}legend{font-weight:700;p
 <label id="wrestlerLabel">Wrestler<select id="wrestler"></select></label>
 <div id="requestOptions" hidden><fieldset><legend>Group size</legend><div class="kinds" id="kinds"></div></fieldset><label id="spotsLabel" hidden>Number of wrestlers in the group<select id="spots"><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
 <fieldset><legend>Your wrestlers in this group</legend><div id="ownWrestlers"></div><p class="muted" id="ownHelp">Their spots are kept for them. The other spots are for families you invite.</p></fieldset></div></section>
-<section id="stepTime" hidden aria-labelledby="timeHeading"><h2 id="timeHeading">3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="times"></div></section>
+<section id="stepTime" hidden aria-labelledby="timeHeading"><h2 id="timeHeading">3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="coachAbout" class="about" hidden></div><div id="times"></div></section>
 <section id="reviewBox" hidden aria-labelledby="reviewHeading"><h2 id="reviewHeading">4. Review</h2><div class="summary" id="summary"></div>
 <div id="payArea"><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label><button class="primary" id="pay" disabled>Pay securely</button></div>
 <p id="notOpen" class="calm" hidden>Online payment for lessons isn’t open yet. To book this spot, pay the academy for your wrestler. Nothing is reserved until the academy records your payment.</p>
@@ -118,10 +121,15 @@ function render(){
  const coach=$('coach').value,list=(picking?c[path]:[]).filter(o=>!coach||o.coachKey===coach);
  if(opening&&!list.some(o=>o.id===opening))opening='';
  const days=[...new Set(list.map(o=>o.date))];
+ aboutCoach(opening?(list.find(o=>o.id===opening)||{}).coachKey:coach||(new Set(list.map(o=>o.coachKey)).size===1?list[0].coachKey:''));
  $('times').innerHTML=days.length?days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b><span>${esc(o.coach)}</span>${path==='group'?`<span>${esc(nameOf(o.format))}</span><span class="left">${spotsText(o.spotsLeft,o.capacity)}</span>`:''}</button>`).join('')}</div>`).join(''):'<p class="muted">This coach has no open times for this right now. Choose Any coach to see every open time.</p>';
  document.querySelectorAll('[data-opening]').forEach(b=>b.onclick=()=>{opening=b.dataset.opening;review=null;render();check()});
  renderReview();
 }
+// About the coach (issue #190): their name, bio and specialties from their profile, for the chosen coach or time.
+function aboutCoach(key){const p=key&&data&&data.coaches?data.coaches[key]:null,box=$('coachAbout');if(!box)return;box.hidden=!p;if(!p)return;
+ const initials=String(p.name||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('');
+ box.innerHTML=`<div class="avatar" aria-hidden="true">${esc(initials)}</div><div><p><b>About ${esc(p.name)}</b></p>${p.bio?`<p class="bio">${esc(p.bio)}</p>`:''}${(p.specialties||[]).length?`<ul class="chips" aria-label="Specialties">${p.specialties.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`}
 function defaultKind(){return ['partner','small-group'].find(priced)||''}
 function ownChosen(){return [...document.querySelectorAll('[data-own]')].filter(i=>i.checked).map(i=>i.dataset.own)}
 function renderReview(){

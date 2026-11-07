@@ -88,8 +88,9 @@ export type Opening = {id: string; date: string; start: string; end: string; coa
   closed: boolean; inviteCode: string | null; organizerId: string | null; organizerWrestlers: string[]};
 export type Holder = {id: string; userId: string; wrestlerId: string; wrestler: string; status: string; email: string; family: string | null; pricing: string};
 
-const SELECT = `SELECT o.id,o.date,o.start,o.end,o.format,o.capacity,o.closed,o.invite_code,o.organizer_id,o.organizer_wrestlers,s.name AS coach,s.email AS coachEmail
-  FROM coach_openings o JOIN staff_access s ON s.email=o.coach_email AND s.active=1`;
+// The coach's name is the one on their profile (issue #190), or their staff name until they save one.
+const SELECT = `SELECT o.id,o.date,o.start,o.end,o.format,o.capacity,o.closed,o.invite_code,o.organizer_id,o.organizer_wrestlers,COALESCE(p.display_name,s.name) AS coach,s.email AS coachEmail
+  FROM coach_openings o JOIN staff_access s ON s.email=o.coach_email AND s.active=1 LEFT JOIN coach_profiles p ON p.email=s.email`;
 const opening = (r: any): Opening => ({id: r.id, date: r.date, start: r.start, end: r.end, coach: r.coach, coachEmail: r.coachEmail, format: r.format ?? null,
   capacity: Number.isInteger(r.capacity) && r.capacity > 0 ? r.capacity : 1, closed: r.closed === 1, inviteCode: r.invite_code ?? null,
   organizerId: r.organizer_id ?? null, organizerWrestlers: r.organizer_wrestlers ? JSON.parse(r.organizer_wrestlers) : []});
@@ -120,7 +121,7 @@ export const spotsLeft = (o: Opening, holders: Holder[]) => Math.max(0, o.capaci
 // Openings a family can still book: in the future, from an active coach, not a private group, with a spot left.
 // The owner (recording payments) also sees private groups. Invite codes are never included.
 export async function openLessons(today: string, nowMinutes = academyMinutes(), opts: {includeClosed?: boolean} = {}) {
-  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.date>=? ${opts.includeClosed ? '' : 'AND o.closed=0'} ORDER BY o.date,o.start,s.name LIMIT 500`).bind(today).all<any>()).results
+  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.date>=? ${opts.includeClosed ? '' : 'AND o.closed=0'} ORDER BY o.date,o.start,coach LIMIT 500`).bind(today).all<any>()).results
     .map(opening).filter(o => upcoming(o, today, nowMinutes));
   const holders = await lessonHolders(rows.map(o => o.id));
   const organizers = new Map<string, string>();

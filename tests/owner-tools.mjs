@@ -19,8 +19,9 @@ assert.doesNotMatch(more[0], /<details[^>]* open/, 'folded by default');
 
 // Every page that had a tile is still reachable, exactly once.
 const pages = ['/roster', '/payments', '/cards', '/waivers', '/messages', '/transfers', '/waitlists', '/lesson-settings', '/coach-pay', '/accounts', '/approvals',
-  '/scholarships', '/staff', '/practice-plans', '/curricula', '/payment-setup', '/backups', '/site-health', '/data-requests', '/help/owner', '/security-log'];
+  '/scholarships', '/staff', '/coach', '/practice-plans', '/curricula', '/payment-setup', '/backups', '/site-health', '/data-requests', '/help/owner', '/security-log'];
 for (const p of pages) assert.equal(out.split(`href="${p}"`).length - 1, 1, p);
 for (const g of ['Schedules', 'Programs & pricing', 'Camps & events']) assert.equal(out.split(`go('${g}')`).length - 1, 1, g);
-assert.equal((out.match(/href="|onclick="go\(/g) || []).length, 24, 'no tool added or lost');
+// Issue #190 added Coach view (the owner as a coach).
+assert.equal((out.match(/href="|onclick="go\(/g) || []).length, 25, 'no tool added or lost');
 console.log('owner-tools ok');

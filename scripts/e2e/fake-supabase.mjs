@@ -13,6 +13,9 @@ export const users = {
   // The owner's very first sign-in, before any authenticator is set up (issue #175).
   freshowner: {id: 'e2e-owner-fresh', email: 'savagewrestlingclub@gmail.com', factors: [], aal: 'aal1'},
   coach: {id: 'e2e-coach', email: 'coach.dana@example.test', factors: [{id: 'f-coach', status: 'verified', factor_type: 'totp'}], aal: 'aal2'},
+  // A coach the owner invites (issue #190): signed up and confirmed, no authenticator yet. The walkthrough gives them a
+  // verified authenticator after the invite is accepted, standing in for the setup on /security.
+  invitee: {id: 'e2e-coach-lee', email: 'coach.lee@example.test', factors: [], aal: 'aal1'},
 };
 const userJson = u => ({id: u.id, aud: 'authenticated', role: 'authenticated', email: u.email, email_confirmed_at: '2026-01-01T00:00:00Z', confirmed_at: '2026-01-01T00:00:00Z',
   app_metadata: {provider: 'email'}, user_metadata: {}, identities: [], factors: u.factors, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z'});

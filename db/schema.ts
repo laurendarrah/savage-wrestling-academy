@@ -11,6 +11,19 @@ export const familyAccounts=sqliteTable("family_accounts",{
 export const authAttempts=sqliteTable("auth_attempts",{id:text("id").primaryKey(),count:integer("count").notNull(),bucket:integer("bucket").notNull()});
 
 export const staffAccess=sqliteTable("staff_access",{email:text("email").primaryKey(),name:text("name").notNull(),programs:text("programs").notNull(),active:integer("active").notNull(),updatedAt:text("updated_at").notNull()});
+// Coach invitations (issue #190). The owner invites a coach by name, email and programs. The link carries a random
+// 256-bit token; only its SHA-256 hash is stored. An invite expires, works once, and only for the invited email.
+// Accepting it grants staff_access. Not backed up: restoring a file must never grant access.
+export const coachInvites=sqliteTable("coach_invites",{
+ id:text("id").primaryKey(),tokenHash:text("token_hash").notNull(),email:text("email").notNull(),name:text("name").notNull(),programs:text("programs").notNull(),
+ createdBy:text("created_by").notNull(),createdAt:text("created_at").notNull(),expiresAt:text("expires_at").notNull(),usedAt:text("used_at"),usedBy:text("used_by"),revokedAt:text("revoked_at")
+},t=>[uniqueIndex("coach_invites_token").on(t.tokenHash),index("coach_invites_email").on(t.email)]);
+// Coach profiles (issue #190): what a coach says about themselves, keyed by their staff_access email. Families see the
+// display name, bio and specialties; the phone is for the academy only. photo_key stays empty until photos (#192).
+export const coachProfiles=sqliteTable("coach_profiles",{
+ email:text("email").primaryKey(),displayName:text("display_name").notNull(),bio:text("bio").notNull(),specialties:text("specialties").notNull(),phone:text("phone").notNull(),
+ photoKey:text("photo_key"),updatedAt:text("updated_at").notNull(),updatedBy:text("updated_by").notNull()
+});
 // coach_email links an opening to the coach's staff record (name, active), so families can book it (issue #70).
 // Partner and small-group lessons (issue #177): format null is an ordinary open time (one-on-one, or a family can ask
 // for a private group on it). capacity is the number of wrestlers. closed=1 marks a family-requested private group:

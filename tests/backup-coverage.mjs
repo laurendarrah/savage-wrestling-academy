@@ -58,16 +58,19 @@ function seed(sqlite){
   run("INSERT INTO family_messages VALUES (?,?,?,?,?,?,?)",'fm-1','parent-1','owner','Great practice.',now,null,'skipped');
   run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?,?)",'nt-1','parent-1','pat@example.test','card_expiring','Card expires soon','Renew it.','card-soon:parent-1:w-1:2026-12-01',now,null,'skipped');
   run("INSERT INTO data_requests VALUES (?,?,?,?,?,?,?,?,?,?)",'dr-1','parent-1','pat@example.test','close','Moving away','open',now,null,null,null);
+  // Issue #190: coach profiles are backed up; invites (which grant access) are not.
+  run("INSERT INTO coach_profiles VALUES (?,?,?,?,?,?,?,?)",'dana@example.test','Coach Dana','Two-time state placer.','["Takedowns","Mat returns"]','555-0101',null,now,'owner');
+  run("INSERT INTO coach_invites(id,token_hash,email,name,programs,created_by,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?)",'inv-1','INVITE-HASH','new.coach@example.test','New Coach','["Advanced"]','owner',now,'2026-12-01T00:00:00.000Z');
   run("INSERT INTO booking_exceptions VALUES (?,?,?,?,?,?,?,?,?,?,?)",'ex-1','parent-1','w-1','usaw','2026-11-05','2026-12-05','Renewal pending','owner',now,null,null);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {
   const db=freshDb().sqlite,tables=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%'").all().map(r=>r.name);
-  const core=['academy_state','family_accounts','coach_openings'],excluded=['staff_access','integration_secrets','auth_attempts','error_log','recovery_snapshots','restore_guard','security_events'];
+  const core=['academy_state','family_accounts','coach_openings'],excluded=['staff_access','coach_invites','integration_secrets','auth_attempts','error_log','recovery_snapshots','restore_guard','security_events'];
   const missing=tables.filter(t=>![...core,...excluded,...restorable].includes(t));
   assert.deepEqual(missing,[],'tables neither backed up nor excluded: '+missing.join(', '));
 }
@@ -84,6 +87,7 @@ assert.equal(backup.archive.security_events.length,1);assert.equal(backup.archiv
 const text=JSON.stringify(backup);
 assert.ok(!text.includes('ENCRYPTED-BLOB'),'Stripe credential never exported');
 assert.ok(!text.includes('coach@example.test'),'staff access grants never exported');
+assert.ok(!text.includes('INVITE-HASH')&&!text.includes('new.coach@example.test'),'coach invites never exported');
 assert.equal(backup.staff,undefined);
 assert.equal(lib.validBackup(backup),true);
 
@@ -98,6 +102,7 @@ assert.equal(dump(target.sqlite,'family_accounts').length,1);
 assert.equal(dump(target.sqlite,'coach_openings').length,1);
 assert.equal(dump(target.sqlite,'coach_openings')[0].coach_email,'dana@example.test','coach link restored');
 assert.equal(dump(target.sqlite,'staff_access').length,0,'restore never grants staff access');
+assert.equal(dump(target.sqlite,'coach_invites').length,0,'restore never re-creates an invite');
 assert.equal(dump(target.sqlite,'integration_secrets').length,0);
 const events=dump(target.sqlite,'security_events');
 assert.equal(events.length,1,'archived audit events are not replayed; only the restore itself is logged');
@@ -138,6 +143,10 @@ bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad
   assert.ok(await o2Lib.restoreBackup(v2,await o2Lib.fingerprint(await o2Lib.metadata()),'owner'));
   assert.equal(dump(o2.sqlite,'scholarship_awards').length,1);assert.equal(dump(o2.sqlite,'orders').length,0);
   let b3=clone();delete b3.records.orders;assert.equal(lib.validBackup(b3),false,'v3 missing orders');
+  // A version 3 file made before coach profiles were added still restores; one that has them must have them right.
+  b3=clone();delete b3.records.coach_profiles;assert.equal(lib.validBackup(b3),true,'v3 from before coach profiles');
+  {const o3=freshDb(),o3Lib=loadBackups(o3.DB);const res=await o3Lib.restoreBackup(b3,await o3Lib.fingerprint(await o3Lib.metadata()),'owner');assert.equal(res.restored.orders,1);assert.equal(dump(o3.sqlite,'coach_profiles').length,0)}
+  b3=clone();b3.records.coach_profiles[0].specialties='not json';assert.equal(lib.validBackup(b3),false,'coach profile specialties must be a list');
   b3=clone();b3.records.usaw_reviews.push({...b3.records.usaw_reviews[0]});assert.equal(lib.validBackup(b3),false,'duplicate composite key');
 }
 // A backup never changes a payment that already exists.

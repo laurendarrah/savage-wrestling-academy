@@ -11,7 +11,7 @@ type Opening={id:string;user_id:string;date:string;start:string;end:string;coach
 export type Backup={version:1|2|3;project:string;createdAt:string;academy:any;families:{user_id:string;email:string;payload:any}[];openings:Opening[];records?:Record<string,Row[]>;archive?:{security_events:Row[];truncated:boolean}};
 // Version 2 adds every other business table. Restore only re-creates rows that are missing by primary key
 // and never overwrites an existing row, so a backup cannot alter a signed agreement or a decided approval.
-// Excluded on purpose: staff_access (restoring a file must never grant access), integration_secrets (encrypted
+// Excluded on purpose: staff_access and coach_invites (restoring a file must never grant access), integration_secrets (encrypted
 // credential; keep the wrapping key separately), auth_attempts and error_log (transient), recovery_snapshots and restore_guard (restore bookkeeping).
 // tests/backup-coverage.mjs fails if a table is added to drizzle/ without being backed up or listed here.
 // security_events is exported for retention but never restored, so audit history cannot be forged from a file.
@@ -42,14 +42,19 @@ export const RECORD_TABLES:Record<string,Col[]>={
  family_messages:[['id','text'],['user_id','text'],['sender_role','text'],['body','text',false,BIG],['created_at','text'],['read_at','text',true],['email_status','text']],
  booking_exceptions:[['id','text'],['user_id','text'],['wrestler_id','text'],['rule','text'],['starts_on','text'],['ends_on','text'],['reason','text'],['created_by','text'],['created_at','text'],['revoked_at','text',true],['revoked_by','text',true]],
  notifications:[['id','text'],['user_id','text',true],['email','text'],['kind','text'],['subject','text'],['body','text',false,20000],['dedupe_key','text'],['created_at','text'],['read_at','text',true],['email_status','text']],
+ // Coach profiles (issue #190). Added after version 3 first shipped, so older version 3 files may lack it (V3_LATER).
+ coach_profiles:[['email','text'],['display_name','text'],['bio','text',false,2000],['specialties','text',false,2000],['phone','text'],['photo_key','text',true],['updated_at','text'],['updated_by','text']],
  data_requests:[['id','text'],['user_id','text'],['email','text'],['kind','text'],['note','text',false,2000],['status','text'],['created_at','text'],['resolved_at','text',true],['resolved_by','text',true],['resolution','text',true,2000]],
 };
 // Tables whose primary key is not a single id column.
-export const RECORD_KEYS:Record<string,string[]>={subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
+export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
 const keysOf=(t:string)=>RECORD_KEYS[t]??['id'];
 // JSON columns must parse to the expected shape, so a damaged or tampered file cannot store data that crashes a page.
-const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={orders:[['dates','array'],['pricing','object'],['terms_accepted','object']],waitlist_entries:[['dates','array']],academy_settings:[['payload','object']],waiver_signatures:[['signature_record','object']],announcements:[['audience','object']]};
+const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[['specialties','array']],orders:[['dates','array'],['pricing','object'],['terms_accepted','object']],waitlist_entries:[['dates','array']],academy_settings:[['payload','object']],waiver_signatures:[['signature_record','object']],announcements:[['audience','object']]};
 const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
+// Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
+// and still restores; a file that has the section is checked like any other.
+const V3_LATER=['coach_profiles'];
 const V2_TABLES=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
 const ARCHIVE_COLS:Col[]=[['id','text'],['actor','text'],['action','text'],['target','text',false,2000],['created_at','text']];
 const ROW_LIMIT=20000,ARCHIVE_LIMIT=20000,EXPORT_LIMIT=12000000;
@@ -102,8 +107,9 @@ function validExtra(d:any){
  const r=d.records,a=d.archive;
  // Version 2 files (before issue #78) hold exactly the first six tables; version 3 holds every table. A file missing
  // a section for its version, or carrying one it should not, is refused.
- const expected=d.version===2?V2_TABLES:Object.keys(RECORD_TABLES);
- if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).sort().join()!==[...expected].sort().join())return false;
+ if(!r||typeof r!=='object'||Array.isArray(r))return false;
+ const expected=d.version===2?V2_TABLES:Object.keys(RECORD_TABLES).filter(t=>!V3_LATER.includes(t)||Object.prototype.hasOwnProperty.call(r,t));
+ if(Object.keys(r).sort().join()!==[...expected].sort().join())return false;
  for(const [t,spec] of Object.entries(RECORD_TABLES)){if(!expected.includes(t))continue;const rows=r[t],key=(x:any)=>JSON.stringify(keysOf(t).map(k=>x?.[k]));if(!Array.isArray(rows)||rows.length>ROW_LIMIT||new Set(rows.map(key)).size!==rows.length||!rows.every((x:any)=>validRow(x,spec)&&(JSON_COLUMNS[t]??[]).every(([c,shape])=>jsonShape(x[c],shape))))return false}
  return !!a&&typeof a==='object'&&typeof a.truncated==='boolean'&&Array.isArray(a.security_events)&&a.security_events.length<=ARCHIVE_LIMIT&&a.security_events.every((x:any)=>validRow(x,ARCHIVE_COLS));
 }

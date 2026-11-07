@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach profile | Savage Wrestling Academy</title><style>
+*{box-sizing:border-box}body{font:16px Arial;line-height:1.55;background:#f4f5f7;color:#141416;margin:0}main{max-width:760px;margin:auto;padding:24px 16px 48px}
+section{background:#fff;border:1px solid #e1e3e8;border-radius:6px;padding:20px;margin:18px 0}h1{margin:8px 0 4px}h2{margin:0 0 12px}
+label{display:block;font-weight:600;margin:16px 0}input,textarea{display:block;width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-top:6px;font:inherit}textarea{min-height:140px;resize:vertical}
+button{font:inherit;padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;color:#141416}.primary{background:#c4222c;color:#fff;border-color:#c4222c}
+.muted{color:#55585f}.hint{display:block;font-weight:400;font-size:15px;color:#55585f;margin-top:4px}.count{float:right;font-weight:400;font-size:14px;color:#55585f;font-variant-numeric:tabular-nums}
+.who{display:flex;gap:16px;align-items:center}.avatar{flex:none;width:72px;height:72px;border-radius:50%;background:#141416;color:#fff;display:grid;place-items:center;font:800 28px/1 'Barlow Condensed','Arial Narrow',Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase;border:2px solid #c4222c}
+.who p{margin:0}.preview{border-left:3px solid #b9c4c9;background:#f7f8fa;border-radius:0 6px 6px 0;padding:14px 16px}.preview p{margin:0 0 6px;white-space:pre-line}.preview p:last-child{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0;padding:0;list-style:none}.chips li{background:#eef0f2;border-radius:999px;padding:2px 10px;font-size:14px;font-weight:600}
+#status{font-weight:600}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}[hidden]{display:none!important}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main>
+<a href="/coach" id="back">← Coach home</a>
+<h1 id="heading">Your coach profile</h1>
+<p id="intro">Families see your name, bio and specialties next to your private lesson times. Your phone number stays with the academy.</p>
+<section aria-labelledby="aboutTitle"><h2 id="aboutTitle">About you</h2>
+<div class="who"><div class="avatar" id="avatar" aria-hidden="true"></div><div><p><b id="whoName"></b></p><p class="muted" id="whoEmail"></p><p class="muted">Profile photos are on the way. For now families see your initials.</p></div></div>
+<form id="profileForm">
+<label for="displayName">Name families see <span class="count" id="nameCount"></span><input id="displayName" name="displayName" maxlength="60" required autocomplete="name"></label>
+<label for="bio">Short bio <span class="count" id="bioCount"></span><span class="hint">A few sentences: your wrestling background and how you coach.</span><textarea id="bio" name="bio" maxlength="500"></textarea></label>
+<label for="specialties">Specialties<span class="hint">Separate them with commas, for example: Takedowns, Mat returns, Youth fundamentals. Up to 6.</span><input id="specialties" name="specialties" maxlength="300"></label>
+<label for="phone">Phone<span class="hint">Only the academy sees this.</span><input id="phone" name="phone" type="tel" maxlength="20" autocomplete="tel"></label>
+<div class="actions"><button class="primary" id="saveProfile">Save profile</button><span id="saved" class="muted"></span></div>
+</form></section>
+<section aria-labelledby="previewTitle"><h2 id="previewTitle">What families see</h2><div class="preview" id="preview"></div></section>
+<p id="status" role="status" aria-live="polite"></p></main>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const asked=new URLSearchParams(location.search).get('email')||'';
+const q=asked?'?email='+encodeURIComponent(asked):'';
+async function call(body){const r=await fetch('/api/coach-profile'+(body?'':q),body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error(data.error||'Something went wrong. Please try again.');return data}
+const initials=n=>String(n||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('')||'?';
+const list=v=>String(v||'').split(',').map(s=>s.trim()).filter(Boolean);
+function preview(){const name=$('displayName').value.trim(),bio=$('bio').value.trim(),sp=list($('specialties').value);
+ $('avatar').textContent=initials(name);$('whoName').textContent=name||'Your name';
+ $('nameCount').textContent=$('displayName').value.length+'/60';$('bioCount').textContent=$('bio').value.length+'/500';
+ $('preview').innerHTML=`<p><b>${esc(name||'Your name')}</b></p>${bio?`<p>${esc(bio)}</p>`:'<p class="muted">No bio yet. Families see only your name.</p>'}${sp.length?`<ul class="chips">${sp.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:''}`}
+function fill(d){const p=d.profile;$('displayName').value=p.displayName||'';$('bio').value=p.bio||'';$('specialties').value=(p.specialties||[]).join(', ');$('phone').value=p.phone||'';$('whoEmail').textContent=d.email;
+ if(d.byOwner){$('heading').textContent='Coach profile';$('intro').textContent='You are editing this coach’s profile. They see your changes on their own profile page.';$('back').href='/staff';$('back').textContent='← Coaches'}
+ $('saved').textContent=p.updatedAt?'Last saved '+new Date(p.updatedAt).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}):'Not saved yet';preview()}
+async function load(){try{fill(await call())}catch(e){$('status').textContent=e.message}}
+['displayName','bio','specialties'].forEach(id=>$(id).addEventListener('input',preview));
+$('profileForm').onsubmit=async e=>{e.preventDefault();$('saveProfile').disabled=true;try{const d=await call({email:asked||undefined,displayName:$('displayName').value,bio:$('bio').value,specialties:list($('specialties').value),phone:$('phone').value});fill({...d,email:$('whoEmail').textContent,byOwner:!!asked});$('status').textContent='Profile saved.'}catch(err){$('status').textContent=err.message}finally{$('saveProfile').disabled=false}};
+load();
+</script></body></html>

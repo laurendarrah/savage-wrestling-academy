@@ -3,6 +3,7 @@ import {mfaSwitchedOff} from '../../../lib/mfa-policy';
 import { rateLimited } from '../../../lib/rate-limit';
 import { accountRole,roleDestination } from '../../../lib/access-control';
 import { accountClient, accountReply, sameOrigin, verifiedOwner, appOrigin } from '../../../lib/account-auth';
+import { hasOpenInvite } from '../../../lib/coach-invites';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=accountClient(request),{data:{user},error}=await auth.client.auth.getUser();
@@ -36,6 +37,8 @@ export async function POST(request:Request){
  return reply({error:'The sign-in service is temporarily unavailable. Your password has not been checked. Please try again shortly.'},503);
  }
  const {role}=await accountRole(data.user);
+ // Someone invited as a coach goes back to accept the invite first (issue #190); it then asks for the authenticator.
+ if(role==='family'&&data.user.email_confirmed_at&&await hasOpenInvite(data.user.email))return reply({redirect:'/coach-join'});
  const {data:level}=await auth.client.auth.mfa.getAuthenticatorAssuranceLevel();
  const hasFactor=!!data.user.factors?.some(f=>f.status==='verified');
  // Staff need the authenticator unless STAFF_MFA=off (issue #204); anyone who set one up always uses it.
