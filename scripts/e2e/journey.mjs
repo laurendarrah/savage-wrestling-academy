@@ -58,6 +58,10 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({path: `${
 // Pages that load in the background are used only once they have loaded, never after a fixed wait (issue #220).
 // /family turns its Save button back on when the profile is in; until then, typing is overwritten by the load.
 const familyReady = page => page.waitForSelector('#save:not([disabled])', {state: 'attached'});
+// /cards, /waivers, /contracts and /consent-forms reload their list when the filter changes and mark it busy until the
+// latest load has drawn it. Text from the first load can match before that, and the reload then redraws the list under
+// whatever the walkthrough opened or typed.
+const showAll = async page => { await page.selectOption('#show', 'all'); await page.waitForSelector('#rows:not([aria-busy])', {state: 'attached'}); };
 // /payments has loaded when the payments table is filled and Check price is on. Earlier, the page is still loading
 // and clears the status line when it finishes, which could hide "Payment recorded".
 const openPayments = async page => {
@@ -175,7 +179,7 @@ await step('family adds an expired card, then a current one', async () => {
   await family.click('#save'); await waitText(family, '#status', /saved/);
 });
 await step('owner sees the card on /cards, marks it not valid; family is blocked with the reason', async () => {
-  await owner.goto(BASE + '/cards'); await owner.selectOption('#show', 'all');
+  await owner.goto(BASE + '/cards'); await showAll(owner);
   await waitText(owner, '#rows', /Sam Example[\s\S]*AB-123456/);
   await waitText(owner, '#tRenewLabel', /^(Not yet renewed for \d{4}–\d{2}|Cards expire Aug 31, \d{4})$/);
   // "Look up on USA Wrestling" copies the number and opens USA Wrestling's check in a new tab (a stand-in page here).
@@ -231,13 +235,13 @@ await step('family enters a card USA Wrestling shows as not active, then an acti
   for (const s of usaw.seen) expect(!/Sam|Pat|example\.test/.test(JSON.stringify(s.body)) && s.headers['user-agent'] === 'SavageWrestlingAcademy/1.0 (card check)', 'sent to USA Wrestling: ' + JSON.stringify(s.body).slice(0, 120));
 });
 await step('owner sees how each card was verified and can check one again', async () => {
-  await owner.goto(BASE + '/cards'); await owner.selectOption('#show', 'all');
+  await owner.goto(BASE + '/cards'); await showAll(owner);
   await waitText(owner, '#rows', /Sam Example[\s\S]*1234567890[\s\S]*Verified[\s\S]*USA Wrestling lookup · /);
   await owner.click('#rows tr:has-text("Sam Example") button:has-text("Check with USA Wrestling")');
   await waitText(owner, '#status', /Sam Example: active and the name matches, so the card is verified/);
   await shot(owner, 'owner-cards-lookup');
   const phone = await as('owner', {width: 390, height: 844});
-  await phone.goto(BASE + '/cards'); await phone.selectOption('#show', 'all'); await waitText(phone, '#rows', /USA Wrestling lookup · /);
+  await phone.goto(BASE + '/cards'); await showAll(phone); await waitText(phone, '#rows', /USA Wrestling lookup · /);
   await shot(phone, 'phone-owner-cards-lookup'); await phone.context().close();
   await owner.goto(BASE + '/security-log');
   expect(/USA Wrestling card verified by lookup/.test(await owner.content()), 'Security activity names the lookup verification');
@@ -430,7 +434,7 @@ await step('camp fills; family 2 sees it is full, with no waitlist to join', asy
   await fillDetails(family2, 'Casey Emergency');
   await family2.fill('#usaw0', 'CD-5555'); await family2.selectOption('#usawSeason0', await latestSeason(family2)); await family2.click('#save'); await waitText(family2, '#status', /saved/);
   const rid = await wid(family2);
-  await owner.goto(BASE + '/waivers'); await owner.selectOption('#show', 'all');
+  await owner.goto(BASE + '/waivers'); await showAll(owner);
   await waitText(owner, '#rows', /Riley Two/);
   await owner.locator('summary:has-text("Allow booking anyway")').first().click();
   await owner.locator('[data-exc-until]').first().fill(ny(30)); await owner.locator('[data-exc-reason]').first().fill('Paper waiver at the door');
@@ -792,7 +796,7 @@ await step('owner publishes a coach contract; the coach sees a to-do, signs it o
   await shot(coach, 'contract-signed');
   await coach.goto(BASE + '/coach'); await coach.waitForSelector('#slots article, #slots p'); await coach.waitForTimeout(600);
   expect(!(await coach.isVisible('#contractTodo')), 'the to-do goes away once signed');
-  await owner.goto(BASE + '/contracts'); await owner.selectOption('#show', 'all');
+  await owner.goto(BASE + '/contracts'); await showAll(owner);
   await at(owner, '#rows', /coach\.dana@example\.test/);
   expect(/Signed/.test(await owner.locator('#rows tr', {hasText: 'coach.dana@example.test'}).textContent()), 'the owner sees the coach signed');
   expect(/Not signed/.test(await owner.locator('#rows tr', {hasText: 'coach.lee@example.test'}).textContent()), 'and who has not');
@@ -823,7 +827,7 @@ await step('owner publishes the Parent Consent Form; booking waits until a paren
   await family.fill('#signer', 'Pat Example'); await family.click('#sign'); await at(family, '#status', /Signed for Sam Example/);
   const after = await quote(); expect(after.status === 200, 'signed: the form no longer blocks booking: ' + JSON.stringify(after.body));
   await shot(family, 'consent-signed');
-  await owner.goto(BASE + '/consent-forms'); await owner.selectOption('#show', 'all');
+  await owner.goto(BASE + '/consent-forms'); await showAll(owner);
   await at(owner, '#rows', /Sam Example/);
   expect(/Signed/.test(await owner.locator('#rows tr', {hasText: 'Sam Example'}).textContent()), 'the owner sees the signature');
   await shot(owner, 'consent-forms-owner');

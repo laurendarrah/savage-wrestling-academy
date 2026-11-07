@@ -20,7 +20,7 @@ function server(route) {
   return {fetch, held, calls};
 }
 // The page's script with a stub DOM. start: element properties the markup sets (checked against the markup by the caller).
-function page(file, fetch, start = {}) {
+function page(file, fetch, start = {}, pathname = '/') {
   const nodes = new Map();
   const el = id => {
     if (!nodes.has(id)) {
@@ -28,13 +28,14 @@ function page(file, fetch, start = {}) {
       nodes.set(id, {id, value: '', hidden: false, disabled: false, textContent: '', href: '', srcdoc: '', dataset: {}, style: {},
         // Like a <select>: new options select the first one.
         get innerHTML() { return html; }, set innerHTML(v) { html = String(v); const first = /^<option value="([^"]*)"/.exec(html); if (first) this.value = first[1]; },
+        attrs: {}, setAttribute(name, v) { this.attrs[name] = String(v); }, removeAttribute(name) { delete this.attrs[name]; }, getAttribute(name) { return this.attrs[name] ?? null; },
         listeners: {}, addEventListener(type, f) { this.listeners[type] = f; }, scrollIntoView() {}, focus() {}, select() {}, ...start[id]});
     }
     return nodes.get(id);
   };
   const asked = [];
   const ctx = vm.createContext({console, setTimeout, clearTimeout, URLSearchParams, structuredClone, fetch,
-    location: {search: '', pathname: '/', hash: '', origin: 'https://swa.test'}, confirm: msg => { asked.push(msg); return false; },
+    location: {search: '', pathname, hash: '', origin: 'https://swa.test'}, confirm: msg => { asked.push(msg); return false; },
     document: {getElementById: el, querySelectorAll: () => [], querySelector: () => null}});
   vm.runInContext(readFileSync(file, 'utf8').match(/<script>([\s\S]*)<\/script>/)[1], ctx);
   return {el, ctx, asked, run: code => vm.runInContext(code, ctx)};
@@ -179,4 +180,43 @@ const submit = form => form.onsubmit({preventDefault() {}});
   assert.equal(el('preview').disabled, false); assert.match(el('format').innerHTML, /value="one-on-one"/);
 }
 
-console.log('Page race tests passed: the messages audience count, the coach profile, the public website editor and the payments form ignore late answers and wait for the latest.');
+// ---------- /waivers and /cards: the list is busy until the latest filter's load has drawn it ----------
+{
+  const person = (wrestler, extra) => ({key: wrestler, userId: 'u-' + wrestler, wrestlerId: 'w-' + wrestler, wrestler, grade: 8, parentName: 'Parent', email: 'p@example.test', signed: false, ...extra});
+  const answer = people => ({current: {id: 'v1', title: 'Participation waiver', body: 'Text', publishedAt: '2026-11-01T15:00:00Z'}, versions: [], wrestlers: people, totals: {all: 2, signed: 1, missing: 1}, matched: people.length, next: null});
+  const net = server(url => url.startsWith('/api/waivers') ? HOLD : {exceptions: []});
+  const {el} = page('app/waivers/screen.html', net.fetch, {show: {value: 'missing'}}, '/waivers');
+  await settle();
+  assert.equal(el('rows').getAttribute('aria-busy'), 'true', 'busy while the first list loads');
+  // The owner shows everyone before the first list arrives.
+  el('show').value = 'all'; el('show').onchange(); await settle();
+  assert.match(net.held[0].url, /show=missing/); assert.match(net.held[1].url, /show=all/);
+  net.held[0].reply(answer([person('Riley Two')])); await settle();
+  assert.equal(el('rows').getAttribute('aria-busy'), 'true', 'still busy: the list on screen is about to be replaced');
+  assert.equal(el('rows').innerHTML, '', 'an older filter’s list is not drawn');
+  net.held[1].reply(answer([person('Riley Two'), person('Sam Example', {signed: true, signedAt: '2026-11-02T15:00:00Z', signer: 'Pat Example', signatureId: 's1'})])); await settle();
+  assert.equal(el('rows').getAttribute('aria-busy'), null, 'the latest list is drawn');
+  assert.match(el('rows').innerHTML, /Riley Two[\s\S]*Sam Example/);
+  // A failed load also ends the busy state, with the reason.
+  el('show').onchange(); await settle();
+  net.held[2].reply({error: 'Owner access required.'}, 403); await settle();
+  assert.equal(el('rows').getAttribute('aria-busy'), null); assert.equal(el('status').textContent, 'Owner access required.');
+}
+{
+  const card = (wrestler, extra) => ({key: wrestler, userId: 'u-' + wrestler, wrestlerId: 'w-' + wrestler, wrestler, parentName: 'Parent', email: 'p@example.test', grade: 8, number: 'AB-1', expiresOn: '2027-08-31', status: 'pending', ...extra});
+  const answer = cards => ({cards, date: '2026-11-07', today: '2026-11-07', totals: {}, matched: cards.length, next: null});
+  const net = server(url => url.startsWith('/api/usaw-cards') ? HOLD : {exceptions: []});
+  const {el} = page('app/cards/screen.html', net.fetch, {show: {value: 'attention'}}, '/cards');
+  await settle();
+  assert.equal(el('rows').getAttribute('aria-busy'), 'true');
+  el('show').value = 'all'; el('show').onchange(); await settle();
+  assert.equal(net.held.length, 2, 'two card lists are on their way');
+  net.held[1].reply(answer([card('Sam Example')])); await settle();
+  assert.equal(el('rows').getAttribute('aria-busy'), null);
+  const drawn = el('rows').innerHTML; assert.match(drawn, /Sam Example/);
+  net.held[0].reply(answer([])); await settle();
+  assert.equal(el('rows').innerHTML, drawn, 'an older filter’s list does not replace the newer one');
+  assert.equal(el('rows').getAttribute('aria-busy'), null);
+}
+
+console.log('Page race tests passed: the messages audience count, the coach profile, the public website editor and the payments form ignore late answers and wait for the latest; the waivers and cards lists stay busy until the latest filter is drawn.');
