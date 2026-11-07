@@ -49,7 +49,7 @@ const order = (id, u, session) => sqlite.prepare(`INSERT INTO orders(id,user_id,
   VALUES (?,?,'e',?,'W','walkin','Intermediate','x','Walk-in','["2026-11-10"]',4000,0,4000,'usd','{"secret":"internal"}','{}','paid',?,0,'t','t','t','stripe',?,?)`).run(id, u, 'w-' + u, id, session, 'pi_' + session);
 order('o1', 'p1', 'cs_test_p1'); order('o2', 'p2', 'cs_test_p2');
 sqlite.prepare("INSERT INTO wrestler_passes VALUES ('pass1','p1','w-p1','TOKENp1TOKENp1TOKENp1TOKENp1TOKE','t',NULL,NULL)").run();
-sqlite.prepare("INSERT INTO family_messages VALUES ('m1','p1','owner','Hello Pat One','t',NULL,'skipped'),('m2','p2','owner','Hello Pat Two','t',NULL,'skipped')").run();
+sqlite.prepare("INSERT INTO family_messages(id,user_id,sender_role,body,created_at,read_at,email_status) VALUES ('m1','p1','owner','Hello Pat One','t',NULL,'skipped'),('m2','p2','owner','Hello Pat Two','t',NULL,'skipped')").run();
 sqlite.prepare("INSERT INTO attendance VALUES ('a1','practice:Intermediate:2026-11-05:18:00','2026-11-05','p1','w-p1','Wrestler p1','Member','t','owner')").run();
 
 const mine = load(path.resolve('app/api/my-data/route.ts'));

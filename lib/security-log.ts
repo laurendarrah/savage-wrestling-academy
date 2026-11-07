@@ -49,6 +49,7 @@ const TITLES: Record<string, string> = {
   usaw_card_lookup_verified: 'USA Wrestling card verified by lookup',
   lesson_settings_saved: 'Private lesson prices or coach pay saved',
   announcement_sent: 'Announcement sent',
+  emails_resent: 'Emails that didn’t send were sent again',
   waiver_published: 'Waiver published',
   waiver_retired: 'Waiver no longer required',
   waiver_signed: 'Waiver signed',
@@ -113,6 +114,7 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
       detail = m ? `${wrestler(m[2])} may book without a ${m[1] === 'usaw' ? 'current USA Wrestling card' : 'signed waiver'} until ${fullDate(m[3])}` : ''; break;
     }
     case 'announcement_sent': detail = rest[0] ? 'Sent to ' + plural(Number(rest[0]), 'family', 'families') : ''; break;
+    case 'emails_resent': detail = t; break;
     case 'account_closure_requested': detail = names.people[t] ?? ''; break;
     case 'data_request_handled': detail = names.requests[t] ?? ''; break;
     case 'program_curriculum_saved': case 'curriculum_lesson_created': case 'curriculum_lesson_updated': detail = names.curricula[t] ?? ''; break;

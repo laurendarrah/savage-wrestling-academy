@@ -173,16 +173,18 @@ export const membershipTransfers=sqliteTable("membership_transfers",{
  effectiveDate:text("effective_date").notNull(),reason:text("reason").notNull(),transferredBy:text("transferred_by").notNull(),createdAt:text("created_at").notNull()
 },t=>[index("transfers_order").on(t.orderId,t.effectiveDate)]);
 // Announcements and family messages (issue #72). Recipients are fixed when an announcement is sent.
+// email_error (issue #35) is why an email did not send, as a short code from lib/email.ts; not backed up.
 export const announcements=sqliteTable("announcements",{
  id:text("id").primaryKey(),subject:text("subject").notNull(),body:text("body").notNull(),audience:text("audience").notNull(),audienceLabel:text("audience_label").notNull(),
  sentBy:text("sent_by").notNull(),sentAt:text("sent_at").notNull(),recipients:integer("recipients").notNull()
 },t=>[index("announcements_sent").on(t.sentAt)]);
 export const announcementRecipients=sqliteTable("announcement_recipients",{
- announcementId:text("announcement_id").notNull(),userId:text("user_id").notNull(),email:text("email").notNull(),readAt:text("read_at"),emailStatus:text("email_status").notNull()
+ announcementId:text("announcement_id").notNull(),userId:text("user_id").notNull(),email:text("email").notNull(),readAt:text("read_at"),emailStatus:text("email_status").notNull(),
+ emailError:text("email_error")
 },t=>[primaryKey({columns:[t.announcementId,t.userId]}),index("announcement_recipients_user").on(t.userId)]);
 export const familyMessages=sqliteTable("family_messages",{
  id:text("id").primaryKey(),userId:text("user_id").notNull(),senderRole:text("sender_role").notNull(),body:text("body").notNull(),createdAt:text("created_at").notNull(),
- readAt:text("read_at"),emailStatus:text("email_status").notNull()
+ readAt:text("read_at"),emailStatus:text("email_status").notNull(),emailError:text("email_error")
 },t=>[index("family_messages_thread").on(t.userId,t.createdAt),check("family_message_sender",sql`${t.senderRole} IN ('owner','family')`)]);
 // Owner exceptions to the card and waiver booking blocks (issue #89). Each has a reason and an end date.
 export const bookingExceptions=sqliteTable("booking_exceptions",{
@@ -193,7 +195,7 @@ export const bookingExceptions=sqliteTable("booking_exceptions",{
 // Automatic notices to families and coaches (issue #105). dedupe_key makes each event notify once.
 export const notifications=sqliteTable("notifications",{
  id:text("id").primaryKey(),userId:text("user_id"),email:text("email").notNull(),kind:text("kind").notNull(),subject:text("subject").notNull(),body:text("body").notNull(),
- dedupeKey:text("dedupe_key").notNull(),createdAt:text("created_at").notNull(),readAt:text("read_at"),emailStatus:text("email_status").notNull()
+ dedupeKey:text("dedupe_key").notNull(),createdAt:text("created_at").notNull(),readAt:text("read_at"),emailStatus:text("email_status").notNull(),emailError:text("email_error")
 },t=>[uniqueIndex("notifications_once").on(t.dedupeKey),index("notifications_user").on(t.userId,t.createdAt)]);
 // Server errors for the owner's site health page (issue #107). Transient: not backed up, last 500 kept.
 export const errorLog=sqliteTable("error_log",{

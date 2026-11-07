@@ -511,6 +511,7 @@ await step('owner transfers Sam to SWA Advance after approval checks', async () 
 // ---------- Messages ----------
 await step('owner announces to SWA Intermediate; family reads it and replies; owner sees the reply', async () => {
   await owner.goto(BASE + '/messages'); await owner.waitForSelector('#audType');
+  await owner.waitForSelector('#emailNote:not([hidden])'); expect(!(await owner.isVisible('#failedEmails')), 'no failed-email list when nothing failed');
   await owner.selectOption('#audType', 'program'); await owner.selectOption('#program', 'Intermediate'); await waitText(owner, '#audCount', /1 family/);
   await owner.fill('#subject', 'Practice moved'); await owner.fill('#body', 'Practice starts at 6:30 tonight.'); await owner.click('#send');
   await waitText(owner, '#status', /Sent to 1 family/);
@@ -686,6 +687,8 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   expect(bg !== 'rgb(255, 255, 255)' && bg !== 'rgba(0, 0, 0, 0)', 'primary button is invisible: ' + bg);
   await shot(owner, 'owner-dashboard');
   await owner.goto(BASE + '/site-health'); await waitText(owner, '#now', /Site and database are answering/);
+  // Email is not set up locally: the page says so instead of promising alerts (issues #47, #35).
+  await waitText(owner, '#emailOff', /Email isn’t set up yet, so families aren’t getting emails/); expect(await owner.isVisible('#emailOff'), 'email-off notice on site health');
 });
 await step('backup export includes payments and signed waivers', async () => {
   const r = await api(owner, '/api/backups');

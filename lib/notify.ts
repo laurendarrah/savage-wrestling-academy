@@ -4,14 +4,14 @@
 import {env} from 'cloudflare:workers';
 import {appOrigin} from './account-auth';
 import {academyToday} from './public-schedule';
-import {sendEmails} from './email';
+import {sendEmailsDetailed} from './email';
 import {currentWaiver} from './waivers';
 import {dayTime, fullDate, when} from './datetime';
 import {cardSeason, isSeasonEnd} from './usaw';
 
 type Notice = {userId: string | null; email: string; kind: string; subject: string; body: string; dedupeKey: string; link?: string};
 
-const footer = (link = '/inbox') => `\n\n—\nSavage Wrestling Academy\n${appOrigin()}${link}`;
+export const footer = (link = '/inbox') => `\n\n—\nSavage Wrestling Academy\n${appOrigin()}${link}`;
 
 // Saves each new notice and emails it. Notices already sent (same dedupe key) are skipped silently.
 export async function notify(list: Notice[]) {
@@ -21,13 +21,13 @@ export async function notify(list: Notice[]) {
     if (!seen) fresh.push(n);
   }
   if (!fresh.length) return 0;
-  const statuses = await sendEmails(fresh.map(n => ({to: n.email, subject: n.subject, text: n.body + footer(n.link)})));
+  const results = await sendEmailsDetailed(fresh.map(n => ({to: n.email, subject: n.subject, text: n.body + footer(n.link)})));
   const at = new Date().toISOString();
   let saved = 0;
   for (let i = 0; i < fresh.length; i++) {
     const n = fresh[i];
-    const r = await env.DB!.prepare('INSERT OR IGNORE INTO notifications(id,user_id,email,kind,subject,body,dedupe_key,created_at,read_at,email_status) VALUES (?,?,?,?,?,?,?,?,NULL,?)')
-      .bind(crypto.randomUUID(), n.userId, n.email, n.kind, n.subject, n.body, n.dedupeKey, at, statuses[i]).run();
+    const r = await env.DB!.prepare('INSERT OR IGNORE INTO notifications(id,user_id,email,kind,subject,body,dedupe_key,created_at,read_at,email_status,email_error) VALUES (?,?,?,?,?,?,?,?,NULL,?,?)')
+      .bind(crypto.randomUUID(), n.userId, n.email, n.kind, n.subject, n.body, n.dedupeKey, at, results[i].status, results[i].reason).run();
     saved += Number(r.meta?.changes ?? (r as any).changes ?? 0);
   }
   return saved;

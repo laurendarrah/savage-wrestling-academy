@@ -54,9 +54,9 @@ function seed(sqlite){
   run("INSERT INTO waitlist_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",'wl-1','camp','full','["2026-12-20"]','parent-1','w-1','Sam Example','pat@example.test','waiting',now,null,null,null,0,null,null);
   run("INSERT INTO membership_transfers VALUES (?,?,?,?,?,?,?,?)",'tr-1','ord-1','Intermediate','Advanced','2026-11-10','Moved up','owner',now);
   run("INSERT INTO announcements VALUES (?,?,?,?,?,?,?,?)",'an-1','Practice moved','Six thirty tonight.','{"type":"all"}','All families','owner',now,1);
-  run("INSERT INTO announcement_recipients VALUES (?,?,?,?,?)",'an-1','parent-1','pat@example.test',null,'skipped');
-  run("INSERT INTO family_messages VALUES (?,?,?,?,?,?,?)",'fm-1','parent-1','owner','Great practice.',now,null,'skipped');
-  run("INSERT INTO notifications VALUES (?,?,?,?,?,?,?,?,?,?)",'nt-1','parent-1','pat@example.test','card_expiring','Card expires soon','Renew it.','card-soon:parent-1:w-1:2026-12-01',now,null,'skipped');
+  run("INSERT INTO announcement_recipients(announcement_id,user_id,email,read_at,email_status) VALUES (?,?,?,?,?)",'an-1','parent-1','pat@example.test',null,'skipped');
+  run("INSERT INTO family_messages(id,user_id,sender_role,body,created_at,read_at,email_status) VALUES (?,?,?,?,?,?,?)",'fm-1','parent-1','owner','Great practice.',now,null,'skipped');
+  run("INSERT INTO notifications(id,user_id,email,kind,subject,body,dedupe_key,created_at,read_at,email_status) VALUES (?,?,?,?,?,?,?,?,?,?)",'nt-1','parent-1','pat@example.test','card_expiring','Card expires soon','Renew it.','card-soon:parent-1:w-1:2026-12-01',now,null,'skipped');
   run("INSERT INTO data_requests VALUES (?,?,?,?,?,?,?,?,?,?)",'dr-1','parent-1','pat@example.test','close','Moving away','open',now,null,null,null);
   // Issue #190: coach profiles are backed up; invites (which grant access) are not.
   run("INSERT INTO coach_profiles VALUES (?,?,?,?,?,?,?,?)",'dana@example.test','Coach Dana','Two-time state placer.','["Takedowns","Mat returns"]','555-0101',null,now,'owner');

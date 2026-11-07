@@ -14,6 +14,8 @@ Sign in as the owner and open **/site-health**. It shows whether the site and da
 
 Set up a free uptime monitor (for example UptimeRobot) on `<site address>/api/health`, checking every 5 minutes and texting the owner's phone. Then you hear about an outage before families do.
 
+Once email is set up (`EMAIL_API_KEY` and `MAIL_FROM`, #87), the site also emails the owner address when new server errors appear or the morning reminders don't finish, at most once an hour (#47). The email has counts, the page each problem was on and a link to **/site-health**, never family details. Problems that happen within the hour are in the next alert, which goes out with the next problem after the hour or with the next morning's scheduled run. **/site-health → Alerts and email** shows when the last alert went out, or why it didn't. An alert email can't help when the whole site is down, so keep the uptime monitor too.
+
 ## The site is down or shows an error for everyone
 
 1. Open `<site address>/api/health`. If it says `"ok":true`, the site is up. The problem is probably the family's own connection or browser, so ask them to refresh or try another browser.
@@ -41,6 +43,8 @@ Don't make more changes until you know what happened.
 
 ## Families say they never got the email
 
+- Announcements, private messages and automatic notices are always on the family's **Messages** page, emailed or not. If email isn't set up yet, **/messages** and **/site-health** say so.
+- **/messages → Emails that didn't go out** lists each email from the last 30 days that didn't send: who it was for, when, what it was and why, in plain words. **Try again** sends it again. If the reason is the academy's email settings, check `EMAIL_API_KEY` and `MAIL_FROM` on the Worker and the sending domain in the email provider before trying again.
 - Sign-up, confirmation and password emails come from Supabase. Until the academy chooses an email sender (#87), Supabase only delivers to people on the Supabase team, and only a few emails an hour. Families won't receive them until a sender is set up under **Supabase → Authentication → Emails → SMTP settings**.
 - Check that the email links point at the site: **Supabase → Authentication → URL Configuration** lists the site address and the two `/auth/confirm` addresses (`docs/GO_LIVE.md`, step 6).
 - The family can use **Didn't get the confirmation email?** on the sign-in page to send it again.
