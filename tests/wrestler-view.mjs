@@ -73,7 +73,9 @@ assert.equal((await view('w3', 'p2')).status, 200);
 assert.equal((await view('../x')).status, 404);
 
 // Membership, a paid extra practice, a camp and a lesson all show up; nothing else does.
-assert.equal((await pay({kind: 'annual', program: 'Intermediate'})).status, 200);
+// A paid monthly membership (a year paid upfront is no longer sold, #210).
+sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end)
+  VALUES ('m1','p1','p1@x','w1','Sam','monthly','Intermediate','Intermediate','SWA Intermediate: 12-month membership, monthly payment','[]',20000,0,20000,'usd','{}','{}','paid','m1',0,'t','t','t',?,?)`).run(ny(0), ny(364));
 assert.equal((await pay({kind: 'live', liveId: 'fnl', date: ny(2)})).status, 200);
 assert.equal((await pay({kind: 'event', eventId: 'camp'})).status, 200);
 sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,source)
@@ -97,6 +99,8 @@ for (let k = 0; k < 7; k++) {
 // The pass is the family's pass; check-ins this month are counted.
 as('p1'); const code = (await call(passesApi, 'GET')).body.passes[0].code;
 assert.equal(r.body.pass, code); assert.equal(r.body.checkInsThisMonth, 0);
+// Check-in needs a verified card (#210).
+sqlite.prepare("INSERT INTO usaw_reviews(user_id,wrestler_id,number,expires,status,note,reviewed_by,reviewed_at) VALUES ('p1','w1','AB1234','2099-12-31','valid','','owner-id','x')").run();
 as('owner'); assert.equal((await call(rosterApi, 'POST', {action: 'scan', date: today, code})).status, 200);
 assert.equal((await view('w1')).body.checkInsThisMonth, 1);
 

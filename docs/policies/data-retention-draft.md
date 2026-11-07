@@ -25,7 +25,7 @@ How long the academy keeps each kind of record, and what happens when a family a
 Proposed steps for the owner (to confirm):
 1. Confirm the request with the family (email or phone).
 2. Check for anything still active: a membership in its term, an unpaid installment, or an upcoming paid session. [Decision: what happens to those.]
-3. Remove what isn't needed: [Decision: profile details, card numbers, messages, notices, entry passes, waitlist entries].
+3. Remove what isn't needed: [Decision: profile details, card numbers, messages, notices, entry passes, waitlist entries (no longer collected since #210)].
 4. Keep what must be kept (payments, signed waivers, scholarship agreements) until its period above ends.
 5. Record what was done on **Data requests**. The family sees it in their account.
 

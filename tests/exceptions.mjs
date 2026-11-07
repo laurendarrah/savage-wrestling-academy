@@ -83,13 +83,15 @@ assert.equal(r.body.exceptions[0].wrestler, 'Sam'); assert.equal(r.body.exceptio
 assert.equal((await walkin(1)).ok, true);
 assert.match((await walkin(31)).error, /card expired/, 'after the exception ends');
 assert.match((await quotes.quoteBooking('p1', {type: 'event', wrestlerId: 'w1', id: 'camp'})).error, /before this session ends/, 'camp runs past the exception');
-as('owner'); r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'annual', program: 'Intermediate', method: 'cash'});
+as('owner'); r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:18:00`, method: 'cash'});
 assert.equal(r.status, 200, 'owner-recorded payment allowed too');
 
 // --- Families see that the academy is allowing it; the roster shows why ---
 as('p1'); r = await call(familyApi, 'GET'); assert.equal(r.body.cards.w1.state, 'expired'); assert.equal(r.body.cards.w1.exceptionUntil, ny(30));
 let entry = (await roster.rosterFor(today, {role: 'owner'})).find(s => s.key.startsWith('practice:')).entries[0];
 assert.equal(entry.card, 'expired'); assert.equal(JSON.stringify(entry.exceptions), JSON.stringify(['usaw']));
+// The card exception lets staff check the wrestler in too (#210), exactly like booking.
+assert.equal(entry.checkInBlocked, null, 'the exception covers check-in');
 
 // --- Waiver exceptions work the same way ---
 as('owner'); assert.equal((await call(waiversApi, 'POST', {action: 'publish', title: 'Participation waiver', body: 'Wrestling is a contact sport. '.repeat(10)})).status, 200);
@@ -105,6 +107,8 @@ as('owner'); const card = (await call(api, 'GET')).body.exceptions.find(x => x.r
 assert.equal((await call(api, 'POST', {action: 'remove', id: card.id})).status, 200);
 assert.equal((await call(api, 'POST', {action: 'remove', id: card.id})).status, 404);
 assert.match((await walkin()).error, /card expired/);
+entry = (await roster.rosterFor(today, {role: 'owner'})).find(s => s.key.startsWith('practice:')).entries[0];
+assert.match(entry.checkInBlocked, /^Sam can't be checked in: the USA Wrestling card expired/, 'without the exception, check-in is blocked again');
 assert.deepEqual(sqlite.prepare("SELECT action FROM security_events WHERE action LIKE 'booking_exception%' ORDER BY rowid").all().map(x => x.action), ['booking_exception_granted', 'booking_exception_granted', 'booking_exception_removed']);
 
 // --- Owner page helper (inline JavaScript is not typechecked) ---
@@ -112,9 +116,9 @@ assert.deepEqual(sqlite.prepare("SELECT action FROM security_events WHERE action
   const html = readFileSync('app/cards/screen.html', 'utf8'), script = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
   const start = script.indexOf('let exceptions=[];'), end = script.indexOf('function wireExceptions');
   const ctx = {Date, String, Intl, encodeURIComponent}; vm.runInNewContext("const esc=v=>String(v??'').replace(/[&<>\"']/g,'');" + script.slice(start, end).replace('let exceptions=[];', 'var exceptions=[];') + ';this.ctl=exceptionControls;this.set=v=>{exceptions=v}', ctx);
-  assert.match(ctx.ctl('p1', 'w1', 'usaw'), /Allow booking anyway.*data-exc-grant="p1\|w1\|usaw"/s);
+  assert.match(ctx.ctl('p1', 'w1', 'usaw'), /Allow booking and check-in anyway.*data-exc-grant="p1\|w1\|usaw"/s);
   ctx.set([{id: 'e1', userId: 'p1', wrestlerId: 'w1', rule: 'usaw', endsOn: '2027-01-15', reason: 'Renewal pending'}]);
-  assert.match(ctx.ctl('p1', 'w1', 'usaw'), /Booking allowed until <strong>Jan 15, 2027<\/strong>.*Renewal pending.*data-exc-remove="e1"/s);
-  assert.match(ctx.ctl('p1', 'w1', 'waiver'), /Allow booking anyway/, 'per rule');
+  assert.match(ctx.ctl('p1', 'w1', 'usaw'), /Booking and check-in allowed until <strong>Jan 15, 2027<\/strong>.*Renewal pending.*data-exc-remove="e1"/s);
+  assert.match(ctx.ctl('p1', 'w1', 'waiver'), /Allow booking and check-in anyway/, 'per rule');
 }
 console.log('Owner exception tests passed');

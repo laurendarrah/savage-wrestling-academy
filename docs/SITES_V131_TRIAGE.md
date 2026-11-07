@@ -288,6 +288,8 @@ Entries 06, 07, 08, 10, 14 (previews), 16, 19, 22, 24, 26 (tables), 30â€“37, 39â
 
 ## Questions for Justin
 
+Justin answered these in #197. Q9 (no year paid upfront), Q10 (no waitlists), Q11 (a card problem blocks check-in) and Q13 (30-day renewal list) are built in #210, which supersedes the "Decision needed" and "Conflicts" notes on entries 24 and 63 and the upfront-membership note above.
+
 **Pay and time**
 
 1. Should practices pay head coaches $40 an hour and assistants $30 an hour, or should each coach have their own rate?

@@ -4,6 +4,7 @@
 //
 // Usage: see scripts/e2e/run.sh
 import {createRequire} from 'node:module';
+import {execFileSync} from 'node:child_process';
 import {start, sessionCookie, users} from './fake-supabase.mjs';
 import {start as startUsaw} from './fake-usaw.mjs';
 const require = createRequire(import.meta.url);
@@ -11,6 +12,9 @@ let playwright;
 for (const p of ['playwright', '/opt/node-tools/node_modules/playwright']) { try { playwright = require(p); break; } catch {} }
 const BASE = process.env.E2E_BASE || 'http://127.0.0.1:8799', AUTH = process.env.E2E_SUPABASE || 'http://127.0.0.1:54321';
 const SHOTS = process.env.E2E_SHOTS || '';
+// The local database of the running site (run.sh), for records that can no longer be made through the site itself.
+const PERSIST = process.env.E2E_PERSIST || '.wrangler/e2e';
+const sql = q => JSON.parse(execFileSync('node', ['--import', './scripts/local-env.mjs', './node_modules/wrangler/bin/wrangler.js', 'd1', 'execute', 'DB', '--local', '--config', 'dist/server/wrangler.json', '--persist-to', PERSIST, '--json', '--command', q], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}))[0].results;
 const auth = await start(+new URL(AUTH).port);
 // USA Wrestling's verify page is a local stand-in (issue #202); the site is started with USAW_LOOKUP_BASE pointing here.
 const USAW = process.env.E2E_USAW || 'http://127.0.0.1:54331';
@@ -68,7 +72,8 @@ await step('on a fresh site the owner publishes the programs with one click', as
   await waitText(owner, '#syncStatus', /All changes saved/);
   await owner.waitForSelector('[data-launch="programs"][data-status="done"]', {state: 'attached'});
   const after = await api(owner, '/api/public-schedule');
-  expect(JSON.stringify(after.body.programs.map(p => [p.name, p.monthlyCents, p.annualCents, p.walkInCents])) === JSON.stringify([['SWA Development', 20000, 240000, 4000], ['SWA Intermediate', 20000, 240000, 4000], ['SWA Advance', 20000, 240000, 4000]]), 'published programs: ' + JSON.stringify(after.body.programs));
+  // Monthly and walk-in prices only: a year paid upfront is not offered (#210).
+  expect(JSON.stringify(after.body.programs.map(p => [p.name, p.monthlyCents, p.walkInCents, p.annualCents])) === JSON.stringify([['SWA Development', 20000, 4000, undefined], ['SWA Intermediate', 20000, 4000, undefined], ['SWA Advance', 20000, 4000, undefined]]), 'published programs: ' + JSON.stringify(after.body.programs));
   await pub.goto(BASE + '/welcome'); await waitText(pub, '#programs', /SWA Development[\s\S]*SWA Intermediate[\s\S]*SWA Advance/);
   await shot(pub, 'welcome-programs'); await pub.close();
 });
@@ -175,7 +180,7 @@ await step('owner sees the card on /cards, marks it not valid; family is blocked
   await owner.fill('#rows input[id^=note]', 'Number not found');
   await owner.click('#rows button:has-text("Not valid")');
   await waitText(owner, '#status', /Marked not valid/);
-  const r = await api(family, '/api/registration', {wrestlerId: (await api(family, '/api/family')).body.data.wrestlers[0].id, program: 'Intermediate', plan: 'annual'});
+  const r = await api(family, '/api/registration', {wrestlerId: (await api(family, '/api/family')).body.data.wrestlers[0].id, program: 'Intermediate', plan: 'monthly'});
   expect(r.status === 403 && /could not verify .*Number not found/.test(r.body.error), 'expected refusal, got ' + JSON.stringify(r));
   await shot(owner, 'owner-cards');
 });
@@ -239,7 +244,7 @@ await step('owner publishes a waiver; family is blocked until they sign it on /w
   await owner.goto(BASE + '/waivers');
   await owner.fill('#wTitle', 'Participation waiver'); await owner.fill('#wBody', 'Sample waiver text for testing. '.repeat(10));
   await owner.click('#publish'); await waitText(owner, '#status', /Published/);
-  const r = await api(family, '/api/registration', {wrestlerId: samId, program: 'Intermediate', plan: 'annual'});
+  const r = await api(family, '/api/registration', {wrestlerId: samId, program: 'Intermediate', plan: 'monthly'});
   expect(r.status === 403 && /needs a signed Participation waiver/.test(r.body.error), 'expected waiver block: ' + JSON.stringify(r.body));
   await family.goto(BASE + '/family'); await waitText(family, '#savedDetails', /Waiver not signed/);
   await family.goto(BASE + '/waiver?wrestler=' + samId); await family.waitForSelector('#signatureCanvas');
@@ -323,16 +328,21 @@ await step('family reviews a walk-in once card and waiver are in order', async (
   await shot(family, 'register-review');
 });
 
-// ---------- Owner records a cash membership; roster, check-in and QR ----------
-await step('owner records a cash membership on /payments', async () => {
+// ---------- No year paid upfront; a membership paid upfront earlier still counts; roster, check-in and QR ----------
+await step('no year paid upfront anywhere; a membership paid upfront before the change still counts', async () => {
+  // Families are offered the monthly membership and walk-ins only (#210).
+  await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
+  expect(!(await family.$('#plan-annual')) && !/upfront/i.test(await family.locator('main').innerText()), 'the register page offers no upfront year');
+  const refused = await api(family, '/api/registration', {wrestlerId: samId, program: 'Intermediate', plan: 'annual'});
+  expect(refused.status === 400 && /no longer offered/.test(refused.body.error), 'upfront year refused: ' + JSON.stringify(refused.body));
   await owner.goto(BASE + '/payments');
   await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
-  await owner.selectOption('#family', {label: 'Pat Example · family.a@example.test'});
-  await owner.selectOption('#kind', 'annual'); await owner.waitForTimeout(300); await owner.selectOption('#program', 'Intermediate');
-  await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])');
-  await owner.selectOption('#method', 'check'); await owner.fill('#note', 'Check 1042'); await owner.click('#record');
-  await waitText(owner, '#status', /recorded/i);
-  await waitText(owner, '#rows', /Sam Example[\s\S]*\$2,400\.00/);
+  expect(!(await owner.$$eval('#kind option', os => os.some(o => o.value === 'annual'))), 'the owner cannot record a year paid upfront');
+  // Sam's membership was paid upfront in cash before #210, so it is already in the database; it stays valid.
+  const start = ny(-20);
+  sql(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
+    VALUES ('e2e-upfront-sam','e2e-family-a','family.a@example.test','${samId}','Sam Example','annual','Intermediate','Intermediate','SWA Intermediate: 12-month membership, paid upfront','[]',240000,0,240000,'usd','{"method":"check","note":"Check 1042","recordedBy":"e2e-owner"}','{"offline":true}','paid','e2e-upfront-sam',0,'${start}T12:00:00.000Z','${start}T12:00:00.000Z','${start}T12:00:00.000Z','${start}','${ny(344)}','offline')`);
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#rows', /Sam Example[\s\S]*Membership \(paid upfront\)[\s\S]*\$2,400\.00/);
 });
 await step('Sam is on today\'s roster; owner checks in, undoes, then a QR scan checks in once', async () => {
   await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Sam Example/);
@@ -352,6 +362,7 @@ await step('family sees the pass, the wrestler view and the membership', async (
   await family.goto(BASE + '/wrestler?id=' + samId); await waitText(family, '#list', /SWA Intermediate/); await waitText(family, '#checkins', /1/);
   await shot(family, 'wrestler-view');
   await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /Active membership/);
+  await waitText(family, '#membershipCards', /\$2,400\.00 paid upfront on/);
   await waitText(family, '#paymentsPill', /^Paid$/);
   await waitText(family, '#purchaseList', /Paid/);
   // Set up, so the family home leads with the next session and the entry pass instead of the guided start (issue #132).
@@ -403,8 +414,8 @@ await step('coach removes an opening nobody booked; the booked one stays', async
   await coach.waitForFunction(n => document.querySelectorAll('[data-slot]').length === n - 1, before);
 });
 
-// ---------- Waitlist ----------
-await step('camp fills; family 2 joins the waitlist from the booking page; owner offers; family 2 can book', async () => {
+// ---------- A full camp is full: no waitlist (#210) ----------
+await step('camp fills; family 2 sees it is full, with no waitlist to join', async () => {
   await family2.goto(BASE + '/family'); await family2.waitForSelector('#familyForm');
   await family2.fill('[name=parentName]', 'Riley Parent'); await family2.click('text=+ Add wrestler'); await family2.fill('#name0', 'Riley Two'); await family2.selectOption('#grade0', '8');
   await fillDetails(family2, 'Casey Emergency');
@@ -425,18 +436,39 @@ await step('camp fills; family 2 joins the waitlist from the booking page; owner
   await waitText(family2, '#description', /9:00 AM–12:00 PM[\s\S]*Time to be announced/);
   // The page is titled with the event and says where each wrestler stands (issue #132).
   await waitText(family2, 'h1', /Winter camp/); await waitText(family2, '#wrestlerStatus', /Riley Two is not registered yet/);
-  await family2.click('#submit'); await waitText(family2, '#status', /Join the waitlist/);
-  await family2.click('#joinWaitlist'); await waitText(family2, '#status', /on the waitlist/);
-  await waitText(family2, '#wrestlerStatus', /Riley Two is on the waitlist/);
+  await family2.click('#submit'); await waitText(family2, '#status', /^This event is full\.$/);
+  expect(!(await family2.$('#joinWaitlist')) && !/waitlist/i.test(await family2.locator('main').innerText()), 'no waitlist on the booking page');
   await family.goto(BASE + '/booking?type=event&id=winter-camp'); await waitText(family, '#wrestlerStatus', /Sam Example is already registered/);
-  await owner.goto(BASE + '/waitlists'); await waitText(owner, '#events', /Riley Two/);
-  await owner.locator('[data-offer]').first().click(); await waitText(owner, '#status', /Seat offered/);
-  // The camp was full, so the owner confirmed going over the limit; the page says so instead of a negative number.
-  await waitText(owner, '#events', /Full: 1 over the 1-seat limit/);
-  await family2.goto(BASE + '/family'); await waitText(family2, '#waitlistList', /Seat held for you/);
-  await family2.goto(BASE + '/booking?type=event&id=winter-camp'); await family2.waitForSelector('#submit'); await family2.click('#submit');
-  await family2.waitForFunction(() => /\$160\.00/.test(document.body.textContent), null, {timeout: 30000});
+  await family2.goto(BASE + '/calendar'); expect(!/waitlist/i.test(await family2.locator('body').innerText()), 'no waitlist on the calendar');
+  const gone = await owner.request.get(BASE + '/waitlists', {maxRedirects: 0}); expect(gone.status() === 404, 'the owner waitlist page is gone: ' + gone.status());
+  const api404 = await family2.request.get(BASE + '/api/waitlist'); expect(api404.status() === 404, 'the family waitlist API is gone: ' + api404.status());
+  await family2.goto(BASE + '/family'); expect(!(await family2.$('#waitlist')), 'no waitlist section in the family account');
   expect(rid, 'riley id');
+});
+
+// ---------- USA Wrestling card at check-in (#210) ----------
+await step('a wrestler whose card is not verified can\'t be checked in; the roster says why; an owner exception lets them in', async () => {
+  const rid = await wid(family2);
+  // Riley's card is on file but not verified. Booking still works (with the waiver exception above); check-in does not.
+  const practice = (await api(owner, '/api/roster')).body.sessions.find(s => s.key.startsWith('practice:Intermediate:'));
+  expect(practice, 'an SWA Intermediate practice today');
+  const r = await api(owner, '/api/payments', {action: 'record', userId: 'e2e-family-b', wrestlerId: rid, kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:${practice.start}`, method: 'cash'});
+  expect(r.status === 200, 'walk-in recorded: ' + JSON.stringify(r.body));
+  await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Riley Two can.t be checked in: the USA Wrestling card has not been verified yet\. Check it and mark it verified on the USA Wrestling cards page\./);
+  const row = owner.locator('.row', {hasText: 'Riley Two'}).first();
+  expect(await row.locator('button:has-text("Can’t check in")').isDisabled() && !(await row.locator('[data-checkin]').count()), 'no Check in button for Riley');
+  await shot(owner, 'roster-card-blocked');
+  const pass = (await api(family2, '/api/passes')).body.passes[0].code;
+  let s = await api(owner, '/api/roster', {action: 'scan', date: today, code: pass});
+  expect(s.status === 409 && /Riley Two can.t be checked in/.test(s.body.error), 'scan refused: ' + JSON.stringify(s.body));
+  // The coach sees the same reason, with what to do next.
+  await coach.goto(BASE + '/roster'); await waitText(coach, '#sessions', /Riley Two can.t be checked in[^.]*\. Ask the owner to verify the card\./);
+  // The owner's card exception covers check-in the same way it covers booking.
+  const g = await api(owner, '/api/exceptions', {action: 'grant', userId: 'e2e-family-b', wrestlerId: rid, rule: 'usaw', endsOn: ny(7), reason: 'Card being checked with USA Wrestling'});
+  expect(g.status === 200, 'exception ' + JSON.stringify(g.body));
+  s = await api(owner, '/api/roster', {action: 'scan', date: today, code: pass});
+  expect(s.status === 200 && !s.body.scan.already, 'scan under the exception: ' + JSON.stringify(s.body).slice(0, 200));
+  await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Riley Two[\s\S]*Owner exception: card/);
 });
 
 // ---------- Partner and small-group lessons (issue #177) ----------
@@ -1010,7 +1042,7 @@ const a11yPages = {
   public: ['/welcome', '/team', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/consent', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
   coach: ['/coach', '/roster', '/help/coach', '/coach-profile', '/contract', '/coach-time'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/consent-forms', '/contracts', '/lesson-settings', '/coach-pay', '/timesheets', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/consent-forms', '/contracts', '/lesson-settings', '/coach-pay', '/timesheets', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {

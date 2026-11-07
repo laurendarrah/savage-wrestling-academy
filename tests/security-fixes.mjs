@@ -54,8 +54,6 @@ const card = {usawNumber: 'AB1234', usawExpires: '2099-12-31'};
 for (const u of ['p1', 'p2']) fam(u, [{id: 'w-' + u, name: 'Wrestler ' + u, grade: '8', ...card}]);
 
 const quotes = load(path.resolve('lib/quotes.ts'));
-const familyWaitlist = load(path.resolve('app/api/waitlist/route.ts'));
-const ownerWaitlist = load(path.resolve('app/api/waitlists/route.ts'));
 const payments = load(path.resolve('app/api/payments/route.ts'));
 const waiversApi = load(path.resolve('app/api/waivers/route.ts'));
 const waiverApi = load(path.resolve('app/api/waiver/route.ts'));
@@ -66,21 +64,12 @@ const O = 'https://a.test';
 const call = async (route, method, body) => { const r = await route[method](new Request(O + '/x', method === 'GET' ? {} : {method, headers: {'content-type': 'application/json', origin: O}, body: JSON.stringify(body)})); return {status: r.status, body: await r.json()}; };
 const as = id => { actor = id === 'owner' ? {owner: true, id: 'owner-id'} : {owner: false, id}; };
 
-// --- 1. A waitlist offer covers only the days it was made for ---
+// --- 1. A full camp is full for the whole camp and for each single day (no waitlist offers since #210) ---
 as('owner'); assert.equal((await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w-p1', kind: 'event', eventId: 'camp', method: 'cash'})).status, 200);
-as('p2'); assert.equal((await call(familyWaitlist, 'POST', {action: 'join', eventId: 'camp', wrestlerId: 'w-p2', option: ny(10)})).status, 200);
-const entry = (await call(familyWaitlist, 'GET')).body.entries[0].id;
-as('owner'); assert.equal((await call(ownerWaitlist, 'POST', {action: 'offer', id: entry, hours: 24})).status, 200);
 let q = await quotes.quoteBooking('p2', {type: 'event', wrestlerId: 'w-p2', id: 'camp', option: 'full'});
-assert.equal(q.ok, false, 'a one-day offer cannot book the whole camp'); assert.equal(q.extra.waitlist, true);
+assert.equal(q.ok, false); assert.equal(q.error, 'This event is full.');
 q = await quotes.quoteBooking('p2', {type: 'event', wrestlerId: 'w-p2', id: 'camp', option: ny(10)});
-assert.equal(q.ok, true, 'the offered day can be booked');
-// A second, overlapping registration is refused while the first is in progress.
-sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at)
-  VALUES ('pend','p2','e','w-p2','W','event','camp','Camp',?,9000,0,9000,'usd','{}','{}','pending',?,0,?,?)`).run(JSON.stringify([ny(10)]), `p2|w-p2|event|camp|${ny(10)}`, new Date().toISOString(), new Date().toISOString());
-sqlite.prepare("UPDATE waitlist_entries SET option='full',dates=? WHERE id=?").run(JSON.stringify([ny(10), ny(11)]), entry);
-q = await quotes.quoteBooking('p2', {type: 'event', wrestlerId: 'w-p2', id: 'camp', option: 'full'});
-assert.match(q.error, /already registered for this event, or a payment for it is in progress/);
+assert.equal(q.ok, false, 'a single day of a full camp is full too'); assert.equal(q.error, 'This event is full.');
 
 // --- 2. Coach emails never reach families ---
 sqlite.prepare("INSERT INTO staff_access VALUES ('dana@example.test','Coach Dana','[]',1,'x')").run();

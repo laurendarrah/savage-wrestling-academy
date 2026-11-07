@@ -3,19 +3,18 @@
 // member pricing and family page treat them exactly like online payments.
 import {env} from 'cloudflare:workers';
 import {quoteMembership, quoteBooking, type Quote} from './quotes';
-import {membershipTerm} from './membership-term';
 import {academyToday} from './public-schedule';
 import {withinCapacity} from './capacity';
-import {acceptStatement} from './waitlist';
 import {noticePaymentRecorded, noticeLessonBooked, quietly} from './notify';
 
 export const METHODS = ['cash', 'check', 'venmo', 'zelle', 'card-in-person', 'other'] as const;
-export const OFFLINE_KINDS = ['annual', 'walkin', 'event', 'live', 'lesson'] as const;
+// A membership paid upfront for the year is not offered, online or at the academy (decision Q9 in #197, issue #210).
+export const OFFLINE_KINDS = ['walkin', 'event', 'live', 'lesson'] as const;
 type Kind = typeof OFFLINE_KINDS[number];
 
 export type OfflineInput = {
   userId: string; wrestlerId: string; kind: Kind;
-  program?: string; date?: string; practiceId?: string;   // annual, walkin
+  program?: string; date?: string; practiceId?: string;   // walkin
   eventId?: string; option?: string;                       // event
   liveId?: string;                                         // live (uses date)
   openingId?: string; format?: string;                     // lesson
@@ -30,7 +29,7 @@ export async function previewOffline(input: OfflineInput): Promise<Quote> {
     return {ok: false, status: 400, error: 'Choose a family, wrestler and payment type.'};
   const family = await env.DB!.prepare('SELECT user_id FROM family_accounts WHERE user_id=?').bind(input.userId).first();
   if (!family) return {ok: false, status: 404, error: 'Family account not found.'};
-  if (input.kind === 'annual' || input.kind === 'walkin')
+  if (input.kind === 'walkin')
     return quoteMembership(input.userId, {wrestlerId: input.wrestlerId, program: input.program, plan: input.kind, date: input.date, practiceId: input.practiceId});
   if (input.kind === 'event')
     return quoteBooking(input.userId, {type: 'event', wrestlerId: input.wrestlerId, id: input.eventId, option: input.option || 'full'});
@@ -52,7 +51,6 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
   const paidOn = input.paidOn === undefined || input.paidOn === '' ? academyToday() : input.paidOn;
   if (!validDate(paidOn) || paidOn > academyToday()) return {status: 400, error: 'Choose the date the payment was received. It cannot be in the future.'};
   const user = await env.DB!.prepare('SELECT email FROM family_accounts WHERE user_id=?').bind(input.userId).first<{email: string}>();
-  const term = charge.kind === 'annual' ? membershipTerm(paidOn) : null;
   const id = crypto.randomUUID(), at = new Date().toISOString();
   const pricing = {...charge.pricing, method: input.method, note, recordedBy: ownerId, listedCents: charge.amountCents};
   try {
@@ -61,7 +59,7 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'usd',?,?,'paid',?,0,?,?,?,?,?,'offline')`
     ).bind(id, input.userId, user!.email, quote.wrestler.id, quote.wrestler.name, charge.kind, charge.program, charge.itemId, charge.itemLabel,
       JSON.stringify(charge.dates), charge.baseCents, charge.baseCents - amount, amount, JSON.stringify(pricing), JSON.stringify({offline: true, recordedBy: ownerId, at}),
-      charge.dedupeKey, at, at, paidOn + 'T12:00:00.000Z', term?.start ?? null, term?.end ?? null).run();
+      charge.dedupeKey, at, at, paidOn + 'T12:00:00.000Z', null, null).run();
   } catch {
     return {status: 409, error: 'This wrestler already has a payment recorded for this item.'};
   }
@@ -70,7 +68,6 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
     await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=?").bind(at, id).run();
     return {status: 409, error: charge.kind === 'lesson' ? 'This lesson just filled up. The payment was not recorded.' : 'This event just filled up. The payment was not recorded.'};
   }
-  if (charge.kind === 'event') await acceptStatement(charge.itemId, input.userId, quote.wrestler.id, at).run();
   await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
     .bind(crypto.randomUUID(), ownerId, 'offline_payment_recorded', `${id} ${charge.kind} ${amount}`, at).run();
   await quietly(() => noticePaymentRecorded(id));

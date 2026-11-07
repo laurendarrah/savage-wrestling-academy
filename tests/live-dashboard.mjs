@@ -12,7 +12,6 @@ const responses = {
   '/api/usaw-cards': {cards: [{state: 'current'}, {state: 'expired'}, {state: 'missing'}, {state: 'verified'}]},
   '/api/waivers': {current: {id: 'v'}, wrestlers: [{signed: true}, {signed: false}]},
   '/api/messages': {families: [{unread: 2}, {unread: 1}, {unread: 0}]},
-  '/api/waitlists': {events: [{entries: [{status: 'waiting'}, {status: 'offered'}, {status: 'accepted'}]}]},
 };
 let fetched = [];
 const location = {hash: '', href: ''};
@@ -30,7 +29,7 @@ assert.match(tiles, /Sessions today<\/span><b[^>]*>2<\/b>.*2 of 4 wrestlers chec
 assert.match(tiles, /Blocked by USA Wrestling card<\/span><b[^>]*color:#b12c38[^>]*>2<\/b>/s);
 assert.match(tiles, /Waiver not signed<\/span><b[^>]*>1</s);
 assert.match(tiles, /Unread family messages<\/span><b[^>]*>3</s);
-assert.match(tiles, /On waitlists<\/span><b[^>]*>1<\/b>.*1 seat offered/s);
+assert.ok(!tiles.includes('waitlist') && !fetched.includes('/api/waitlists'), 'no waitlist tile (#210)');
 assert.match(tiles, /Collected this month<\/span><b[^>]*>\$1,234\.50<\/b>.*7 payments/s);
 assert.ok(fetched.some(u => /^\/api\/payments\?from=\d{4}-\d{2}-01$/.test(u)));
 // A tile is left out when its data is unavailable (for example no waiver in force).

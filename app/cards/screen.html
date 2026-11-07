@@ -11,17 +11,18 @@ async function loadExceptions(){try{const r=await fetch('/api/exceptions',{cache
 const exceptionOf=(userId,wrestlerId,rule)=>exceptions.find(x=>x.userId===userId&&x.wrestlerId===wrestlerId&&x.rule===rule);
 function exceptionControls(userId,wrestlerId,rule){
  const x=exceptionOf(userId,wrestlerId,rule),key=esc(userId+'|'+wrestlerId+'|'+rule);
- if(x)return '<div class="exc">Booking allowed until <strong>'+esc(new Date(x.endsOn+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}))+'</strong><br><span class="muted">'+esc(x.reason)+'</span><br><button type="button" data-exc-remove="'+esc(x.id)+'">Remove exception</button></div>';
+ if(x)return '<div class="exc">Booking and check-in allowed until <strong>'+esc(new Date(x.endsOn+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}))+'</strong><br><span class="muted">'+esc(x.reason)+'</span><br><button type="button" data-exc-remove="'+esc(x.id)+'">Remove exception</button></div>';
  const max=new Date(Date.now()+366*864e5).toISOString().slice(0,10),min=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
- return '<details class="exc"><summary>Allow booking anyway</summary><label>Until<input type="date" min="'+min+'" max="'+max+'" data-exc-until="'+key+'"></label><label>Reason<input maxlength="300" data-exc-reason="'+key+'" placeholder="Renewal pending, paper waiver on file…"></label><button type="button" data-exc-grant="'+key+'">Allow</button></details>';
+ return '<details class="exc"><summary>Allow booking and check-in anyway</summary><label>Until<input type="date" min="'+min+'" max="'+max+'" data-exc-until="'+key+'"></label><label>Reason<input maxlength="300" data-exc-reason="'+key+'" placeholder="Renewal pending, paper waiver on file…"></label><button type="button" data-exc-grant="'+key+'">Allow</button></details>';
 }
 function wireExceptions(after){
  document.querySelectorAll('[data-exc-grant]').forEach(b=>b.onclick=async()=>{const [userId,wrestlerId,rule]=b.dataset.excGrant.split('|');try{const r=await fetch('/api/exceptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'grant',userId,wrestlerId,rule,endsOn:document.querySelector('[data-exc-until="'+b.dataset.excGrant+'"]').value,reason:document.querySelector('[data-exc-reason="'+b.dataset.excGrant+'"]').value})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not save.');exceptions=d.exceptions;after();$('status').textContent='Exception saved. This wrestler can book until the date you chose.'}catch(e){$('status').textContent=e.message}});
- document.querySelectorAll('[data-exc-remove]').forEach(b=>b.onclick=async()=>{if(!confirm('Remove this exception? Booking will be blocked again.'))return;try{const r=await fetch('/api/exceptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'remove',id:b.dataset.excRemove})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not remove.');exceptions=d.exceptions;after();$('status').textContent='Exception removed.'}catch(e){$('status').textContent=e.message}});
+ document.querySelectorAll('[data-exc-remove]').forEach(b=>b.onclick=async()=>{if(!confirm('Remove this exception? Booking and check-in will be blocked again.'))return;try{const r=await fetch('/api/exceptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'remove',id:b.dataset.excRemove})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not remove.');exceptions=d.exceptions;after();$('status').textContent='Exception removed.'}catch(e){$('status').textContent=e.message}});
 }
 
 const addDays=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')+n*864e5).toISOString().slice(0,10);
-const soon=c=>(c.state==='current'||c.state==='verified')&&c.expires<=addDays(data.date,30);
+// The renewal list (issue #210): a current card expiring within the server's renewal window of the chosen date.
+const soon=c=>(c.state==='current'||c.state==='verified')&&Number.isInteger(data.renewalDays)&&c.expires<=addDays(data.date,data.renewalDays);
 const blocked=c=>['missing','expired','invalid','recheck'].includes(c.state);
 const labels={missing:'No card on file',expired:'Expired',invalid:'Not valid',recheck:'Changed after rejection · check it',current:'On file',verified:'Verified'};
 // The automatic USA Wrestling check (issue #202): how a card was verified, and what the latest check found.
@@ -44,7 +45,7 @@ async function load(){
 }
 function render(){
  const c=data.cards,q=$('q').value.trim().toLowerCase(),show=$('show').value;
- const rn=data.renewal;if(rn){$('tRenewLabel').textContent=rn.label;$('tRenew').textContent=rn.count;$('renewTile').className='tile'+(rn.august?'':' quiet')}
+ const rn=data.renewal;if(rn){$('tRenewLabel').textContent=rn.label;$('tRenew').textContent=rn.count;$('renewTile').className='tile'+(rn.august?'':' quiet')}const soonLabel=$('tSoon').previousElementSibling;if(soonLabel&&Number.isInteger(data.renewalDays))soonLabel.textContent='Expire within '+data.renewalDays+' days';
  $('tAll').textContent=c.length;$('tBlocked').textContent=c.filter(blocked).length;$('tSoon').textContent=c.filter(soon).length;$('tVerified').textContent=c.filter(x=>x.state==='verified').length;
  const list=c.filter(x=>show==='all'||(show==='problems'?blocked(x)||soon(x)||flagged(x):x.state==='current'||x.state==='recheck')).filter(x=>!q||[x.wrestler,x.parentName,x.email].join(' ').toLowerCase().includes(q))
   .sort((a,b)=>(blocked(b)-blocked(a))||String(a.expires||'').localeCompare(String(b.expires||''))||a.wrestler.localeCompare(b.wrestler));

@@ -198,12 +198,21 @@ assert.equal(w.body.outcome, 'partial-refund'); assert.equal(order(second.id).st
 w = await deliver('charge.refunded', {...charge, refunded: true, amount_refunded: 16000});
 assert.equal(w.body.outcome, 'refunded'); assert.equal(order(second.id).status, 'refunded');
 
-// --- Upfront annual membership: term recorded, then member pricing everywhere ---
+// --- No year paid upfront (#210): refused even when CHECKOUT_KINDS still lists "annual" ---
 let live = await (await post(bookingRoute, {type: 'live', id: 'live-1', date: liveDate, wrestlerId: 'w-1'})).json();
 assert.equal(live.review.cents, 2000, 'non-member price before membership');
+assert.match(env.CHECKOUT_KINDS, /annual/);
 res = await pay({source: 'membership', program: 'Intermediate', plan: 'annual', wrestlerId: 'w-1'});
-body = await res.json(); assert.equal(res.status, 200); assert.equal(body.amountCents, 240000);
-const annual = order(body.orderId);
+body = await res.json(); assert.equal(res.status, 400); assert.match(body.error, /Paying for a full year upfront is no longer offered/);
+assert.equal(sqlite.prepare("SELECT count(*) n FROM orders WHERE kind='annual'").get().n, 0, 'no upfront order is created');
+res = await post(registrationRoute, {program: 'Intermediate', plan: 'annual', wrestlerId: 'w-1'});
+assert.equal(res.status, 400, 'nor reviewed');
+
+// --- A late event for an upfront order started before #210 still records it, with its term and member pricing ---
+sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,stripe_session_id)
+  VALUES ('old-annual','parent-1','pat@example.test','w-1','Sam Example','annual','Intermediate','Intermediate','SWA Intermediate: 12-month membership, paid upfront','[]',240000,0,240000,'usd','{"plan":"annual"}','{}','pending','old-annual-key',0,?,?,'cs_old_annual')`)
+  .run(new Date(Date.now() - 20 * 60000).toISOString(), new Date().toISOString());
+const annual = order('old-annual');
 await deliver('checkout.session.completed', sessionFor(annual));
 const paidAnnual = order(annual.id);
 assert.equal(paidAnnual.status, 'paid');
@@ -213,7 +222,7 @@ assert.equal(live.review.cents, 1000, 'paid members get the Friday Night Live me
 assert.equal(live.review.memberEligible, true);
 const campReview = await (await post(bookingRoute, camp)).json();
 assert.equal(campReview.review.cents, 14400, 'paid members get 10% off camps');
-res = await post(registrationRoute, {program: 'Intermediate', plan: 'annual', wrestlerId: 'w-1'});
+res = await post(registrationRoute, {program: 'Intermediate', plan: 'monthly', wrestlerId: 'w-1'});
 assert.equal(res.status, 409, 'cannot buy a second membership while one is active');
 
 // --- Walk-in uses the scheduled practice and its date ---
@@ -256,4 +265,4 @@ assert.equal(w.status, 200); assert.match(w.body.outcome, /^ignored/);
 w = await deliver('checkout.session.completed', {...sessionFor(liveNew), client_reference_id: 'no-such-order', metadata: {}});
 assert.equal(w.body.outcome, 'rejected:unknown-order');
 
-console.log('Passed: checkout closed by default and per purchase type; server-side prices; terms and origin required; retry after abandoning; webhook signature, amount, mode and session checks; idempotent replays; late events; refunds; annual term dates; paid-member pricing; walk-ins; Stripe outages; double payments flagged.');
+console.log('Passed: checkout closed by default and per purchase type; server-side prices; terms and origin required; retry after abandoning; webhook signature, amount, mode and session checks; idempotent replays; late events; refunds; no upfront year, and a late upfront order still gets its term; paid-member pricing; walk-ins; Stripe outages; double payments flagged.');

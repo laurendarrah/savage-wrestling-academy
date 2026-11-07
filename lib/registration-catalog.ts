@@ -5,7 +5,7 @@ const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturda
 const validPrice=(n:unknown):n is number=>Number.isInteger(n)&&Number(n)>=0&&Number(n)<=1000000;
 export function registrationCatalog(state:any,month:string,today:string){
  state=upgradeProgramNames(state);
- const programs=(Array.isArray(state?.programs)?state.programs:[]).filter((p:any)=>ids.includes(p?.id)).map((p:any)=>({id:p.id,name:String(p.name??p.id).slice(0,100),description:String(p.description??'').slice(0,2000),grades:String(p.grades??'').slice(0,100),monthlyCents:validPrice(p.priceCents)?p.priceCents:null,annualCents:validPrice(p.priceCents)?p.priceCents*12:null,walkInCents:validPrice(p.walkInPriceCents)?p.walkInPriceCents:null}));
+ const programs=(Array.isArray(state?.programs)?state.programs:[]).filter((p:any)=>ids.includes(p?.id)).map((p:any)=>({id:p.id,name:String(p.name??p.id).slice(0,100),description:String(p.description??'').slice(0,2000),grades:String(p.grades??'').slice(0,100),monthlyCents:validPrice(p.priceCents)?p.priceCents:null,walkInCents:validPrice(p.walkInPriceCents)?p.walkInPriceCents:null}));
  const seasons=Array.isArray(state?.seasons)?state.seasons:[];
  const practices:{id:string;program:string;date:string;start:string;end:string}[]=[];
  const [year,mo]=month.split('-').map(Number),count=new Date(Date.UTC(year,mo,0)).getUTCDate();

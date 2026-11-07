@@ -13,10 +13,11 @@ import {cardProblem} from './usaw';
 import {dayDate, dayTime} from './datetime';
 import {waiverProblem} from './waivers';
 import {lessonOpening, lessonSettings, lessonHolders, mayJoin} from './lessons';
-import {settleOffers, activeOffer} from './waitlist';
 import {PROGRAM_ON} from './transfers';
 
-export type ChargeKind = 'walkin' | 'annual' | 'monthly' | 'event' | 'live' | 'lesson';
+// No 'annual': a membership paid upfront for the year is not sold (decision Q9 in #197, issue #210). Orders of that
+// kind made before then still count as memberships below and in the roster, transfers and family history.
+export type ChargeKind = 'walkin' | 'monthly' | 'event' | 'live' | 'lesson';
 export type Charge = {
   kind: ChargeKind;
   program: string | null;
@@ -48,6 +49,7 @@ async function academyState(): Promise<any> {
 }
 
 // A wrestler counts as a member when they hold an active scholarship or a paid membership whose term covers today.
+// 'annual' is kept here so a membership paid upfront before #210 still counts until its term ends.
 export async function paidMembership(userId: string, wrestlerId: string, today: string, program?: string) {
   const row = await env.DB!.prepare(
     `SELECT id, kind, program, term_start, term_end FROM orders
@@ -63,7 +65,9 @@ export async function isMember(userId: string, wrestlerId: string, today: string
 
 // Memberships and walk-ins for the three programs. Mirrors the original /api/registration review rules.
 export async function quoteMembership(userId: string, input: any, opts?: QuoteOptions): Promise<Quote> {
-  if (!input || typeof input.wrestlerId !== 'string' || !['Elementary', 'Intermediate', 'Advanced'].includes(input.program) || !['monthly', 'annual', 'walkin'].includes(input.plan))
+  // An old link or page may still ask for the upfront year (#210); say plainly what is offered instead.
+  if (input?.plan === 'annual') return fail(400, 'Paying for a full year upfront is no longer offered. Choose the monthly membership (12 monthly payments) or a walk-in.');
+  if (!input || typeof input.wrestlerId !== 'string' || !['Elementary', 'Intermediate', 'Advanced'].includes(input.program) || !['monthly', 'walkin'].includes(input.plan))
     return fail(400, 'Choose a saved wrestler, program, and plan.');
   const profile = await familyProfile(userId), w = profile?.wrestlers.find(w => w.id === input.wrestlerId);
   if (!w) return fail(404, 'Saved wrestler not found in your family account.');
@@ -88,7 +92,7 @@ export async function quoteMembership(userId: string, input: any, opts?: QuoteOp
   if (card) return fail(403, card, {usawRequired: true});
   const waiver = await waiverProblem(userId, w, [input.plan === 'walkin' ? date : today]);
   if (waiver) return fail(403, waiver, {waiverRequired: true});
-  const baseCents = input.plan === 'walkin' ? p.walkInCents : input.plan === 'annual' ? p.annualCents : p.monthlyCents;
+  const baseCents = input.plan === 'walkin' ? p.walkInCents : p.monthlyCents;
   const pricing = teamCodeDiscount(state.teamCodes ?? [], input.teamCode, p.id, input.plan, baseCents);
   if ('error' in pricing) return fail(400, pricing.error);
   const review = {
@@ -104,7 +108,7 @@ export async function quoteMembership(userId: string, input: any, opts?: QuoteOp
     charge = {
       kind, program: p.id,
       itemId: kind === 'walkin' ? String(practice!.id) : p.id,
-      itemLabel: kind === 'walkin' ? `${p.name} walk-in` : kind === 'annual' ? `${p.name}: 12-month membership, paid upfront` : `${p.name}: 12-month membership, monthly payment`,
+      itemLabel: kind === 'walkin' ? `${p.name} walk-in` : `${p.name}: 12-month membership, monthly payment`,
       dates: kind === 'walkin' ? [date] : [],
       baseCents, discountCents: baseCents - pricing.cents, amountCents: pricing.cents,
       pricing: {plan: kind, teamCode: input.teamCode ? String(input.teamCode).trim().toUpperCase() : null, discount: pricing.discount ?? null},
@@ -192,45 +196,33 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
   }
   const event = catalog.events.find((e: any) => e.id === input.id);
   if (!event) return fail(409, 'This event is archived or no longer available.');
-  // Waitlist (issue #73): a family holding an offer from the owner may book even though the event looks full.
-  await settleOffers(event.id);
-  const held = await activeOffer(event.id, userId, w.id);
-  const fullError = () => fail(409, 'This event is full. Join the waitlist and the academy can offer you a seat if one opens.', {waitlist: true, eventId: event.id});
+  // A full event is simply full: there are no waitlists (decision Q10 in #197, issue #210).
+  const fullError = () => fail(409, 'This event is full.');
   const option = input.option || 'full';
   if (option !== 'full' && (event.type !== 'Camp' || event.dayCents === null || !event.dates.includes(option) || option < today)) return fail(400, 'Choose an available camp day.');
   if (option === 'full' && event.dates[0] < today) return fail(409, 'This event has already started. Choose a future single camp day if offered, or contact the academy.');
   const eventDates = option === 'full' ? event.dates : [option];
-  // An offer only covers the days it was made for (issue #97): an offer for one camp day cannot book the whole camp.
-  const offerDates: string[] = held ? JSON.parse(held.dates) : [];
-  const offer = held && eventDates.every((d: string) => offerDates.includes(d)) ? held : null;
-  if (event.full && !offer) return fullError();
-  if (offer) {
-    const since = new Date(Date.now() - 35 * 60000).toISOString();
-    const other = await env.DB!.prepare("SELECT 1 FROM orders WHERE user_id=? AND wrestler_id=? AND kind='event' AND item_id=? AND (status='paid' OR (status='pending' AND created_at>=?)) AND dedupe_key<>? LIMIT 1")
-      .bind(userId, w.id, event.id, since, [userId, w.id, 'event', event.id, option].join('|')).first();
-    if (other) return fail(409, 'This wrestler is already registered for this event, or a payment for it is in progress. Check your family account.');
-  }
+  if (event.full) return fullError();
   const card = await cardProblem(userId, w, eventDates);
   if (card) return fail(403, card, {usawRequired: true});
   const waiver = await waiverProblem(userId, w, eventDates);
   if (waiver) return fail(403, waiver, {waiverRequired: true});
   const slots = eventSlots(state, event.id);
   const left = slots === null ? null : await seatsLeft(event.id, eventDates, slots, 'event', {userId, wrestlerId: w.id});
-  if (left !== null && left <= 0 && !offer) return fullError();
+  if (left !== null && left <= 0) return fullError();
   const baseCents = option === 'full' ? event.cents : event.dayCents;
   const memberDiscount = member && event.type === 'Camp' && baseCents !== null ? Math.round(baseCents * .1) : 0;
   const review = {
     type: 'event', title: event.name, wrestler: w.name, dates: option === 'full' ? event.dates : [option], baseCents,
     // Times of the chosen days, for the review only (issue #189). Days without one show "Time to be announced".
     schedule: (event.schedule ?? []).filter((x: any) => eventDates.includes(x.date)),
-    cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, seatsLeft: left, status: 'registration_review', offerExpiresAt: offer?.offer_expires_at ?? null,
+    cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, seatsLeft: left, status: 'registration_review',
     message: (memberDiscount ? 'Your membership is active, so the 10% member discount for camps is applied.' : 'The price shown is the full price for this event.') + tail(opts, baseCents === null ? null : 'event')
   };
   const charge: Charge | null = baseCents === null ? null : {
     kind: 'event', program: null, itemId: String(event.id), itemLabel: option === 'full' ? String(event.name) : `${event.name} on ${dayDate(option)}`,
     dates: option === 'full' ? event.dates : [option], baseCents, discountCents: memberDiscount, amountCents: baseCents - memberDiscount,
-    // A seat offered from the waitlist is the owner's decision, so it is not limited again at checkout.
-    pricing: {member, option, eventType: event.type, slots: offer ? null : slots, ...(offer ? {waitlistOffer: offer.id} : {})}, dedupeKey: [userId, w.id, 'event', event.id, option].join('|')
+    pricing: {member, option, eventType: event.type, slots}, dedupeKey: [userId, w.id, 'event', event.id, option].join('|')
   };
   return {ok: true, review, charge, wrestler};
 }

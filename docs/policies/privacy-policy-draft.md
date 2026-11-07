@@ -29,7 +29,7 @@ Accounts are created by a **parent or guardian** (or an adult wrestler). Childre
 - Payments made in person (cash, check and similar) that the academy records for you.
 - Attendance: the date and session each wrestler was checked in.
 - Entry passes: a random code for each wrestler, shown as a QR code.
-- Waitlist places and seat offers, private lesson bookings, and program transfers.
+- Private lesson bookings and program transfers, and any waitlist places from before waitlists were removed.
 - The academy's review of a USA Wrestling card (for example, "verified" or "could not verify", with a reason).
 - The result of checking a USA Wrestling card number: whether the membership is active, the name and state USA Wrestling shows for that number, and the date of the check. See "USA Wrestling card checks" below.
 - Security records: sign-ins and sensitive actions (for example, a payment recorded or a waiver signed), with the time.
@@ -44,7 +44,7 @@ We use only the cookies needed to keep you signed in securely. We do not use adv
 - To check wrestlers in at the door and keep rosters for coaches.
 - To confirm that every wrestler has a current USA Wrestling card and a signed waiver before booking, as the academy requires.
 - To reach someone quickly and look after a wrestler who is hurt or unwell at practice.
-- To send you notices and messages (for example, a card about to expire, a waitlist seat held for you, a payment received) in your account and, [Decision: once email is set up], by email.
+- To send you notices and messages (for example, a card about to expire, a payment received) in your account and, [Decision: once email is set up], by email.
 - To keep the site secure, prevent misuse and fix problems.
 - To keep records the academy needs for accounting, insurance and legal reasons.
 
@@ -57,7 +57,7 @@ When you add or change a wrestler's USA Wrestling card number, or choose "Check 
 ## Who can see it
 
 - **The academy owner** can see all family accounts and records.
-- **Coaches** see the wrestlers registered for practices in the programs they coach (names, grades, parent name and phone, check-in status, and whether a card or waiver needs attention), and the lessons booked with them. Coaches do not see family email addresses or payment details.
+- **Coaches** see the wrestlers registered for practices in the programs they coach (names, grades, parent name and phone, check-in status, and whether a card or waiver needs attention, including why a wrestler can't be checked in), and the lessons booked with them. Coaches do not see family email addresses or payment details.
 - **Other families** never see your information.
 
 ## Service providers

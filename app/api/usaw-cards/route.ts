@@ -3,7 +3,7 @@
 import {env} from 'cloudflare:workers';
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyToday} from '../../../lib/public-schedule';
-import {listCards, setReview, clearReview, cardStatus, cardRenewal} from '../../../lib/usaw';
+import {listCards, setReview, clearReview, cardStatus, cardRenewal, CARD_RENEWAL_DAYS} from '../../../lib/usaw';
 import {noticeCardRejected, quietly} from '../../../lib/notify';
 import {checkCard} from '../../../lib/usaw-check';
 export const dynamic = 'force-dynamic';
@@ -16,8 +16,9 @@ export async function GET(request: Request) {
   const q = new URL(request.url).searchParams, today = academyToday(), date = q.get('date') || today;
   if (!validDate(date)) return reply({error: 'Choose a valid date.'}, 400);
   const cards = await listCards(date);
-  // The season summary is about today, whatever date the owner checks cards on (issue #131).
-  return reply({today, date, cards, renewal: cardRenewal(cards, today)});
+  // The season summary is about today, whatever date the owner checks cards on (issue #131). renewalDays is the
+  // renewal-list window (issue #210).
+  return reply({today, date, cards, renewal: cardRenewal(cards, today), renewalDays: CARD_RENEWAL_DAYS});
 }
 
 export async function POST(request: Request) {

@@ -48,7 +48,8 @@ function page(file, {fetch, search = '', hidden = []}) {
   const cards = el('programs').innerHTML;
   assert.match(cards, /<span class="grades" style="[^"]*">Grades K–6<\/span><h3>SWA Development<\/h3>/, 'grades fall back to the program rules, shown as a label above the name');
   assert.doesNotMatch(cards, /class="swatch"/, 'no colour square that looks like a checkbox (issue #171)');
-  assert.match(cards, /\$200 a month for a 12-month membership, or \$2,400 paid upfront/);
+  assert.match(cards, /\$200 a month for a 12-month membership/);
+  assert.doesNotMatch(cards, /upfront|2,400/, 'no year paid upfront (#210)');
   assert.match(cards, /\$40 for a single walk-in practice/);
   // Weekly practice times on each card, from the published practices (issue #180).
   assert.match(cards, /SWA Development<\/h3><span class="times">Mon · 6:00–7:30 PM<\/span>/);
@@ -156,17 +157,19 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
 {
   const html = readFileSync('app/register/screen.html', 'utf8'), script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   assert.doesNotMatch(html, /<select id="plan"/, 'no plan dropdown');
-  for (const k of ['monthly', 'annual', 'walkin']) assert.match(html, new RegExp(`<input type="radio" name="planChoice" id="plan-${k}" value="${k}"`));
+  for (const k of ['monthly', 'walkin']) assert.match(html, new RegExp(`<input type="radio" name="planChoice" id="plan-${k}" value="${k}"`));
   assert.match(html, /<details class="included" id="included"><summary>What’s included<\/summary><p>Includes every scheduled practice/, 'the policy paragraph sits behind a disclosure');
   const line = start => { const i = script.indexOf(start); assert.ok(i >= 0, start); return script.slice(i, script.indexOf('\n', i)); };
   const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {value: '', textContent: '', checked: false}); return nodes.get(id); };
   const ctx = {Intl, $: el}; vm.runInNewContext(line('const money=') + '\n' + line('function choosePlan') + '\n' + line('function renderPlanCards'), ctx);
   el('plan').value = 'monthly';
-  ctx.renderPlanCards({monthlyCents: 20000, annualCents: 240000, walkInCents: 4000});
+  ctx.renderPlanCards({monthlyCents: 20000, walkInCents: 4000});
   assert.equal(el('planPrice-monthly').textContent, '$200.00 a month'); assert.equal(el('planTerm-monthly').textContent, '12 monthly payments · $2,400.00 total');
-  assert.equal(el('planPrice-annual').textContent, '$2,400.00'); assert.equal(el('planPrice-walkin').textContent, '$40.00');
+  assert.equal(el('planPrice-walkin').textContent, '$40.00');
+  assert.equal(el('planPrice-annual').textContent, '', 'no upfront plan card (#210)');
+  assert.doesNotMatch(html, /plan-annual|paid upfront/, 'the register page offers only monthly and walk-in');
   assert.equal(el('plan-monthly').checked, true); assert.equal(el('plan-walkin').checked, false);
-  ctx.renderPlanCards({monthlyCents: null, annualCents: null, walkInCents: 4000});
+  ctx.renderPlanCards({monthlyCents: null, walkInCents: 4000});
   assert.equal(el('planPrice-monthly').textContent, 'Price to be set by the academy'); assert.equal(el('planTerm-monthly').textContent, '12 monthly payments');
   let changed = 0; el('plan').onchange = () => changed++;
   ctx.choosePlan('walkin'); assert.equal(el('plan').value, 'walkin'); assert.equal(changed, 1, 'a card choice runs the same update as before');
@@ -203,9 +206,9 @@ const formats = [{id: 'one-on-one', name: 'One-on-one lesson', description: 'd',
 }
 
 // ---------- Event booking (M3) ----------
-async function booking({orders = [], entries = []}) {
+async function booking({orders = []}) {
   const catalog = {month: '2026-11', today: '2026-11-06', programs: [], practices: [], liveClasses: [], privateFormats: [], events: [{id: 'camp', name: 'Winter camp', type: 'Camp', dates: ['2026-11-16', '2026-11-17'], cents: 16000, dayCents: 9000, gradeRange: '', description: ''}]};
-  const p = page('app/booking/screen.html', {search: '?type=event&id=camp', fetch: async url => json(url === '/api/family' ? {data: {wrestlers: [{id: 'w-1', name: 'Sam Example', grade: 'K'}]}} : url === '/api/orders' ? {orders} : url === '/api/waitlist' ? {entries} : catalog)});
+  const p = page('app/booking/screen.html', {search: '?type=event&id=camp', fetch: async url => json(url === '/api/family' ? {data: {wrestlers: [{id: 'w-1', name: 'Sam Example', grade: 'K'}]}} : url === '/api/orders' ? {orders} : catalog)});
   await settle(); p.el('wrestler').value = 'w-1'; vm.runInContext('showWrestlerStatus()', p.ctx); return p;
 }
 {
@@ -221,8 +224,11 @@ async function booking({orders = [], entries = []}) {
   assert.equal(el('wrestlerStatus').textContent, 'Sam Example is already registered. You don’t need to book again.'); assert.match(el('wrestlerStatus').className, /ok/);
 }
 {
-  const {el} = await booking({orders: [{kind: 'event', item_id: 'other', wrestler_id: 'w-1', status: 'paid', dates: []}], entries: [{eventId: 'camp', wrestler: 'Sam Example', status: 'waiting', position: 2}]});
-  assert.equal(el('wrestlerStatus').textContent, 'Sam Example is on the waitlist, number 2 in line. The academy can offer a seat if one opens.');
+  // No waitlists (#210): the page only asks for the family's orders.
+  const {el, calls, html} = await booking({orders: [{kind: 'event', item_id: 'other', wrestler_id: 'w-1', status: 'paid', dates: []}]});
+  assert.equal(el('wrestlerStatus').textContent, 'Sam Example is not registered yet.');
+  assert.ok(!calls.some(c => c.url.includes('waitlist')), 'no waitlist request');
+  assert.doesNotMatch(html, /joinWaitlist|Join the waitlist/);
 }
 
 // ---------- Messages (P3) ----------

@@ -109,22 +109,22 @@ state.extraPractices.push({...state.extraPractices[0],id:'clinic',name:'Live Cli
 state.extraPractices[0].enabled=false;sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));assert.equal((await booking.POST(bReq(liveBody))).status,409);state.extraPractices=[];sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));assert.equal((await booking.POST(bReq(liveBody))).status,409);
 console.log('Passed: named practice/date lookup, same-day offerings use their own prices, forged membership/amount ignored, saved wrestler isolation, unselected dates, hide and removal.');
 
-// Annual totals and commitment length come from saved prices, not browser input.
-const annual=await review('kid-7',{program:'Intermediate',plan:'annual',cents:1,totalCents:1,paymentCount:999,termMonths:1});
-assert.equal(annual.status,200);
-const annualBody=await annual.json();
-assert.equal(annualBody.review.cents,240000);
-assert.equal(annualBody.review.totalCents,240000);
-assert.equal(annualBody.review.paymentCount,1);
-assert.equal(annualBody.review.termMonths,12);
-assert.equal(annualBody.review.renewal,'manual');
-assert.equal(annualBody.review.termsStatus,'draft');
-assert.equal(annualBody.paymentsEnabled,false);
-const installments=await (await review('kid-7',{program:'Intermediate'})).json();
+// Monthly totals and commitment length come from saved prices, not browser input.
+const monthly=await review('kid-7',{program:'Intermediate',plan:'monthly',cents:1,totalCents:1,paymentCount:999,termMonths:1});
+assert.equal(monthly.status,200);
+const installments=await monthly.json();
+assert.equal(installments.review.cents,20000);
 assert.equal(installments.review.paymentCount,12);
 assert.equal(installments.review.totalCents,240000);
-assert.equal((await review('kid-7',{program:'Intermediate',plan:'annual',teamCode:'SCHOOL15'})).status,400);
-assert.equal((await review('kid-7',{program:'Advanced',plan:'annual',approved:true})).status,403);
+assert.equal(installments.review.termMonths,12);
+assert.equal(installments.review.renewal,'manual');
+assert.equal(installments.review.termsStatus,'draft');
+assert.equal(installments.paymentsEnabled,false);
+// No year paid upfront (decision Q9 in #197, issue #210), whatever the browser sends.
+const upfront=await review('kid-7',{program:'Intermediate',plan:'annual',cents:240000});
+assert.equal(upfront.status,400);
+assert.match((await upfront.json()).error,/Paying for a full year upfront is no longer offered\. Choose the monthly membership/);
+assert.equal((await review('kid-7',{program:'Advanced',plan:'monthly',approved:true})).status,403);
 assert.equal((await review('kid-7',{program:'Intermediate',plan:'month-to-month'})).status,400);
-assert.equal((await review('foreign-kid',{program:'Intermediate',plan:'annual'})).status,404);
-console.log('Passed: annual upfront price, 12 installment total, term/renewal controls, forged-price rejection, draft/payment gate and annual approval/account isolation.');
+assert.equal((await review('foreign-kid',{program:'Intermediate',plan:'monthly'})).status,404);
+console.log('Passed: 12 installment total, term/renewal controls, forged-price rejection, draft/payment gate, no upfront year, and approval/account isolation.');

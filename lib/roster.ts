@@ -4,9 +4,10 @@ import {publicSchedule} from './public-schedule';
 import {cardStatus, type CardStatus} from './usaw';
 import {currentWaiver} from './waivers';
 import {PROGRAM_ON} from './transfers';
+import {fullDate} from './datetime';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
-export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]};
+export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]; checkInBlocked: string | null};
 // Allergies or medical notes and the emergency contact (issue #188, decided in #197 question 14). The roster is for staff
 // only, and coaches get only their own programs' practices (canSee).
 export type SafetyDetails = {allergies: string | null; emergencyName: string | null; emergencyPhone: string | null};
@@ -39,6 +40,26 @@ export function sessionsOn(state: any, date: string): Session[] {
     return {key: `event:${e.id}:${date}`, type: 'event', title: e.name, program: null, date, start: timed?.start ?? null, end: timed?.end ?? null};
   });
   return [...practices, ...live, ...events].sort((a, b) => (a.start ?? '99') .localeCompare(b.start ?? '99') || a.title.localeCompare(b.title));
+}
+
+// USA Wrestling card at check-in (decision Q11 in #197, issue #210). A wrestler is checked in only with a card verified by
+// the owner or by the USA Wrestling lookup (#202) and current on the session date: cardStatus(...).state === 'verified',
+// the same answer as cardVerification() in lib/usaw.ts, with the day's reviews loaded in one query in rosterFor(). A
+// missing, expired, rejected or not-yet-verified card blocks check-in. The owner's card exception (issue #89), which lets
+// a wrestler book despite the card, also lets them be checked in on the dates it covers, exactly as it does for booking.
+// Returns the plain reason staff see, or null when check-in is allowed.
+export function checkInBlock(e: Pick<Entry, 'name' | 'card' | 'cardExpires' | 'cardNote' | 'exceptions'>, scope: Scope): string | null {
+  if (e.card === 'verified' || e.exceptions.includes('usaw')) return null;
+  const why = e.card === 'missing' ? 'there is no USA Wrestling card on file'
+    : e.card === 'expired' ? `the USA Wrestling card expired ${e.cardExpires ? fullDate(e.cardExpires) : ''}`.trim()
+    : e.card === 'invalid' ? `the academy marked the USA Wrestling card not valid${e.cardNote ? ` (${e.cardNote})` : ''}`
+    : e.card === 'recheck' ? 'the USA Wrestling card was changed and the academy has not checked it yet'
+    : 'the USA Wrestling card has not been verified yet';
+  // What to do next. A card on file only needs the academy's check; anything else needs the family, or an exception.
+  const check = e.card === 'current' || e.card === 'recheck';
+  return `${e.name} can't be checked in: ${why}. ` + (scope.role === 'owner'
+    ? (check ? 'Check it and mark it verified on the USA Wrestling cards page.' : 'The family needs to update the card. To let the wrestler in meanwhile, allow an exception on the USA Wrestling cards page.')
+    : (check ? 'Ask the owner to verify the card.' : 'Ask the family to update the card, or the owner to allow an exception.'));
 }
 
 export function canSee(scope: Scope, session: Session) {
@@ -100,16 +121,19 @@ export async function rosterFor(date: string, scope: Scope) {
       if (merged.has(k)) { const e = merged.get(k)!; if (!e.sources.includes(r.source)) e.sources.push(r.source); continue; }
       const f = families.get(r.userId) ?? null, w = f?.wrestlers?.find((x: any) => x.id === r.wrestlerId);
       const c = checked.get(`${session.key}|${k}`);
-      // Card status on the session date. Check-in still works; staff see the warning and follow up (issue #68).
+      // Card status on the session date (issue #68). Only a verified card, or the owner's exception, allows check-in (#210).
       const card = w ? cardStatus(w, review.get(k) ?? null, date) : {state: 'missing' as const, expires: '', note: ''};
+      const entryExceptions = ['usaw', 'waiver'].filter(x => excepted.get(k)?.includes(x));
+      const name = w?.name ?? r.name;
       merged.set(k, {
-        userId: r.userId, wrestlerId: r.wrestlerId, name: w?.name ?? r.name, grade: w?.grade ?? null,
+        userId: r.userId, wrestlerId: r.wrestlerId, name, grade: w?.grade ?? null,
         parentName: f?.parentName || null, phone: f?.phone || null, email: scope.role === 'owner' ? f?.email ?? null : null,
         allergies: w?.allergies || null, emergencyName: f?.emergencyContactName || null, emergencyPhone: f?.emergencyContactPhone || null,
         sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null,
         card: card.state, cardExpires: card.expires || null, cardNote: card.note,
         waiverSigned: waiver ? signedSet.has(`${k}|${String(w?.name ?? r.name).trim().toLowerCase()}`) : null,
-        exceptions: ['usaw', 'waiver'].filter(x => excepted.get(k)?.includes(x))
+        exceptions: entryExceptions,
+        checkInBlocked: checkInBlock({name, card: card.state, cardExpires: card.expires || null, cardNote: card.note, exceptions: entryExceptions}, scope)
       });
     }
     const entries = [...merged.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -118,13 +142,14 @@ export async function rosterFor(date: string, scope: Scope) {
   return result;
 }
 
-// Check-in only succeeds for a wrestler who is on that session's roster.
+// Check-in only succeeds for a wrestler who is on that session's roster and whose USA Wrestling card allows it (#210).
 export async function checkIn(date: string, sessionKey: string, userId: string, wrestlerId: string, scope: Scope, actor: string) {
   const sessions = await rosterFor(date, scope);
   const session = sessions.find(s => s.key === sessionKey);
   if (!session) return {status: 404, error: 'This session is not on your roster for that date.'};
   const entry = session.entries.find(e => e.userId === userId && e.wrestlerId === wrestlerId);
   if (!entry) return {status: 409, error: 'This wrestler is not registered or paid for this session.'};
+  if (entry.checkInBlocked) return {status: 409, error: entry.checkInBlocked, cardBlocked: true};
   await env.DB!.prepare('INSERT OR IGNORE INTO attendance(id,session_key,session_date,user_id,wrestler_id,wrestler_name,source,checked_in_at,checked_in_by) VALUES (?,?,?,?,?,?,?,?,?)')
     .bind(crypto.randomUUID(), sessionKey, date, userId, wrestlerId, entry.name, entry.sources.join(', '), new Date().toISOString(), actor).run();
   return {status: 200};

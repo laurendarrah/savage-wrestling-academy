@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (!kinds.has(quote.charge.kind)) return reply({error: 'Online payment for this is not open yet.'}, 403);
 
   try {
-    const termsUrl = quote.charge.kind === 'annual' || quote.charge.kind === 'monthly' ? '/membership-terms' : '/membership-terms#camps';
+    const termsUrl = quote.charge.kind === 'monthly' ? '/membership-terms' : '/membership-terms#camps';
     const {orderId, url} = await startCheckout({id: auth.user.id, email: auth.user.email}, quote.wrestler, quote.charge, new URL(request.url).origin, termsUrl);
     return reply({orderId, url, amountCents: quote.charge.amountCents});
   } catch (e) {

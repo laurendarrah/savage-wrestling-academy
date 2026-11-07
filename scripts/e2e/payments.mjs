@@ -92,6 +92,13 @@ await step('a refund in Stripe marks the walk-in refunded and takes Sam off that
   const roster = await api(owner, '/api/roster?date=' + ny(1));
   expect(!roster.body.sessions.some(s => s.entries.some(e => e.name === 'Sam Example')), 'still on roster after refund');
 });
+await step('a year paid upfront is refused at checkout and nothing is created (#210)', async () => {
+  await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
+  expect(!(await family.$('#plan-annual')), 'no upfront plan on the register page');
+  const r = await api(family, '/api/checkout', {source: 'membership', wrestlerId: 'w-sam', program: 'Intermediate', plan: 'annual', acceptTerms: true});
+  expect(r.status === 400 && /no longer offered/.test(r.body?.error), 'upfront checkout ' + JSON.stringify(r));
+  expect(sql("SELECT count(*) n FROM orders WHERE kind='annual'")[0].n === 0, 'no upfront order');
+});
 await step('family starts a 12-month membership paid monthly: a Stripe subscription checkout', async () => {
   await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
   await family.check('#plan-monthly'); await family.selectOption('#program', 'Intermediate');
@@ -118,6 +125,16 @@ await step('the second monthly payment extends paid-through; a failed one shows 
   expect(s.payments_made === 2 && s.paid_through > before, 'not extended ' + JSON.stringify(s));
   r = await webhook('invoice.payment_failed', {id: 'in_rehearsal_3', object: 'invoice', subscription: 'sub_rehearsal_1', billing_reason: 'subscription_cycle', amount_due: 20000, livemode: false});
   await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /needs attention/i);
+});
+await step('a late Stripe event for an upfront order started before #210 still records it, with its 12-month term', async () => {
+  const at = new Date(Date.now() - 20 * 60000).toISOString();
+  sql(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,stripe_session_id)
+    VALUES ('late-upfront','e2e-family-a','family.a@example.test','w-sam','Sam Example','annual','Advanced','Advanced','SWA Advance: 12-month membership, paid upfront','[]',240000,0,240000,'usd','{}','{}','pending','late-upfront',0,'${at}','${at}','cs_test_late_upfront')`);
+  const r = await webhook('checkout.session.completed', {id: 'cs_test_late_upfront', object: 'checkout.session', client_reference_id: 'late-upfront', metadata: {order_id: 'late-upfront'}, payment_status: 'paid', amount_total: 240000, currency: 'usd', livemode: false, payment_intent: 'pi_rehearsal_upfront', mode: 'payment'});
+  expect(r.status === 200 && r.body.outcome === 'paid', 'late upfront webhook ' + JSON.stringify(r.body));
+  const o = sql("SELECT status,term_start,term_end FROM orders WHERE id='late-upfront'")[0];
+  expect(o.status === 'paid' && o.term_start && o.term_end > o.term_start, 'late upfront order ' + JSON.stringify(o));
+  await family.goto(BASE + '/family'); await waitText(family, '#purchaseList', /paid upfront/);
 });
 
 await browser.close(); auth.close();

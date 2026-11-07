@@ -3,7 +3,9 @@ import {env} from 'cloudflare:workers';
 
 // Monthly memberships charge 12 times through a Stripe subscription that cancels itself after the 12th
 // payment (issue #20). Only list "monthly" in CHECKOUT_KINDS once the membership terms are approved.
-export const ONLINE_KINDS = ['walkin', 'annual', 'monthly', 'event', 'live', 'lesson'] as const;
+// Paying for a whole year upfront ("annual") is not offered (decision Q9 in #197, issue #210): it never opens, even
+// if CHECKOUT_KINDS still lists it.
+export const ONLINE_KINDS = ['walkin', 'monthly', 'event', 'live', 'lesson'] as const;
 
 type Env = Cloudflare.Env & {CHECKOUT_KINDS?: string; STRIPE_TEST_WEBHOOK_SECRET?: string; STRIPE_LIVE_WEBHOOK_SECRET?: string; STRIPE_MODE?: string};
 

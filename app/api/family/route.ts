@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
 import { validFamily, cleanFamily, emptyFamily, familyProblem, missingDetails, missingMessage } from '../../../lib/family-records';
-import { cardVerification, seasonOptions } from '../../../lib/usaw';
+import { cardVerification, seasonOptions, CARD_RENEWAL_DAYS } from '../../../lib/usaw';
 import { checkChangedCards, familyLookup, lookupView, lookupsFor } from '../../../lib/usaw-check';
 import { exceptionFor } from '../../../lib/exceptions';
 import { dailyReminders, quietly } from '../../../lib/notify';
@@ -18,7 +18,7 @@ export async function GET(request:Request){
  const lookups=await lookupsFor(auth.user.id);
  for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]);cards[w.id]={...await cardVerification(auth.user.id,w,today),exceptionUntil:x?.endsOn??null,lookup:familyLookup(lookupView(w,lookups.get(w.id)))}}
  // The card seasons a family can choose today (issue #131); the page offers them in the wrestler editor.
- return accountReply({email:auth.user.email,data,cards,cardSeasons:seasonOptions(today),revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
+ return accountReply({email:auth.user.email,data,cards,cardSeasons:seasonOptions(today),cardRenewalDays:CARD_RENEWAL_DAYS,revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
 }
 export async function PUT(request:Request){
  const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);

@@ -62,34 +62,37 @@ const fams = JSON.parse((await get('?families=1')).text).families;
 assert.equal(fams.length, 2); assert.equal(fams[0].wrestlers[0].name, 'Wrestler p1');
 
 // --- Preview uses the same pricing as checkout ---
-let r = await post({action: 'preview', userId: 'p1', wrestlerId: 'w-p1', kind: 'annual', program: 'Intermediate'});
-assert.equal(r.status, 200); assert.equal(r.body.listCents, 240000); assert.equal(r.body.suggestedCents, 240000);
-assert.equal((await post({action: 'preview', userId: 'p1', wrestlerId: 'w-p1', kind: 'annual', program: 'Advanced'})).status, 403, 'Advance still needs approval');
-assert.equal((await post({action: 'preview', userId: 'nobody', wrestlerId: 'w-p1', kind: 'annual', program: 'Intermediate'})).status, 404);
+const walk = {kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:18:00`};
+let r = await post({action: 'preview', userId: 'p1', wrestlerId: 'w-p1', ...walk});
+assert.equal(r.status, 200); assert.equal(r.body.listCents, 4000); assert.equal(r.body.suggestedCents, 4000);
+assert.equal((await post({action: 'preview', userId: 'p1', wrestlerId: 'w-p1', ...walk, program: 'Advanced'})).status, 403, 'Advance still needs approval');
+assert.equal((await post({action: 'preview', userId: 'nobody', wrestlerId: 'w-p1', ...walk})).status, 404);
 
 // --- Validation ---
-assert.equal((await rec({kind: 'annual', program: 'Intermediate', method: 'bitcoin'})).status, 400, 'unknown method');
-assert.equal((await rec({kind: 'annual', program: 'Intermediate', amountCents: 240001})).status, 400, 'cannot exceed the listed price');
-assert.equal((await rec({kind: 'annual', program: 'Intermediate', paidOn: ny(2)})).status, 400, 'no future dates');
+assert.equal((await rec({...walk, method: 'bitcoin'})).status, 400, 'unknown method');
+assert.equal((await rec({...walk, amountCents: 4001})).status, 400, 'cannot exceed the listed price');
+assert.equal((await rec({...walk, paidOn: ny(2)})).status, 400, 'no future dates');
 assert.equal((await rec({kind: 'monthly', program: 'Intermediate'})).status, 400, 'monthly is not an offline type');
+// A year paid upfront is not offered, at the academy either (decision Q9 in #197, issue #210).
+assert.equal((await rec({kind: 'annual', program: 'Intermediate', amountCents: 240000})).status, 400, 'no upfront year');
+assert.equal((await post({action: 'preview', userId: 'p1', wrestlerId: 'w-p1', kind: 'annual', program: 'Intermediate'})).status, 400);
+assert.doesNotMatch(readFileSync('app/payments/screen.html', 'utf8').match(/<select id="kind">[\s\S]*?<\/select>/)[0], /annual|paid in full|upfront/, 'the record form does not offer it');
 
-// --- Recording a membership: roster, member pricing, family page, and no double sale online ---
+// --- An upfront membership recorded before #210 still counts: roster, member pricing, and no double sale online ---
 assert.equal(await onRoster('practice:Intermediate:', 'Wrestler p1'), false);
-r = await rec({kind: 'annual', program: 'Intermediate', amountCents: 200000, method: 'check', note: 'Check 1042', paidOn: ny(-1)});
-assert.equal(r.status, 200);
-const order = sqlite.prepare('SELECT * FROM orders WHERE id=?').get(r.body.orderId);
-assert.equal(order.source, 'offline'); assert.equal(order.status, 'paid'); assert.equal(order.amount_cents, 200000); assert.equal(order.discount_cents, 40000);
-assert.equal(order.term_start, ny(-1), 'term starts on the date received');
-assert.equal(JSON.parse(order.pricing).method, 'check'); assert.equal(JSON.parse(order.pricing).note, 'Check 1042');
+sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
+  VALUES ('legacy-annual','p1','p1@example.test','w-p1','Wrestler p1','annual','Intermediate','Intermediate','SWA Intermediate: 12-month membership, paid upfront','[]',240000,40000,200000,'usd',?,'{"offline":true}','paid','legacy-annual',0,'x','x',?,?,?,'offline')`)
+  .run(JSON.stringify({method: 'check', note: 'Check 1042', recordedBy: 'owner-id'}), ny(-1) + 'T12:00:00.000Z', ny(-1), ny(363));
+const order = sqlite.prepare("SELECT * FROM orders WHERE id='legacy-annual'").get();
 assert.equal(await onRoster('practice:Intermediate:', 'Wrestler p1'), true, 'appears on the roster');
 assert.equal(await quotes.isMember('p1', 'w-p1', today), true, 'gets member pricing');
-assert.equal((await quotes.quoteMembership('p1', {wrestlerId: 'w-p1', program: 'Intermediate', plan: 'annual'})).status, 409, 'online checkout will not sell a second membership');
-assert.equal((await rec({kind: 'annual', program: 'Intermediate'})).status, 409, 'no duplicate offline record');
-assert.ok(sqlite.prepare("SELECT 1 FROM security_events WHERE action='offline_payment_recorded'").get());
+assert.equal((await quotes.quoteMembership('p1', {wrestlerId: 'w-p1', program: 'Intermediate', plan: 'monthly'})).status, 409, 'online checkout will not sell a second membership');
 
 // --- Walk-in and Friday Night Live for the other family ---
 r = await post({action: 'record', userId: 'p2', wrestlerId: 'w-p2', kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:18:00`, method: 'cash'});
 assert.equal(r.status, 200); assert.equal(await onRoster('practice:Intermediate:', 'Wrestler p2'), true);
+assert.ok(sqlite.prepare("SELECT 1 FROM security_events WHERE action='offline_payment_recorded'").get());
+const walkinId = r.body.orderId;
 r = await post({action: 'record', userId: 'p2', wrestlerId: 'w-p2', kind: 'live', liveId: 'fnl', date: today, method: 'venmo'});
 assert.equal(r.status, 200); assert.equal(sqlite.prepare('SELECT amount_cents FROM orders WHERE id=?').get(r.body.orderId).amount_cents, 2000, 'non-member Friday Night Live price');
 assert.equal(await onRoster('live:fnl:', 'Wrestler p2'), true);
@@ -107,6 +110,7 @@ assert.equal(r.status, 200); assert.equal(sqlite.prepare('SELECT amount_cents,di
 let list = JSON.parse((await get('')).text);
 assert.equal(list.totals.count, 5); assert.equal(list.totals.offlineCents, 200000 + 4000 + 2000 + 16000 + 0); assert.equal(list.totals.onlineCents, 0);
 assert.equal(JSON.parse((await get('?kind=walkin')).text).payments.length, 1);
+assert.equal(JSON.parse((await get('?kind=annual')).text).payments.length, 1, 'the old upfront payment stays in the history');
 sqlite.prepare("UPDATE orders SET pricing=json_set(pricing,'$.note','=HYPERLINK(\"x\")') WHERE kind='walkin'").run();
 const csv = await get('?format=csv');
 assert.match(csv.type, /text\/csv/); assert.match(csv.text, /^Paid on,Status,Paid via/);
@@ -121,7 +125,9 @@ assert.equal(await quotes.isMember('p1', 'w-p1', today), false);
 assert.equal((await post({action: 'void', orderId: membershipId, reason: 'again'})).status, 409);
 list = JSON.parse((await get('?status=canceled')).text);
 assert.equal(list.payments[0].status, 'voided'); assert.equal(list.payments[0].voidReason, 'Check bounced');
-assert.equal((await rec({kind: 'annual', program: 'Intermediate', method: 'cash'})).status, 200, 'can be re-recorded after a void');
+assert.equal((await rec({kind: 'annual', program: 'Intermediate', method: 'cash'})).status, 400, 'a voided upfront year is not sold again');
+assert.equal((await post({action: 'void', orderId: walkinId, reason: 'Wrong day'})).status, 200);
+assert.equal((await post({action: 'record', userId: 'p2', wrestlerId: 'w-p2', kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:18:00`, method: 'cash'})).status, 200, 'can be re-recorded after a void');
 sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,source)
   VALUES ('online1','p2','x','w-p2','W','event',NULL,'camp','Camp','[]',100,0,100,'usd','{}','{}','paid','k-online',0,'x','x',?,'stripe')`).run(today + 'T12:00:00Z');
 assert.match((await post({action: 'void', orderId: 'online1', reason: 'x'})).body.error, /refunded in Stripe/, 'online payments are refunded in Stripe');
