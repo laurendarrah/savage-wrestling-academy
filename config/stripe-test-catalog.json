@@ -6,8 +6,6 @@
   "renewal": "manual",
   "programs": {
     "Elementary": {
-      "annualUpfrontPrice": "price_1UYST9PkPTNkVQBzhCiXi8OV",
-      "annualUpfrontCents": 240000,
       "product": "prod_VX2Av9pgfUZcmx",
       "monthlyPrice": "price_1UVy5oPkPTNkVQBzhoyNjVv0",
       "walkInPrice": "price_1UVy6hPkPTNkVQBzDPN2COI2",
@@ -16,8 +14,6 @@
       "currency": "usd"
     },
     "Intermediate": {
-      "annualUpfrontPrice": "price_1UYSTEPkPTNkVQBzaP3EhgHL",
-      "annualUpfrontCents": 240000,
       "product": "prod_VX2AcyhLcrSHaP",
       "monthlyPrice": "price_1UVy62PkPTNkVQBzl4wFalmz",
       "walkInPrice": "price_1UVy6wPkPTNkVQBz2fPu6D5j",
@@ -26,8 +22,6 @@
       "currency": "usd"
     },
     "Advanced": {
-      "annualUpfrontPrice": "price_1UYSTIPkPTNkVQBzRCInKQJg",
-      "annualUpfrontCents": 240000,
       "product": "prod_VX2AV2aVVgqXrr",
       "monthlyPrice": "price_1UVy6UPkPTNkVQBzydeCWnD9",
       "walkInPrice": "price_1UVy6zPkPTNkVQBzTYjHFrxN",

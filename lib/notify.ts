@@ -6,8 +6,8 @@ import {appOrigin} from './account-auth';
 import {academyToday} from './public-schedule';
 import {sendEmailsDetailed} from './email';
 import {currentVersion, FAMILY_KINDS} from './documents';
-import {dayTime, fullDate, when} from './datetime';
-import {cardSeason, isSeasonEnd} from './usaw';
+import {dayTime, fullDate} from './datetime';
+import {cardSeason, isSeasonEnd, renewalDue} from './usaw';
 
 type Notice = {userId: string | null; email: string; kind: string; subject: string; body: string; dedupeKey: string; link?: string};
 
@@ -43,16 +43,6 @@ const longDate = fullDate;
 export async function quietly(fn: () => Promise<unknown>) { try { await fn(); } catch (e) { console.error('notice failed', e); } }
 
 // --- Events ---
-
-export async function noticeWaitlistOffer(entryId: string) {
-  const e = await env.DB!.prepare('SELECT * FROM waitlist_entries WHERE id=?').bind(entryId).first<any>();
-  if (!e || e.status !== 'offered') return;
-  const state = await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload: string}>();
-  const event = (state ? JSON.parse(state.payload).events ?? [] : []).find((x: any) => x.id === e.event_id);
-  await notify([{userId: e.user_id, email: e.email, kind: 'waitlist_offer', dedupeKey: `waitlist-offer:${e.id}:${e.offered_at}`, link: '/family#waitlist',
-    subject: `A seat in ${event?.name ?? 'the event'} is held for ${e.wrestler_name}`,
-    body: `Good news: a seat in ${event?.name ?? 'the event'} opened up and is held for ${e.wrestler_name} until ${when(e.offer_expires_at)}. Book it from your family account before then, or it goes to the next family on the waitlist.`}]);
-}
 
 export async function noticeApproval(approvalId: string, status: string) {
   const a = await env.DB!.prepare('SELECT * FROM program_approvals WHERE id=?').bind(approvalId).first<any>();
@@ -129,7 +119,7 @@ export async function dailyReminders(force = false, today = academyToday()) {
     const r = await env.DB!.prepare("INSERT OR IGNORE INTO academy_settings(id,payload,updated_at,updated_by) VALUES (?,'{}',?,'system')").bind('reminders:' + today, new Date().toISOString()).run();
     if (!Number(r.meta?.changes ?? (r as any).changes ?? 0)) return 0;
   }
-  const soon = new Date(Date.parse(today + 'T12:00:00Z') + 30 * 86400000).toISOString().slice(0, 10);
+  const soon = renewalDue(today);
   const families = (await env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts').all<{user_id: string; email: string; payload: string}>()).results;
   // Family documents in force (the waiver, and the Parent Consent Form once published, issue #195), each with who signed.
   const docs = [];

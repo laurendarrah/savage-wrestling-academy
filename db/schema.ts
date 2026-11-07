@@ -162,7 +162,8 @@ export const wrestlerPasses=sqliteTable("wrestler_passes",{
  id:text("id").primaryKey(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),token:text("token").notNull(),
  createdAt:text("created_at").notNull(),revokedAt:text("revoked_at"),revokedBy:text("revoked_by")
 },t=>[uniqueIndex("wrestler_pass_token").on(t.token),uniqueIndex("wrestler_pass_active").on(t.userId,t.wrestlerId).where(sql`${t.revokedAt} IS NULL`)]);
-// Waitlists for full camps and events (issue #73). An offer holds a seat for one family until it expires.
+// Waitlists for full camps and events (issue #73). No longer used: there are no waitlists (decision Q10 in #197, issue
+// #210). The table and its rows are kept: backups, the family data export and the security log still read them.
 export const waitlistEntries=sqliteTable("waitlist_entries",{
  id:text("id").primaryKey(),eventId:text("event_id").notNull(),option:text("option").notNull(),dates:text("dates").notNull(),
  userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),wrestlerName:text("wrestler_name").notNull(),email:text("email").notNull(),

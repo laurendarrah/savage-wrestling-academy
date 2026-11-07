@@ -105,6 +105,6 @@ The full guide for problems after launch (site down, bad update, lost data, emai
 Only after the matching decision is recorded on its issue:
 
 1. Refund policy decided (#3): set `CHECKOUT_KINDS=walkin,event,live`.
-2. Membership terms approved (#2): add `annual`, and later `monthly`.
+2. Membership terms approved (#2): add `monthly`. A year paid upfront is not offered (#210).
 3. Lesson refund policy decided (#80): add `lesson`.
 4. Test with Stripe test cards first (#24), then follow the live steps on #26.

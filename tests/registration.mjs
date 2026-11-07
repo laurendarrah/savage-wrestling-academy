@@ -47,17 +47,22 @@ vm.runInContext(`loading=true;update()`,ctx);assert.equal(el('practiceCalendar')
 vm.runInContext(`loading=false;document.getElementById('program').value='Intermediate';document.getElementById('program').onchange()`,ctx);assert.equal(el('reviewButton').disabled,true);assert.match(el('calendarAvailability').textContent,/No published practices/);assert.equal(el('selectedPractice').hidden,true);
 console.log('Passed: calendar days, unavailable/past/holiday dates, explicit time selection, selection clearing, monthly schedule browsing, walk-in switch, loading state and unpublished schedule empty state.');
 
-// Annual selection hides installment-only codes and sends no stale code.
-vm.runInContext("family.data.wrestlers[0].grade='5';document.getElementById('program').value='Elementary';document.getElementById('plan').value='annual';document.getElementById('teamCode').value='STALE';catalog.programs[0].annualCents=240000;back();update()",ctx);
-assert.equal(el('teamCodeField').hidden,true);
+// Only the monthly membership and walk-ins are offered (decision Q9 in #197, issue #210): 12 monthly payments, shown with
+// their total, with the team code sent along.
+assert.doesNotMatch(readFileSync('app/register/screen.html','utf8'),/plan-annual|paid upfront|upfront/,'no upfront plan on the page');
+assert.match(readFileSync('app/register/screen.html','utf8'),/if\(\['monthly','walkin'\]\.includes\(params\.get\('plan'\)\)\)/,'an old ?plan=annual link falls back to the monthly plan');
+vm.runInContext("family.data.wrestlers[0].grade='5';document.getElementById('program').value='Elementary';document.getElementById('plan').value='monthly';document.getElementById('teamCode').value='TEAM10';catalog.programs[0].monthlyCents=20000;back();update()",ctx);
+assert.equal(el('teamCodeField').hidden,false);
 assert.equal(el('monthly').hidden,false);
-assert.match(el('price').textContent,/\$2,400.00/);
-assert.match(el('membershipBilling').textContent,/One upfront payment/);
-ctx.fetch=async(url,options)=>{sent=JSON.parse(options.body);return {ok:true,json:async()=>({review:{wrestlerName:'Test Wrestler',programName:'SWA Development',programId:'Elementary',plan:'annual',cents:240000,totalCents:240000,paymentCount:1,termMonths:12}})}};
+assert.match(el('price').textContent,/\$200\.00 per wrestler, per month × 12 payments · \$2,400\.00 total/);
+assert.match(el('membershipBilling').textContent,/^12 monthly payments cover a 12-month commitment/);
+ctx.fetch=async(url,options)=>{sent=JSON.parse(options.body);return {ok:true,json:async()=>({review:{wrestlerName:'Test Wrestler',programName:'SWA Development',programId:'Elementary',plan:'monthly',cents:20000,totalCents:240000,paymentCount:12,termMonths:12}})}};
 await el('selection').onsubmit({preventDefault(){}});
-assert.equal(sent.plan,'annual');
-assert.equal(sent.teamCode,'');
-assert.match(el('reviewDetails').innerHTML,/paid upfront/);
-assert.match(el('reviewDetails').innerHTML,/One upfront payment/);
-assert.doesNotMatch(el('reviewDetails').innerHTML,/\$2,400.00 \/ month/);
-console.log('Passed: annual customer selection, correct upfront price, 12-month total and stale team-code clearing.');
+assert.equal(sent.plan,'monthly');
+assert.equal(sent.teamCode,'TEAM10');
+assert.match(el('reviewDetails').innerHTML,/12-month commitment — paid monthly/);
+assert.match(el('reviewDetails').innerHTML,/12 monthly payments on your billing anniversary/);
+assert.match(el('reviewDetails').innerHTML,/<strong>Total commitment:<\/strong> \$2,400\.00/);
+assert.match(el('reviewDetails').innerHTML,/\$200\.00 \/ month × 12 payments/);
+assert.doesNotMatch(el('reviewDetails').innerHTML,/upfront/);
+console.log('Passed: monthly membership selection, 12-payment total, team code sent, and no upfront year.');

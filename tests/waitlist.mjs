@@ -1,6 +1,7 @@
-// Issue #73: waitlists for full camps and events, with owner offers that hold a seat until they expire.
+// Issue #210 (decision Q10 in #197): there are no waitlists. A full camp or event is simply full. Waitlists from #73 are
+// gone from families and the owner, but the rows already in waitlist_entries are kept, in the database and in backups.
 import assert from 'node:assert/strict';
-import {readFileSync, readdirSync} from 'node:fs';
+import {readFileSync, readdirSync, existsSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
 import ts from 'typescript';
@@ -28,7 +29,7 @@ function load(file) {
           strongAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
           sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name.endsWith('/rate-limit')) return {rateLimited: async () => false};
-        if (name.endsWith('/access-control')) return {accountRole: async () => actor.coach ? {role: 'coach', staff: {email: actor.coach, name: 'Coach Dana', programs: actor.programs ?? ['Intermediate']}} : {role: 'family', staff: null}};
+        if (name.endsWith('/access-control')) return {accountRole: async () => ({role: 'family', staff: null})};
         if (name.endsWith('/stripe-test')) return {storedStripeKeyFor: async () => null, stripeClientFor: () => null, stripeMode: () => 'test'};
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'));
         throw Error('unexpected import ' + name);
@@ -36,122 +37,73 @@ function load(file) {
   return module.exports;
 }
 
-
-
-
-
-
-
 const ny = k => new Date(Date.now() + k * 86400000).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2, programs: [], seasons: [],
   events: [{id: 'camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], price: 160, slots: 1},
-           {id: 'open', name: 'Open clinic', type: 'Clinic', dates: [ny(12)], price: 50},
            {id: 'clinic', name: 'Takedown clinic', type: 'Clinic', dates: [ny(14)], price: 50, slots: 1},
            {id: 'closed', name: 'Closed clinic', type: 'Clinic', dates: [ny(15)], price: 50, slots: 0}]}));
 for (const u of ['p1', 'p2', 'p3']) sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(u, u + '@example.test',
   JSON.stringify({parentName: 'Parent ' + u, phone: '', wrestlers: [{id: 'w-' + u, name: 'Wrestler ' + u, grade: '8', usawNumber: 'AB1234', usawExpires: '2099-12-31'}]}), 1, 'x');
 
-const familyApi = load(path.resolve('app/api/waitlist/route.ts'));
-const ownerApi = load(path.resolve('app/api/waitlists/route.ts'));
+// --- The waitlist pages, APIs and library are gone ---
+for (const f of ['app/api/waitlist/route.ts', 'app/api/waitlists/route.ts', 'app/waitlists/route.ts', 'app/waitlists/screen.html', 'lib/waitlist.ts'])
+  assert.equal(existsSync(f), false, f + ' is removed');
+for (const f of ['app/booking/screen.html', 'app/family/screen.html', 'app/calendar/screen.html', 'app/portal.html'])
+  assert.doesNotMatch(readFileSync(f, 'utf8'), /\/api\/waitlist|\/waitlists|joinWaitlist|Join the waitlist|Leave the waitlist|Waitlist available|On waitlists/, f + ' offers no waitlist');
+assert.doesNotMatch(readFileSync('lib/notify.ts', 'utf8'), /noticeWaitlistOffer|waitlist_offer/, 'no seat-offer notice is sent');
+for (const f of ['app/help/screen.html', 'app/help/owner/screen.html'])
+  assert.doesNotMatch(readFileSync(f, 'utf8'), /Join the waitlist|On <strong>Waitlists<\/strong>|waitlist seat/, f + ' no longer describes waitlists');
+// The table stays: no migration drops it.
+assert.ok(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='waitlist_entries'").get(), 'waitlist_entries is kept');
+
 const payments = load(path.resolve('app/api/payments/route.ts'));
 const quotes = load(path.resolve('lib/quotes.ts'));
 const capacity = load(path.resolve('lib/capacity.ts'));
 const webhook = load(path.resolve('lib/stripe-webhook.ts'));
+const backups = load(path.resolve('lib/backup-records.ts'));
 const O = 'https://a.test';
 const call = async (route, method, body) => { const r = await route[method](new Request(O + '/x', method === 'GET' ? {} : {method, headers: {'content-type': 'application/json', origin: O}, body: JSON.stringify(body)})); return {status: r.status, body: await r.json()}; };
-const as = id => { actor = id === 'owner' ? {owner: true, id: 'owner-id'} : {owner: false, id}; };
 const quote = (u, id = 'camp') => quotes.quoteBooking(u, {type: 'event', wrestlerId: 'w-' + u, id});
-const join = (u, eventId = 'camp') => { as(u); return call(familyApi, 'POST', {action: 'join', eventId, wrestlerId: 'w-' + u}); };
-const record = (u, eventId = 'camp') => { as('owner'); return call(payments, 'POST', {action: 'record', userId: u, wrestlerId: 'w-' + u, kind: 'event', eventId, method: 'cash'}); };
-const entries = async u => { as(u); return (await call(familyApi, 'GET')).body.entries; };
-const ownerView = async () => { as('owner'); return (await call(ownerApi, 'GET')).body.events; };
-const entryId = async (u, eventId = 'camp') => (await entries(u)).find(x => x.eventId === eventId && ['waiting', 'offered'].includes(x.status)).id;
-const offer = async (u, eventId = 'camp', hours = 24, autoNext = false) => { const id = await entryId(u, eventId); as('owner'); return call(ownerApi, 'POST', {action: 'offer', id, hours, autoNext}); };
+const record = (u, eventId = 'camp') => { actor = {owner: true, id: 'owner-id'}; return call(payments, 'POST', {action: 'record', userId: u, wrestlerId: 'w-' + u, kind: 'event', eventId, method: 'cash'}); };
 
-// --- Full events point families to the waitlist ---
+// --- A full event is simply full ---
 assert.equal((await record('p1')).status, 200);
-let q = await quote('p2'); assert.equal(q.status, 409); assert.equal(q.extra.waitlist, true); assert.match(q.error, /Join the waitlist/);
-assert.equal((await join('p2', 'open')).status, 409, 'cannot join when seats are left');
-assert.equal((await join('p2')).status, 200);
-assert.equal((await join('p2')).status, 409, 'once per wrestler');
-assert.equal((await join('p3')).status, 200);
-assert.equal((await join('p3', 'closed')).status, 200, 'an event marked full also takes a waitlist');
-assert.deepEqual((await entries('p3')).filter(x => x.eventId === 'camp').map(x => x.position), [2]);
-let ev = (await ownerView()).find(e => e.eventId === 'camp');
-assert.equal(JSON.stringify(ev.entries.map(x => [x.wrestler, x.position])), JSON.stringify([['Wrestler p2', 1], ['Wrestler p3', 2]]));
-as('p2'); assert.equal((await call(ownerApi, 'GET')).status, 403, 'families cannot see the owner list');
+let q = await quote('p2');
+assert.equal(q.ok, false); assert.equal(q.status, 409); assert.equal(q.error, 'This event is full.');
+assert.equal(q.extra, undefined, 'no waitlist hint for the page');
+q = await quote('p2', 'closed');
+assert.equal(q.status, 409); assert.equal(q.error, 'This event is full.', 'an event the owner marked full is full too');
+assert.equal((await record('p2')).status, 409, 'nor can the owner record a payment past the limit');
 
-// --- An offered seat is held for that family only ---
-assert.equal((await offer('p2', 'camp', 0)).status, 400, 'hold hours are checked');
-assert.equal((await offer('p2')).status, 200);
-const p1Order = sqlite.prepare("SELECT id FROM orders WHERE user_id='p1' AND item_id='camp'").get().id;
-as('owner'); assert.equal((await call(payments, 'POST', {action: 'void', orderId: p1Order, reason: 'refund'})).status, 200);
-assert.match((await quote('p3')).error, /Join the waitlist/, 'the freed seat is held for p2');
-assert.equal((await record('p3')).status, 409, 'nor can the owner record it for someone else');
-q = await quote('p2'); assert.equal(q.ok, true); assert.equal(q.charge.pricing.slots, null); assert.ok(q.review.offerExpiresAt);
-assert.equal((await entries('p2')).find(x => x.eventId === 'camp').status, 'offered');
-// Checkout ranking: another family's pending order does not get the held seat, the offered family's does.
-const pend = (id, u) => sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,stripe_session_id)
-  VALUES (?,?,'e',?,'W','event','camp','Camp',?,16000,0,16000,'usd','{}','{}','pending',?,0,?,?,?)`).run(id, u, 'w-' + u, JSON.stringify([ny(10), ny(11)]), id, new Date().toISOString(), new Date().toISOString(), 'cs_' + id);
-pend('x3', 'p3'); assert.equal(await capacity.withinCapacity('x3', 'camp', [ny(10), ny(11)], 1), false);
-sqlite.prepare("DELETE FROM orders WHERE id='x3'").run();
-pend('x2', 'p2'); assert.equal(await capacity.withinCapacity('x2', 'camp', [ny(10), ny(11)], 1), true);
-// Paying closes the offer.
-let r = await webhook.applyStripeEvent({id: 'evt_w', type: 'checkout.session.completed', data: {object: {id: 'cs_x2', client_reference_id: 'x2', payment_status: 'paid', livemode: false, amount_total: 16000, currency: 'usd'}}});
+// --- Waitlist rows from before #210 are kept but no longer hold or grant seats ---
+const old = (id, u, eventId, status, dates, offerHours = null) => sqlite.prepare(
+  `INSERT INTO waitlist_entries(id,event_id,option,dates,user_id,wrestler_id,wrestler_name,email,status,created_at,offered_at,offer_expires_at,offer_hours,auto_next,offered_by)
+   VALUES (?,?,'full',?,?,?,?,?,?,?,?,?,?,0,?)`).run(id, eventId, JSON.stringify(dates), u, 'w-' + u, 'Wrestler ' + u, u + '@example.test', status, new Date().toISOString(),
+  offerHours ? new Date().toISOString() : null, offerHours ? new Date(Date.now() + offerHours * 3600000).toISOString() : null, offerHours, offerHours ? 'owner-id' : null);
+old('wl-camp', 'p3', 'camp', 'offered', [ny(10), ny(11)], 48);
+old('wl-clinic-offer', 'p3', 'clinic', 'offered', [ny(14)], 48);
+old('wl-clinic-wait', 'p2', 'clinic', 'waiting', [ny(14)]);
+q = await quote('p3');
+assert.equal(q.status, 409, 'an old seat offer does not let a family into a full camp'); assert.equal(q.error, 'This event is full.');
+assert.equal(await capacity.seatsLeft('clinic', [ny(14)], 1), 1, 'an old unexpired offer no longer holds the seat');
+q = await quote('p2', 'clinic');
+assert.equal(q.ok, true, 'anyone can book the free seat'); assert.equal(q.charge.pricing.slots, 1, 'checkout still enforces the limit');
+assert.equal(q.charge.pricing.waitlistOffer, undefined); assert.equal('offerExpiresAt' in q.review, false);
+
+// A paid event (online, late or not) and a recorded payment leave the old rows exactly as they were.
+const pend = (id, u, item, dates, cents) => sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,stripe_session_id)
+  VALUES (?,?,'e',?,'W','event',?,'Clinic',?,?,0,?,'usd','{"slots":1}','{}','pending',?,0,?,?,?)`).run(id, u, 'w-' + u, item, JSON.stringify(dates), cents, cents, id, new Date().toISOString(), new Date().toISOString(), 'cs_' + id);
+pend('x2', 'p2', 'clinic', [ny(14)], 5000);
+assert.equal(await capacity.withinCapacity('x2', 'clinic', [ny(14)], 1), true, 'the old offer to p3 does not outrank p2');
+const r = await webhook.applyStripeEvent({id: 'evt_w', type: 'checkout.session.completed', data: {object: {id: 'cs_x2', client_reference_id: 'x2', payment_status: 'paid', livemode: false, amount_total: 5000, currency: 'usd'}}});
 assert.equal(r.outcome, 'paid');
-assert.equal((await entries('p2')).find(x => x.eventId === 'camp').status, 'accepted');
-assert.match((await quote('p3')).error, /Join the waitlist/, 'camp full again');
+assert.equal(sqlite.prepare("SELECT status FROM orders WHERE id='x2'").get().status, 'paid');
+assert.equal((await quote('p3', 'clinic')).error, 'This event is full.');
+const rows = sqlite.prepare('SELECT id,status FROM waitlist_entries ORDER BY id').all().map(x => [x.id, x.status]);
+assert.deepEqual(rows, [['wl-camp', 'offered'], ['wl-clinic-offer', 'offered'], ['wl-clinic-wait', 'waiting']], 'old rows are untouched, never deleted');
 
-// --- An expired offer passes on when the owner asked, and not otherwise ---
-assert.equal((await record('p1', 'clinic')).status, 200);
-assert.equal((await join('p2', 'clinic')).status, 200); assert.equal((await join('p3', 'clinic')).status, 200);
-assert.equal((await offer('p2', 'clinic', 4, true)).status, 200);
-const clinicOrder = sqlite.prepare("SELECT id FROM orders WHERE user_id='p1' AND item_id='clinic' AND status='paid'").get().id;
-as('owner'); await call(payments, 'POST', {action: 'void', orderId: clinicOrder, reason: 'x'});
-sqlite.prepare("UPDATE waitlist_entries SET offer_expires_at=? WHERE event_id='clinic' AND status='offered'").run(new Date(Date.now() - 1000).toISOString());
-q = await quote('p3', 'clinic');
-assert.equal(q.ok, true, 'p3 now holds the offer');
-assert.equal((await entries('p2')).find(x => x.eventId === 'clinic').status, 'expired');
-assert.equal((await entries('p3')).find(x => x.eventId === 'clinic').status, 'offered');
-assert.match((await quote('p2', 'clinic')).error, /Join the waitlist/);
-// Without pass-on the seat simply opens up again.
-assert.equal((await record('p1', 'clinic')).status, 409, 'still held for p3');
-sqlite.prepare("UPDATE waitlist_entries SET auto_next=0,offer_expires_at=? WHERE event_id='clinic' AND status='offered'").run(new Date(Date.now() - 1000).toISOString());
-assert.equal((await record('p1', 'clinic')).status, 200, 'expired with no pass-on: open to anyone');
+// They stay in backups and in the family's own data download.
+assert.ok(backups.RECORD_TABLES.waitlist_entries, 'backups still copy waitlist_entries');
+assert.match(readFileSync('lib/data-requests.ts', 'utf8'), /waitlists: await all\('SELECT [^']*FROM waitlist_entries WHERE user_id=\?'/);
 
-// --- Event marked full by the owner: an offer lets that family in ---
-assert.match((await quote('p3', 'closed')).error, /Join the waitlist/);
-assert.equal((await offer('p3', 'closed')).status, 200);
-assert.equal((await quote('p3', 'closed')).ok, true);
-
-// --- Leaving and removing ---
-assert.equal((await join('p1')).status, 200);
-const p1camp = await entryId('p1');
-as('p1'); assert.equal((await call(familyApi, 'POST', {action: 'withdraw', id: p1camp})).status, 200);
-const p3camp = await entryId('p3', 'camp');
-as('p2'); assert.equal((await call(familyApi, 'POST', {action: 'withdraw', id: p3camp})).status, 404, 'cannot withdraw another family');
-as('owner'); assert.equal((await call(ownerApi, 'POST', {action: 'remove', id: p3camp})).status, 200);
-assert.equal((await entries('p3')).find(x => x.eventId === 'camp').status, 'removed');
-
-console.log('Waitlist tests passed');
-
-// #125: the owner page says plainly when an event is over its limit, and asks before offering a seat that is not free.
-{
-  const page = readFileSync('app/waitlists/screen.html', 'utf8');
-  const fn = name => page.slice(page.indexOf('function ' + name + '('), page.indexOf('\n', page.indexOf('function ' + name + '(')));
-  const asked = [];
-  const ctx = vm.createContext({confirm: m => { asked.push(m); return false; }});
-  vm.runInContext(fn('seatText') + '\n' + fn('confirmOverLimit'), ctx);
-  const ev = (seatsLeft, slots = 1, more = {}) => ({name: 'Winter camp', slots, seatsLeft, ...more});
-  assert.equal(ctx.seatText(ev(2, 10)), '2 of 10 seats free');
-  assert.equal(ctx.seatText(ev(0)), 'Full');
-  assert.equal(ctx.seatText(ev(-1)), 'Full: 1 over the 1-seat limit');
-  assert.equal(ctx.seatText(ev(null, null)), 'No seat limit');
-  assert.equal(ctx.seatText(ev(3, 10, {manuallyFull: true})), 'Marked full');
-  assert.equal(ctx.confirmOverLimit(ev(2, 10)), true); assert.equal(asked.length, 0, 'no question while seats are free');
-  assert.equal(ctx.confirmOverLimit(ev(null, null)), true);
-  assert.equal(ctx.confirmOverLimit(ev(0)), false); assert.match(asked.at(-1), /No seat is free in Winter camp.*1-seat limit/);
-  assert.equal(ctx.confirmOverLimit(ev(5, 10, {manuallyFull: true})), false); assert.match(asked.at(-1), /marked full/);
-  assert.ok(!page.includes("(e.seatsLeft??0)+' of '+e.slots+' seats free'}"), 'the old negative-number text is gone');
-  console.log('Waitlist seats wording and over-limit confirmation');
-}
+console.log('Passed: no waitlists (#210): pages, APIs and notices removed; a full event is full; old waitlist rows kept, untouched and backed up, and old offers hold no seat.');

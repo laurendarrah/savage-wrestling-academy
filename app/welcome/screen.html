@@ -107,7 +107,7 @@ function weeklyTimes(id,schedules,today){
 }
 function programCard(p,schedules=[],today=''){
  const grades=String(p.grades||GRADES[p.id]||'').replace(/\s*·\s*Coach approval required/i,'');
- const prices=[p.monthlyCents!=null?money(p.monthlyCents)+' a month for a 12-month membership'+(p.annualCents!=null?', or '+money(p.annualCents)+' paid upfront':''):'',p.walkInCents!=null?money(p.walkInCents)+' for a single walk-in practice':''].filter(Boolean);
+ const prices=[p.monthlyCents!=null?money(p.monthlyCents)+' a month for a 12-month membership':'',p.walkInCents!=null?money(p.walkInCents)+' for a single walk-in practice':''].filter(Boolean);
  return '<article class="program card">'+(grades?'<span class="grades" style="'+(swatch[p.id]||'background:#C4222C;color:#fff')+'">'+esc(grades)+'</span>':'')+'<h3>'+esc(p.name)+'</h3>'+weeklyTimes(p.id,schedules,today).map(t=>'<span class="times">'+esc(t)+'</span>').join('')+(p.description?'<p>'+esc(p.description)+'</p>':'')+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'</article>'}
 // The next sessions from today, soonest first: practices, extra practices and the first day of each event.
 function upcoming(schedules,today,limit=6){

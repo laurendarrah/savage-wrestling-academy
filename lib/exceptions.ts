@@ -2,6 +2,7 @@
 // bookings through despite a missing or expired USA Wrestling card ("usaw"), an unsigned waiver ("waiver") or an
 // unsigned Parent Consent Form ("parent_consent", issue #195).
 // An exception covers a booking only if every booked date falls inside it. A reason and an end date are required.
+// A card exception also lets the wrestler be checked in on the dates it covers (decision Q11 in #197, issue #210).
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
 

@@ -58,7 +58,7 @@ const O = 'https://a.test';
 const call = async (route, method, body, origin = O) => { const r = await route[method](new Request(O + '/x', method === 'GET' ? {} : {method, headers: {'content-type': 'application/json', origin}, body: JSON.stringify(body)})); return {status: r.status, body: await r.json()}; };
 const as = id => { actor = id === 'owner' ? {owner: true, id: 'owner-id'} : {owner: false, id}; };
 const walkin = (u = 'p1') => quotes.quoteMembership(u, {wrestlerId: 'w-' + u, program: 'Intermediate', plan: 'walkin', date: ny(1), practiceId: `Intermediate:${ny(1)}:18:00`});
-const everything = async u => [await walkin(u), await quotes.quoteMembership(u, {wrestlerId: 'w-' + u, program: 'Intermediate', plan: 'annual'}),
+const everything = async u => [await walkin(u), await quotes.quoteMembership(u, {wrestlerId: 'w-' + u, program: 'Intermediate', plan: 'monthly'}),
   await quotes.quoteBooking(u, {type: 'live', wrestlerId: 'w-' + u, id: 'fnl', date: ny(3)}), await quotes.quoteBooking(u, {type: 'event', wrestlerId: 'w-' + u, id: 'camp'}),
   await quotes.quoteBooking(u, {type: 'lesson', wrestlerId: 'w-' + u, format: 'one-on-one'})];
 const TEXT = 'I understand that wrestling is a contact sport with a risk of injury. '.repeat(5);
@@ -83,7 +83,7 @@ current = (await call(ownerApi, 'GET')).body.current.id;
 // --- Every purchase type now needs the signature, offline payments too ---
 for (const q of await everything('p1')) { assert.equal(q.ok, false); assert.equal(q.status, 403); assert.equal(q.extra.waiverRequired, true); assert.match(q.error, /Wrestler p1 needs a signed 2026 Participation waiver before booking/); }
 as('owner');
-let r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w-p1', kind: 'annual', program: 'Intermediate', method: 'cash'});
+let r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w-p1', kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:18:00`, method: 'cash'});
 assert.equal(r.status, 403); assert.match(r.body.error, /needs a signed/);
 
 // --- Family signs ---
@@ -119,7 +119,7 @@ as('owner');
 r = (await call(ownerApi, 'GET')).body;
 assert.equal(r.wrestlers.length, 2); assert.equal(r.wrestlers.find(w => w.wrestlerId === 'w-p1').signed, true); assert.equal(r.wrestlers.find(w => w.wrestlerId === 'w-p2').signed, false);
 assert.equal(r.versions[0].signed, 1);
-assert.equal((await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w-p1', kind: 'annual', program: 'Intermediate', method: 'cash'})).status, 200);
+assert.equal((await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w-p1', kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:18:00`, method: 'cash'})).status, 200);
 let entry = (await roster.rosterFor(today, {role: 'owner'})).find(s => s.key.startsWith('practice:Intermediate:')).entries[0];
 assert.equal(entry.waiverSigned, true);
 

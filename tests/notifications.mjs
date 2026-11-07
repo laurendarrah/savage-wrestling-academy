@@ -60,8 +60,6 @@ sqlite.prepare("INSERT INTO staff_access VALUES ('dana@example.test','Coach Dana
 const notify = load(path.resolve('lib/notify.ts'));
 const inbox = load(path.resolve('app/api/inbox/route.ts'));
 const payments = load(path.resolve('app/api/payments/route.ts'));
-const waitlistApi = load(path.resolve('app/api/waitlist/route.ts'));
-const waitlistsApi = load(path.resolve('app/api/waitlists/route.ts'));
 const waiversApi = load(path.resolve('app/api/waivers/route.ts'));
 const cardsApi = load(path.resolve('app/api/usaw-cards/route.ts'));
 const transfersApi = load(path.resolve('app/api/transfers/route.ts'));
@@ -97,28 +95,21 @@ assert.match(notices('p2', 'card_rejected')[0].body, /could not verify Jo's USA 
 sqlite.prepare("DELETE FROM usaw_reviews").run();
 
 // --- Offline payment recorded; transfer ---
-as('owner'); let r = await call(payments, 'POST', {action: 'record', userId: 'p2', wrestlerId: 'w3', kind: 'annual', program: 'Intermediate', method: 'check'});
+as('owner'); let r = await call(payments, 'POST', {action: 'record', userId: 'p2', wrestlerId: 'w3', kind: 'walkin', program: 'Intermediate', date: ny(1), practiceId: `Intermediate:${ny(1)}:18:00`, method: 'check'});
 assert.equal(r.status, 200);
-assert.match(notices('p2', 'payment_recorded')[0].body, /recorded your payment of \$2400\.00 for SWA Intermediate: 12-month membership, paid upfront \(Jo\)/);
+assert.match(notices('p2', 'payment_recorded')[0].body, /recorded your payment of \$40\.00 for SWA Intermediate walk-in \(Jo\)/);
+// A paid monthly membership to transfer (a year paid upfront is no longer sold, #210).
+sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end)
+  VALUES ('m-jo','p2','p2@example.test','w3','Jo','monthly','Intermediate','Intermediate','SWA Intermediate: 12-month membership, monthly payment','[]',20000,0,20000,'usd','{}','{}','paid','m-jo',0,'t','t','t',?,?)`).run(ny(-1), ny(29));
+r = {body: {orderId: 'm-jo'}};
 sqlite.prepare("INSERT INTO program_approvals(id,user_id,wrestler_id,program,wrestler_name,grade,status,created_at,updated_at,decided_by) VALUES ('a1','p2','w3','Advanced','Jo','8','approved','t','t','owner')").run();
 r = await call(transfersApi, 'POST', {orderId: r.body.orderId, toProgram: 'Advanced', effectiveDate: ny(3), reason: 'Moved up'});
 assert.equal(r.status, 200); assert.match(notices('p2', 'transfer')[0].subject, /Jo moves to SWA Advance/);
 
-// --- Waitlist offer ---
-r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'event', eventId: 'camp', method: 'cash'});
-sqlite.prepare("UPDATE family_accounts SET payload=json_set(payload,'$.wrestlers[0].usawExpires','2099-12-31') WHERE user_id='p2'").run();
-as('p2'); assert.equal((await call(waitlistApi, 'POST', {action: 'join', eventId: 'camp', wrestlerId: 'w3'})).status, 200);
-const entry = (await call(waitlistApi, 'GET')).body.entries[0].id;
-as('owner'); assert.equal((await call(waitlistsApi, 'POST', {action: 'offer', id: entry, hours: 24})).status, 200);
-assert.match(notices('p2', 'waitlist_offer')[0].subject, /A seat in Winter camp is held for Jo/);
-// Automatic pass-on to the next family also notifies.
-sqlite.prepare("UPDATE waitlist_entries SET status='waiting',offered_at=NULL,offer_expires_at=NULL WHERE id=?").run(entry);
+// --- No waitlists (#210): a full camp sends no seat-offer notice ---
+as('owner'); r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'event', eventId: 'camp', method: 'cash'});
 fam('p3', [{id: 'w4', name: 'Lee', grade: '8', usawNumber: 'AB1237', usawExpires: '2099-12-31'}]);
-as('p3'); await call(waitlistApi, 'POST', {action: 'join', eventId: 'camp', wrestlerId: 'w4'});
-as('owner'); await call(waitlistsApi, 'POST', {action: 'offer', id: entry, hours: 1, autoNext: true});
-sqlite.prepare("UPDATE waitlist_entries SET offer_expires_at=? WHERE id=?").run(new Date(Date.now() - 1000).toISOString(), entry);
-await call(waitlistsApi, 'GET');
-assert.equal(notices('p3', 'waitlist_offer').length, 1, 'the next family is told');
+assert.equal(sqlite.prepare("SELECT count(*) n FROM notifications WHERE kind='waitlist_offer'").get().n, 0);
 
 // --- Lesson paid online: coach and family both told; email sent once a provider is set ---
 env.EMAIL_API_KEY = 'k'; env.MAIL_FROM = 'SWA <a@swa.example>';
@@ -144,7 +135,7 @@ assert.equal(sqlite.prepare('SELECT count(*) n FROM notifications').get().n, bef
 
 // --- A failing notice never breaks the action ---
 fetchMock = async () => { throw Error('network down'); };
-as('owner'); r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'annual', program: 'Intermediate', method: 'cash'});
+as('owner'); r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'walkin', program: 'Intermediate', date: ny(2), practiceId: `Intermediate:${ny(2)}:18:00`, method: 'cash'});
 assert.equal(r.status, 200, 'payment recorded even though email failed');
 assert.equal(notices('p1', 'payment_recorded').at(-1).email_status, 'failed');
 

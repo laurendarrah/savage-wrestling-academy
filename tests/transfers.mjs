@@ -61,8 +61,10 @@ const owner = () => { actor = {owner: true, id: 'owner-id'}; };
 const programsOn = async d => (await roster.rosterFor(d, {role: 'owner'})).filter(s => s.entries.some(e => e.wrestlerId === 'w1')).map(s => s.program);
 
 owner();
-assert.equal((await payments.POST(new Request(O + '/x', {method: 'POST', headers: {'content-type': 'application/json', origin: O}, body: JSON.stringify({action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'annual', program: 'Intermediate', method: 'cash'})}))).status, 200);
-const orderId = sqlite.prepare("SELECT id FROM orders WHERE kind='annual'").get().id;
+// A paid monthly membership (a year paid upfront is no longer sold, #210). Its whole 12-month term is paid through here.
+sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end)
+  VALUES ('m1','p1','p1@example.test','w1','Sam','monthly','Intermediate','Intermediate','SWA Intermediate: 12-month membership, monthly payment','[]',20000,0,20000,'usd','{}','{}','paid','m1',0,'t','t','t',?,?)`).run(ny(0), ny(364));
+const orderId = 'm1';
 let r = await call('GET'); assert.equal(r.body.memberships.length, 1); assert.equal(r.body.memberships[0].programToday, 'Intermediate');
 const move = body => call('POST', {orderId, reason: 'Moved up after evaluation', effectiveDate: ny(3), ...body});
 
@@ -85,7 +87,7 @@ assert.equal(JSON.stringify(await programsOn(ny(3))), JSON.stringify(['Advanced'
 const up = await view.upcomingFor('p1', 'w1', ny(0), 6);
 assert.equal(JSON.stringify(up.map(u => u.title)), JSON.stringify(['SWA Intermediate', 'SWA Intermediate', 'SWA Intermediate', 'SWA Advance', 'SWA Advance', 'SWA Advance']), 'wrestler view follows the transfer');
 // Still a member of Intermediate today, so it cannot be bought twice.
-assert.match((await quotes.quoteMembership('p1', {wrestlerId: 'w1', program: 'Intermediate', plan: 'annual'})).error, /already has an active paid membership/);
+assert.match((await quotes.quoteMembership('p1', {wrestlerId: 'w1', program: 'Intermediate', plan: 'monthly'})).error, /already has an active paid membership/);
 r = await call('GET'); assert.equal(r.body.memberships[0].programToday, 'Intermediate'); assert.equal(r.body.memberships[0].program, 'Advanced');
 
 // --- A second transfer chains; it cannot come before the first ---
@@ -98,6 +100,6 @@ r = await call('GET');
 assert.equal(JSON.stringify(r.body.history.map(t => [t.from_program, t.to_program, t.effective_date])), JSON.stringify([['Advanced', 'Intermediate', ny(5)], ['Intermediate', 'Advanced', ny(3)]]));
 assert.equal(r.body.history[0].wrestler, 'Sam');
 assert.equal(sqlite.prepare("SELECT count(*) n FROM security_events WHERE action='membership_transferred'").get().n, 2);
-assert.equal(sqlite.prepare('SELECT amount_cents FROM orders WHERE id=?').get(orderId).amount_cents, 240000, 'no money moves');
+assert.equal(sqlite.prepare('SELECT amount_cents FROM orders WHERE id=?').get(orderId).amount_cents, 20000, 'no money moves');
 
 console.log('Program transfer tests passed');

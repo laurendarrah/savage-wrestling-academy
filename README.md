@@ -23,15 +23,15 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 | Coach access, openings, practice plans, curricula | Live |
 | Registration and booking review with server pricing | Live, stops before payment |
 | Online payment, memberships, orders | Built, closed until `CHECKOUT_KINDS` opens each type. Offline payments recorded on `/payments` |
-| Real roster and check-in | Built. Owner and coaches check wrestlers in on `/roster`, by hand or by scanning QR passes |
-| USA Wrestling cards | Built. Missing or expired cards block booking; owner verifies on `/cards` |
+| Real roster and check-in | Built. Owner and coaches check wrestlers in on `/roster`, by hand or by scanning QR passes. A wrestler without a verified, current USA Wrestling card can't be checked in unless the owner allowed an exception (#210) |
+| USA Wrestling cards | Built. Missing or expired cards block booking, and only verified cards check in; owner verifies on `/cards`, where a card joins the renewal list 30 days before it expires (#210) |
 | Waivers | Built. Owner publishes on `/waivers`; families sign on `/waiver`; unsigned wrestlers cannot book |
 | Private lessons | Built. Families book coach openings on `/lesson`; online payment waits for the refund policy (#80) |
-| Waitlists | Built. Families join full events; owner offers seats on `/waitlists` |
+| Waitlists | Removed (#210). A full camp or event is full. Old waitlist records stay in the database and backups |
 | Program transfers | Built. Owner moves a paid membership between programs on `/transfers` |
 | Wrestler view | Built. `/wrestler?id=` shows the entry pass, what is coming up and anything blocking new bookings |
 | Messages | Built. Announcements and private threads on `/messages` and `/inbox`; email after #87. Emails that didn't send are listed on `/messages` with the reason, to send again |
-| Automatic notices | Built. Card expiring or expired, waiver to sign, waitlist seat offered, SWA Advance decision, payment recorded, lesson booked (also to the coach), transfer. In the family inbox now; by email after #87 |
+| Automatic notices | Built. Card expiring or expired, waiver to sign, SWA Advance decision, payment recorded, lesson booked (also to the coach), transfer. In the family inbox now; by email after #87 |
 | Owner workspace | Opens on the launch checklist, today's real numbers and every real tool. Its editors (programs, schedules, camps and events, team codes) publish to the welcome page and calendar. No sample screens |
 
 The owner workspace (`app/portal.html`) runs on real records only. Real family data lives in the `family_accounts`, `program_approvals` and `scholarship_awards` tables. On a new site the owner publishes the programs from the launch checklist.

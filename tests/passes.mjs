@@ -50,6 +50,9 @@ sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(J
 const fam = (u, wrestlers) => sqlite.prepare('INSERT OR REPLACE INTO family_accounts VALUES (?,?,?,?,?)').run(u, u + '@example.test', JSON.stringify({parentName: 'Parent ' + u, phone: '', wrestlers}), 1, 'x');
 fam('p1', [{id: 'w1', name: 'Sam', grade: '8', usawNumber: 'AB1234', usawExpires: '2099-12-31'}, {id: 'w2', name: 'Riley', grade: '8', usawNumber: 'AB1235', usawExpires: '2099-12-31'}]);
 fam('p2', [{id: 'w3', name: 'Jo', grade: '8', usawNumber: 'AB1236', usawExpires: '2099-12-31'}]);
+// Check-in needs a card the academy has verified (#210).
+const verify = (u, w, number) => sqlite.prepare("INSERT OR REPLACE INTO usaw_reviews(user_id,wrestler_id,number,expires,status,note,reviewed_by,reviewed_at) VALUES (?,?,?,'2099-12-31','valid','','owner-id','x')").run(u, w, number);
+verify('p2', 'w3', 'AB1236');
 
 const passesApi = load(path.resolve('app/api/passes/route.ts'));
 const rosterApi = load(path.resolve('app/api/roster/route.ts'));
@@ -76,6 +79,11 @@ assert.equal((await call(payments, 'POST', {action: 'record', userId: 'p1', wres
 assert.equal((await scan('SWA1:' + 'x'.repeat(32))).status, 404, 'unknown pass');
 assert.equal((await scan('not a pass')).status, 404);
 r = await scan(riley); assert.equal(r.status, 409); assert.match(r.body.error, /not registered or paid/);
+// A scan follows the card rule too (#210): Sam's card is on file but not verified yet, so the door says why.
+r = await scan(sam);
+assert.equal(r.status, 409); assert.equal(r.body.error, "Sam can't be checked in: the USA Wrestling card has not been verified yet. Check it and mark it verified on the USA Wrestling cards page.");
+assert.equal(sqlite.prepare("SELECT count(*) n FROM attendance WHERE wrestler_id='w1'").get().n, 0, 'nothing recorded');
+verify('p1', 'w1', 'AB1234');
 r = await scan(sam);
 assert.equal(r.status, 200); assert.equal(r.body.scan.already, false); assert.equal(r.body.scan.name, 'Sam'); assert.match(r.body.scan.session, /Intermediate/);
 assert.equal(sqlite.prepare("SELECT count(*) n FROM attendance WHERE wrestler_id='w1'").get().n, 1);

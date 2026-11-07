@@ -2,7 +2,6 @@
 // Each Stripe event id is stored once, so repeated, late or out-of-order deliveries cannot apply twice.
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
-import {acceptStatement} from './waitlist';
 import {noticeLessonBooked, quietly} from './notify';
 import {membershipTerm, paidThroughAfter} from './membership-term';
 export {membershipTerm, paidThroughAfter};
@@ -125,6 +124,8 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
             .bind(orderId, subscriptionId, PAYMENTS, full.start, full.end, paidThrough, cancelAt, at)
         ]};
       }
+      // Upfront memberships are no longer sold (#210), but a checkout started before then whose event arrives late
+      // still records its 12-month term.
       const term = order.kind === 'annual' ? membershipTerm(paidDate) : null;
       // A payment that completes after its seat hold lapsed can push an event over its limit. The payment stands
       // (money was taken), and the owner is warned so they can add a seat or refund.
@@ -132,9 +133,7 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
       const overCapacity = order.kind === 'event' || order.kind === 'lesson' ? await overLimit(order) : null;
       const warn = overCapacity ? [env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
         .bind(crypto.randomUUID(), 'stripe', order.kind === 'lesson' ? 'lesson_double_booked' : 'event_over_capacity', `${orderId} ${overCapacity}`, at)] : [];
-      // A paid event closes the family's waitlist entry or offer for it (issue #73).
-      const waitlist = order.kind === 'event' ? [acceptStatement(order.item_id, order.user_id, order.wrestler_id, at)] : [];
-      return {outcome: overCapacity ? 'paid-over-capacity' : 'paid', orderId, writes: [...warn, ...waitlist,
+      return {outcome: overCapacity ? 'paid-over-capacity' : 'paid', orderId, writes: [...warn,
         // If the family started a newer checkout for the same item, that newer one is canceled so the paid order wins.
         env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE dedupe_key=? AND status='pending' AND id<>?").bind(at, order.dedupe_key, orderId),
         env.DB!.prepare("UPDATE orders SET status='paid',paid_at=?,updated_at=?,stripe_session_id=?,stripe_payment_intent=?,term_start=?,term_end=? WHERE id=? AND status IN ('pending','expired','canceled')")

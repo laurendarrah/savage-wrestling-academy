@@ -66,10 +66,11 @@ answer = true;
 await run('publishPrograms()');
 assert.equal(puts, 1); assert.equal(run('saveBlocked'), false); assert.equal(run('programsSaved'), true);
 const pub = await publicSchedule();
-assert.deepEqual(pub.programs.map(p => [p.id, p.name, p.grades, p.monthlyCents, p.annualCents, p.walkInCents]), [
-  ['Elementary', 'SWA Development', 'Grades K–6', 20000, 240000, 4000],
-  ['Intermediate', 'SWA Intermediate', 'Grades 7–12', 20000, 240000, 4000],
-  ['Advanced', 'SWA Advance', 'Grades 7–12 · Coach approval required', 20000, 240000, 4000]]);
+assert.deepEqual(pub.programs.map(p => [p.id, p.name, p.grades, p.monthlyCents, p.walkInCents]), [
+  ['Elementary', 'SWA Development', 'Grades K–6', 20000, 4000],
+  ['Intermediate', 'SWA Intermediate', 'Grades 7–12', 20000, 4000],
+  ['Advanced', 'SWA Advance', 'Grades 7–12 · Coach approval required', 20000, 4000]]);
+assert.ok(pub.programs.every(p => !('annualCents' in p)), 'no upfront-year price is published (#210)');
 assert.ok(pub.programs.every(p => p.description.length > 40), 'each program has its description');
 assert.deepEqual(pub.practices, [], 'publishing the programs publishes no practice schedule; that stays under Schedules');
 item = await programsItem();

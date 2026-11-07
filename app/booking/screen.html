@@ -10,14 +10,14 @@ select{display:block;width:100%;margin-top:6px}
 .wrestler-status{margin:0 0 18px;padding:12px 14px;border-radius:6px;background:#EEF0F3}
 .wrestler-status.ok{background:#E6F2EA;color:#195b33}
 .wrestler-status.wait{background:#FFF3F3;color:#8E1A22}
-#submit,#payButton,#payPending,#joinWaitlist{padding:0 18px}
+#submit,#payButton,#payPending{padding:0 18px}
 .notice{background:#FFF3F3;border-left:4px solid #C4222C;padding:14px 16px;border-radius:0 6px 6px 0}
 .price{font-size:22px;font-weight:700}
 .small{font-size:15px;color:#55585F}
 #status{font-weight:600}
 .after{margin:20px 0 0;display:flex;flex-wrap:wrap;gap:8px 18px}
 [hidden]{display:none!important}
-</style></head><body><main><p class="eyebrow" id="kind"></p><h1 id="heading">Book a session</h1><p id="status" role="status" aria-live="polite">Loading…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p><p id="waitlistHelp" hidden><button type="button" id="joinWaitlist">Join the waitlist</button></p>
+</style></head><body><main><p class="eyebrow" id="kind"></p><h1 id="heading">Book a session</h1><p id="status" role="status" aria-live="polite">Loading…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
 <section id="choice" hidden aria-labelledby="heading"><p id="description"></p><p id="gradeRange" class="muted" hidden></p><p id="offeringDescription" style="white-space:pre-wrap;overflow-wrap:anywhere" hidden></p><form id="form"><label>Wrestler<select id="wrestler" required></select></label><p id="wrestlerStatus" class="wrestler-status" role="status" aria-live="polite" hidden></p><label id="optionLabel" hidden>Registration option<select id="option"></select></label><button class="primary" id="submit">Review selection →</button></form></section>
 <section id="empty" hidden aria-labelledby="emptyHeading"><h2 id="emptyHeading">Add your wrestler first</h2><p>Add your wrestler in your family account, then come back to this page to book.</p><a class="button primary" href="/family">Add a wrestler</a></section>
 <section id="review" hidden tabindex="-1" aria-labelledby="reviewHeading"><h2 id="reviewHeading">Not booked yet</h2><div id="details"></div><p class="notice" id="notice"></p><div id="payBox" hidden><label><input type="checkbox" id="acceptTerms"> I have read and agree to the <a href="/membership-terms#camps" target="_blank" rel="noopener">refund policy</a> for this purchase.</label><button class="primary" id="payButton" disabled>Continue to secure checkout</button><p class="small">Payment is handled by Stripe. Your spot is confirmed once Stripe confirms the payment.</p></div><button disabled id="payPending">Online payment isn’t open yet</button><p class="after"><a href="/calendar">Back to the calendar</a><a href="/family">Your family account</a></p></section></main><script>
@@ -26,15 +26,15 @@ const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,
 function eventDay(e,d){const t=(e&&e.schedule||[]).find(x=>x.date===d);return dayDate(d)+(catalog&&d===catalog.today?' (today)':'')+' · '+(t?clock(t.start)+'–'+clock(t.end):'Time to be announced')}
 function eventWhen(e){return (e.schedule||[]).length?e.dates.map(d=>eventDay(e,d)).join('; ')+' (New York time)':e.dates.map(d=>dayDate(d)+(catalog&&d===catalog.today?' (today)':'')).join(' · ')+' · Time to be announced'}
 const gradeLabel=g=>g==='Adult'?'Adult':g==='K'?'Kindergarten':'Grade '+g;
-const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
 async function load(){try{[family,catalog]=await Promise.all([call('/api/family'),call('/api/public-schedule'+(params.get('type')==='live'&&/^\d{4}-\d{2}-\d{2}$/.test(params.get('date')||'')?'?month='+params.get('date').slice(0,7):''))]);const lesson=params.get('type')==='lesson',live=params.get('type')==='live';selected=live?(catalog.liveClasses||[]).find(c=>c.date===params.get('date')&&c.id===params.get('id')):lesson?catalog.privateFormats.find(p=>p.id===params.get('format')):catalog.events.find(e=>e.id===params.get('id'));if(!selected)throw Error('This session is no longer available. Choose another one from the calendar.');
  // The heading is the session's own name (issue #132); the line above it says what kind of session it is.
  $('heading').textContent=selected.name;$('kind').textContent=live?'Extra practice':lesson?'Private lesson':selected.type||'Event';
  $('description').textContent=live?dayDate(selected.date)+' · '+clock(selected.start)+'–'+clock(selected.end)+' (New York time) · '+money(selected.memberCents)+' members / '+money(selected.nonMemberCents)+' non-members. A separate purchase; not included in memberships.':lesson?selected.description+' The academy confirms the coach, date and price with you.':eventWhen(selected)+' · '+money(selected.cents);$('gradeRange').hidden=!selected.gradeRange;$('gradeRange').textContent=selected.gradeRange?'Grade range: '+selected.gradeRange:'';$('offeringDescription').hidden=lesson||!selected.description;$('offeringDescription').textContent=lesson?'':selected.description||'';if(!family.data.wrestlers.length){$('empty').hidden=false;$('status').textContent='';return}$('wrestler').replaceChildren(...family.data.wrestlers.map(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.name+' · '+gradeLabel(w.grade);return o}));$('optionLabel').hidden=live||lesson||selected.type!=='Camp';$('option').innerHTML='<option value="full">'+(live?'Single practice':lesson?'Lesson':'Full event · '+money(selected.cents))+'</option>'+(!lesson&&selected.type==='Camp'&&selected.dayCents!==null?selected.dates.filter(d=>d>=catalog.today).map(d=>'<option value="'+d+'">'+eventDay(selected,d)+' only · '+money(selected.dayCents)+'</option>').join(''):'');$('choice').hidden=false;$('status').textContent='Choose your wrestler, then choose Review selection.';loadBookings()}catch(e){$('status').textContent=e.message}}
-// Whether the chosen wrestler is already registered or on the waitlist (issue #132), from the family's own orders and waitlist.
-let myOrders=[],myWaitlist=[];
+// Whether the chosen wrestler is already registered (issue #132), from the family's own orders. There are no waitlists:
+// a full camp or event is simply full (decision Q10 in #197, issue #210).
+let myOrders=[];
 async function loadBookings(){
- try{const [o,w]=await Promise.all([fetch('/api/orders',{cache:'no-store'}).then(r=>r.ok?r.json():{}),fetch('/api/waitlist',{cache:'no-store'}).then(r=>r.ok?r.json():{})]);myOrders=Array.isArray(o.orders)?o.orders:[];myWaitlist=Array.isArray(w.entries)?w.entries:[]}catch{}
+ try{const o=await fetch('/api/orders',{cache:'no-store'}).then(r=>r.ok?r.json():{});myOrders=Array.isArray(o.orders)?o.orders:[]}catch{}
  showWrestlerStatus();
 }
 function bookingStatus(w){
@@ -43,9 +43,6 @@ function bookingStatus(w){
  const paid=mine.find(o=>o.status==='paid');
  if(paid)return {cls:'ok',text:w.name+' is already registered'+((paid.dates||[]).length&&!live&&paid.dates.length<(selected.dates||[]).length?' for '+paid.dates.map(dayDate).join(' · '):'')+'. You don’t need to book again.'};
  if(mine.some(o=>o.status==='pending'))return {cls:'wait',text:'A checkout for '+w.name+' was started but not finished. Nothing has been charged.'};
- const spot=live?null:myWaitlist.find(x=>x.eventId===selected.id&&x.wrestler===w.name&&(x.status==='waiting'||x.status==='offered'));
- if(spot&&spot.status==='offered')return {cls:'wait',text:'A seat is held for '+w.name+' until '+when(spot.offerExpiresAt)+'. Review and book it below.'};
- if(spot)return {cls:'wait',text:w.name+' is on the waitlist'+(spot.position?', number '+spot.position+' in line':'')+'. The academy can offer a seat if one opens.'};
  return {cls:'',text:w.name+' is not registered yet.'};
 }
 function showWrestlerStatus(){const w=(family&&family.data.wrestlers||[]).find(x=>x.id===$('wrestler').value),s=bookingStatus(w);$('wrestlerStatus').hidden=!s;if(s!==null){$('wrestlerStatus').textContent=s.text;$('wrestlerStatus').className='wrestler-status '+s.cls}}
@@ -60,8 +57,6 @@ $('form').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;$('subm
 // The help link goes to the document named in the message: the Parent Consent Form or the waiver (issue #195).
 function signHelp(p,t){const a=p.querySelector('a'),consent=/Parent Consent Form/.test(t);if(a){a.href=consent?'/consent':'/waiver';a.textContent=consent?'Sign the Parent Consent Form →':'Sign the waiver →'}}
 // Booking is refused without a current USA Wrestling card (issue #68); point the family to where they fix it.
-if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=document.getElementById('status').textContent;document.getElementById('cardHelp').hidden=!/USA Wrestling card/.test(t);document.getElementById('waiverHelp').hidden=!/needs a signed .* before booking/.test(t);signHelp(document.getElementById('waiverHelp'),t);document.getElementById('waitlistHelp').hidden=!/Join the waitlist/.test(t)}).observe(document.getElementById('status'),{childList:true,characterData:true,subtree:true});
+if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=document.getElementById('status').textContent;document.getElementById('cardHelp').hidden=!/USA Wrestling card/.test(t);document.getElementById('waiverHelp').hidden=!/needs a signed .* before booking/.test(t);signHelp(document.getElementById('waiverHelp'),t)}).observe(document.getElementById('status'),{childList:true,characterData:true,subtree:true});
 
-// Waitlist (issue #73): a full event offers to join its waitlist.
-document.getElementById('joinWaitlist').onclick=async()=>{const st=document.getElementById('status');try{const r=await fetch('/api/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'join',eventId:selected.id,wrestlerId:document.getElementById('wrestler').value,option:document.getElementById('option').value})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not join the waitlist.');st.textContent='You are on the waitlist. If a seat opens, the academy can hold it for you; it will show in your family account.';if(Array.isArray(d.entries)){myWaitlist=d.entries;showWrestlerStatus()}}catch(e){st.textContent=e.message}};
 </script></body></html>

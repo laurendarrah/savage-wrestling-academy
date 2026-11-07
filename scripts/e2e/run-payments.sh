@@ -18,7 +18,7 @@ node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 MOCK_PID=$!
 node --import ./scripts/local-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --persist-to .wrangler/e2e-pay --port $PORT --local \
   --var SUPABASE_URL:http://127.0.0.1:54321 --var SUPABASE_PUBLISHABLE_KEY:sb_publishable_e2e --var APP_ORIGIN:http://127.0.0.1:$PORT \
-  --var CHECKOUT_KINDS:walkin,annual,monthly,event,live,lesson --var STRIPE_API_BASE:http://127.0.0.1:12111 \
+  --var CHECKOUT_KINDS:walkin,monthly,event,live,lesson --var STRIPE_API_BASE:http://127.0.0.1:12111 \
   --var USAW_LOOKUP_BASE:http://127.0.0.1:9 --var STRIPE_TEST_WEBHOOK_SECRET:$SECRET --var STRIPE_CONFIG_ENCRYPTION_KEY:$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") >.wrangler/e2e-pay-server.log 2>&1 &
 SERVER=$!
 trap 'kill $SERVER $MOCK_PID 2>/dev/null; rm -rf .wrangler/e2e-pay' EXIT

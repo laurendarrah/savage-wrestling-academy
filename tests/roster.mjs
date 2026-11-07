@@ -42,15 +42,21 @@ const state = {programNamingVersion: 2,
   events: [{id: 'camp-1', name: 'Takedown Camp', type: 'Camp', dates: [today, tomorrow], price: 160, slots: 20}],
   extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [today], enabled: true, start: '17:00', end: '18:00', memberCents: 1000, nonMemberCents: 2000}]};
 sqlite.prepare('INSERT INTO academy_state VALUES (?,?,?,?,?)').run('academy', JSON.stringify(state), 1, 'owner', today);
-const fam = (uid, parent, phone, wrestlers, extra = {}) => sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(uid, uid + '@example.test', JSON.stringify({parentName: parent, phone, wrestlers, ...extra}), 1, today);
+// Every wrestler here has a verified USA Wrestling card, which check-in needs (#210; tests/checkin-card-block.mjs).
+const card = {usawNumber: 'AB1234', usawExpires: '2099-08-31'};
+const fam = (uid, parent, phone, wrestlers, extra = {}) => {
+  sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(uid, uid + '@example.test', JSON.stringify({parentName: parent, phone, wrestlers, ...extra}), 1, today);
+  for (const w of wrestlers) sqlite.prepare("INSERT INTO usaw_reviews(user_id,wrestler_id,number,expires,status,note,reviewed_by,reviewed_at) VALUES (?,?,'AB1234','2099-08-31','valid','','owner-id','x')").run(uid, w.id);
+};
 // Issue #188: allergies or medical notes and the emergency contact reach staff on the roster.
-fam('p1', 'Pat One', '555-0101', [{id: 'w1', name: 'Avery Member', grade: '9', birthDate: '2011-02-03', allergies: 'Peanut allergy'}], {emergencyContactName: 'Jordan One', emergencyContactPhone: '631-555-0111', homeAddress: '1 Main St'});
-fam('p2', 'Pat Two', '555-0102', [{id: 'w2', name: 'Blake Walkin', grade: '8'}]);
-fam('p3', 'Pat Three', '', [{id: 'w3', name: 'Casey Refunded', grade: '10'}]);
-fam('p4', 'Pat Four', '555-0104', [{id: 'w4', name: 'Dana Scholar', grade: 'K'}]);
+fam('p1', 'Pat One', '555-0101', [{id: 'w1', name: 'Avery Member', grade: '9', birthDate: '2011-02-03', allergies: 'Peanut allergy', ...card}], {emergencyContactName: 'Jordan One', emergencyContactPhone: '631-555-0111', homeAddress: '1 Main St'});
+fam('p2', 'Pat Two', '555-0102', [{id: 'w2', name: 'Blake Walkin', grade: '8', ...card}]);
+fam('p3', 'Pat Three', '', [{id: 'w3', name: 'Casey Refunded', grade: '10', ...card}]);
+fam('p4', 'Pat Four', '555-0104', [{id: 'w4', name: 'Dana Scholar', grade: 'K', ...card}]);
 let n = 0;
 const order = (uid, wid, name, kind, status, o = {}) => sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end)
   VALUES (?,?,?,?,?,?,?,?,?,?,1000,0,1000,'usd','{}','{}',?,?,0,?,?,?,?,?)`).run('o' + ++n, uid, 'x', wid, name, kind, o.program ?? null, o.item ?? 'x', 'label', JSON.stringify(o.dates ?? []), status, 'k' + n, today, today, today, o.start ?? null, o.end ?? null);
+// A membership paid upfront before #210 still puts the wrestler on the roster until its term ends.
 order('p1', 'w1', 'Avery Member', 'annual', 'paid', {program: 'Intermediate', item: 'Intermediate', start: ny(-10), end: ny(355)});
 order('p2', 'w2', 'Blake Walkin', 'walkin', 'paid', {program: 'Intermediate', item: `Intermediate:${tomorrow}:18:00`, dates: [tomorrow]});
 order('p3', 'w3', 'Casey Refunded', 'annual', 'refunded', {program: 'Intermediate', item: 'Intermediate', start: ny(-10), end: ny(355)});

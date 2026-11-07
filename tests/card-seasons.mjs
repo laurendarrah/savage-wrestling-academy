@@ -161,7 +161,7 @@ function page(file, {fetch, hidden = [], extra = {}}) {
     {id: 'd', name: 'No card', grade: 'K'}];
   const seasons = [{expires: '2099-08-31', label: '2098–99 season'}, {expires: '2100-08-31', label: '2099–00 season'}];
   const {el, ctx, html} = page('app/family/screen.html', {hidden: ['summary'], fetch: async url => url === '/api/family'
-    ? json({email: 'pat@example.test', data: {parentName: 'Pat', phone: '1', wrestlers: structuredClone(wrestlers)}, revision: 1, updatedAt: null, cards: {}, cardSeasons: seasons})
+    ? json({email: 'pat@example.test', data: {parentName: 'Pat', phone: '1', wrestlers: structuredClone(wrestlers)}, revision: 1, updatedAt: null, cards: {}, cardSeasons: seasons, cardRenewalDays: 30})
     : json({})});
   await settle();
   const form = el('wrestlers').innerHTML;
@@ -218,7 +218,7 @@ async function cardsPage({renewal, clipboard}) {
   const cards = [{userId: 'p1', email: 'p1@example.test', parentName: 'Pat', phone: '', wrestlerId: 'w1', wrestler: 'Sam', grade: '8', state: 'current', number: 'AB-1234', expires: '2027-08-31', note: '', reviewedAt: null},
     {userId: 'p2', email: 'p2@example.test', parentName: 'Riley', phone: '', wrestlerId: 'w4', wrestler: 'Lee', grade: '9', state: 'missing', number: '', expires: '', note: '', reviewedAt: null}];
   const selection = {ranges: [], removeAllRanges() { this.ranges = []; }, addRange(r) { this.ranges.push(r); }};
-  const p = page('app/cards/screen.html', {fetch: async url => json(url === '/api/exceptions' ? {exceptions: []} : {today: '2027-08-20', date: '2027-08-20', cards, renewal}),
+  const p = page('app/cards/screen.html', {fetch: async url => json(url === '/api/exceptions' ? {exceptions: []} : {today: '2027-08-20', date: '2027-08-20', cards, renewal, renewalDays: 30}),
     extra: {navigator: clipboard === undefined ? {} : {clipboard}, window: {getSelection: () => selection}}});
   p.ctx.document.createRange = () => ({selectNodeContents(n) { this.node = n; }});
   p.el('show').value = 'all'; p.el('q').value = '';
@@ -231,6 +231,8 @@ async function cardsPage({renewal, clipboard}) {
   assert.equal(el('tRenewLabel').textContent, 'Not yet renewed for 2027–28'); assert.equal(el('tRenew').textContent, 2);
   assert.equal(el('renewTile').className, 'tile', 'August: a normal tile');
   const rows = el('rows').innerHTML;
+  // The renewal list (#210): Sam's card ends Aug 31, within 30 days of Aug 20.
+  assert.match(rows, /<span class="badge soon">On file · expires soon<\/span>/); assert.equal(el('tSoon').textContent, 1);
   assert.match(rows, /<span class="usaw-id" id="num0">AB-1234<\/span>/);
   assert.match(rows, /<a class="button lookup" href="https:\/\/www\.usawmembership\.com\/verify_membership" target="_blank" rel="noopener" data-lookup="0">Look up on USA Wrestling<\/a>/);
   assert.equal((rows.match(/data-lookup=/g) || []).length, 1, 'no lookup for a wrestler without a card number');

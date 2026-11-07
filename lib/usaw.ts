@@ -45,10 +45,17 @@ export function seasonOptions(today: string): {expires: string; label: string}[]
   return list;
 }
 
-// Summary for the owner's cards page. In August: how many cards still end this August 31, so the wrestler has not
-// renewed for the new season yet. The rest of the year: how many cards end with the current season.
+// A card joins the owner's renewal list, and the family gets its "card expires soon" reminder, this many days before
+// it expires (decision Q13 in #197, issue #210). The cards page, the family page and the daily reminders all use it.
+export const CARD_RENEWAL_DAYS = 30;
+// The last day of the renewal window that starts today: a card expiring on or before it is due for renewal.
+export const renewalDue = (today: string) => new Date(Date.parse(today + 'T12:00:00Z') + CARD_RENEWAL_DAYS * 86400000).toISOString().slice(0, 10);
+
+// Summary for the owner's cards page. Inside the renewal window before August 31 (from August 1 with 30 days): how many
+// cards still end this August 31, so the wrestler has not renewed for the new season yet. The rest of the year: how
+// many cards end with the current season. `august` keeps its name for the page; it means the window is open.
 export function cardRenewal(cards: {number?: string; expires?: string}[], today: string) {
-  const season = cardSeason(today), august = today.slice(5, 7) === '08';
+  const season = cardSeason(today), august = renewalDue(today) >= season.end;
   const count = cards.filter(c => c.number && c.expires === season.end).length;
   const next = cardSeason(`${season.end.slice(0, 4)}-09-01`);
   return {august, ends: season.end, count,

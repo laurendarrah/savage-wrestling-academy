@@ -56,7 +56,7 @@ const roster = load(path.resolve('lib/roster.ts'));
 const O = 'https://a.test';
 const call = async (route, method, body, origin = O) => { const r = await route[method](new Request(O + '/x', method === 'GET' ? {} : {method, headers: {'content-type': 'application/json', origin}, body: JSON.stringify(body)})); return {status: r.status, body: await r.json()}; };
 const walkin = () => quotes.quoteMembership('p1', {wrestlerId: 'w1', program: 'Intermediate', plan: 'walkin', date: ny(1), practiceId: `Intermediate:${ny(1)}:18:00`});
-const annual = () => quotes.quoteMembership('p1', {wrestlerId: 'w1', program: 'Intermediate', plan: 'annual'});
+const membership = () => quotes.quoteMembership('p1', {wrestlerId: 'w1', program: 'Intermediate', plan: 'monthly'});
 const live = () => quotes.quoteBooking('p1', {type: 'live', wrestlerId: 'w1', id: 'fnl', date: ny(3)});
 const camp = option => quotes.quoteBooking('p1', {type: 'event', wrestlerId: 'w1', id: 'camp', option});
 const blockedBy = (q, text) => { assert.equal(q.ok, false); assert.equal(q.status, 403); assert.equal(q.extra?.usawRequired, true); assert.match(q.error, text); };
@@ -84,11 +84,11 @@ assert.equal(records.cleanFamily({parentName: 'P', phone: '', wrestlers: [{id: '
 
 // --- Missing and expired cards block every purchase type ---
 setCard(undefined);
-for (const q of [await walkin(), await annual(), await live(), await camp('full')]) blockedBy(q, /needs a current USA Wrestling card/);
+for (const q of [await walkin(), await membership(), await live(), await camp('full')]) blockedBy(q, /needs a current USA Wrestling card/);
 blockedBy(await quotes.quoteBooking('p1', {type: 'lesson', wrestlerId: 'w1', format: 'one-on-one'}), /needs a current USA Wrestling card/);
 setCard('AB1234', ny(-1));
 blockedBy(await walkin(), /card expired on/);
-blockedBy(await annual(), /card expired on/);
+blockedBy(await membership(), /card expired on/);
 
 // --- The card must cover the session date, and every day of a multi-day event ---
 setCard('AB1234', ny(2));
@@ -138,14 +138,14 @@ assert.deepEqual(sqlite.prepare("SELECT action FROM security_events WHERE action
 // A future date shows whose card will have lapsed by then (for example a tournament day).
 r = await cardsApi.GET(new Request(O + '/x?date=' + ny(201))); assert.equal((await r.json()).cards[0].state, 'expired');
 
-// --- Roster: a paid member whose card later lapses still appears and can check in, with a warning ---
-r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'annual', program: 'Intermediate', method: 'cash'});
+// --- Roster: a paid wrestler whose card is unverified or later lapses still appears, but can't be checked in (#210) ---
+r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:18:00`, method: 'cash'});
 assert.equal(r.status, 200);
 let entry = (await roster.rosterFor(today, {role: 'owner'})).find(s => s.key.startsWith('practice:Intermediate:')).entries[0];
-assert.equal(entry.card, 'current');
+assert.equal(entry.card, 'current'); assert.match(entry.checkInBlocked, /has not been verified yet/);
 setCard('AB1235', ny(-1));
 entry = (await roster.rosterFor(today, {role: 'owner'})).find(s => s.key.startsWith('practice:Intermediate:')).entries[0];
-assert.equal(entry.name, 'Sam'); assert.equal(entry.card, 'expired'); assert.equal(entry.cardExpires, ny(-1));
+assert.equal(entry.name, 'Sam'); assert.equal(entry.card, 'expired'); assert.equal(entry.cardExpires, ny(-1)); assert.match(entry.checkInBlocked, /^Sam can't be checked in: the USA Wrestling card expired/);
 
 // --- Automatic USA Wrestling lookup (issue #202): it only fills in verification; booking rules are unchanged ---
 {
@@ -197,10 +197,15 @@ assert.equal(entry.name, 'Sam'); assert.equal(entry.card, 'expired'); assert.equ
   const pick = start => { const i = script.indexOf(start); assert.ok(i >= 0, start); return script.slice(i, script.indexOf('\n', i)); };
   const helpers = script.slice(script.indexOf('let cards={};'), script.indexOf('async function refreshCards'));
   const ctx = {Date, String, Intl};
-  vm.runInNewContext(pick('const longDate=') + '\nconst esc=v=>String(v??"").replace(/[&<>"\']/g,"");\n' + helpers.replace('let cards={};', 'var cards={};') + '\nthis.cardLine=cardLine;this.setCards=c=>{cards=c};', ctx);
+  vm.runInNewContext(pick('const longDate=') + '\nconst esc=v=>String(v??"").replace(/[&<>"\']/g,"");\n' + helpers.replace('let cards={};', 'var cards={};') + '\nthis.cardLine=cardLine;this.setCards=c=>{cards=c};this.setRenewalDays=d=>{renewalDays=d};', ctx);
   assert.match(ctx.cardLine({id: 'a', name: 'A'}), /No USA Wrestling card.*Booking is blocked/);
   assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(-1)}), /expired.*Booking is blocked/);
+  // "Renew soon" uses the server's renewal window (CARD_RENEWAL_DAYS, #210), sent with the family account.
+  assert.doesNotMatch(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(10)}), /Renew soon/, 'no window until the server sends it');
+  ctx.setRenewalDays(30);
   assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(10)}), /warning.*Renew soon/);
+  assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(30)}), /warning.*Renew soon/, 'day 30 is inside the window');
+  assert.doesNotMatch(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(31)}), /Renew soon/, 'day 31 is not');
   assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(200)}), /active">USA Wrestling card on file/);
   ctx.setCards({a: {state: 'invalid', number: 'AB12', expires: ny(200), note: 'Number not found'}});
   assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(200)}), /Card not verified.*Number not found/);
