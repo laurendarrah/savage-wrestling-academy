@@ -1072,11 +1072,12 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Sessions today/);
   await waitText(owner, '#todayTiles', /Collected this month/);
   await waitText(owner, '#todayTiles', /Site errors, last 24 hours/);
-  // Launch checklist: by now the walkthrough has set programs, schedule, waiver, coach and lesson prices.
+  // Launch checklist: by now the walkthrough has set programs, schedules, website, waiver, coach and lesson prices.
   await waitText(owner, '#launchCount', /\d+ of \d+ ready|Everything is set up/);
-  for (const k of ['programs', 'schedule', 'waiver', 'coaches', 'lessons', 'address', 'signin'])
+  for (const k of ['programs', 'schedule', 'website', 'waiver', 'coaches', 'lessons', 'address', 'signin'])
     expect(await owner.getAttribute(`[data-launch="${k}"]`, 'data-status') === 'done', `launch checklist: ${k} should be ready`);
-  expect(await owner.getAttribute('[data-launch="email"]', 'data-status') === 'waiting', 'launch checklist: email waits on its decision');
+  expect(await owner.getAttribute('[data-launch="email"]', 'data-status') === 'waiting', 'launch checklist: email waits on its setup');
+  await at(owner, '[data-launch="events"]', /1 camp coming up/); await at(owner, '[data-launch="live"]', /Switch to live when you’re ready/);
   const h = await owner.request.get(BASE + '/api/health'); expect(h.status() === 200 && (await h.json()).ok === true, 'health check');
   expect(!(await owner.isVisible('.sample-notice')) && !(await owner.isVisible('#previewMenu')), 'the dashboard has no sample notices or previews');
   const bg = await owner.locator('a.button.primary').first().evaluate(el => getComputedStyle(el).backgroundColor);

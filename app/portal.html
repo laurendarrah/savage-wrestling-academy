@@ -238,8 +238,9 @@ function dashboard(){setTimeout(loadToday,0);setTimeout(loadLaunch,0);return tit
 async function loadLaunch(){
  let d=null;try{const r=await fetch('/api/launch-checklist',{cache:'no-store'});if(r.ok)d=await r.json()}catch{}
  const el=document.getElementById('launch');if(!el||!d)return;
- const mark={done:['✓','#1f6f3a','Ready'],todo:['!','#b12c38','To do'],waiting:['…','#8a5a00','Waiting on a decision'],info:['i','#555967','For your information']};
- const row=i=>{const [m,c,l]=mark[i.status]||mark.info;const open=i.action==='publish-programs'?'<button type="button" class="primary" onclick="publishPrograms()">Publish the programs</button>':i.href?`<a class="button" href="${esc(i.href)}">Open</a>`:i.section?`<button type="button" onclick="go('${esc(i.section)}')">Open</button>`:'';
+ const mark={done:['✓','#1f6f3a','Ready'],todo:['!','#b12c38','To do'],waiting:['…','#8a5a00','Waiting on setup'],info:['i','#555967','For your information']};
+ // Links to another site (the Launch board in GitHub) open in a new tab; the academy's own pages open here.
+ const row=i=>{const [m,c,l]=mark[i.status]||mark.info;const open=i.action==='publish-programs'?'<button type="button" class="primary" onclick="publishPrograms()">Publish the programs</button>':i.href?`<a class="button" href="${esc(i.href)}"${/^https:\/\//.test(i.href)?' target="_blank" rel="noopener"':''}>Open</a>`:i.section?`<button type="button" onclick="go('${esc(i.section)}')">Open</button>`:'';
   return `<div class="listitem" data-launch="${esc(i.key)}" data-status="${esc(i.status)}"><span aria-label="${l}" title="${l}" style="flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;background:${c}">${m}</span><div class="grow"><b>${esc(i.label)}</b><p class="muted small" style="margin:2px 0 0">${esc(i.detail)}</p></div>${i.status==='done'?'':open}</div>`};
  // What still needs attention first; finished items fold away so the list stays short.
  const order={todo:0,waiting:1,info:2},open=d.items.filter(i=>i.status!=='done').sort((a,b)=>order[a.status]-order[b.status]),done=d.items.filter(i=>i.status==='done');
