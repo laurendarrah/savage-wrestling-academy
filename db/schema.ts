@@ -128,6 +128,16 @@ export const usawReviews=sqliteTable("usaw_reviews",{
  userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),number:text("number").notNull(),expires:text("expires").notNull(),
  status:text("status").notNull(),note:text("note").notNull(),reviewedBy:text("reviewed_by").notNull(),reviewedAt:text("reviewed_at").notNull()
 },t=>[primaryKey({columns:[t.userId,t.wrestlerId]}),check("usaw_review_status",sql`${t.status} IN ('valid','invalid')`)]);
+// The latest check of a wrestler's card on USA Wrestling's public verify page (issue #202). Only the status, the name
+// and state USA Wrestling shows, and the date are kept, never their page. The same rows are the 24-hour cache per
+// card number and season. A verification it makes is a usaw_reviews row with reviewed_by 'usaw-lookup'.
+export const usawLookups=sqliteTable("usaw_lookups",{
+ userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),number:text("number").notNull(),expires:text("expires").notNull(),
+ season:text("season").notNull(),status:text("status").notNull(),outcome:text("outcome").notNull(),cardName:text("card_name"),cardState:text("card_state"),
+ checkedAt:text("checked_at").notNull()
+},t=>[primaryKey({columns:[t.userId,t.wrestlerId]}),index("usaw_lookups_card").on(t.number,t.season,t.checkedAt),
+ check("usaw_lookup_status",sql`${t.status} IN ('active','inactive','not_found','unavailable')`),
+ check("usaw_lookup_outcome",sql`${t.outcome} IN ('verified','inactive','not_found','mismatch','season','unavailable')`)]);
 // Waivers (issue #69). Each published text is a new, never-edited version; families sign per wrestler per version.
 export const waiverVersions=sqliteTable("waiver_versions",{
  id:text("id").primaryKey(),title:text("title").notNull(),body:text("body").notNull(),sha256:text("sha256").notNull(),

@@ -70,7 +70,7 @@ const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance
 // table fails here until someone decides which.
 {
   const db=freshDb().sqlite,tables=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%'").all().map(r=>r.name);
-  const core=['academy_state','family_accounts','coach_openings'],excluded=['staff_access','coach_invites','integration_secrets','auth_attempts','error_log','recovery_snapshots','restore_guard','security_events'];
+  const core=['academy_state','family_accounts','coach_openings'],excluded=['staff_access','coach_invites','integration_secrets','auth_attempts','error_log','usaw_lookups','recovery_snapshots','restore_guard','security_events'];
   const missing=tables.filter(t=>![...core,...excluded,...restorable].includes(t));
   assert.deepEqual(missing,[],'tables neither backed up nor excluded: '+missing.join(', '));
 }

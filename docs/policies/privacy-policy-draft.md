@@ -27,6 +27,7 @@ Accounts are created by a **parent or guardian** (or an adult wrestler). Childre
 - Entry passes: a random code for each wrestler, shown as a QR code.
 - Waitlist places and seat offers, private lesson bookings, and program transfers.
 - The academy's review of a USA Wrestling card (for example, "verified" or "could not verify", with a reason).
+- The result of checking a USA Wrestling card number: whether the membership is active, the name and state USA Wrestling shows for that number, and the date of the check. See "USA Wrestling card checks" below.
 - Security records: sign-ins and sensitive actions (for example, a payment recorded or a waiver signed), with the time.
 - Error records: when a page fails to load, the time and the page address (never the information you entered).
 
@@ -42,6 +43,12 @@ We use only the cookies needed to keep you signed in securely. We do not use adv
 - To keep the site secure, prevent misuse and fix problems.
 - To keep records the academy needs for accounting, insurance and legal reasons.
 
+## USA Wrestling card checks
+
+When you add or change a wrestler's USA Wrestling card number, or choose "Check my card", the site checks the card number with USA Wrestling's public membership verification page (usawmembership.com/verify_membership), the same page anyone can use without signing in. The academy may also check a card from its own page. Only the card number is sent to USA Wrestling: never your name, your wrestler's name, your email or anything else. We keep only whether the athlete membership is active, the name and state USA Wrestling shows for that number, and the date of the check. If the card is active and the name matches your wrestler, the card is marked verified. If the number belongs to someone else, we never show you their name. Each card number is checked at most once a day.
+
+[Attorney: confirm that checking a family-provided card number on USA Wrestling's public page is consistent with USA Wrestling's terms of use, and whether this needs its own line in the consent families give.]
+
 ## Who can see it
 
 - **The academy owner** can see all family accounts and records.
@@ -54,6 +61,7 @@ We use these companies to run the site. They process information on our behalf a
 - **Supabase**: sign-in and account security.
 - **Stripe**: online card payments.
 - **Website hosting and database**: Cloudflare (the academy's own account).
+- **USA Wrestling**: not a service provider, but the site sends a wrestler's card number to USA Wrestling's public membership verification page to check it (see above).
 - **Email delivery**: [Decision: provider, see #87].
 
 [Attorney: confirm whether data processing agreements are needed with each provider, and where each stores data.]

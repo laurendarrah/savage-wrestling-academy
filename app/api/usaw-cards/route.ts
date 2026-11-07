@@ -5,6 +5,7 @@ import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth
 import {academyToday} from '../../../lib/public-schedule';
 import {listCards, setReview, clearReview, cardStatus, cardRenewal} from '../../../lib/usaw';
 import {noticeCardRejected, quietly} from '../../../lib/notify';
+import {checkCard} from '../../../lib/usaw-check';
 export const dynamic = 'force-dynamic';
 
 const validDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').toISOString().slice(0, 10) === d;
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
   if (raw.length > 2048) return reply({error: 'Request too large.'}, 413);
   let input: any;
   try { input = JSON.parse(raw); } catch { return reply({error: 'Invalid request.'}, 400); }
-  if (!['valid', 'invalid', 'clear'].includes(input?.status) || typeof input.userId !== 'string' || typeof input.wrestlerId !== 'string')
+  if (!['valid', 'invalid', 'clear', 'lookup'].includes(input?.status) || typeof input.userId !== 'string' || typeof input.wrestlerId !== 'string')
     return reply({error: 'Choose a wrestler and a review.'}, 400);
   const row = await env.DB!.prepare('SELECT payload FROM family_accounts WHERE user_id=?').bind(input.userId).first<{payload: string}>();
   const w = row ? (JSON.parse(row.payload).wrestlers || []).find((x: any) => x.id === input.wrestlerId) : null;
@@ -40,6 +41,13 @@ export async function POST(request: Request) {
   if (input.number !== s.number || input.expires !== s.expires) return reply({error: 'The family changed this card since the page loaded. Reload and check it again.'}, 409);
   const note = typeof input.note === 'string' ? input.note.trim().slice(0, 200) : '';
   if (input.status === 'invalid' && !note) return reply({error: 'Add a short reason the family will see, for example "number not found".'}, 400);
+  // "Check with USA Wrestling" (issue #202): one card, on the owner's tap. It verifies the card when it is active and the
+  // name matches; anything else leaves the owner's decision to the owner.
+  if (input.status === 'lookup') {
+    const result = await checkCard(request, {userId: input.userId, wrestler: w, trigger: 'owner', actorId: auth.owner.userId});
+    if ('reason' in result) return reply({error: result.reason}, result.outcome === 'limited' ? 429 : 409);
+    return reply({ok: true, outcome: result.outcome, cached: result.cached, checkedAt: result.checkedAt});
+  }
   await setReview(input.userId, input.wrestlerId, s.number, s.expires, input.status, note, auth.owner.userId);
   if (input.status === 'invalid') await quietly(() => noticeCardRejected(input.userId, input.wrestlerId, note));
   return reply({ok: true});

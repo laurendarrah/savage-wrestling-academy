@@ -7,10 +7,16 @@ import {exceptionFor} from './exceptions';
 import {fullDate} from './datetime';
 
 export type CardWrestler = {id: string; name: string; usawNumber?: string; usawExpires?: string};
-export type Review = {number: string; expires: string; status: 'valid' | 'invalid'; note: string; reviewed_at: string} | null;
+export type Review = {number: string; expires: string; status: 'valid' | 'invalid'; note: string; reviewed_at: string; reviewed_by?: string} | null;
 export type CardStatus = {state: 'missing' | 'expired' | 'invalid' | 'recheck' | 'current' | 'verified'; number: string; expires: string; note: string};
 
 const longDate = fullDate;
+// reviewed_by on a verification made by the automatic USA Wrestling lookup (issue #202, lib/usaw-check.ts).
+export const LOOKUP_REVIEWER = 'usaw-lookup';
+// Who verified or rejected a card on file: the USA Wrestling lookup or the owner. Null when no review applies.
+export const reviewSource = (review: Review, s: CardStatus) =>
+  review && review.number === s.number && review.expires === s.expires && (s.state === 'verified' || s.state === 'invalid')
+    ? {verifiedBy: review.reviewed_by === LOOKUP_REVIEWER ? 'usaw-lookup' as const : 'owner' as const, verifiedAt: review.reviewed_at} : {verifiedBy: null, verifiedAt: null};
 
 // USA Wrestling membership seasons (issue #131). The membership year runs September 1 to August 31, and every card
 // expires on August 31 of its membership year, whatever month it was bought. New-season cards usually open in
@@ -62,7 +68,7 @@ export function cardStatus(w: CardWrestler, review: Review, onDate: string): Car
 }
 
 export async function reviewFor(userId: string, wrestlerId: string): Promise<Review> {
-  return await env.DB!.prepare('SELECT number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id=? AND wrestler_id=?')
+  return await env.DB!.prepare('SELECT number,expires,status,note,reviewed_at,reviewed_by FROM usaw_reviews WHERE user_id=? AND wrestler_id=?')
     .bind(userId, wrestlerId).first<NonNullable<Review>>() ?? null;
 }
 
@@ -95,14 +101,21 @@ export async function setReview(userId: string, wrestlerId: string, number: stri
 // Every wrestler in every family with card status on a date, for the owner's card review page.
 export async function listCards(onDate: string) {
   const families = (await env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts ORDER BY email LIMIT 2000').all<{user_id: string; email: string; payload: string}>()).results;
-  const reviews = (await env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews').all<NonNullable<Review> & {user_id: string; wrestler_id: string}>()).results;
+  const reviews = (await env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at,reviewed_by FROM usaw_reviews').all<NonNullable<Review> & {user_id: string; wrestler_id: string}>()).results;
   const byKey = new Map(reviews.map(r => [r.user_id + '/' + r.wrestler_id, r]));
+  // The latest automatic check on USA Wrestling (issue #202), shown to the owner while it is about the card on file.
+  type Lookup = {user_id: string; wrestler_id: string; number: string; expires: string; status: string; outcome: string; card_name: string | null; card_state: string | null; checked_at: string};
+  const lookups = new Map((await env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,outcome,card_name,card_state,checked_at FROM usaw_lookups').all<Lookup>()).results
+    .map(r => [r.user_id + '/' + r.wrestler_id, r]));
   return families.flatMap(f => {
     const p = JSON.parse(f.payload || '{}');
     return (p.wrestlers || []).map((w: CardWrestler & {grade: string}) => {
-      const review = byKey.get(f.user_id + '/' + w.id) ?? null, status = cardStatus(w, review, onDate);
+      const review = byKey.get(f.user_id + '/' + w.id) ?? null, status = cardStatus(w, review, onDate), l = lookups.get(f.user_id + '/' + w.id);
+      const lookup = l && l.number === status.number.replace(/[\s-]/g, '') && l.expires === status.expires
+        ? {status: l.status, outcome: l.outcome, name: l.card_name, state: l.card_state, checkedAt: l.checked_at} : null;
       return {userId: f.user_id, email: f.email, parentName: p.parentName || '', phone: p.phone || '', wrestlerId: w.id, wrestler: w.name, grade: w.grade,
-        ...status, reviewedAt: review && review.number === status.number && review.expires === status.expires ? review.reviewed_at : null};
+        ...status, reviewedAt: review && review.number === status.number && review.expires === status.expires ? review.reviewed_at : null,
+        ...reviewSource(review, status), lookup};
     });
   });
 }

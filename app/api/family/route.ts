@@ -1,7 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
 import { validFamily, cleanFamily, emptyFamily } from '../../../lib/family-records';
-import { cardStatus, reviewFor, seasonOptions } from '../../../lib/usaw';
+import { cardStatus, reviewFor, reviewSource, seasonOptions } from '../../../lib/usaw';
+import { checkChangedCards, familyLookup, lookupView, lookupsFor } from '../../../lib/usaw-check';
 import { exceptionFor } from '../../../lib/exceptions';
 import { dailyReminders, quietly } from '../../../lib/notify';
 import { academyToday } from '../../../lib/public-schedule';
@@ -13,7 +14,9 @@ export async function GET(request:Request){
  await quietly(()=>dailyReminders());
  const data=row?JSON.parse(row.payload):emptyFamily(),today=academyToday(),cards:Record<string,unknown>={};
  // USA Wrestling card status per wrestler, including the owner's review, so the family sees what blocks booking.
- for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]);cards[w.id]={...cardStatus(w,await reviewFor(auth.user.id,w.id),today),exceptionUntil:x?.endsOn??null}}
+ // The latest automatic check on USA Wrestling (issue #202): what happened and when, never the name on the card.
+ const lookups=await lookupsFor(auth.user.id);
+ for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]),review=await reviewFor(auth.user.id,w.id),s=cardStatus(w,review,today);cards[w.id]={...s,...reviewSource(review,s),exceptionUntil:x?.endsOn??null,lookup:familyLookup(lookupView(w,lookups.get(w.id)))}}
  // The card seasons a family can choose today (issue #131); the page offers them in the wrestler editor.
  return accountReply({email:auth.user.email,data,cards,cardSeasons:seasonOptions(today),revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
 }
@@ -28,11 +31,15 @@ export async function PUT(request:Request){
  if(!input||!Number.isInteger(input.revision)||input.revision<0||!validFamily(input.data))return reply({error:'Check the family profile fields.'},400);
  const scholarships=await env.DB!.prepare("SELECT wrestler_id FROM scholarship_awards WHERE user_id=? AND status='active'").bind(auth.user.id).all<{wrestler_id:string}>();
  if(scholarships.results.some(a=>!input.data.wrestlers.some((w:{id:string})=>w.id===a.wrestler_id)))return reply({error:'An active scholarship wrestler must remain in the family profile. Contact SWA before removing this wrestler.'},409);
- const payload=JSON.stringify(cleanFamily(input.data)),now=new Date().toISOString();
+ const clean=cleanFamily(input.data),payload=JSON.stringify(clean),now=new Date().toISOString();
+ const before=await env.DB!.prepare('SELECT payload FROM family_accounts WHERE user_id=?').bind(auth.user.id).first<{payload:string}>();
  // The account ID always comes from the verified session, never the client body.
  const row=input.revision===0?
  await env.DB!.prepare('INSERT INTO family_accounts (user_id,email,payload,revision,updated_at) VALUES (?,?,?,1,?) ON CONFLICT(user_id) DO NOTHING RETURNING revision').bind(auth.user.id,auth.user.email!,payload,now).first<{revision:number}>():
  await env.DB!.prepare('UPDATE family_accounts SET payload=?,revision=revision+1,updated_at=? WHERE user_id=? AND revision=? RETURNING revision').bind(payload,now,auth.user.id,input.revision).first<{revision:number}>();
  if(!row)return reply({error:'Your profile changed on another device. Reload before saving.'},409);
- return reply({revision:row.revision,updatedAt:now});
+ // A new or changed card number is checked on USA Wrestling's public verify page (issue #202). It never fails the save.
+ let lookups:Record<string,string>={};
+ try{lookups=await checkChangedCards(request,auth.user.id,before?JSON.parse(before.payload):null,clean)}catch{}
+ return reply({revision:row.revision,updatedAt:now,lookups});
 }

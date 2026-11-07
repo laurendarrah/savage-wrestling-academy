@@ -5,12 +5,16 @@
 // Usage: see scripts/e2e/run.sh
 import {createRequire} from 'node:module';
 import {start, sessionCookie, users} from './fake-supabase.mjs';
+import {start as startUsaw} from './fake-usaw.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 for (const p of ['playwright', '/opt/node-tools/node_modules/playwright']) { try { playwright = require(p); break; } catch {} }
 const BASE = process.env.E2E_BASE || 'http://127.0.0.1:8799', AUTH = process.env.E2E_SUPABASE || 'http://127.0.0.1:54321';
 const SHOTS = process.env.E2E_SHOTS || '';
 const auth = await start(+new URL(AUTH).port);
+// USA Wrestling's verify page is a local stand-in (issue #202); the site is started with USAW_LOOKUP_BASE pointing here.
+const USAW = process.env.E2E_USAW || 'http://127.0.0.1:54331';
+const usaw = await startUsaw(+new URL(USAW).port);
 const browser = await playwright.chromium.launch();
 const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 const today = ny(0);
@@ -138,7 +142,9 @@ await step('family adds an expired card, then a current one', async () => {
   await family.selectOption('#usawSeason0', season);
   expect(await family.isHidden('#usawExpBox0'), 'choosing a season hides the date box');
   await family.click('#save');
-  await waitText(family, '#savedDetails', /USA Wrestling card on file[\s\S]*Current through Aug 31, \d{4}, the end of the \d{4}–\d{2} season/);
+  // The site checked the number with USA Wrestling (a stand-in here), which has no card with it (issue #202).
+  await waitText(family, '#savedDetails', /Check the card number[\s\S]*USA Wrestling has no card with this number/);
+  await waitText(family, '#status', /Your changes are saved\. USA Wrestling has no card with the number you entered for Sam Example/);
   await family.click('text=Edit family profile');
   expect(await family.inputValue('#usawSeason0') === season, 'the saved season is preselected');
   await family.click('#save'); await waitText(family, '#status', /saved/);
@@ -171,6 +177,45 @@ await step('family changes the card: still blocked until the owner checks it; ow
   await owner.click('#rows button:has-text("Verified")');
   await waitText(owner, '#status', /Marked verified/);
   await family.goto(BASE + '/family'); await waitText(family, '#savedDetails', /USA Wrestling card verified/);
+});
+// USA Wrestling lookup (issue #202): the site checks a new or changed number on USA Wrestling's public verify page (a
+// local stand-in here, with fictional cards) and verifies it when the card is active and the name matches.
+const seasonEnd = (() => { const [y, m] = today.split('-').map(Number); return (m >= 9 ? y + 1 : y) + '-08-31'; })();
+await step('family enters a card USA Wrestling shows as not active, then an active one that verifies itself', async () => {
+  const sent = usaw.seen.length;
+  await family.goto(BASE + '/family'); await family.click('text=Edit family profile');
+  await family.fill('#usaw0', '2222222222'); await family.selectOption('#usawSeason0', seasonEnd); await family.click('#save');
+  await waitText(family, '#status', /USA Wrestling shows Sam Example’s card isn’t active/);
+  await waitText(family, '#savedDetails', /USA Wrestling card not active[\s\S]*Renew it, then choose Check my card[\s\S]*Get or renew a card/);
+  expect(await family.isVisible('#savedDetails button:has-text("Check my card")'), 'Check my card button');
+  await family.click('#savedDetails button:has-text("Check my card")');
+  await waitText(family, '#status', /isn’t active/);
+  expect(usaw.seen.length === sent + 1, 'the second check came from the one-day cache: ' + (usaw.seen.length - sent));
+  await shot(family, 'family-card-not-active');
+  const phone = await as('family', {width: 390, height: 844});
+  await phone.goto(BASE + '/family'); await waitText(phone, '#savedDetails', /USA Wrestling card not active/);
+  await shot(phone, 'phone-family-card-not-active');
+  await family.click('text=Edit family profile');
+  await family.fill('#usaw0', '1234567890'); await family.click('#save');
+  await waitText(family, '#status', /Sam Example’s USA Wrestling card is verified\./);
+  await waitText(family, '#savedDetails', /USA Wrestling card verified[\s\S]*Checked with USA Wrestling on/);
+  await shot(family, 'family-card-verified-by-lookup');
+  await phone.goto(BASE + '/family'); await waitText(phone, '#savedDetails', /USA Wrestling card verified[\s\S]*Checked with USA Wrestling on/);
+  await shot(phone, 'phone-family-card-verified-by-lookup'); await phone.context().close();
+  // Only the card number ever went to USA Wrestling.
+  for (const s of usaw.seen) expect(!/Sam|Pat|example\.test/.test(JSON.stringify(s.body)) && s.headers['user-agent'] === 'SavageWrestlingAcademy/1.0 (card check)', 'sent to USA Wrestling: ' + JSON.stringify(s.body).slice(0, 120));
+});
+await step('owner sees how each card was verified and can check one again', async () => {
+  await owner.goto(BASE + '/cards'); await owner.selectOption('#show', 'all');
+  await waitText(owner, '#rows', /Sam Example[\s\S]*1234567890[\s\S]*Verified[\s\S]*USA Wrestling lookup · /);
+  await owner.click('#rows tr:has-text("Sam Example") button:has-text("Check with USA Wrestling")');
+  await waitText(owner, '#status', /Sam Example: active and the name matches, so the card is verified/);
+  await shot(owner, 'owner-cards-lookup');
+  const phone = await as('owner', {width: 390, height: 844});
+  await phone.goto(BASE + '/cards'); await phone.selectOption('#show', 'all'); await waitText(phone, '#rows', /USA Wrestling lookup · /);
+  await shot(phone, 'phone-owner-cards-lookup'); await phone.context().close();
+  await owner.goto(BASE + '/security-log');
+  expect(/USA Wrestling card verified by lookup/.test(await owner.content()), 'Security activity names the lookup verification');
 });
 
 
@@ -790,7 +835,7 @@ await step('every button and link on every page responds', async () => {
   expect(!broken.length, `${broken.length} broken link(s):\n` + broken.join('\n'));
 });
 
-await browser.close(); auth.close();
+await browser.close(); auth.close(); usaw.close();
 console.log(`\n${passed.length} steps passed, ${problems.length} problem(s).`);
 for (const p of problems) console.log(' - ' + p);
 process.exit(problems.length ? 1 : 0);
