@@ -22,6 +22,9 @@ export async function familyExport(userId: string) {
     subscriptions: await all('SELECT s.status,s.payments_made,s.payments_total,s.term_start,s.term_end,s.paid_through FROM subscriptions s JOIN orders o ON o.id=s.order_id WHERE o.user_id=?', userId),
     attendance: await all('SELECT session_date,session_key,wrestler_name,checked_in_at FROM attendance WHERE user_id=? ORDER BY session_date', userId),
     usaWrestlingCardReviews: await all('SELECT wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id=?', userId),
+    // The latest check on USA Wrestling's verify page (issue #202). The name USA Wrestling showed is included only when it
+    // matched this wrestler, so a mistyped number never reveals someone else's name.
+    usaWrestlingCardChecks: await all("SELECT wrestler_id,number,expires,season,status,outcome,CASE WHEN outcome IN ('verified','inactive','season') THEN card_name END AS card_name,CASE WHEN outcome IN ('verified','inactive','season') THEN card_state END AS card_state,checked_at FROM usaw_lookups WHERE user_id=?", userId),
     waiverSignatures: await all('SELECT s.wrestler_name,s.signer,s.signed_at,v.title,v.published_at FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE s.user_id=? ORDER BY s.signed_at', userId),
     advanceApprovals: await all("SELECT wrestler_name,grade,program,status,created_at,updated_at FROM program_approvals WHERE user_id=?", userId),
     approvalMessages: await all("SELECT m.sender_role,m.body,m.created_at FROM approval_messages m JOIN program_approvals a ON a.id=m.approval_id WHERE a.user_id=? ORDER BY m.created_at", userId),

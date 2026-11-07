@@ -31,4 +31,20 @@ assert.equal(r.at(-1), true, 'per-address limit within a feature still applies')
 r = await times(11, i => rateLimited(from('203.0.113.50'), `user${i}@example.test`, 10));
 assert.equal(r.at(-1), true, 'sign-in attempts across accounts from one address are limited');
 assert.equal(await rateLimited(from('203.0.113.50'), 'payments:owner', 60), false, 'sign-in attempts do not block other features');
+
+// Issue #202: an hourly window, and a separate limit for the shared address. USA Wrestling card checks allow a few per
+// family per hour while families on the academy WiFi share a higher address limit.
+r = await times(6, () => rateLimited(from('203.0.113.77'), 'usaw-lookup:fam1', 5, {windowMinutes: 60, ipLimit: 40}));
+assert.deepEqual(r, [false, false, false, false, false, true], 'five an hour for one family');
+r = await times(10, i => rateLimited(from('203.0.113.77'), 'usaw-lookup:other' + i, 5, {windowMinutes: 60, ipLimit: 40}));
+assert.ok(r.every(x => !x), 'other families on the same network are not blocked by one family');
+r = await times(40, i => rateLimited(from('203.0.113.77'), 'usaw-lookup:more' + i, 5, {windowMinutes: 60, ipLimit: 40}));
+assert.equal(r.at(-1), true, 'the address limit still applies');
+// An hourly counter never shares a row with a one-minute counter of the same name.
+assert.equal(await rateLimited(from('203.0.113.78'), 'usaw-lookup:fam1', 5), false);
+// ipLimit null counts the account only (a site-wide cap).
+r = await times(4, i => rateLimited(from('198.51.100.' + i), 'usaw-site:all', 3, {windowMinutes: 60, ipLimit: null}));
+assert.deepEqual(r, [false, false, false, true]);
+const rows = sqlite.prepare('SELECT id,bucket FROM auth_attempts').all();
+assert.ok(rows.filter(x => x.bucket % 60 === 0).length >= 3, 'hourly buckets start on the hour');
 console.log('Rate limit tests passed');

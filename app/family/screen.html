@@ -77,6 +77,7 @@ input,select{display:block;width:100%;margin-top:5px}
 .card-hint{margin:0 0 4px;font-size:15px}
 .athlete{border-bottom:1px solid #E1E3E8;padding-bottom:16px}
 .card-line{margin:6px 0 10px}
+.card-check{margin-left:6px;min-height:36px;padding:4px 12px}
 .form-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .form-actions button,.athlete button{padding:0 16px}
 .notice{border-left:3px solid #C4222C;padding-left:14px}
@@ -162,7 +163,7 @@ function draw(){const f=$('familyForm');f.elements.parentName.value=profile.pare
 function addWrestler(){if(!ready)return;readFields();if(profile.wrestlers.length>=20)return;profile.wrestlers.push({id:crypto.randomUUID(),name:'',grade:'K'});draw()}
 function removeWrestler(i){readFields();profile.wrestlers.splice(i,1);draw()}
 async function loadFamily(){ready=false;$('save').disabled=true;$('status').textContent='Loading…';try{const r=await fetch('/api/family',{cache:'no-store'}),body=await r.json();if(r.status===401){location.href='/login';return}if(!r.ok)throw Error(body.error||'We couldn’t load your family account. Refresh the page to try again.');profile=body.data;cards=body.cards||{};cardSeasons=Array.isArray(body.cardSeasons)?body.cardSeasons:[];revision=body.revision;$('email').textContent=body.email;draw();ready=true;loadScholarships();loadOrders();loadWaiver();loadWaitlist();loadUnread();loadRequests();savedAt=body.updatedAt;savedProfile=body.updatedAt?JSON.parse(JSON.stringify(profile)):null;if(savedProfile)showSummary();else renderHome();loadNextUp();$('status').textContent=''}catch(e){$('status').textContent=e.message}finally{$('save').disabled=!ready}}
-$('familyForm').onsubmit=async e=>{e.preventDefault();if(!ready)return;$('save').disabled=true;$('status').textContent='Saving…';try{readFields();const r=await fetch('/api/family',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,data:profile})}),body=await r.json();if(!r.ok)throw Error(body.error||'Something went wrong.');revision=body.revision;savedAt=body.updatedAt;savedProfile=JSON.parse(JSON.stringify(profile));renderMembershipCards();$('status').textContent='Your changes are saved.';showSummary(true);refreshCards();loadNextUp()}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth',block:'start'})}finally{$('save').disabled=false}};
+$('familyForm').onsubmit=async e=>{e.preventDefault();if(!ready)return;$('save').disabled=true;$('status').textContent='Saving…';try{readFields();const r=await fetch('/api/family',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,data:profile})}),body=await r.json();if(!r.ok)throw Error(body.error||'Something went wrong.');revision=body.revision;savedAt=body.updatedAt;savedProfile=JSON.parse(JSON.stringify(profile));renderMembershipCards();const found=Object.entries(body.lookups||{}).map(([id,o])=>{const w=profile.wrestlers.find(x=>x.id===id);return w?lookupMessage(w.name,o):''}).filter(Boolean);$('status').textContent='Your changes are saved.'+(found.length?' '+found.join(' '):'');showSummary(true);refreshCards();loadNextUp()}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth',block:'start'})}finally{$('save').disabled=false}};
 async function loadScholarships(){
  try{const r=await fetch('/api/scholarship',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'We couldn’t load scholarship details. Refresh the page to try again.');scholarshipAwards=d.awards||[];renderMembershipCards();refreshHome()}catch(e){$('status').textContent=e.message}
 }
@@ -197,8 +198,33 @@ function seasonField(w,i){
 function seasonPicked(i){const other=document.getElementById('usawSeason'+i).value==='other';document.getElementById('usawExpBox'+i).hidden=!other;if(other)document.getElementById('usawExp'+i).focus()}
 // A chosen season stores its August 31; "different date" stores the date typed in.
 function cardExpires(i){const v=document.getElementById('usawSeason'+i).value;return v==='other'?document.getElementById('usawExp'+i).value:v}
+// USA Wrestling lookup (issue #202): the site checks a new or changed card number on USA Wrestling's public verify page.
+// What it found, in plain words. Nothing is said when USA Wrestling could not be reached: the academy checks by hand.
+function lookupMessage(name,outcome){
+ return ({verified:name+'’s USA Wrestling card is verified.',
+  inactive:'USA Wrestling shows '+name+'’s card isn’t active. Renew it at usawmembership.com, then choose Check my card.',
+  not_found:'USA Wrestling has no card with the number you entered for '+name+'. Check the number on the card and save it again.',
+  mismatch:'The name on that USA Wrestling card doesn’t match '+name+'. Check the number; it may belong to someone else.',
+  season:'USA Wrestling shows '+name+'’s card is active. The academy will confirm the card’s season.'})[outcome]||'';
+}
+// A "Check my card" button for a saved card that is on file and not yet checked by the academy.
+const cardFlagged=c=>c.state==='current'&&!!c.lookup&&['inactive','not_found','mismatch'].includes(c.lookup.outcome);
+// The academy's date of a stored time, for "Checked with USA Wrestling on …".
+const academyDate=t=>new Date(t).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
+function checkButton(w,c){return c===cards[w.id]&&c.state==='current'?' <button type="button" class="card-check" data-wrestler="'+esc(w.id)+'" onclick="checkMyCard(this.dataset.wrestler)">Check my card</button>':''}
+async function checkMyCard(id){
+ const w=profile.wrestlers.find(x=>x.id===id);if(!w)return;
+ $('status').textContent='Checking '+w.name+'’s card with USA Wrestling…';
+ try{const r=await fetch('/api/usaw-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wrestlerId:id})}),d=await r.json();if(!r.ok)throw Error(d.error||'We couldn’t check the card just now. The academy will check it.');
+  cards[id]=d.card;refreshHome();$('status').textContent=lookupMessage(w.name,d.outcome)||'We couldn’t reach USA Wrestling just now. The academy will check '+w.name+'’s card, or try again later.'}
+ catch(e){$('status').textContent=e.message}
+}
 function cardLine(w){
  const c=cardState(w),server=cards[w.id],blocked=server&&server.exceptionUntil?' The academy is allowing bookings until '+esc(longDate(server.exceptionUntil))+' while this is sorted out.':' <strong>Booking is blocked until this is fixed.</strong>',renew=' <a href="https://www.usawmembership.com" target="_blank" rel="noopener">Get or renew a card →</a>';
+ const found=c.state==='current'&&c.lookup?c.lookup.outcome:'';
+ if(found==='inactive')return '<span class="billing-pill warning">USA Wrestling card not active</span> USA Wrestling shows this card isn’t active. Renew it, then choose Check my card.'+renew+checkButton(w,c);
+ if(found==='not_found')return '<span class="billing-pill warning">Check the card number</span> USA Wrestling has no card with this number. Check the number on the card and save it again.'+checkButton(w,c);
+ if(found==='mismatch')return '<span class="billing-pill warning">Check the card number</span> The name on this USA Wrestling card doesn’t match '+esc(w.name)+'. Check the number; it may belong to someone else. If it is right, the academy will check it.'+checkButton(w,c);
  if(c.state==='missing')return '<span class="billing-pill warning">No USA Wrestling card</span> Add the card number and the card’s season.'+blocked+renew;
  if(c.state==='expired')return '<span class="billing-pill warning">USA Wrestling card expired</span> Expired '+esc(longDate(c.expires))+'.'+(isSeasonEnd(c.expires)?' Renew for the '+esc(seasonName(seasonEndOn(academyDay())))+', then choose it here.':'')+blocked+renew;
  if(c.state==='recheck')return '<span class="billing-pill warning">Waiting for the academy</span> The academy will check your updated card.'+blocked;
@@ -206,7 +232,10 @@ function cardLine(w){
  const soon=c.expires<=new Date(Date.now()+30*864e5).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
  const season=isSeasonEnd(c.expires),next=season?seasonName((Number(c.expires.slice(0,4))+1)+'-08-31'):'';
  return '<span class="billing-pill '+(soon?'warning':'active')+'">USA Wrestling card '+(c.state==='verified'?'verified':'on file')+'</span> Current through '+esc(longDate(c.expires))+(season?', the end of the '+esc(seasonName(c.expires)):'')+'.'
-  +(soon?(season?' Renew for the '+esc(next)+' by Aug 31. New-season cards usually open in mid-August.':' Renew soon. Sessions after that date cannot be booked.')+renew:'');
+  +(c.state==='verified'&&c.verifiedBy==='usaw-lookup'&&c.verifiedAt?' Checked with USA Wrestling on '+esc(longDate(academyDate(c.verifiedAt)))+'.':'')
+  +(found==='season'?' USA Wrestling shows this card is active; the academy will confirm the card’s season.':'')
+  +(soon?(season?' Renew for the '+esc(next)+' by Aug 31. New-season cards usually open in mid-August.':' Renew soon. Sessions after that date cannot be booked.')+renew:'')
+  +(found==='season'?'':checkButton(w,c));
 }
 // Unread announcements and messages (issue #72).
 async function loadUnread(){try{const r=await fetch('/api/inbox',{cache:'no-store'}),d=await r.json();if(r.ok&&d.unread)$('inboxLink').textContent='Messages ('+d.unread+' new)'}catch{}}
@@ -244,11 +273,14 @@ function setupSteps(){
  const saved=savedProfile||{parentName:'',phone:'',wrestlers:[]},kids=saved.wrestlers||[];
  const details=!!(String(saved.parentName||'').trim()&&String(saved.phone||'').trim());
  const noCard=kids.filter(w=>!['current','verified'].includes(cardState(w).state));
+ // A card USA Wrestling showed as not active, not found or in another name is not "done" (issue #202). Booking rules
+ // do not change; the family is only asked to check it.
+ const toCheck=kids.filter(w=>!noCard.includes(w)&&cardFlagged(cardState(w)));
  const steps=[
   {key:'details',title:'Your details',done:details,text:details?'Your name and phone number are saved.':'Add your name and phone number so the academy can reach you.',button:'<button type="button" onclick="startDetails()">Add your details</button>'},
-  {key:'wrestler',title:'Your wrestler and USA Wrestling card',done:kids.length>0&&!noCard.length,
-   text:!kids.length?'Add each wrestler with their grade, USA Wrestling card number and the card’s season.':noCard.length?esc(noCard.map(w=>w.name).join(', '))+(noCard.length===1?' needs':' need')+' a current USA Wrestling card before booking.':'Every wrestler has a current USA Wrestling card.',
-   button:'<button type="button" onclick="startWrestler()">'+(kids.length?'Add the card':'Add a wrestler')+'</button>'}
+  {key:'wrestler',title:'Your wrestler and USA Wrestling card',done:kids.length>0&&!noCard.length&&!toCheck.length,
+   text:!kids.length?'Add each wrestler with their grade, USA Wrestling card number and the card’s season.':noCard.length?esc(noCard.map(w=>w.name).join(', '))+(noCard.length===1?' needs':' need')+' a current USA Wrestling card before booking.':toCheck.length?'Check the USA Wrestling card for '+esc(toCheck.map(w=>w.name).join(', '))+'. See the note under '+(toCheck.length===1?'that wrestler':'each wrestler')+'.':'Every wrestler has a current USA Wrestling card.',
+   button:'<button type="button" onclick="startWrestler()">'+(!kids.length?'Add a wrestler':!noCard.length&&toCheck.length?'Check the card':'Add the card')+'</button>'}
  ];
  if(waiverInfo&&waiverInfo.waiver){
   const unsigned=kids.filter(w=>!waiverInfo.signatures.some(x=>x.current&&x.wrestlerId===w.id));

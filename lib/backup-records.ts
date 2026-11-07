@@ -12,7 +12,7 @@ export type Backup={version:1|2|3;project:string;createdAt:string;academy:any;fa
 // Version 2 adds every other business table. Restore only re-creates rows that are missing by primary key
 // and never overwrites an existing row, so a backup cannot alter a signed agreement or a decided approval.
 // Excluded on purpose: staff_access and coach_invites (restoring a file must never grant access), integration_secrets (encrypted
-// credential; keep the wrapping key separately), auth_attempts and error_log (transient), recovery_snapshots and restore_guard (restore bookkeeping).
+// credential; keep the wrapping key separately), auth_attempts, error_log and usaw_lookups (transient: the latest USA Wrestling check and its one-day cache; the verification itself is a usaw_reviews row), recovery_snapshots and restore_guard (restore bookkeeping).
 // tests/backup-coverage.mjs fails if a table is added to drizzle/ without being backed up or listed here.
 // security_events is exported for retention but never restored, so audit history cannot be forged from a file.
 type Col=[name:string,type:'text'|'int',nullable?:boolean,max?:number];

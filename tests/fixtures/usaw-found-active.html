@@ -1,0 +1,1503 @@
+<div wire:id="QBM6wPjKIrZLsZxK6MkK" wire:name="data-tables.resources.verify-memberships">
+
+    
+                <div  x-cloak>
+
+                            <div wire:ignore wire:key="filter-panel-f502115c-0e14-45a4-bb2d-0ac3d849c13c"  wire:keydown.enter="search" class="flex md:flex-row flex-col print:hidden">
+                <fieldset class="px-4 border border-gray-200 rounded mb-3 sm:w-full">
+                    <legend class="my-0 mx-auto text-gray-900">Advanced Filters</legend>
+                    <div class="sm:w-full sm:grid sm:grid-cols-3 md:grid-cols-4 sm:gap-4">
+                                                                                    <div class="py-3">
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <label for="filter-usaw_id"
+                                            class="block text-sm leading-5 font-medium text-gray-700">
+                                            USAW ID
+                                        </label>
+
+                                        <div
+    wire:key="filter-usaw_id"
+    x-data="{
+        value: '',
+        init() {
+            const v = $wire.$get('filters.usaw_id');
+            this.value = (v === null || v === undefined) ? '' : String(v);
+        },
+    }"
+    @filters-reset.window="value = ''"
+>
+    <input
+        type="text"
+        id="filter-usaw_id"
+        x-model="value"
+        @input="$wire.$set('filters.usaw_id', value, false)"
+                        class="h-9 px-2.5 py-0 text-sm flex-auto min-w-0 block w-full font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+    >
+</div>
+
+                                    </div>
+                                </div>
+                                                                                                                <div class="py-3">
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <label for="filter-first_name"
+                                            class="block text-sm leading-5 font-medium text-gray-700">
+                                            First Name
+                                        </label>
+
+                                        <div
+    wire:key="filter-first_name"
+    x-data="{
+        value: '',
+        init() {
+            const v = $wire.$get('filters.first_name');
+            this.value = (v === null || v === undefined) ? '' : String(v);
+        },
+    }"
+    @filters-reset.window="value = ''"
+>
+    <input
+        type="text"
+        id="filter-first_name"
+        x-model="value"
+        @input="$wire.$set('filters.first_name', value, false)"
+                        class="h-9 px-2.5 py-0 text-sm flex-auto min-w-0 block w-full font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+    >
+</div>
+
+                                    </div>
+                                </div>
+                                                                                                                <div class="py-3">
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <label for="filter-last_name"
+                                            class="block text-sm leading-5 font-medium text-gray-700">
+                                            Last Name
+                                        </label>
+
+                                        <div
+    wire:key="filter-last_name"
+    x-data="{
+        value: '',
+        init() {
+            const v = $wire.$get('filters.last_name');
+            this.value = (v === null || v === undefined) ? '' : String(v);
+        },
+    }"
+    @filters-reset.window="value = ''"
+>
+    <input
+        type="text"
+        id="filter-last_name"
+        x-model="value"
+        @input="$wire.$set('filters.last_name', value, false)"
+                        class="h-9 px-2.5 py-0 text-sm flex-auto min-w-0 block w-full font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+    >
+</div>
+
+                                    </div>
+                                </div>
+                                                                                                                <div class="py-3">
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <label for="filter-gender_id"
+                                            class="block text-sm leading-5 font-medium text-gray-700">
+                                            Gender
+                                        </label>
+
+                                        <div
+    wire:key="filter-gender_id"
+    x-data="{
+        open: false,
+        options: JSON.parse('{\u00221\u0022:\u0022M\u0022,\u00222\u0022:\u0022F\u0022}'),
+        keys: JSON.parse('[\u00221\u0022,\u00222\u0022]'),
+        allKey: 'all',
+        allLabel: 'All',
+        hasAll: true,
+        selected: '',
+        search: '',
+        activeKey: null,
+        init() {
+            const v = $wire.$get('filters.gender_id');
+            this.selected = (v === null || v === undefined) ? '' : String(v);
+        },
+        choose(key) {
+            this.selected = (key === null) ? '' : String(key);
+            $wire.$set('filters.gender_id', this.selected, false);
+            this.open = false;
+            this.$nextTick(() => this.$refs.trigger && this.$refs.trigger.focus());
+        },
+        isSelected(key) {
+            return String(this.selected) === String(key);
+        },
+        matches(key) {
+            return this.search === '' || String(this.options[key] ?? '').toLowerCase().includes(this.search.toLowerCase());
+        },
+        get isNone() {
+            return this.selected === '' || this.selected === this.allKey;
+        },
+        get label() {
+            return this.isNone ? this.allLabel : (this.options[this.selected] ?? this.allLabel);
+        },
+        get visibleKeys() {
+            return (this.hasAll ? [this.allKey] : []).concat(this.keys.filter((k) => k !== this.allKey && this.matches(k)));
+        },
+        openList() {
+            this.open = true;
+            this.search = '';
+            this.activeKey = this.isNone ? (this.hasAll ? this.allKey : (this.keys[0] ?? null)) : String(this.selected);
+            this.$nextTick(() => { this.$refs.searchbox && this.$refs.searchbox.focus(); this.scrollActive() });
+        },
+        move(step) {
+            if (! this.open) { this.openList(); return }
+            const keys = this.visibleKeys;
+            if (! keys.length) return;
+            const current = this.activeKey === null ? -1 : keys.indexOf(String(this.activeKey));
+            const next = current === -1 ? (step > 0 ? 0 : keys.length - 1) : Math.min(Math.max(current + step, 0), keys.length - 1);
+            this.activeKey = keys[next];
+            this.scrollActive();
+        },
+        scrollActive() {
+            this.$nextTick(() => {
+                const el = Array.from(this.$root.querySelectorAll('[data-option-key]')).find((o) => o.dataset.optionKey === String(this.activeKey));
+                el && el.scrollIntoView({ block: 'nearest' });
+            });
+        },
+        chooseActive() {
+            if (this.open && this.activeKey !== null) {
+                this.choose(this.activeKey);
+            }
+        },
+        isActive(key) {
+            return this.activeKey !== null && String(this.activeKey) === String(key);
+        },
+    }"
+    @click.outside="open = false"
+    @filters-reset.window="$nextTick(() => init())"
+    @keydown.down.prevent="move(1)"
+    @keydown.up.prevent="move(-1)"
+    @keydown.enter="if (open) { $event.preventDefault(); chooseActive() }"
+    @keydown.escape.prevent.stop="open = false; $refs.trigger && $refs.trigger.focus()"
+    class="relative"
+>
+    <button
+        type="button"
+        x-ref="trigger"
+        @click="open ? open = false : openList()"
+        class="flex w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white h-9 px-2.5 py-0 text-sm text-left text-gray-700 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:outline-none focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+    >
+        <span class="truncate" :class="{ 'text-gray-400': isNone }" x-text="label"></span>
+        <svg class="h-4 w-4 shrink-0 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+        </svg>
+    </button>
+
+    <div
+        x-show="open"
+        x-cloak
+        x-transition.opacity
+        class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white pb-1 shadow-lg"
+    >
+        <div class="sticky top-0 border-b border-gray-100 bg-white p-1">
+            <input
+                type="text"
+                x-ref="searchbox"
+                x-model="search"
+                @input="activeKey = visibleKeys.length > 1 ? visibleKeys[1] : allKey"
+                placeholder="Search..."
+                class="block w-full rounded border border-gray-200 px-2 py-1 text-sm text-gray-700 focus:border-indigo-300 focus:outline-none focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+            >
+        </div>
+                    <button
+                type="button"
+                :data-option-key="allKey"
+                @click="choose(allKey)"
+                @mouseenter="activeKey = allKey"
+                class="flex w-full items-center px-3 py-2 text-left text-sm hover:bg-gray-100"
+                :class="[isNone ? 'font-semibold text-indigo-600' : 'text-gray-500', isActive(allKey) && 'bg-gray-100']"
+            >
+                All
+            </button>
+                            <button
+                type="button"
+                data-option-key="1"
+                x-show="matches('1')"
+                @click="choose('1')"
+                @mouseenter="activeKey = '1'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('1'), 'bg-gray-100': isActive('1') }"
+            >
+                M
+            </button>
+                    <button
+                type="button"
+                data-option-key="2"
+                x-show="matches('2')"
+                @click="choose('2')"
+                @mouseenter="activeKey = '2'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('2'), 'bg-gray-100': isActive('2') }"
+            >
+                F
+            </button>
+            </div>
+</div>
+
+                                    </div>
+                                </div>
+                                                                                                                <div class="py-3">
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <label for="filter-dob"
+                                            class="block text-sm leading-5 font-medium text-gray-700">
+                                            Date of Birth Range
+                                        </label>
+
+                                        <div class="flex items-center gap-1" wire:key="filter-dob" x-data @filters-reset.window="$root.querySelectorAll('input').forEach(el => el.value = '')">
+    <input
+        wire:model="filters.dob.start"
+        wire:key="filter-dob-start"
+        id="filter-dob-start"
+        type="date"
+        min="1900-01-01"
+        max="9999-12-31"
+        class="h-9 px-2.5 py-0 text-sm flex-auto min-w-0 block w-full font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+    />
+    <span class="text-gray-500">&ndash;</span>
+    <input
+        wire:model="filters.dob.end"
+        wire:key="filter-dob-end"
+        id="filter-dob-end"
+        type="date"
+        min="1900-01-01"
+        max="9999-12-31"
+        class="h-9 px-2.5 py-0 text-sm flex-auto min-w-0 block w-full font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+    />
+</div>
+
+                                    </div>
+                                </div>
+                                                                                                                <div class="py-3">
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <label for="filter-state_id"
+                                            class="block text-sm leading-5 font-medium text-gray-700">
+                                            State
+                                        </label>
+
+                                        <div
+    wire:key="filter-state_id"
+    x-data="{
+        open: false,
+        options: JSON.parse('{\u00221\u0022:\u0022Alabama\u0022,\u00222\u0022:\u0022Alaska\u0022,\u00223\u0022:\u0022Arizona\u0022,\u00224\u0022:\u0022Arkansas\u0022,\u00225\u0022:\u0022California\u0022,\u00226\u0022:\u0022Colorado\u0022,\u00227\u0022:\u0022Connecticut\u0022,\u00228\u0022:\u0022Delaware\u0022,\u00229\u0022:\u0022Dist. of Columbia\u0022,\u002210\u0022:\u0022Florida\u0022,\u002211\u0022:\u0022Georgia\u0022,\u002212\u0022:\u0022Hawaii\u0022,\u002213\u0022:\u0022Idaho\u0022,\u002214\u0022:\u0022Illinois\u0022,\u002215\u0022:\u0022Indiana\u0022,\u002216\u0022:\u0022Iowa\u0022,\u002217\u0022:\u0022Kansas\u0022,\u002218\u0022:\u0022Kentucky\u0022,\u002219\u0022:\u0022Louisiana\u0022,\u002220\u0022:\u0022Maine\u0022,\u002221\u0022:\u0022Maryland\u0022,\u002222\u0022:\u0022Massachusetts\u0022,\u002223\u0022:\u0022Michigan\u0022,\u002224\u0022:\u0022Minnesota\u0022,\u002225\u0022:\u0022Mississippi\u0022,\u002226\u0022:\u0022Missouri\u0022,\u002227\u0022:\u0022Montana\u0022,\u002228\u0022:\u0022Nebraska\u0022,\u002229\u0022:\u0022Nevada\u0022,\u002230\u0022:\u0022New Hampshire\u0022,\u002231\u0022:\u0022New Jersey\u0022,\u002232\u0022:\u0022New Mexico\u0022,\u002233\u0022:\u0022New York\u0022,\u002234\u0022:\u0022North Carolina\u0022,\u002235\u0022:\u0022North Dakota\u0022,\u002236\u0022:\u0022Ohio\u0022,\u002237\u0022:\u0022Oklahoma\u0022,\u002238\u0022:\u0022Oregon\u0022,\u002239\u0022:\u0022Pennsylvania\u0022,\u002240\u0022:\u0022Rhode Island\u0022,\u002241\u0022:\u0022South Carolina\u0022,\u002242\u0022:\u0022South Dakota\u0022,\u002243\u0022:\u0022Tennessee\u0022,\u002244\u0022:\u0022Texas\u0022,\u002245\u0022:\u0022Utah\u0022,\u002246\u0022:\u0022Vermont\u0022,\u002247\u0022:\u0022Virginia\u0022,\u002248\u0022:\u0022Washington\u0022,\u002249\u0022:\u0022West Virginia\u0022,\u002250\u0022:\u0022Wisconsin\u0022,\u002251\u0022:\u0022Wyoming\u0022,\u002252\u0022:\u0022Canada\u0022,\u002253\u0022:\u0022US Territory\u0022,\u002254\u0022:\u0022Guam\u0022}'),
+        keys: JSON.parse('[\u00221\u0022,\u00222\u0022,\u00223\u0022,\u00224\u0022,\u00225\u0022,\u00226\u0022,\u00227\u0022,\u00228\u0022,\u00229\u0022,\u002210\u0022,\u002211\u0022,\u002212\u0022,\u002213\u0022,\u002214\u0022,\u002215\u0022,\u002216\u0022,\u002217\u0022,\u002218\u0022,\u002219\u0022,\u002220\u0022,\u002221\u0022,\u002222\u0022,\u002223\u0022,\u002224\u0022,\u002225\u0022,\u002226\u0022,\u002227\u0022,\u002228\u0022,\u002229\u0022,\u002230\u0022,\u002231\u0022,\u002232\u0022,\u002233\u0022,\u002234\u0022,\u002235\u0022,\u002236\u0022,\u002237\u0022,\u002238\u0022,\u002239\u0022,\u002240\u0022,\u002241\u0022,\u002242\u0022,\u002243\u0022,\u002244\u0022,\u002245\u0022,\u002246\u0022,\u002247\u0022,\u002248\u0022,\u002249\u0022,\u002250\u0022,\u002251\u0022,\u002252\u0022,\u002253\u0022,\u002254\u0022]'),
+        allKey: 'all',
+        allLabel: 'All',
+        hasAll: true,
+        selected: '',
+        search: '',
+        activeKey: null,
+        init() {
+            const v = $wire.$get('filters.state_id');
+            this.selected = (v === null || v === undefined) ? '' : String(v);
+        },
+        choose(key) {
+            this.selected = (key === null) ? '' : String(key);
+            $wire.$set('filters.state_id', this.selected, false);
+            this.open = false;
+            this.$nextTick(() => this.$refs.trigger && this.$refs.trigger.focus());
+        },
+        isSelected(key) {
+            return String(this.selected) === String(key);
+        },
+        matches(key) {
+            return this.search === '' || String(this.options[key] ?? '').toLowerCase().includes(this.search.toLowerCase());
+        },
+        get isNone() {
+            return this.selected === '' || this.selected === this.allKey;
+        },
+        get label() {
+            return this.isNone ? this.allLabel : (this.options[this.selected] ?? this.allLabel);
+        },
+        get visibleKeys() {
+            return (this.hasAll ? [this.allKey] : []).concat(this.keys.filter((k) => k !== this.allKey && this.matches(k)));
+        },
+        openList() {
+            this.open = true;
+            this.search = '';
+            this.activeKey = this.isNone ? (this.hasAll ? this.allKey : (this.keys[0] ?? null)) : String(this.selected);
+            this.$nextTick(() => { this.$refs.searchbox && this.$refs.searchbox.focus(); this.scrollActive() });
+        },
+        move(step) {
+            if (! this.open) { this.openList(); return }
+            const keys = this.visibleKeys;
+            if (! keys.length) return;
+            const current = this.activeKey === null ? -1 : keys.indexOf(String(this.activeKey));
+            const next = current === -1 ? (step > 0 ? 0 : keys.length - 1) : Math.min(Math.max(current + step, 0), keys.length - 1);
+            this.activeKey = keys[next];
+            this.scrollActive();
+        },
+        scrollActive() {
+            this.$nextTick(() => {
+                const el = Array.from(this.$root.querySelectorAll('[data-option-key]')).find((o) => o.dataset.optionKey === String(this.activeKey));
+                el && el.scrollIntoView({ block: 'nearest' });
+            });
+        },
+        chooseActive() {
+            if (this.open && this.activeKey !== null) {
+                this.choose(this.activeKey);
+            }
+        },
+        isActive(key) {
+            return this.activeKey !== null && String(this.activeKey) === String(key);
+        },
+    }"
+    @click.outside="open = false"
+    @filters-reset.window="$nextTick(() => init())"
+    @keydown.down.prevent="move(1)"
+    @keydown.up.prevent="move(-1)"
+    @keydown.enter="if (open) { $event.preventDefault(); chooseActive() }"
+    @keydown.escape.prevent.stop="open = false; $refs.trigger && $refs.trigger.focus()"
+    class="relative"
+>
+    <button
+        type="button"
+        x-ref="trigger"
+        @click="open ? open = false : openList()"
+        class="flex w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white h-9 px-2.5 py-0 text-sm text-left text-gray-700 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:outline-none focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+    >
+        <span class="truncate" :class="{ 'text-gray-400': isNone }" x-text="label"></span>
+        <svg class="h-4 w-4 shrink-0 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+        </svg>
+    </button>
+
+    <div
+        x-show="open"
+        x-cloak
+        x-transition.opacity
+        class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white pb-1 shadow-lg"
+    >
+        <div class="sticky top-0 border-b border-gray-100 bg-white p-1">
+            <input
+                type="text"
+                x-ref="searchbox"
+                x-model="search"
+                @input="activeKey = visibleKeys.length > 1 ? visibleKeys[1] : allKey"
+                placeholder="Search..."
+                class="block w-full rounded border border-gray-200 px-2 py-1 text-sm text-gray-700 focus:border-indigo-300 focus:outline-none focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+            >
+        </div>
+                    <button
+                type="button"
+                :data-option-key="allKey"
+                @click="choose(allKey)"
+                @mouseenter="activeKey = allKey"
+                class="flex w-full items-center px-3 py-2 text-left text-sm hover:bg-gray-100"
+                :class="[isNone ? 'font-semibold text-indigo-600' : 'text-gray-500', isActive(allKey) && 'bg-gray-100']"
+            >
+                All
+            </button>
+                            <button
+                type="button"
+                data-option-key="1"
+                x-show="matches('1')"
+                @click="choose('1')"
+                @mouseenter="activeKey = '1'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('1'), 'bg-gray-100': isActive('1') }"
+            >
+                Alabama
+            </button>
+                    <button
+                type="button"
+                data-option-key="2"
+                x-show="matches('2')"
+                @click="choose('2')"
+                @mouseenter="activeKey = '2'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('2'), 'bg-gray-100': isActive('2') }"
+            >
+                Alaska
+            </button>
+                    <button
+                type="button"
+                data-option-key="3"
+                x-show="matches('3')"
+                @click="choose('3')"
+                @mouseenter="activeKey = '3'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('3'), 'bg-gray-100': isActive('3') }"
+            >
+                Arizona
+            </button>
+                    <button
+                type="button"
+                data-option-key="4"
+                x-show="matches('4')"
+                @click="choose('4')"
+                @mouseenter="activeKey = '4'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('4'), 'bg-gray-100': isActive('4') }"
+            >
+                Arkansas
+            </button>
+                    <button
+                type="button"
+                data-option-key="5"
+                x-show="matches('5')"
+                @click="choose('5')"
+                @mouseenter="activeKey = '5'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('5'), 'bg-gray-100': isActive('5') }"
+            >
+                California
+            </button>
+                    <button
+                type="button"
+                data-option-key="6"
+                x-show="matches('6')"
+                @click="choose('6')"
+                @mouseenter="activeKey = '6'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('6'), 'bg-gray-100': isActive('6') }"
+            >
+                Colorado
+            </button>
+                    <button
+                type="button"
+                data-option-key="7"
+                x-show="matches('7')"
+                @click="choose('7')"
+                @mouseenter="activeKey = '7'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('7'), 'bg-gray-100': isActive('7') }"
+            >
+                Connecticut
+            </button>
+                    <button
+                type="button"
+                data-option-key="8"
+                x-show="matches('8')"
+                @click="choose('8')"
+                @mouseenter="activeKey = '8'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('8'), 'bg-gray-100': isActive('8') }"
+            >
+                Delaware
+            </button>
+                    <button
+                type="button"
+                data-option-key="9"
+                x-show="matches('9')"
+                @click="choose('9')"
+                @mouseenter="activeKey = '9'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('9'), 'bg-gray-100': isActive('9') }"
+            >
+                Dist. of Columbia
+            </button>
+                    <button
+                type="button"
+                data-option-key="10"
+                x-show="matches('10')"
+                @click="choose('10')"
+                @mouseenter="activeKey = '10'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('10'), 'bg-gray-100': isActive('10') }"
+            >
+                Florida
+            </button>
+                    <button
+                type="button"
+                data-option-key="11"
+                x-show="matches('11')"
+                @click="choose('11')"
+                @mouseenter="activeKey = '11'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('11'), 'bg-gray-100': isActive('11') }"
+            >
+                Georgia
+            </button>
+                    <button
+                type="button"
+                data-option-key="12"
+                x-show="matches('12')"
+                @click="choose('12')"
+                @mouseenter="activeKey = '12'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('12'), 'bg-gray-100': isActive('12') }"
+            >
+                Hawaii
+            </button>
+                    <button
+                type="button"
+                data-option-key="13"
+                x-show="matches('13')"
+                @click="choose('13')"
+                @mouseenter="activeKey = '13'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('13'), 'bg-gray-100': isActive('13') }"
+            >
+                Idaho
+            </button>
+                    <button
+                type="button"
+                data-option-key="14"
+                x-show="matches('14')"
+                @click="choose('14')"
+                @mouseenter="activeKey = '14'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('14'), 'bg-gray-100': isActive('14') }"
+            >
+                Illinois
+            </button>
+                    <button
+                type="button"
+                data-option-key="15"
+                x-show="matches('15')"
+                @click="choose('15')"
+                @mouseenter="activeKey = '15'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('15'), 'bg-gray-100': isActive('15') }"
+            >
+                Indiana
+            </button>
+                    <button
+                type="button"
+                data-option-key="16"
+                x-show="matches('16')"
+                @click="choose('16')"
+                @mouseenter="activeKey = '16'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('16'), 'bg-gray-100': isActive('16') }"
+            >
+                Iowa
+            </button>
+                    <button
+                type="button"
+                data-option-key="17"
+                x-show="matches('17')"
+                @click="choose('17')"
+                @mouseenter="activeKey = '17'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('17'), 'bg-gray-100': isActive('17') }"
+            >
+                Kansas
+            </button>
+                    <button
+                type="button"
+                data-option-key="18"
+                x-show="matches('18')"
+                @click="choose('18')"
+                @mouseenter="activeKey = '18'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('18'), 'bg-gray-100': isActive('18') }"
+            >
+                Kentucky
+            </button>
+                    <button
+                type="button"
+                data-option-key="19"
+                x-show="matches('19')"
+                @click="choose('19')"
+                @mouseenter="activeKey = '19'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('19'), 'bg-gray-100': isActive('19') }"
+            >
+                Louisiana
+            </button>
+                    <button
+                type="button"
+                data-option-key="20"
+                x-show="matches('20')"
+                @click="choose('20')"
+                @mouseenter="activeKey = '20'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('20'), 'bg-gray-100': isActive('20') }"
+            >
+                Maine
+            </button>
+                    <button
+                type="button"
+                data-option-key="21"
+                x-show="matches('21')"
+                @click="choose('21')"
+                @mouseenter="activeKey = '21'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('21'), 'bg-gray-100': isActive('21') }"
+            >
+                Maryland
+            </button>
+                    <button
+                type="button"
+                data-option-key="22"
+                x-show="matches('22')"
+                @click="choose('22')"
+                @mouseenter="activeKey = '22'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('22'), 'bg-gray-100': isActive('22') }"
+            >
+                Massachusetts
+            </button>
+                    <button
+                type="button"
+                data-option-key="23"
+                x-show="matches('23')"
+                @click="choose('23')"
+                @mouseenter="activeKey = '23'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('23'), 'bg-gray-100': isActive('23') }"
+            >
+                Michigan
+            </button>
+                    <button
+                type="button"
+                data-option-key="24"
+                x-show="matches('24')"
+                @click="choose('24')"
+                @mouseenter="activeKey = '24'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('24'), 'bg-gray-100': isActive('24') }"
+            >
+                Minnesota
+            </button>
+                    <button
+                type="button"
+                data-option-key="25"
+                x-show="matches('25')"
+                @click="choose('25')"
+                @mouseenter="activeKey = '25'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('25'), 'bg-gray-100': isActive('25') }"
+            >
+                Mississippi
+            </button>
+                    <button
+                type="button"
+                data-option-key="26"
+                x-show="matches('26')"
+                @click="choose('26')"
+                @mouseenter="activeKey = '26'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('26'), 'bg-gray-100': isActive('26') }"
+            >
+                Missouri
+            </button>
+                    <button
+                type="button"
+                data-option-key="27"
+                x-show="matches('27')"
+                @click="choose('27')"
+                @mouseenter="activeKey = '27'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('27'), 'bg-gray-100': isActive('27') }"
+            >
+                Montana
+            </button>
+                    <button
+                type="button"
+                data-option-key="28"
+                x-show="matches('28')"
+                @click="choose('28')"
+                @mouseenter="activeKey = '28'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('28'), 'bg-gray-100': isActive('28') }"
+            >
+                Nebraska
+            </button>
+                    <button
+                type="button"
+                data-option-key="29"
+                x-show="matches('29')"
+                @click="choose('29')"
+                @mouseenter="activeKey = '29'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('29'), 'bg-gray-100': isActive('29') }"
+            >
+                Nevada
+            </button>
+                    <button
+                type="button"
+                data-option-key="30"
+                x-show="matches('30')"
+                @click="choose('30')"
+                @mouseenter="activeKey = '30'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('30'), 'bg-gray-100': isActive('30') }"
+            >
+                New Hampshire
+            </button>
+                    <button
+                type="button"
+                data-option-key="31"
+                x-show="matches('31')"
+                @click="choose('31')"
+                @mouseenter="activeKey = '31'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('31'), 'bg-gray-100': isActive('31') }"
+            >
+                New Jersey
+            </button>
+                    <button
+                type="button"
+                data-option-key="32"
+                x-show="matches('32')"
+                @click="choose('32')"
+                @mouseenter="activeKey = '32'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('32'), 'bg-gray-100': isActive('32') }"
+            >
+                New Mexico
+            </button>
+                    <button
+                type="button"
+                data-option-key="33"
+                x-show="matches('33')"
+                @click="choose('33')"
+                @mouseenter="activeKey = '33'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('33'), 'bg-gray-100': isActive('33') }"
+            >
+                New York
+            </button>
+                    <button
+                type="button"
+                data-option-key="34"
+                x-show="matches('34')"
+                @click="choose('34')"
+                @mouseenter="activeKey = '34'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('34'), 'bg-gray-100': isActive('34') }"
+            >
+                North Carolina
+            </button>
+                    <button
+                type="button"
+                data-option-key="35"
+                x-show="matches('35')"
+                @click="choose('35')"
+                @mouseenter="activeKey = '35'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('35'), 'bg-gray-100': isActive('35') }"
+            >
+                North Dakota
+            </button>
+                    <button
+                type="button"
+                data-option-key="36"
+                x-show="matches('36')"
+                @click="choose('36')"
+                @mouseenter="activeKey = '36'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('36'), 'bg-gray-100': isActive('36') }"
+            >
+                Ohio
+            </button>
+                    <button
+                type="button"
+                data-option-key="37"
+                x-show="matches('37')"
+                @click="choose('37')"
+                @mouseenter="activeKey = '37'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('37'), 'bg-gray-100': isActive('37') }"
+            >
+                Oklahoma
+            </button>
+                    <button
+                type="button"
+                data-option-key="38"
+                x-show="matches('38')"
+                @click="choose('38')"
+                @mouseenter="activeKey = '38'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('38'), 'bg-gray-100': isActive('38') }"
+            >
+                Oregon
+            </button>
+                    <button
+                type="button"
+                data-option-key="39"
+                x-show="matches('39')"
+                @click="choose('39')"
+                @mouseenter="activeKey = '39'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('39'), 'bg-gray-100': isActive('39') }"
+            >
+                Pennsylvania
+            </button>
+                    <button
+                type="button"
+                data-option-key="40"
+                x-show="matches('40')"
+                @click="choose('40')"
+                @mouseenter="activeKey = '40'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('40'), 'bg-gray-100': isActive('40') }"
+            >
+                Rhode Island
+            </button>
+                    <button
+                type="button"
+                data-option-key="41"
+                x-show="matches('41')"
+                @click="choose('41')"
+                @mouseenter="activeKey = '41'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('41'), 'bg-gray-100': isActive('41') }"
+            >
+                South Carolina
+            </button>
+                    <button
+                type="button"
+                data-option-key="42"
+                x-show="matches('42')"
+                @click="choose('42')"
+                @mouseenter="activeKey = '42'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('42'), 'bg-gray-100': isActive('42') }"
+            >
+                South Dakota
+            </button>
+                    <button
+                type="button"
+                data-option-key="43"
+                x-show="matches('43')"
+                @click="choose('43')"
+                @mouseenter="activeKey = '43'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('43'), 'bg-gray-100': isActive('43') }"
+            >
+                Tennessee
+            </button>
+                    <button
+                type="button"
+                data-option-key="44"
+                x-show="matches('44')"
+                @click="choose('44')"
+                @mouseenter="activeKey = '44'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('44'), 'bg-gray-100': isActive('44') }"
+            >
+                Texas
+            </button>
+                    <button
+                type="button"
+                data-option-key="45"
+                x-show="matches('45')"
+                @click="choose('45')"
+                @mouseenter="activeKey = '45'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('45'), 'bg-gray-100': isActive('45') }"
+            >
+                Utah
+            </button>
+                    <button
+                type="button"
+                data-option-key="46"
+                x-show="matches('46')"
+                @click="choose('46')"
+                @mouseenter="activeKey = '46'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('46'), 'bg-gray-100': isActive('46') }"
+            >
+                Vermont
+            </button>
+                    <button
+                type="button"
+                data-option-key="47"
+                x-show="matches('47')"
+                @click="choose('47')"
+                @mouseenter="activeKey = '47'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('47'), 'bg-gray-100': isActive('47') }"
+            >
+                Virginia
+            </button>
+                    <button
+                type="button"
+                data-option-key="48"
+                x-show="matches('48')"
+                @click="choose('48')"
+                @mouseenter="activeKey = '48'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('48'), 'bg-gray-100': isActive('48') }"
+            >
+                Washington
+            </button>
+                    <button
+                type="button"
+                data-option-key="49"
+                x-show="matches('49')"
+                @click="choose('49')"
+                @mouseenter="activeKey = '49'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('49'), 'bg-gray-100': isActive('49') }"
+            >
+                West Virginia
+            </button>
+                    <button
+                type="button"
+                data-option-key="50"
+                x-show="matches('50')"
+                @click="choose('50')"
+                @mouseenter="activeKey = '50'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('50'), 'bg-gray-100': isActive('50') }"
+            >
+                Wisconsin
+            </button>
+                    <button
+                type="button"
+                data-option-key="51"
+                x-show="matches('51')"
+                @click="choose('51')"
+                @mouseenter="activeKey = '51'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('51'), 'bg-gray-100': isActive('51') }"
+            >
+                Wyoming
+            </button>
+                    <button
+                type="button"
+                data-option-key="52"
+                x-show="matches('52')"
+                @click="choose('52')"
+                @mouseenter="activeKey = '52'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('52'), 'bg-gray-100': isActive('52') }"
+            >
+                Canada
+            </button>
+                    <button
+                type="button"
+                data-option-key="53"
+                x-show="matches('53')"
+                @click="choose('53')"
+                @mouseenter="activeKey = '53'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('53'), 'bg-gray-100': isActive('53') }"
+            >
+                US Territory
+            </button>
+                    <button
+                type="button"
+                data-option-key="54"
+                x-show="matches('54')"
+                @click="choose('54')"
+                @mouseenter="activeKey = '54'"
+                class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                :class="{ 'font-semibold text-indigo-600': isSelected('54'), 'bg-gray-100': isActive('54') }"
+            >
+                Guam
+            </button>
+            </div>
+</div>
+
+                                    </div>
+                                </div>
+                                                                        </div>
+                    <div class="w-full pt-2 pb-3 items-center justify-center">
+                        <button wire:click="search"  class="w-full md:w-fit md:min-w-[9rem] px-4 py-1.5 bg-usa-blue text-white font-bold text-xs leading-tight uppercase rounded shadow-md hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700  focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out text-center">
+                            Apply Filters
+                        </button>
+                        <button wire:click="setFilterDefaults"  class="w-full md:w-fit md:min-w-[9rem] px-4 py-1.5 bg-usa-red text-white font-bold text-xs leading-tight uppercase rounded shadow-md hover:bg-red-700 hover:shadow-lg focus:bg-red-700  focus:shadow-lg focus:outline-none focus:ring-0 active:bg-red-800 active:shadow-lg transition duration-150 ease-in-out text-center">
+                            Reset
+                        </button>
+                    </div>
+                </fieldset>
+            </div>
+            </div>
+    <div wire:loading.flex wire:target="search, setFilterDefaults" class="w-full items-center justify-center gap-2 py-4 text-usawBlue">
+        <svg class="h-8 w-8 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-label="Loading">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+            <div wire:key='table-main' class="pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div class="flex flex-wrap items-center justify-start gap-y-2">
+                    <div>
+    </div>
+
+                                            <div class="ml-2 mb-2 p-2 bg-usa-nav-gray justify-center items-center text-gray-700 leading-none rounded"><span>
+                                                            Total Rows: 1
+                                                    </span></div>
+                                    </div>
+                        <div class="flex flex-row flex-wrap items-center shrink-0 mb-1 sm:mb-0 gap-3 sm:ml-auto print:hidden">
+                                                    <div class="w-auto min-w-[120px]">
+                        <select class="w-full rounded border border-usawLightGray px-[0.45rem] py-[0.45rem] text-base transition-all duration-[250ms] ease-linear focus:border-white focus:shadow-[0_0_5px_#152c53] focus:outline-none h-9! py-0! text-sm!" wire:change="search" wire:model.live="perPage">
+    <option value="0">All Rows</option>
+                            <option value="5">Show 5</option>
+                            <option value="10">Show 10</option>
+                            <option value="25">Show 25</option>
+                            <option value="50">Show 50</option>
+                            <option value="100">Show 100</option>
+</select>
+                    </div>
+                                                    <div class="w-auto">
+                        <div
+                            x-data="{ open: false, childElementOpen: false  }"
+                            @keydown.window.escape="if (!childElementOpen) { open = false }"
+                            x-on:click.away="if (!childElementOpen) { open = false }"
+                            class="inline-block relative w-auto text-left"
+                            wire:key="column-select-button-f502115c-0e14-45a4-bb2d-0ac3d849c13c"
+                        >
+                            <div>
+                    <span class="rounded-md shadow-sm">
+                        <button
+                            x-on:click="open = !open"
+                            type="button"
+                            class="inline-flex justify-center items-center h-9 px-3.5 text-sm w-full font-medium text-gray-700 bg-white rounded-md border border-gray-300 shadow-sm hover:bg-gray-50 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                            aria-haspopup="true"
+                            x-bind:aria-expanded="open"
+                            aria-expanded="true"
+                        >
+                            Columns
+
+                            <svg class="-mr-1 ml-2 w-5 h-5" x-description="Heroicon name: chevron-down" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                    </span>
+                            </div>
+
+                            <div
+                                x-cloak
+                                x-show="open"
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="transform opacity-0 scale-95"
+                                x-transition:enter-end="transform opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="transform opacity-100 scale-100"
+                                x-transition:leave-end="transform opacity-0 scale-95"
+                                class="absolute left-0 z-50 mt-2 w-full bg-white rounded-md divide-y divide-gray-100 ring-1 ring-black ring-opacity-5 shadow-lg origin-top-right md:w-48 focus:outline-none"
+                            >
+                                <div class="bg-white rounded-md shadow-xs">
+                                    <div class="p-2" role="menu" aria-orientation="vertical" aria-labelledby="column-select-menu">
+                                        <div>
+                                            <label
+                                                wire:loading.attr="disabled"
+                                                class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                            >
+                                                <input
+                                                    class="text-indigo-600 transition duration-150 ease-in-out border-gray-300 rounded shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-wait"
+                                                                                                            checked
+                                                        wire:click="deselectAllColumns"
+                                                                                                        wire:loading.attr="disabled"
+                                                    type="checkbox"
+                                                />
+                                                <span class="ml-2">All Columns</span>
+                                            </label>
+                                        </div>
+                                                                                    <div wire:key="columnSelect-0-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="USAW ID"
+                                                    />
+                                                    <span class="ml-2">USAW ID</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-1-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="Name"
+                                                    />
+                                                    <span class="ml-2">Name</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-2-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="State"
+                                                    />
+                                                    <span class="ml-2">State</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-3-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="Athlete"
+                                                    />
+                                                    <span class="ml-2">Athlete</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-4-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="Wrestling Leader"
+                                                    />
+                                                    <span class="ml-2">Wrestling Leader</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-5-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="Booster"
+                                                    />
+                                                    <span class="ml-2">Booster</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-6-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="Medical"
+                                                    />
+                                                    <span class="ml-2">Medical</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-7-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="Sponsor"
+                                                    />
+                                                    <span class="ml-2">Sponsor</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-8-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="Event Vol"
+                                                    />
+                                                    <span class="ml-2">Event Vol</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-9-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="BG Check"
+                                                    />
+                                                    <span class="ml-2">BG Check</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-10-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="SS Training"
+                                                    />
+                                                    <span class="ml-2">SS Training</span>
+                                                </label>
+                                            </div>
+                                                                                    <div wire:key="columnSelect-11-f502115c-0e14-45a4-bb2d-0ac3d849c13c">
+                                                <label
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="selectedColumns"
+                                                    class="inline-flex items-center px-2 py-1 disabled:opacity-50 disabled:cursor-wait"
+                                                >
+                                                    <input
+                                                        class="text-indigo-600 rounded border-gray-300 shadow-sm transition duration-150 ease-in-out focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50"
+                                                        wire:model.live="selectedColumns"
+                                                        wire:target="selectedColumns"
+                                                        wire:loading.attr="disabled"
+                                                        type="checkbox"
+                                                        value="NCEP Level(s)"
+                                                    />
+                                                    <span class="ml-2">NCEP Level(s)</span>
+                                                </label>
+                                            </div>
+                                                                            </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                                            </div>
+        </div>
+        <div id="f502115c-0e14-45a4-bb2d-0ac3d849c13c-topscroll" wire:key="topscroll-f502115c-0e14-45a4-bb2d-0ac3d849c13c" class="table-top-scroll" wire:ignore>
+            <div style="height: 1px;"></div>
+        </div>
+        <div id="f502115c-0e14-45a4-bb2d-0ac3d849c13c-scroll" class="relative overflow-x-auto overflow-y-hidden shadow-md rounded-lg">
+            <table  id="f502115c-0e14-45a4-bb2d-0ac3d849c13c" class="w-full text-sm text-left text-gray-500 ">
+                <thead class="text-xs text-gray-700 uppercase bg-usa-nav-gray">
+                    <tr class="bg-usa-nav-gray">
+                                                                                                                                <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="0">
+                                            USAW ID
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="1">
+                                            Name
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="2">
+                                            State
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="3">
+                                            Athlete
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="4">
+                                            Wrestling Leader
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="5">
+                                            Booster
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="6">
+                                            Medical
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="7">
+                                            Sponsor
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="8">
+                                            Event Vol
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="9">
+                                            BG Check
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="10">
+                                            SS Training
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                                                            <th class="text-center">
+                                <div class=" py-3 px-3 flex items-center justify-center  cursor-pointer">
+                                                                                                                    <span class=" flex items-center justify-center  "  wire:key="11">
+                                            NCEP Level(s)
+                                                                                                                                        </span>
+                                                                                                            </div>
+                            </th>
+                                                                        </tr>
+                </thead>
+                <tbody wire:sortable="updateSortOrder">
+                                                            <tr wire:key="row-1"  class=" bg-white  border-b hover:bg-gray-50">
+                                                                                                                                                    <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    1234567890
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    Sam Example
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    NY
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    <div style="background-color: #66ff33; width: 1.5rem; height: 1.5rem; border-radius: 100rem; margin: 0 auto;"></div>
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    <div style="background-color: #a94442; width: 1.5rem; height: 1.5rem; border-radius: 100rem; margin: 0 auto;"></div>
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    <div style="background-color: #a94442; width: 1.5rem; height: 1.5rem; border-radius: 100rem; margin: 0 auto;"></div>
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    <div style="background-color: #a94442; width: 1.5rem; height: 1.5rem; border-radius: 100rem; margin: 0 auto;"></div>
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    <div style="background-color: #a94442; width: 1.5rem; height: 1.5rem; border-radius: 100rem; margin: 0 auto;"></div>
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    <div style="background-color: #a94442; width: 1.5rem; height: 1.5rem; border-radius: 100rem; margin: 0 auto;"></div>
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    <div style="text-align: center; margin: 0 auto;">N/A</div>
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    <div style="background-color: #a94442; width: 1.5rem; height: 1.5rem; border-radius: 100rem; margin: 0 auto;"></div>
+</div>
+                                    </div>
+                                </td>
+                                                                                                                            <td class="text-center">
+                                    <div class=" py-3 px-3  flex items-center justify-center text-center cursor-pointer text-black  text-base ">
+                                        <div>
+    
+</div>
+                                    </div>
+                                </td>
+                                                                                    </tr>
+                                                    </tbody>
+            </table>
+        </div>
+                <div class="mt-5">
+            <div>
+    </div>
+
+        </div>
+                    <style>
+        .table-top-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        .table-top-scroll::-webkit-scrollbar {
+            height: 12px;
+        }
+        .table-top-scroll::-webkit-scrollbar-track {
+            box-shadow: inset 0 0 5px grey;
+            border-radius: 10px;
+        }
+        .table-top-scroll::-webkit-scrollbar-thumb {
+            background: #152c53; /* usawBlue */
+            border-radius: 10px;
+        }
+    </style>
+</div>

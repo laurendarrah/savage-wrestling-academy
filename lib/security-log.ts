@@ -46,6 +46,7 @@ const TITLES: Record<string, string> = {
   usaw_card_valid: 'USA Wrestling card verified',
   usaw_card_invalid: 'USA Wrestling card marked not valid',
   usaw_card_review_cleared: 'USA Wrestling card review cleared',
+  usaw_card_lookup_verified: 'USA Wrestling card verified by lookup',
   lesson_settings_saved: 'Private lesson prices or coach pay saved',
   announcement_sent: 'Announcement sent',
   waiver_published: 'Waiver published',
@@ -93,7 +94,7 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     case 'program_approval_requested': case 'program_approval_approved': case 'program_approval_declined':
       detail = names.approvals[t] ?? ''; break;
     case 'waitlist_offer': detail = names.waitlist[t] ?? ''; break;
-    case 'pass_revoked': case 'usaw_card_valid': case 'usaw_card_invalid': case 'usaw_card_review_cleared': detail = wrestler(t); break;
+    case 'pass_revoked': case 'usaw_card_valid': case 'usaw_card_invalid': case 'usaw_card_review_cleared': case 'usaw_card_lookup_verified': detail = wrestler(t); break;
     case 'waiver_published': case 'waiver_retired': detail = names.waivers[t] ?? ''; break;
     case 'waiver_signed': {
       const [version, ...w] = t.split('/'); const key = row.actor + '/' + w.join('/');

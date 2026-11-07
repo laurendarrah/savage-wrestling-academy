@@ -234,7 +234,7 @@ async function cardsPage({renewal, clipboard}) {
   assert.match(rows, /<span class="usaw-id" id="num0">AB-1234<\/span>/);
   assert.match(rows, /<a class="button lookup" href="https:\/\/www\.usawmembership\.com\/verify_membership" target="_blank" rel="noopener" data-lookup="0">Look up on USA Wrestling<\/a>/);
   assert.equal((rows.match(/data-lookup=/g) || []).length, 1, 'no lookup for a wrestler without a card number');
-  assert.match(html, /id="lookupHelp">To check a card, choose <strong>Look up on USA Wrestling<\/strong>\. It copies the card number and opens USA Wrestling’s membership check in a new tab\. Paste the number as the USAW ID there, check the card is current, then come back and mark it <strong>Verified<\/strong> or <strong>Not valid<\/strong>\.<\/p>/);
+  assert.match(html, /id="lookupHelp"><strong>Check with USA Wrestling<\/strong> checks one card on USA Wrestling’s verify page now and shows what it found\. To check by hand, choose <strong>Look up on USA Wrestling<\/strong>\. It copies the card number and opens USA Wrestling’s membership check in a new tab\. Paste the number as the USAW ID there, check the card is current, then come back and mark it <strong>Verified<\/strong> or <strong>Not valid<\/strong>\.<\/p>/);
   vm.runInContext('lookUp(0)', ctx); await settle();
   assert.equal(copied, 'AB-1234');
   assert.equal(el('status').textContent, 'Copied AB-1234 for Sam. Paste it as the USAW ID on the USA Wrestling page, then come back and mark the card.');

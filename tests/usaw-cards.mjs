@@ -147,6 +147,50 @@ setCard('AB1235', ny(-1));
 entry = (await roster.rosterFor(today, {role: 'owner'})).find(s => s.key.startsWith('practice:Intermediate:')).entries[0];
 assert.equal(entry.name, 'Sam'); assert.equal(entry.card, 'expired'); assert.equal(entry.cardExpires, ny(-1));
 
+// --- Automatic USA Wrestling lookup (issue #202): it only fills in verification; booking rules are unchanged ---
+{
+  const exp = ny(200), season = usaw.cardSeason(today).end, notBlocked = (q, why) => assert.notEqual(q.extra?.usawRequired, true, why + ': ' + q.error);
+  const lookupRow = (status, outcome) => { sqlite.prepare('DELETE FROM usaw_lookups').run();
+    sqlite.prepare('INSERT INTO usaw_lookups VALUES (?,?,?,?,?,?,?,?,?,?)').run('p1', 'w1', '1234567890', exp, season, status, outcome, 'Sam', 'NY', new Date().toISOString()); };
+  sqlite.prepare('DELETE FROM usaw_reviews').run();
+  setCard('1234567890', exp);
+  // A verification made by the lookup counts exactly like the owner's "Verified".
+  sqlite.prepare("INSERT INTO usaw_reviews VALUES ('p1','w1','1234567890',?,'valid','','usaw-lookup','2026-11-06T12:00:00Z')").run(exp);
+  assert.equal(usaw.cardStatus({...W, usawNumber: '1234567890', usawExpires: exp}, await usaw.reviewFor('p1', 'w1'), today).state, 'verified');
+  notBlocked(await live(), 'verified by lookup');
+  // cardVerification is the one place later rules (for example check-in) read "verified" from.
+  let v = await usaw.cardVerification('p1', {...W, usawNumber: '1234567890', usawExpires: exp}, today);
+  assert.equal(v.verified, true); assert.equal(v.verifiedBy, 'usaw-lookup'); assert.equal(v.verifiedAt, '2026-11-06T12:00:00Z');
+  v = await usaw.cardVerification('p1', {...W, usawNumber: '1234567890', usawExpires: exp}, ny(201));
+  assert.equal(v.verified, false, 'not verified on a date after it expires'); assert.equal(v.state, 'expired');
+  v = await usaw.cardVerification('p1', {...W, usawNumber: '1234567899', usawExpires: exp}, today);
+  assert.equal(v.verified, false, 'a changed number is not verified'); assert.equal(v.verifiedBy, null);
+  actor = {owner: true, id: 'owner-id'};
+  let c = (await call(cardsApi, 'GET')).body.cards[0]; assert.equal(c.verifiedBy, 'usaw-lookup'); assert.equal(c.verifiedAt, '2026-11-06T12:00:00Z');
+  // Changing the number resets it, exactly like an owner review.
+  setCard('1234567891', exp);
+  assert.equal(usaw.cardStatus({...W, usawNumber: '1234567891', usawExpires: exp}, await usaw.reviewFor('p1', 'w1'), today).state, 'current');
+  c = (await call(cardsApi, 'GET')).body.cards[0]; assert.equal(c.verifiedBy, null);
+  // A card the lookup found not active, not found or in another name is "on file", as before: no new block, no verification.
+  setCard('1234567890', exp); sqlite.prepare('DELETE FROM usaw_reviews').run();
+  for (const [status, outcome] of [['inactive', 'inactive'], ['not_found', 'not_found'], ['active', 'mismatch'], ['active', 'season'], ['unavailable', 'unavailable']]) {
+    lookupRow(status, outcome);
+    assert.equal(usaw.cardStatus({...W, usawNumber: '1234567890', usawExpires: exp}, await usaw.reviewFor('p1', 'w1'), today).state, 'current', outcome);
+    notBlocked(await live(), outcome);
+    c = (await call(cardsApi, 'GET')).body.cards[0]; assert.equal(c.state, 'current'); assert.equal(c.lookup.outcome, outcome);
+  }
+  // Missing, expired and rejected cards stay blocked whatever a lookup says.
+  lookupRow('active', 'verified');
+  sqlite.prepare("INSERT INTO usaw_reviews VALUES ('p1','w1','1234567890',?,'valid','','usaw-lookup','t')").run(ny(-1));
+  setCard('1234567890', ny(-1)); blockedBy(await live(), /expired on/);
+  setCard(undefined); blockedBy(await live(), /needs a current USA Wrestling card/);
+  sqlite.prepare('DELETE FROM usaw_reviews').run(); setCard('1234567890', exp);
+  sqlite.prepare("INSERT INTO usaw_reviews VALUES ('p1','w1','1234567890',?,'invalid','Wrong wrestler','owner-id','t')").run(exp);
+  blockedBy(await live(), /could not verify Sam's USA Wrestling card \(Wrong wrestler\)/);
+  sqlite.prepare('DELETE FROM usaw_reviews').run(); sqlite.prepare('DELETE FROM usaw_lookups').run();
+  actor = {owner: false, id: 'p1'};
+}
+
 // --- Family page helpers (inline JavaScript is not typechecked) ---
 {
   const html = readFileSync('app/family/screen.html', 'utf8'), script = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
