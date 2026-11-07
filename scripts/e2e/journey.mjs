@@ -434,7 +434,12 @@ async function recordLesson(familyLabel, wrestler, lesson) {
   await owner.waitForFunction(re => [...document.querySelectorAll('#opening option')].some(o => new RegExp(re).test(o.textContent)), lesson.source);
   const value = await owner.$$eval('#opening option', (os, re) => os.find(o => new RegExp(re).test(o.textContent)).value, lesson.source);
   await owner.selectOption('#opening', value);
-  await owner.waitForFunction(() => document.querySelector('#format option')?.value);
+  // Choosing a time reloads the lesson types in the background; wait for the type that matches this time, or the
+  // preview can go out with the first time's type (a one-on-one) and be refused.
+  await owner.waitForFunction(() => {
+    const time = document.querySelector('#opening option:checked')?.textContent || '', type = document.querySelector('#format option');
+    return !!type?.value && type.textContent.startsWith((time.match(/Partner lesson|Small-group lesson/) || ['One-on-one lesson'])[0]);
+  });
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record');
   await waitText(owner, '#status', /recorded/i);
 }
