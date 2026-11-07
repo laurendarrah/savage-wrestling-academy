@@ -7,6 +7,7 @@ Follow the steps in order. The old Sites site keeps running until the domain is 
 ## 1. Accounts (Justin)
 
 - [ ] Create a Cloudflare account in the academy's name (free plan to start; Workers Paid is $5/month if limits are reached). Add Lauren as an administrator.
+  - **When to switch to Workers Paid:** the free plan allows about 50 database queries per page load or scheduled run, and Workers Paid allows 1,000. The academy is far below the free limit today. Load checks at 3,000 families (PRs #219 and #242) show the backup download, the daily reminders and the longest owner lists start needing more than 50 somewhere past about 1,000 families. **Warning signs:** a backup download that fails, missed morning reminders, or "too many subrequests" errors on `/site-health`. Switch at about 750 families, or as soon as any of those appear. Workers & Pages → Plans in Cloudflare.
 - [ ] Decide the site address, for example `register.savagewrestling.com`. Whoever controls the domain's DNS needs to be available on cut-over day.
 - [ ] Accept the invite to the new Supabase project (see below), and add Lauren to the Stripe account.
 
