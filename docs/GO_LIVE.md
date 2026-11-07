@@ -93,7 +93,7 @@ Daily card and waiver reminders now run every morning at 7:41 (8:41 in summer) N
 
 ## Rolling back
 
-The full guide for problems after launch (site down, bad update, lost data, emails, lost authenticator, payments) is `docs/RUNBOOK.md`.
+The full guide for problems after launch (site down, failed deploys, bad update, lost data, payments and webhooks, sign-in and authenticators, emails) is `docs/RUNBOOK.md`.
 
 - **Before step 8:** nothing has changed for families. Fix and redeploy.
 - **A bad publish:** Cloudflare → Workers → the worker → Deployments → roll back to the previous version. Database changes are add-only, so the previous version keeps working.
