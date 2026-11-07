@@ -1003,7 +1003,8 @@ await step('family pages fit a phone screen', async () => {
   const phone = await (async () => { const p = await (await browser.newContext({viewport: {width: 390, height: 844}, deviceScaleFactor: SHOTS ? 3 : 1, isMobile: true, hasTouch: true})); const c = (await import('./fake-supabase.mjs')).sessionCookie('family', AUTH); await p.addCookies([{name: c.name, value: c.value, url: BASE}]); return p.newPage(); })();
   for (const path of ['/welcome', '/help', '/family', '/register', '/lesson', '/waiver', '/consent', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
     await phone.goto(BASE + path); await phone.waitForTimeout(700);
-    const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    // Against the 390px screen, not innerWidth: a phone widens innerWidth to fit content that pokes out (issue #222).
+    const over = await phone.evaluate(() => document.documentElement.scrollWidth - 390);
     expect(over <= 1, `${path} scrolls sideways by ${over}px on a phone`);
     // Buttons and links must not break a word across lines (for example "Messa ges").
     const broken = await phone.evaluate(() => [...document.querySelectorAll('a,button')].filter(el => el.offsetParent && el.children.length === 0 && /^\S+$/.test(el.textContent.trim()) && el.textContent.trim().length > 3 && el.getClientRects().length && el.scrollHeight > parseFloat(getComputedStyle(el).lineHeight || '20') * 1.9 + parseFloat(getComputedStyle(el).paddingTop) + parseFloat(getComputedStyle(el).paddingBottom)).map(el => el.textContent.trim()));
