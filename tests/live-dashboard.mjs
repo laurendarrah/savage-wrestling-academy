@@ -54,7 +54,7 @@ assert.match(launch, /data-launch="waiver"[\s\S]*?href="\/waivers">Open/);
 assert.doesNotMatch(launch.split('data-launch="health"')[1], /<a class="button"|<button/, 'a ready item has no button');
 
 // No preview modes: the header links to what families really see.
-assert.match(html, /<nav class="family-links" aria-label="What families see">[^]*?<a href="\/welcome">Welcome page<\/a> <a href="\/calendar">Calendar<\/a><\/nav>/);
+assert.match(html, /<nav class="family-links" aria-label="What families see">[^]*?<a href="\/welcome">Welcome page<\/a> <a href="\/team">Team page<\/a> <a href="\/calendar">Calendar<\/a><\/nav>/);
 for (const gone of ['previewMenu', 'Preview what families see', 'Parent view', 'Wrestler view', 'setMode', 'liveWorkspace', 'sampleDashboard', 'admin-demo', 'attendance-demo', 'qr-preview.js'])
   assert.ok(!html.includes(gone), `portal still has ${gone}`);
 assert.ok(!html.includes('OWNER WORKSPACE'), 'the dashboard has no sample-preview banner (issue #133)');

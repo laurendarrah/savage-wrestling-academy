@@ -4,7 +4,7 @@ section{background:#fff;border:1px solid #e1e3e8;border-radius:6px;padding:20px;
 label{display:block;font-weight:600;margin:12px 0}input,select,textarea{display:block;width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-top:6px;font:inherit}
 button{font:inherit;padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;color:#141416}.primary{background:#c4222c;color:#fff;border-color:#c4222c}
 .muted{color:#55585f}#status{font-weight:600}[hidden]{display:none!important}
-.month-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}.month-head h2{margin:0}.month-nav{display:flex;gap:6px}.month-nav button{min-width:52px}
+.month-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}.month-head h2{margin:0}.month-head .month-picker{flex:0 1 320px}
 .state{margin:8px 0 0;font-weight:600}.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
 /* Phones: paid time across the top, amount and shifts side by side under it, so no tile sits alone (issue #223). */
 @media(max-width:520px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:first-child{grid-column:1/-1}}
@@ -13,7 +13,7 @@ button{font:inherit;padding:10px 14px;border:1px solid #ccc;border-radius:6px;ba
 .shift{border:1px solid #e1e3e8;border-radius:10px;padding:14px 16px;margin:12px 0}.shift.voided{opacity:.6}.shift.voided .what{text-decoration:line-through}
 .shift-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.shift p{margin:4px 0}
 .badge{display:inline-block;background:#eef0f2;color:#141416}.badge.open{background:#fdecee;color:#a11b24}.badge.approved{background:#e6f2ea;color:#1f6f3a}.badge.submitted{background:#141416;color:#fff}
-.flags{margin:8px 0 0;padding:8px 12px 8px 28px;background:#fff7e6;border-radius:8px;color:#5c3b00;font-size:15px}.flags li+li{margin-top:4px}
+.flags{margin:8px 0 0;padding:8px 12px 8px 28px;background:var(--swa-warn-bg,#FFF7E6);border-radius:8px;color:var(--swa-warn-ink,#5C3B00);font-size:15px}.flags li+li{margin-top:4px}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}@media(max-width:520px){.pair{grid-template-columns:1fr}}
 details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:#c4222c}
 .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}.send{margin-top:18px;padding-top:16px;border-top:1px solid #e1e3e8}.send button{width:100%;min-height:60px}
@@ -26,7 +26,7 @@ html body .send button.primary:disabled,html body .send button.primary:disabled:
 <h1>Your hours</h1>
 <p id="intro">Clock in at practice, check your month and send it to the academy once the month ends. Practices are paid for the scheduled practice time, by the role you coached.</p>
 <section id="clock" data-coach-clock data-link="off" aria-labelledby="clockTitle"><h2 id="clockTitle">Clock in</h2><p class="muted">Loading your clock…</p></section>
-<section aria-labelledby="monthTitle"><div class="month-head"><h2 id="monthTitle">This month</h2><div class="month-nav"><button type="button" id="prev" aria-label="Previous month">←</button><button type="button" id="next" aria-label="Next month">→</button></div></div>
+<section aria-labelledby="monthTitle"><div class="month-head"><h2 id="monthTitle">This month</h2><div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="month"></select></label><button type="button" class="month-step" id="next" aria-label="Next month">→</button></div></div>
 <p id="monthState" class="state"></p><p id="rates" class="muted"></p>
 <div class="tiles"><div class="tile">Paid time<b id="tMinutes">–</b></div><div class="tile">Amount<b id="tAmount">–</b></div><div class="tile">Shifts<b id="tShifts">–</b></div></div>
 <ul id="breakdown" class="breakdown"></ul><p id="timeOffNote" class="muted" hidden></p>
@@ -46,6 +46,7 @@ html body .send button.primary:disabled,html body .send button.primary:disabled:
 <p id="status" role="status" aria-live="polite"></p></main>
 <script src="/hours-text.js"></script>
 <script src="/coach-clock.js"></script>
+<script src="/month-picker.js"></script>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1]%12||12)+':'+m[2]+' '+(+m[1]<12?'AM':'PM'):''};
@@ -78,8 +79,10 @@ const OFF={pending:'Waiting for the academy',approved:'Approved',declined:'Not a
 function offHtml(r){return `<div class="off"><p><b>${esc(r.text)}</b> · ${OFF[r.status]||esc(r.status)}</p><p class="muted">${esc(r.reason)}${r.decisionNote?' · Academy: '+esc(r.decisionNote):''}</p>${r.status==='pending'?`<button type="button" data-withdraw="${esc(r.id)}" data-rev="${r.revision}">Withdraw</button>`:''}</div>`}
 const noticeHtml=n=>`<div class="notice"><p><b>${esc(n.subject)}</b> <span class="muted">· ${esc(atText(n.at))}</span></p><p>${esc(n.body)}</p></div>`;
 let current=null,data=null;
+// The month picker shared with /financials and /timesheets (public/month-picker.js, issue #232).
+const picker={select:$('month'),prev:$('prev'),next:$('next')};
 function render(d){data=d;current=d.month;
- $('monthTitle').textContent=d.monthLabel;$('monthState').textContent=monthText(d);$('next').disabled=!d.next;
+ $('monthTitle').textContent=d.monthLabel;$('monthState').textContent=monthText(d);MonthPicker.set(picker,d.month,{max:[d.month,String(d.today||'').slice(0,7)].sort().pop()});$('next').disabled=!d.next;
  $('rates').textContent='Rates: '+d.rates.map(r=>r.label+' '+money(r.centsPerHour)+' an hour').join(', ')+'. Only the scheduled practice time is paid.';
  $('tMinutes').textContent=hoursText(d.totals.minutes);$('tAmount').textContent=money(d.totals.amountCents);$('tShifts').textContent=d.totals.shifts;
  $('breakdown').innerHTML=d.totals.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)}</span><span>${esc(hoursText(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('');
@@ -94,8 +97,7 @@ function render(d){data=d;current=d.month;
  document.querySelectorAll('[data-withdraw]').forEach(b=>b.onclick=()=>act({action:'time-off-withdraw',id:b.dataset.withdraw,revision:Number(b.dataset.rev)},'Request withdrawn.'))}
 async function load(month){try{render(await call(null,month?'?month='+encodeURIComponent(month):''))}catch(e){$('status').textContent=e.message}}
 async function act(body,done){try{const r=await call(body);await load(current);if(window.CoachClock)CoachClock.refresh();$('status').textContent=typeof done==='function'?done(r):done}catch(e){$('status').textContent=e.message}}
-const shiftMonth=(m,n)=>{const [y,mo]=m.split('-').map(Number),d=new Date(Date.UTC(y,mo-1+n,1));return d.toISOString().slice(0,7)};
-$('prev').onclick=()=>load(shiftMonth(current,-1));$('next').onclick=()=>{if(data&&data.next)load(data.next)};
+MonthPicker.wire(picker,load);
 $('submit').onclick=()=>act({action:'submit',month:current},r=>r.sent+' shift'+(r.sent===1?'':'s')+' sent to the academy.');
 // The practice list for a hand-added shift follows the date.
 async function addChoices(){const date=$('addDate').value,sel=$('addSession');if(!date){sel.innerHTML='<option value="">Choose a date first</option>';return}

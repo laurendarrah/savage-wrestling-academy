@@ -310,7 +310,7 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   const r = await get(owner, '/api/timesheets?month=2026-11', 'owner');
   const {el, ctx} = page('app/timesheets/screen.html', async () => okJson(r.body));
   await settle(); await settle();
-  assert.equal(el('monthLabel').textContent, 'November 2026'); assert.equal(el('csv').href, '/api/timesheets?format=csv&month=2026-11');
+  assert.equal(el('month').value, '2026-11'); assert.match(el('month').innerHTML, /<option value="2026-11" selected>November 2026<\/option>/); // the shared month picker (issue #232) assert.equal(el('csv').href, '/api/timesheets?format=csv&month=2026-11');
   assert.match(el('coaches').innerHTML, /data-approve="dana\.coach@example\.test">Approve Coach Dana’s November 2026 \(\$237\.50\)/);
   assert.match(el('coaches').innerHTML, /Private lessons: 1, share \$65\.00 at 65%/);
   assert.match(el('coaches').innerHTML, /data-correct=/); assert.match(el('coaches').innerHTML, /Void: Entered twice/);

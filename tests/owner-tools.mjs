@@ -32,4 +32,12 @@ for (const g of ['Schedules', 'Programs & pricing', 'Camps & events']) assert.eq
 for (const p of ['/consent-forms', '/contracts']) assert.equal(out.split(`href="${p}"`).length - 1, 1, p);
 assert.equal(out.split('href="/website"').length - 1, 1, '/website');
 assert.equal((out.match(/href="|onclick="go\(/g) || []).length, 29, 'no tool added or lost');
+// Issue #232: across the whole dashboard (the header's Account & tools menu and "What families see" links, and the
+// tools), each page is linked once. The menu keeps account actions only; the team page (#215) joins the family links.
+const header = html.match(/<header>[\s\S]*?<\/header>/)[0];
+const headerLinks = [...header.matchAll(/href="([^"]+)"/g)].map(m => m[1]);
+assert.deepEqual(headerLinks, ['/welcome', '/team', '/calendar', '/security']);
+const all = [...headerLinks, ...[...out.matchAll(/href="([^"]+)"/g)].map(m => m[1])];
+assert.equal(all.length, new Set(all).size, 'no page is linked twice: ' + all.filter((h, i) => all.indexOf(h) !== i));
+assert.equal(all.length, 30, 'the header adds four links to the 26 tool links');
 console.log('owner-tools ok');

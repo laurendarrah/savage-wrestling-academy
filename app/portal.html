@@ -6,7 +6,7 @@
 .toolgroups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 28px;border-top:1px solid var(--line);padding-top:16px}
 .toolgroups h3{font-size:13px;letter-spacing:1.6px;text-transform:uppercase;color:#6B7076;margin:0 0 6px}
 .toolgroups ul,.toolmore ul{list-style:none;margin:0;padding:0}
-.toollink{display:flex;align-items:center;min-height:40px;width:100%;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;text-decoration:none;cursor:pointer;border-bottom:1px solid #EEF0F3}
+.toollink{display:flex;align-items:center;min-height:44px;width:100%;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:600;text-align:left;text-decoration:none;cursor:pointer;border-bottom:1px solid #EEF0F3}
 .toollink:hover{color:var(--red)}
 .toolmore{margin-top:18px;border-top:1px solid var(--line);padding-top:6px}
 .toolmore summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:700;color:#55585F}
@@ -81,17 +81,18 @@ header .owner-tools .menu{position:absolute;right:0;top:calc(100% + 6px);z-index
 header .owner-tools .menu-item{display:flex;align-items:center;width:100%;min-height:44px;margin:0;padding:0 12px;border:0;border-radius:8px;background:none;box-shadow:none;color:var(--ink);font:600 15px/1.3 Barlow,Arial,sans-serif;letter-spacing:0;text-transform:none;text-align:left;text-decoration:none;cursor:pointer}
 header .owner-tools .menu-item:hover,header .owner-tools .menu-item:focus-visible{background:var(--bg);color:var(--red)}
 header .owner-tools .menu hr{width:auto;border:0;border-top:1px solid var(--line);margin:4px 8px}
-.title-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end}
+.title-actions{display:flex;flex:none;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end;max-width:100%}
 @media(max-width:650px){
- aside{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px}
+ aside{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px}
  .logo{display:flex;align-items:center;gap:10px;font-size:26px}.logo img{width:40px;height:40px;margin:0}
  aside .mobile-menu-button{width:auto;min-width:150px;min-height:44px;margin:0;padding:0 16px;gap:12px;font:600 15px Barlow,Arial,sans-serif}
  aside .nav{flex-basis:100%;margin-top:0}
  header{display:grid;gap:4px 12px;padding:6px 16px 8px}header>.crumbs{display:none}
- .family-links{gap:0 14px}.owner-tools-wrap{justify-content:space-between}
+ .family-links{gap:0 18px}.family-links>span{display:none}.owner-tools-wrap{justify-content:space-between}
  header .owner-tools .menu{left:auto;right:0;min-width:min(280px,calc(100vw - 32px))}
+ .toolbar select.calendar-month{flex:1 1 0;width:auto;min-width:0}
  main .title{padding:22px 16px 20px}main .title h1{margin-bottom:8px}main .title .eyebrow{margin-bottom:8px!important}
- .title-actions{justify-content:flex-start;gap:8px;margin-top:6px}.title-actions>*{flex:1 1 auto}
+ .title-actions{justify-content:flex-start;gap:8px;margin-top:6px;width:100%}.title-actions>*{flex:1 1 0}.title-actions>.primary{flex-basis:100%}
 }
 </style><link rel="stylesheet" href="/responsive.css"></head><body><div class="shell"><aside><div class="logo"><img src="/brand/savage-logo-128.png" alt="" width="64" height="64"><span>SAVAGE<small>WRESTLING ACADEMY</small></span></div><div class="redline"></div><button type="button" id="navToggle" class="mobile-menu-button" aria-expanded="false" aria-controls="nav" onclick="toggleMobileNav()">Menu</button><nav class="nav" id="nav" aria-label="Academy navigation"></nav><div class="sidefoot"><b>Built for the work.</b><br>Huntington Station, NY</div></aside><div class="workspace"><header><div class="crumbs"><span class="eyebrow">SAVAGE / </span><span class="muted small" id="crumb">Academy administration</span></div><nav class="family-links" aria-label="What families see"><span class="muted small">What families see:</span> <a href="/welcome">Welcome page</a> <a href="/team">Team page</a> <a href="/calendar">Calendar</a></nav><div class="owner-tools-wrap"><span id="syncStatus" role="status" aria-live="polite">Connecting…</span><details class="owner-tools" id="ownerTools"><summary>Account &amp; tools</summary><div class="menu"><button type="button" class="menu-item" onclick="closeOwnerTools();reloadAcademy()">Refresh saved data</button><a class="menu-item" href="/security">Account security</a><hr><button type="button" class="menu-item" onclick="ownerSignout()">Sign out</button></div></details></div></header><main id="main"></main></div></div><div id="overlay"></div><div id="toast"></div><script>
 function namedMonthOptions(key,min='2020-01',max='2100-12'){
@@ -264,7 +265,7 @@ async function loadLaunch(){
   return `<div class="listitem" data-launch="${esc(i.key)}" data-status="${esc(i.status)}"><span aria-label="${l}" title="${l}" style="flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;background:${c}">${m}</span><div class="grow"><b>${esc(i.label)}</b><p class="muted small" style="margin:2px 0 0">${esc(i.detail)}</p></div>${i.status==='done'?'':open}</div>`};
  // What still needs attention first; finished items fold away so the list stays short.
  const order={todo:0,waiting:1,info:2},open=d.items.filter(i=>i.status!=='done').sort((a,b)=>order[a.status]-order[b.status]),done=d.items.filter(i=>i.status==='done');
- const body=open.map(row).join('')+(done.length?`<details style="margin-top:8px"><summary class="muted" style="cursor:pointer;padding:10px 0">Show the ${done.length} ready item${done.length===1?'':'s'}</summary>${done.map(row).join('')}</details>`:'');
+ const body=open.map(row).join('')+(done.length?`<details style="margin-top:8px"><summary class="muted" style="cursor:pointer;padding:12px 0;line-height:20px">Show the ${done.length} ready item${done.length===1?'':'s'}</summary>${done.map(row).join('')}</details>`:'');
  const pct=d.total?Math.round(d.ready/d.total*100):0,all=d.ready===d.total;
  el.innerHTML=`<details ${all?'':'open'}><summary style="cursor:pointer;list-style:none"><h2 style="margin:0;display:inline">Launch checklist</h2> <span class="muted" id="launchCount">${all?'Everything is set up ✓':d.ready+' of '+d.total+' ready'}</span><div role="progressbar" aria-label="Launch checklist progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" style="height:8px;background:#eeeef1;border-radius:99px;margin-top:10px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${all?'#1f6f3a':'#d72732'}"></div></div></summary>${body}</details>`;
  el.hidden=false;
