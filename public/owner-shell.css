@@ -1,0 +1,123 @@
+/* The owner shell (issue #261): one sidebar and header on every owner page, added by the Worker (lib/owner-shell.ts).
+   Loaded after the page's own styles and savage.css. Every rule starts "html body" and a shell class, so it outranks
+   the shared "html body button" and "html body a" rules and the pages' own element rules, and touches nothing else.
+   The dashboard does not load savage.css, so the colors below repeat its tokens as fallbacks. */
+:root{--os-red:var(--swa-red,#C4222C);--os-ink:var(--swa-ink,#111113);--os-muted:var(--swa-muted,#55585F);--os-line:var(--swa-line,#E4E6EA);
+  --os-hair:var(--swa-hair,rgba(17,17,19,.08));--os-ground:var(--swa-ground,#F3F4F6);--os-shadow:var(--swa-shadow,0 1px 2px rgba(17,17,19,.05),0 10px 28px -12px rgba(17,17,19,.16));
+  --os-texture:radial-gradient(90% 140% at 100% 0%,rgba(196,34,44,.22),transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 1px,transparent 1px 10px),linear-gradient(180deg,#141416,#0D0D0F);
+  --os-side:264px;--os-body:Barlow,'Helvetica Neue',Arial,sans-serif;--os-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif}
+
+/* Moving between owner pages: the sidebar and header keep still while the middle cross-fades. Browsers without
+   cross-document View Transitions, and anyone who asks for less motion, get an ordinary page load. */
+@media (prefers-reduced-motion:no-preference){
+  @view-transition{navigation:auto}
+  ::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
+}
+html body .os-side{view-transition-name:swa-owner-side}
+html body .os-top{view-transition-name:swa-owner-top}
+html:has(>body[data-swa-shell]){scroll-padding-top:80px}
+html:has(>body.os-open){overflow:hidden}
+
+html body .os-skip{position:absolute;left:12px;top:-80px;z-index:100;padding:12px 16px;border-radius:8px;background:#fff;color:var(--os-ink);font:700 16px var(--os-body);text-decoration:none;box-shadow:var(--os-shadow)}
+html body .os-skip:focus{top:12px}
+
+html body .os{display:grid;grid-template-columns:var(--os-side) minmax(0,1fr);min-height:100vh}
+/* The page's own content. Clipped sideways, so a page's edge-to-edge black heading band stops at the sidebar. */
+html body .os-work{min-width:0;overflow-x:clip}
+html body .os-work .swa-head::before{width:300vw}
+html body .os-work main h1[tabindex="-1"]:focus{outline:none}
+/* Pages shared with coaches (the roster, curricula) link coaches back to Coach home; the owner has the sidebar. */
+html body .os-work #home.swa-back{display:none}
+/* Beside the sidebar, a tool page's content keeps clear of its edge (the dashboard has its own, wider margins). */
+@media (min-width:901px){html body:not([data-swa-page="/"]) .os-work>main{padding-left:32px;padding-right:32px}}
+
+/* ---------- Sidebar ---------- */
+html body .os-side{position:sticky;top:0;z-index:40;height:100vh;height:100dvh;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;
+  padding:22px 14px 18px;background:var(--os-texture);background-color:#0D0D0F;color:#fff;font:15px/1.4 var(--os-body);scrollbar-width:thin;scrollbar-color:#3A3B40 transparent}
+html body .os-side-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:0 8px}
+html body .os-brand{display:flex;flex-direction:column;align-items:flex-start;gap:8px;color:#fff;text-decoration:none;font:italic 800 36px/1 var(--os-display);letter-spacing:1px}
+html body .os-brand:hover{color:#fff}
+html body .os-brand img{display:block;width:56px;height:56px}
+html body .os-brand small{display:block;margin-top:8px;font:700 12px/1.2 var(--os-body);letter-spacing:2.4px;font-style:normal;color:#fff}
+html body .os-redline{height:4px;width:38px;background:var(--os-red);margin:18px 8px 8px}
+html body .os-list{list-style:none;margin:0;padding:0}
+html body .os-list li{margin:1px 0}
+html body .os-nav a,html body .os-family-drawer a{display:flex;align-items:center;gap:12px;min-height:38px;padding:6px 10px 6px 9px;border-left:3px solid transparent;border-radius:6px;
+  color:#AEB2BA;font:600 15px/1.25 var(--os-body);letter-spacing:0;text-transform:none;text-decoration:none;overflow-wrap:normal}
+html body .os-nav a:hover,html body .os-family-drawer a:hover{color:#fff;background:rgba(255,255,255,.06)}
+html body .os-nav a[aria-current=page]{color:#fff;background:#292A2F;border-left-color:var(--os-red)}
+html body .os-nav svg{flex:none;display:block;width:18px;height:18px}
+html body .os-side :focus-visible{outline:3px solid #E25C63;outline-offset:2px}
+html body .os-group{margin:16px 0 4px;padding:0 12px;font:700 11px/1.2 var(--os-body);letter-spacing:1.8px;text-transform:uppercase;color:#80848E}
+html body .os-fold{margin-top:12px}
+html body .os-fold summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;
+  font:700 11px/1.2 var(--os-body);letter-spacing:1.8px;text-transform:uppercase;color:#80848E}
+html body .os-fold summary::-webkit-details-marker{display:none}
+html body .os-fold summary::after{content:"";width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px)}
+html body .os-fold[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
+html body .os-fold summary:hover{color:#fff}
+html body .os-family-drawer{display:none}
+html body .os-foot{margin:auto 0 0;padding:24px 12px 0;color:#A6A9B0;font-size:12px;line-height:1.7}
+html body .os-foot b{color:#fff}
+html body .os-close{display:none}
+
+/* ---------- Header ---------- */
+html body .os-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px 22px;min-height:64px;padding:10px 32px;background:#fff;border-bottom:1px solid var(--os-line);
+  color:var(--os-ink);font:15px/1.4 var(--os-body)}
+html body .os-menu,html body .os-top-brand{display:none}
+html body .os-crumbs{flex:1 1 auto;min-width:0;margin:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--os-muted);font-size:13px}
+html body .os-crumbs-home{color:var(--os-ink);font-weight:800;font-size:12px;letter-spacing:2px}
+html body .os-family-top{display:flex;align-items:center;flex-wrap:wrap;gap:0 16px}
+html body .os-family-label{color:var(--os-muted);font-size:13px}
+html body .os-family-top a{display:inline-flex;align-items:center;min-height:44px;color:var(--os-ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+html body .os-family-top a:hover{color:var(--os-red)}
+html body .os-tools{display:flex;align-items:center;gap:14px;margin-left:auto}
+html body .os-sync{font-size:13px;font-weight:600}
+html body .os-account{position:relative;margin:0}
+html body .os-account summary{list-style:none;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 14px;border:1px solid #CDD0D6;border-radius:8px;background:#fff;
+  color:var(--os-ink);font:600 15px/1 var(--os-body);cursor:pointer;box-shadow:0 1px 2px rgba(17,17,19,.06)}
+html body .os-account summary::-webkit-details-marker{display:none}
+html body .os-account summary::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px)}
+html body .os-account[open] summary{border-color:var(--os-ink)}
+html body .os-account[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
+html body .os-panel{position:absolute;right:0;top:calc(100% + 6px);z-index:55;min-width:240px;display:flex;flex-direction:column;gap:2px;padding:6px;background:#fff;
+  border:1px solid var(--os-hair);border-radius:12px;box-shadow:var(--os-shadow)}
+html body .os-item{display:flex;align-items:center;width:100%;min-height:44px;margin:0;padding:0 12px;border:0;border-radius:8px;background:none;box-shadow:none;color:var(--os-ink);
+  font:600 15px/1.3 var(--os-body);letter-spacing:0;text-transform:none;text-align:left;text-decoration:none;cursor:pointer}
+html body .os-item:hover,html body .os-item:focus-visible,html body .os-item[aria-current=page]{background:var(--os-ground);color:var(--os-red);border-color:transparent}
+html body .os-panel hr{width:auto;border:0;border-top:1px solid var(--os-line);margin:4px 8px}
+@media (max-width:1240px){html body .os-family-label{display:none}}
+@media (max-width:1060px) and (min-width:901px){html body .os-crumbs{display:none}html body .os-family-top{margin-right:auto}}
+
+/* ---------- Phones and small tablets: the header stays, the sidebar becomes a drawer behind Menu ---------- */
+@media (max-width:900px){
+  html body .os{display:block}
+  html body .os-side{position:fixed;inset:0 auto 0 0;width:min(320px,86vw);z-index:70;transform:translateX(-102%);visibility:hidden;box-shadow:0 0 60px rgba(0,0,0,.5);
+    transition:transform .22s ease,visibility 0s linear .22s}
+  html body.os-open .os-side{transform:none;visibility:visible;transition:transform .22s ease}
+  html body .os-scrim{position:fixed;inset:0;z-index:60;background:rgba(10,10,12,.55)}
+  html body .os-scrim[hidden]{display:none}
+  html body .os-close{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;min-height:44px;padding:0;margin:0;border:1px solid #494A50;border-radius:8px;
+    background:#292A2F;color:#fff;box-shadow:none}
+  html body .os-close:hover{border-color:#fff;color:#fff}
+  html body .os-brand{font-size:30px}html body .os-brand img{width:44px;height:44px}
+  html body .os-nav a,html body .os-family-drawer a{min-height:44px}
+  html body .os-family-drawer{display:block;margin-top:8px}
+  html body .os-top{min-height:60px;padding:8px 16px;gap:8px 12px;flex-wrap:wrap;background:#0D0D0F;color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}
+  html body .os-menu{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin:0;padding:0 14px;border:1px solid #494A50;border-radius:8px;background:#292A2F;color:#fff;
+    font:600 15px/1 var(--os-body);letter-spacing:0;text-transform:none;box-shadow:none}
+  html body .os-menu:hover{border-color:#fff;color:#fff}
+  html body .os-top-brand{display:flex;align-items:center;gap:8px;min-height:44px;color:#fff;text-decoration:none;font:italic 900 22px/1 var(--os-display)}
+  html body .os-top-brand:hover{color:#fff}
+  html body .os-top-brand img{display:block;width:36px;height:36px}
+  html body .os-crumbs,html body .os-family-top{display:none}
+  html body .os-tools{display:contents}
+  html body .os-account{margin-left:auto}
+  html body .os-account summary{background:transparent;color:#fff;border-color:rgba(255,255,255,.35);box-shadow:none}
+  html body .os-account[open] summary{border-color:#fff}
+  html body .os-panel{min-width:min(280px,calc(100vw - 32px))}
+  html body .os-sync{order:5;flex:1 0 100%;margin:0 -16px -8px;padding:6px 16px;background:#fff;border-bottom:1px solid var(--os-line)}
+  html body .os-top :focus-visible{outline:3px solid #E25C63;outline-offset:2px}
+}
+@media (max-width:900px) and (prefers-reduced-motion:reduce){html body .os-side,html body.os-open .os-side{transition:none}}
+@media print{html body .os-side,html body .os-top,html body .os-scrim,html body .os-skip{display:none!important}html body .os{display:block}}

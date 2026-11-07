@@ -1,13 +1,15 @@
 // One look on every page (issue #129). The Worker passes each HTML page through decoratePage(), which adds the shared
 // stylesheet, the browser icons and the same top bar (logo home link, Calendar, Home) everywhere, so no page needs its
 // own copy. "/" sends each person to their own home (owner dashboard, coach home, family home or the welcome page).
-// Left alone: the owner dashboard (it has its own menu), printable documents and pages shown inside other pages.
+// Left alone: printable documents and pages shown inside other pages. Owner pages get the owner shell instead of the
+// top bar (issue #261, lib/owner-shell.ts), including the owner dashboard at "/".
+import {OWNER_SHELL_HEADER, OWNER_SHELL_HEAD, wrapOwnerBody} from './owner-shell';
 const SKIP = new Set(['/', '/scholarship-agreement', '/waiver-copy']);
 const HOMES = new Set(['/family', '/coach']);
 
-export function shouldDecorate(url: URL, contentType: string | null) {
+export function shouldDecorate(url: URL, contentType: string | null, ownerShell = false) {
   if (!contentType?.startsWith('text/html')) return false;
-  if (SKIP.has(url.pathname) || url.pathname.startsWith('/api/')) return false;
+  if ((SKIP.has(url.pathname) && !(ownerShell && url.pathname === '/')) || url.pathname.startsWith('/api/')) return false;
   return !url.searchParams.has('embed') && !url.searchParams.has('embedded');
 }
 
@@ -19,8 +21,9 @@ export function topBar(pathname: string) {
     + '</div></header>';
 }
 
-const HEAD = '<link rel="icon" href="/brand/favicon-32.png" sizes="32x32"><link rel="icon" href="/brand/favicon-64.png" sizes="64x64">'
-  + '<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="stylesheet" href="/savage.css">';
+const ICONS = '<link rel="icon" href="/brand/favicon-32.png" sizes="32x32"><link rel="icon" href="/brand/favicon-64.png" sizes="64x64">'
+  + '<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">';
+const HEAD = ICONS + '<link rel="stylesheet" href="/savage.css">';
 
 // The black page header (issue #146): a page that opens with optional back links, its heading and an intro paragraph
 // gets them wrapped in .swa-head. Status lines and notices stay outside; pages with their own header are left alone.
@@ -39,20 +42,32 @@ export function pageHead(html: string) {
   return html.slice(0, at) + '<div class="swa-head">' + open[1] + '</div>' + html.slice(at + open[1].length);
 }
 
-export function decoratePage(html: string, pathname: string) {
-  if (html.includes('class="swa-bar"')) return html;
-  let out = html.includes('</head>') ? html.replace('</head>', HEAD + '</head>') : HEAD + html;
+export function decoratePage(html: string, pathname: string, ownerShell = false) {
+  if (html.includes('class="swa-bar"') || html.includes('data-swa-shell=')) return html;
+  // The dashboard keeps its own styles (it never loaded savage.css) and its own title band.
+  const dashboard = ownerShell && pathname === '/';
+  const head = (dashboard ? ICONS : HEAD) + (ownerShell ? OWNER_SHELL_HEAD : '');
+  let out = html.includes('</head>') ? html.replace('</head>', head + '</head>') : head + html;
   const body = out.match(/<body[^>]*>/i);
   // data-swa-page lets the shared stylesheet give a page its own treatment (the sign-in page, for one).
-  const tagged = body ? body[0].replace(/^<body/i, `<body data-swa-page="${pathname.replace(/[^\w/-]/g, '')}"`) : '';
+  const tagged = body ? body[0].replace(/^<body/i, `<body data-swa-page="${pathname.replace(/[^\w/-]/g, '')}"${ownerShell ? ' data-swa-shell="owner"' : ''}`) : '';
+  if (ownerShell && body) return wrapOwnerBody(dashboard ? out.replace(body[0], tagged) : pageHead(out.replace(body[0], tagged)), pathname);
   out = body ? out.replace(body[0], tagged + topBar(pathname)) : topBar(pathname) + out;
   return pageHead(out);
 }
 
 export async function decorateResponse(request: Request, response: Response) {
   const url = new URL(request.url);
-  if (request.method !== 'GET' || response.status !== 200 || !shouldDecorate(url, response.headers.get('Content-Type'))) return response;
+  // A route marks an owner page only after its own owner check (lib/owner-shell.ts). The mark never leaves the Worker.
+  const ownerShell = response.headers.has(OWNER_SHELL_HEADER);
+  if (request.method !== 'GET' || response.status !== 200 || !shouldDecorate(url, response.headers.get('Content-Type'), ownerShell)) {
+    if (!ownerShell) return response;
+    const headers = new Headers(response.headers);
+    headers.delete(OWNER_SHELL_HEADER);
+    return new Response(response.body, {status: response.status, statusText: response.statusText, headers});
+  }
   const headers = new Headers(response.headers);
   headers.delete('Content-Length');
-  return new Response(decoratePage(await response.text(), url.pathname), {status: response.status, statusText: response.statusText, headers});
+  headers.delete(OWNER_SHELL_HEADER);
+  return new Response(decoratePage(await response.text(), url.pathname, ownerShell), {status: response.status, statusText: response.statusText, headers});
 }

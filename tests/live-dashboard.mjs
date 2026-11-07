@@ -36,8 +36,8 @@ responses['/api/waivers'] = {current: null, wrestlers: []}; delete responses['/a
 await vm.runInContext('loadToday()', ctx);
 assert.ok(!node('#todayTiles').innerHTML.includes('Waiver not signed')); assert.ok(!node('#todayTiles').innerHTML.includes('Unread family messages'));
 
-// Sidebar items with their own page open it.
-for (const [p, href] of [['Families', '/accounts'], ['Roster & check-in', '/roster'], ['Private lessons', '/lesson-settings'], ['Messages', '/messages'], ['Scholarships', '/scholarships'], ['Coaches', '/staff']]) {
+// Owner destinations with their own page open it (the names in lib/owner-nav.ts, issue #261).
+for (const [p, href] of [['Family accounts', '/accounts'], ['Roster & check-in', '/roster'], ['Private lesson prices', '/lesson-settings'], ['Messages', '/messages'], ['Scholarships', '/scholarships'], ['Coaches', '/staff']]) {
   location.href = ''; vm.runInContext(`go(${JSON.stringify(p)})`, ctx); assert.equal(location.href, href, p);
 }
 
@@ -69,8 +69,8 @@ await vm.runInContext('loadLaunch()', ctx);
   assert.match(l, /0 of 1 ready/);
 }
 
-// No preview modes: the header links to what families really see.
-assert.match(html, /<nav class="family-links" aria-label="What families see">[^]*?<a href="\/welcome">Welcome page<\/a> <a href="\/team">Team page<\/a> <a href="\/calendar">Calendar<\/a><\/nav>/);
+// No preview modes: the owner shell's header (issue #261) links to what families really see.
+assert.match(readFileSync('lib/owner-shell.ts', 'utf8'), /const FAMILY_LINKS = '<a href="\/welcome">Welcome page<\/a> <a href="\/team">Team page<\/a> <a href="\/calendar">Calendar<\/a>';/);
 for (const gone of ['previewMenu', 'Preview what families see', 'Parent view', 'Wrestler view', 'setMode', 'liveWorkspace', 'sampleDashboard', 'admin-demo', 'attendance-demo', 'qr-preview.js'])
   assert.ok(!html.includes(gone), `portal still has ${gone}`);
 assert.ok(!html.includes('OWNER WORKSPACE'), 'the dashboard has no sample-preview banner (issue #133)');

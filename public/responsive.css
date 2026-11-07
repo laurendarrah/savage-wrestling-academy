@@ -39,10 +39,6 @@ img,video,svg{max-width:100%}
  .row{flex-wrap:wrap;align-items:stretch}.row>label{min-width:0;flex:1 1 100%;width:100%}
  .row>button{min-width:0;white-space:normal}.grid{min-width:0}
  header{flex-wrap:wrap;gap:12px;padding:14px 16px}header>div{min-width:0;max-width:100%}header .switch{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}header .switch button{font-size:14px;min-height:44px}
- .owner-tools-wrap{width:100%}.owner-tools>div{align-items:stretch}.owner-tools a,.owner-tools button{flex:1 1 45%;font-size:14px;line-height:1.5}.owner-tools summary{min-height:44px}
- .mobile-menu-button{display:inline-flex;width:100%;justify-content:space-between;align-items:center;margin-top:14px;background:#292a2f;color:white;border-color:#494a50}
- aside .nav{display:none;overflow:visible;margin-top:10px}aside .nav.is-open{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
- aside .nav button{width:100%;min-width:0;min-height:44px;white-space:normal;font-size:14px;line-height:1.4;margin:0;padding:12px}
  .toolbar{gap:8px;align-items:center}.toolbar select{width:100%;flex:1 1 100%}.calendar-month{width:auto;flex:1;min-width:0}
  .modalback{padding:12px;align-items:flex-start;overflow:auto}.modal{width:100%;max-width:100%;max-height:calc(100dvh - 24px);padding:20px;overflow:auto;-webkit-overflow-scrolling:touch}
  .day-times{grid-template-columns:repeat(2,minmax(0,1fr))}.holiday-grid,.availability-grid{min-width:0;grid-template-columns:repeat(7,minmax(0,1fr))}.holiday-date,.availability-day{min-width:0;padding:5px 2px}

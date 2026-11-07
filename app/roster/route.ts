@@ -1,6 +1,7 @@
 import html from './screen.html?raw';
 import {ownerIdentity, strongAccount} from '../../lib/account-auth';
 import {accountRole} from '../../lib/access-control';
+import {markOwnerShell} from '../../lib/owner-shell';
 export const dynamic = 'force-dynamic';
 // Owner, or an active coach, with a verified authenticator.
 export async function GET(request: Request) {
@@ -16,5 +17,6 @@ export async function GET(request: Request) {
     return new Response(html, {headers: auth.headers});
   }
   owner.headers.set('Content-Type', 'text/html; charset=utf-8');
+  markOwnerShell(owner.headers);
   return new Response(html, {headers: owner.headers});
 }

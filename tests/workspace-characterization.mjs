@@ -284,6 +284,9 @@ for (const [m, start, end] of [['2026-11', '', ''], ['2026-11', '2026-11-01', '2
 reset();
 record('schedules', run('schedules()'));
 reset();
+// Issue #261 changed one thing here on purpose: the tools card, now drawn from lib/owner-nav.ts, lists "Practice
+// calendar" (the dashboard section) where it listed "Practice plans" (/practice-plans, which sent the owner there).
+// The fixture's dashboard digest was updated for that change only.
 record('dashboard', run('dashboard()'));
 
 // ---------- Compare ----------

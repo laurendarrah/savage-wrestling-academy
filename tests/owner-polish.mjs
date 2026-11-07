@@ -1,21 +1,33 @@
 // Issue #232: design polish for the owner pages. The page scripts are inline JavaScript, which the typecheck skips, so
-// the functions changed here run in a sandbox: the dashboard's menu, icons and calendar cards, the shared month picker,
-// and the site health table. The rest checks the markup every owner page now shares: one back link, the same download
-// label, the shared tokens instead of copied colors, and labelled controls.
+// the functions changed here run in a sandbox: the dashboard's calendar cards, the shared month picker, and the site
+// health table. The rest checks the markup every owner page now shares: no back link inside the owner shell (issue
+// #261), the same download label, the shared tokens instead of copied colors, and labelled controls.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import ts from 'typescript';
 
 const read = f => readFileSync(f, 'utf8');
 const portal = read('app/portal.html');
 const savage = read('public/savage.css');
+const shellCss = read('public/owner-shell.css');
+const loaded = new Map();
+function load(file) {
+  if (loaded.has(file)) return loaded.get(file);
+  const module = {exports: {}}; loaded.set(file, module.exports);
+  vm.runInNewContext(ts.transpileModule(read(file), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
+    {module, exports: module.exports, URL, Headers, require: name => load('lib/' + name.replace('./', '') + '.ts')});
+  return module.exports;
+}
+const {ownerTopbar, ownerSidebar} = load('lib/owner-shell.ts');
 
 // ---------- Owner dashboard ----------
 // Only self-hosted fonts: the Inter label font was never loaded (it fell back to Arial at 9px).
-assert.doesNotMatch(portal, /fonts\.googleapis|\bInter\b/, 'no Inter and no Google Fonts request');
-assert.match(portal, /\.logo small\{display:block;font:700 12px\/1\.2 Barlow,Arial,sans-serif;/, 'the brand label is Barlow at a readable size');
+assert.doesNotMatch(portal + shellCss, /fonts\.googleapis|\bInter\b/, 'no Inter and no Google Fonts request');
+assert.match(shellCss, /\.os-brand small\{display:block;margin-top:8px;font:700 12px\/1\.2 var\(--os-body\);/, 'the brand label is Barlow at a readable size');
+assert.match(shellCss, /--os-body:Barlow,/);
 
-// The page is not decorated, so it carries the savage.css tokens under the same names, with the same values.
+// The dashboard gets the owner shell but not savage.css, so it carries the savage.css tokens under the same names.
 const tokens = css => Object.fromEntries([...css.matchAll(/--(swa-(?:prog|warn)-[a-z-]+):\s*(#[0-9A-Fa-f]{3,6})/g)].map(m => [m[1], m[2].toUpperCase()]));
 const shared = tokens(savage), mirrored = tokens(portal);
 assert.ok(Object.keys(shared).length >= 12, 'savage.css has the program and warning tokens');
@@ -34,50 +46,51 @@ vm.runInContext('const ' + portal.match(/esc=s=>String\(s\?\?''\)\.replace\(.*?\
 vm.runInContext(grab('eventTime'), ctx);
 assert.equal(vm.runInContext("eventTime('6:00 PM–7:30 PM')", ctx), '<span class="event-time">6:00 PM–7:30 PM</span>', 'a time wraps after the dash, never inside "7:30 PM"');
 assert.equal(vm.runInContext("eventTime('<b>')", ctx), '<span class="event-time">&lt;b&gt;</span>');
-vm.runInContext(grab('navIcons') + grab('navIcon'), ctx);
-const nav = ['Dashboard', 'Families', 'Roster & check-in', 'Calendar', 'Schedules', 'Camps & events', 'Private lessons', 'Messages', 'Programs & pricing', 'Scholarships', 'Coaches'];
-const icons = nav.map(n => vm.runInContext(`navIcon(${JSON.stringify(n)})`, ctx));
-for (const [i, icon] of icons.entries()) assert.match(icon, /^<span aria-hidden="true"><svg [^>]*>.+<\/svg><\/span>$/, nav[i]);
-assert.equal(new Set(icons).size, nav.length, 'every sidebar item has its own icon');
-assert.match(portal, /const nav=\['Dashboard','Families','Roster & check-in','Calendar','Schedules','Camps & events','Private lessons','Messages','Programs & pricing','Scholarships','Coaches'\]/, 'the icons cover the sidebar as it is');
+// Each destination's icon is tested with the owner navigation (tests/owner-tools.mjs).
 
-// Account & tools: a styled menu of account actions that repeats none of the tools below it.
-const menu = portal.match(/<details class="owner-tools" id="ownerTools"><summary>Account &amp; tools<\/summary><div class="menu">([\s\S]*?)<\/div><\/details>/);
-assert.ok(menu, 'the menu');
-const items = [...menu[1].matchAll(/<(a|button)\b([^>]*)>([^<]*)</g)];
-assert.deepEqual(items.map(m => m[3]), ['Refresh saved data', 'Account security', 'Sign out']);
-for (const m of items) assert.match(m[2], /class="menu-item"/, m[3] + ' is styled as a menu item, not a default link');
-const tools = vm.runInNewContext(portal.match(/function realTools\(\)\{[\s\S]*?<\/section>`\}/)[0] + ';realTools()');
-for (const [, href] of menu[1].matchAll(/href="([^"]+)"/g)) assert.ok(!tools.includes(`href="${href}"`), href + ' is listed once');
-assert.match(portal, /header \.owner-tools \.menu\{position:absolute;/, 'it opens as a panel');
-assert.match(portal, /function closeOwnerTools\(\)/); assert.match(portal, /e\.key==='Escape'&&closeOwnerTools\(\)/, 'Escape closes it');
+// Account: a styled menu of account actions (the owner shell's, on every owner page; issue #261). Refresh saved data
+// is the dashboard's own and appears only there.
+const menuOf = html => html.match(/<details class="os-account" id="swa-os-account"><summary>Account<\/summary><div class="os-panel">([\s\S]*?)<\/div><\/details>/);
+const dashMenu = menuOf(ownerTopbar('/', '/')), toolMenu = menuOf(ownerTopbar('/payments', '/payments'));
+assert.ok(dashMenu && toolMenu, 'the menu');
+const items = m => [...m[1].matchAll(/<(a|button)\b([^>]*)>([^<]*)</g)];
+assert.deepEqual(items(dashMenu).map(m => m[3]), ['Refresh saved data', 'Account security', 'Sign out']);
+assert.deepEqual(items(toolMenu).map(m => m[3]), ['Account security', 'Sign out']);
+for (const m of items(dashMenu)) assert.match(m[2], /class="os-item"/, m[3] + ' is styled as a menu item, not a default link');
+assert.match(dashMenu[1], /onclick="closeOwnerTools\(\);reloadAcademy\(\)"/); assert.match(portal, /function closeOwnerTools\(\)/); assert.match(portal, /function reloadAcademy\(\)/);
+assert.match(shellCss, /html body \.os-panel\{position:absolute;/, 'it opens as a panel');
+assert.match(read('public/owner-shell.js'), /e\.key === 'Escape'\) \{ if \(!closeAccount\(true\)\)/, 'Escape closes it');
 // Every public page families see is one tap away, once: the welcome page, the team page (issue #215) and the calendar.
-const familyLinks = portal.match(/<nav class="family-links"[\s\S]*?<\/nav>/)[0];
+const familyLinks = ownerTopbar('/', '/').match(/<nav class="os-family os-family-top"[\s\S]*?<\/nav>/)[0];
 assert.deepEqual([...familyLinks.matchAll(/href="([^"]+)"/g)].map(m => m[1]), ['/welcome', '/team', '/calendar']);
-for (const href of ['/welcome', '/team', '/calendar']) assert.ok(!tools.includes(`href="${href}"`), href);
+for (const href of ['/welcome', '/team', '/calendar']) assert.ok(!ownerSidebar('/').match(/<nav class="os-nav"[\s\S]*?<\/nav>/)[0].includes(`href="${href}"`), href);
 
-// Phones: a shorter header (logo and menu button on one line, no breadcrumb) and a 44px menu button.
-const phone = portal.match(/\/\* Design polish 4[\s\S]*?@media\(max-width:650px\)\{([\s\S]*?)\n\}/)[1];
-assert.match(phone, /aside\{display:flex;/); assert.match(phone, /aside \.mobile-menu-button\{[^}]*min-height:44px/); assert.match(phone, /header>\.crumbs\{display:none\}/);
+// Phones: the header keeps the logo, a 44px Menu button and Account on one line; the breadcrumb and family links move
+// out of the way (the family links into the drawer).
+const phone = shellCss.match(/@media \(max-width:900px\)\{([\s\S]*?)\n\}/)[1];
+assert.match(phone, /html body \.os-menu\{display:inline-flex;align-items:center;gap:8px;min-height:44px;/);
+assert.match(phone, /html body \.os-crumbs,html body \.os-family-top\{display:none\}/); assert.match(phone, /html body \.os-family-drawer\{display:block;/);
 assert.match(portal, /\.toollink\{display:flex;align-items:center;min-height:44px;/, 'tool links are full-size targets');
 
-// ---------- One back link on every owner page ----------
-const back = '<a class="swa-back" href="/">← Owner dashboard</a>';
+// ---------- No back link inside the owner shell (issue #261; one back link each before, issue #232) ----------
 const ownerPages = ['app/financials/screen.html', 'app/site-health/screen.html', 'app/messages/screen.html', 'app/cards/screen.html', 'app/payments/screen.html',
   'app/coach-pay/screen.html', 'app/timesheets/screen.html', 'app/website/screen.html', 'app/approvals/screen.html', 'app/scholarships/screen.html',
-  'app/waivers/screen.html', 'app/transfers/screen.html', 'app/lesson-settings/screen.html', 'app/data-requests/screen.html', 'app/payment-setup/screen.html', 'app/accounts/route.ts'];
+  'app/waivers/screen.html', 'app/transfers/screen.html', 'app/lesson-settings/screen.html', 'app/data-requests/screen.html', 'app/payment-setup/screen.html', 'app/accounts/route.ts',
+  'app/staff/screen.html', 'app/backups/screen.html', 'app/security-log/route.ts', 'app/account-setup/route.ts'];
 for (const f of ownerPages) {
   const html = read(f);
-  assert.equal(html.split('class="swa-back"').length - 1, 1, f + ' has one back link');
-  assert.ok(html.includes(back), f + ' goes back to the owner dashboard');
-  assert.match(html, /<main[^>]*>\s*<a class="swa-back"/, f + ': the back link opens the page, so it sits in the black header');
+  assert.doesNotMatch(html, /← Owner dashboard|← Owner workspace|← Account security/, f + ' has no back link: the sidebar is there');
+  assert.match(html, /<main[^>]*>\s*<h1/, f + ': the heading opens the page');
 }
-// Pages shared with coaches name the owner's dashboard the same way.
-assert.match(read('app/roster/screen.html'), /<a id="home" class="swa-back" href="\/">/); assert.match(read('app/roster/screen.html'), /'← Owner dashboard':'← Coach home'/);
+// Pages shared with coaches keep Coach home for coaches and hide it for the owner, who has the sidebar.
+const roster = read('app/roster/screen.html');
+assert.match(roster, /<a id="home" class="swa-back" href="\/">/); assert.match(roster, /\$\('home'\)\.hidden=data\.role==='owner';\$\('home'\)\.href='\/coach';\$\('home'\)\.textContent='← Coach home';/);
 const plans = read('app/practice-plans/screen.html');
-assert.match(plans, /'← Owner dashboard':'← Coach home'/);
-assert.match(plans, /\$\('backCalendar'\)\.hidden=!d\.owner\|\|libraryMode;/, '/curricula shows one back link, not a second small one');
-for (const f of [...ownerPages, 'app/roster/screen.html', 'app/practice-plans/screen.html', 'app/portal.html']) assert.doesNotMatch(read(f), /Owner workspace/, f);
+assert.match(plans, /\$\('home'\)\.hidden=!!d\.owner;\$\('home'\)\.href='\/coach';\$\('home'\)\.textContent='← Coach home';/);
+assert.match(plans, /\$\('backCalendar'\)\.hidden=!d\.owner\|\|libraryMode;/, 'the plan editor keeps its "← Practice calendar" link; /curricula shows none');
+assert.match(plans, /<a id="backCalendar" class="swa-back" href="\/#practice-calendar" hidden>← Practice calendar<\/a>/);
+assert.match(shellCss, /html body \.os-work #home\.swa-back\{display:none\}/, 'hidden before the page script runs, so it never flashes');
+for (const f of [...ownerPages.filter(f => !f.includes('account-setup')), 'app/roster/screen.html', 'app/practice-plans/screen.html', 'app/portal.html']) assert.doesNotMatch(read(f), /Owner workspace|Owner dashboard'/, f);
 
 // ---------- Wording ----------
 const spreadsheetPages = ['app/financials/screen.html', 'app/payments/screen.html', 'app/coach-pay/screen.html', 'app/timesheets/screen.html', 'app/help/owner/screen.html'];
@@ -167,4 +180,4 @@ for (const [f, prev, next] of [['app/financials/screen.html', 'prevMonth', 'next
 const journey = read('scripts/e2e/journey.mjs');
 assert.match(journey, /const phone = await as\('owner', \{width: 390, height: 844\}\);\n  await phone\.goto\(BASE \+ '\/financials'\);[\s\S]{0,300}document\.documentElement\.scrollWidth - 390\)/);
 
-console.log('Owner polish tests passed: dashboard fonts, tokens, menu, icons and phone header; calendar cards; one back link per owner page; download and plain wording; warning tokens; labelled controls and phone tables; site health without an empty table; one month picker; the /financials phone check.');
+console.log('Owner polish tests passed: dashboard fonts, tokens, Account menu and phone header; calendar cards; no back link inside the owner shell; download and plain wording; warning tokens; labelled controls and phone tables; site health without an empty table; one month picker; the /financials phone check.');

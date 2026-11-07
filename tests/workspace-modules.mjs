@@ -168,5 +168,5 @@ assert.equal(vm.runInContext("SwaWorkspace.practiceSlot([{program:'Advanced',sta
 // Each name the page takes from the bundle exists there.
 const names = portalHtml.match(/var \{([^}]*)\}=W;/)[1].split(',');
 for (const name of names) assert.equal(typeof ctx.SwaWorkspace[name], 'function', 'the page reads ' + name);
-for (const [, name] of portalHtml.matchAll(/\bW\.([A-Za-z]+)/g)) assert.ok(name in ctx.SwaWorkspace, 'the page calls W.' + name);
+for (const [, name] of portalHtml.matchAll(/\bW\.([A-Za-z_]+)/g)) assert.ok(name in ctx.SwaWorkspace, 'the page calls W.' + name);
 console.log('Passed: the owner page loads /portal-workspace.js before its own script, and everything it reads is there.');

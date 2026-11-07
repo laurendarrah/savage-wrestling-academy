@@ -143,11 +143,13 @@ const json = body => ({ok: true, status: 200, json: async () => body});
 
 // ---------- 6. One back link per page, and the list's Refresh button is gone ----------
 {
-  for (const [f, text] of [['app/coach-time/screen.html', '← Coach home'], ['app/coach-profile/screen.html', '← Coach home'], ['app/practice-plans/screen.html', '← Coach home'], ['app/timesheets/screen.html', '← Owner dashboard']]) {
+  for (const [f, text] of [['app/coach-time/screen.html', '← Coach home'], ['app/coach-profile/screen.html', '← Coach home'], ['app/practice-plans/screen.html', '← Coach home']]) {
     const s = read(f), opening = s.slice(s.indexOf('<main>'), s.indexOf('<h1'));
     assert.match(opening, new RegExp('<a [^>]*class="swa-back"[^>]*>' + text + '</a>'), f + ' back link');
     assert.equal((opening.match(/<a [^>]*>/g) || []).filter(a => !/ hidden>$/.test(a)).length, 1, f + ' shows one back link');
   }
   assert.doesNotMatch(read('app/practice-plans/screen.html'), /Refresh plans|id="reload"/);
+  // Owner pages have the owner shell's sidebar instead of a back link (issue #261).
+  assert.doesNotMatch(read('app/timesheets/screen.html'), /class="swa-back"/);
 }
 console.log('Coach polish tests passed: one hours-and-minutes formatter on pages and in flags, /coach-time tiles and the grey Send button with when it opens, /timesheets labels, coach home shortcuts and buttons, the profile preview is the team page card with its styles, one back link per page.');
