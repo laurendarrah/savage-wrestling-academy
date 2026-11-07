@@ -110,7 +110,9 @@ const accounts = load('app/accounts/route.ts');
 assert.equal((await accounts.GET(request('/accounts', 'GET', null, 'bob'))).status, 403, 'a family cannot open Family accounts');
 assert.equal((await accounts.GET(request('/accounts', 'GET', null, 'alice'))).status, 403);
 const html = await (await accounts.GET(request('/accounts', 'GET', null, 'owner'))).text();
-const card = html.match(/<article data-search="bob parent[\s\S]*?<\/article>/)[0];
+// A family's card on the page, found by its email.
+const cardOf = (page, email) => '<article ' + page.split('<article ').find(s => s.includes(email)).split('</article>')[0] + '</article>';
+const card = cardOf(html, 'bob@example.test');
 assert.match(card, /data-programs="Intermediate Elementary"/);
 assert.match(card, /Riley Two · Grade 10<\/span><span class="pill">SWA Intermediate<\/span><span class="pill alert">Medical note<\/span>/);
 assert.match(card, /Kit Two · Kindergarten<\/span><span class="pill">SWA Development<\/span><\/li>/, '"None" is not a medical note');
@@ -121,12 +123,12 @@ assert.match(card, /20 Railroad St<br>Huntington Station, NY 11746/);
 assert.match(card, /Jordan Grandparent · \(631\) 555-0199/);
 assert.match(card, /December 1, 2010 · age \d+/);
 assert.match(card, /Peanut allergy.\nEpiPen in the blue bag./);
-const legacyCard = html.match(/<article data-search="lee legacy[\s\S]*?<\/article>/)[0];
+const legacyCard = cardOf(html, 'legacy@example.test');
 assert.match(legacyCard, /data-programs="none"/, 'an ended membership is not a current program');
 assert.match(legacyCard, /<span class="pill warn">Details missing<\/span>/);
 assert.match(legacyCard, /Home address<\/dt><dd><span class="none">Not provided/);
 assert.match(html, /Coaches see allergies and emergency contacts on the check-in roster for their own programs/);
-assert.match(html, /<select id="program"><option value="">All programs<\/option><option value="Elementary">SWA Development<\/option><option value="Intermediate">SWA Intermediate<\/option><option value="Advanced">SWA Advance<\/option><option value="none">No current program<\/option><\/select>/);
+assert.match(html, /<select id="program" name="program"><option value="" selected>All programs<\/option><option value="Elementary">SWA Development<\/option><option value="Intermediate">SWA Intermediate<\/option><option value="Advanced">SWA Advance<\/option><option value="none">No current program<\/option><\/select>/);
 // Text a family typed is escaped.
 assert.equal((await put({...bob, emergencyContactName: '<img src=x onerror=alert(1)>'})).status, 200);
 const escaped = await (await accounts.GET(request('/accounts', 'GET', null, 'owner'))).text();

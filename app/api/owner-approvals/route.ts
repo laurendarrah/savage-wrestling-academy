@@ -5,7 +5,7 @@ import {noticeApproval, quietly} from '../../../lib/notify';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in and authenticator verification required.'},403,auth.headers);
- const rows=await env.DB!.prepare(`SELECT a.id,a.wrestler_name,a.grade,a.status,a.created_at,a.updated_at,f.email,json_extract(f.payload,'$.parentName') AS parent_name,json_extract(f.payload,'$.phone') AS phone,json_extract(w.value,'$.name') AS current_name,json_extract(w.value,'$.grade') AS current_grade FROM program_approvals a JOIN family_accounts f ON f.user_id=a.user_id JOIN json_each(f.payload,'$.wrestlers') w ON json_extract(w.value,'$.id')=a.wrestler_id ORDER BY CASE a.status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END,a.created_at DESC LIMIT 1000`).all();
+ const rows=await env.DB!.prepare(`SELECT a.id,a.wrestler_name,a.grade,a.status,a.created_at,a.updated_at,f.email,json_extract(f.payload,'$.parentName') AS parent_name,json_extract(f.payload,'$.phone') AS phone,json_extract(w.value,'$.name') AS current_name,json_extract(w.value,'$.grade') AS current_grade FROM program_approvals a JOIN family_accounts f ON f.user_id=a.user_id JOIN json_each(f.payload,'$.wrestlers') w ON json_extract(w.value,'$.id')=a.wrestler_id ORDER BY CASE a.status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END,a.created_at DESC`).all();
  return accountReply({requests:rows.results},200,auth.headers);
 }
 export async function POST(request:Request){

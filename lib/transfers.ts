@@ -31,7 +31,7 @@ export async function activeMemberships() {
       return {orderId: r.id, wrestler: r.wrestler_name, grade: w?.grade ?? null, parent: fam.parentName ?? '', email: r.email, kind: r.kind,
         programToday: programOn(r, transfers, today), program: r.program, termStart: r.term_start, termEnd: r.term_end};
     }),
-    history: transfers.slice(0, 200).map(t => ({...t, wrestler: rows.find(r => r.id === t.order_id)?.wrestler_name ?? null}))
+    history: transfers.map(t => ({...t, wrestler: rows.find(r => r.id === t.order_id)?.wrestler_name ?? null}))
   };
 }
 

@@ -1,15 +1,19 @@
 import {env} from 'cloudflare:workers';
 import {ownerIdentity,accountReply,sameOrigin} from '../../../lib/account-auth';
-import {readBackup,validBackup,metadata,fingerprint,restoreBackup} from '../../../lib/backup-records';
+import {readBackup,validBackup,metadata,fingerprint,restoreBackup,readSnapshot,BackupTooLarge,SNAPSHOT_LIST} from '../../../lib/backup-records';
 import {securityEvent} from '../../../lib/security-events';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
  const params=new URL(request.url).searchParams;
  if(params.get('mode')==='preview')return reply({fingerprint:await fingerprint(await metadata())});
- if(params.get('mode')==='snapshots'){const rows=await env.DB!.prepare('SELECT id,created_at FROM recovery_snapshots ORDER BY created_at DESC LIMIT 10').all();return reply({snapshots:rows.results})}
- if(params.has('snapshot')){const row=await env.DB!.prepare('SELECT payload FROM recovery_snapshots WHERE id=?').bind(params.get('snapshot')).first<{payload:string}>();return row?reply({backup:JSON.parse(row.payload)}):reply({error:'Recovery snapshot not found.'},404)}
- try{const backup=await readBackup();await securityEvent(auth.user!.id,'backup_exported');return reply({backup})}catch{return reply({error:'Backup export could not finish. No records were changed.'},502)}
+ // The site keeps the last 10 recovery snapshots (each saved in parts, issue #46).
+ if(params.get('mode')==='snapshots'){const rows=await env.DB!.prepare(SNAPSHOT_LIST).all();return reply({snapshots:rows.results})}
+ if(params.has('snapshot')){const id=params.get('snapshot')!;const backup=/^[A-Za-z0-9-]{1,80}$/.test(id)?await readSnapshot(id):null;return backup?reply({backup}):reply({error:'Recovery snapshot not found.'},404)}
+ try{const backup=await readBackup();await securityEvent(auth.user!.id,'backup_exported');return reply({backup})}catch(e){
+  // Never a partial file: a backup that is too big for one download says so.
+  if(e instanceof BackupTooLarge)return reply({error:`The academy's records are too large for one backup download (${e.what}). No records were changed. Ask whoever maintains the site for a full database export.`},507);
+  return reply({error:'Backup export could not finish. No records were changed.'},502)}
 }
 export async function POST(request:Request){
  const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);

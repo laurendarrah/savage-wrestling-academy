@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
   if (q.has('date')) { const r = await choicesFor(staff, q.get('date')); return r.status === 200 ? reply(r) : reply({error: r.error}, r.status); }
   const month = await coachMonth(staff, q.get('month'));
-  return reply({...month, name: staff.name, owner: staff.owner, timeOffRequests: await myTimeOff(staff.email), notices: await coachNotices(staff.email)});
+  return reply({...month, name: staff.name, owner: staff.owner, timeOffRequests: await myTimeOff(staff.email), ...(await coachNotices(staff.email))});
 }
 
 export async function POST(request: Request) {

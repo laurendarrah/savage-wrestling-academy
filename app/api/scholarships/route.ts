@@ -6,7 +6,7 @@ export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await ownerIdentity(request);
  if(!auth.owner)return accountReply({error:'Owner sign-in and authenticator verification required.'},403,auth.headers);
- const rows=await env.DB!.prepare('SELECT * FROM scholarship_awards ORDER BY created_at DESC LIMIT 500').all<Scholarship>();
+ const rows=await env.DB!.prepare('SELECT * FROM scholarship_awards ORDER BY created_at DESC, id DESC').all<Scholarship>();
  return accountReply({awards:rows.results.map(a=>scholarshipView(a))},200,auth.headers);
 }
 export async function POST(request:Request){

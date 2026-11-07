@@ -80,7 +80,7 @@ function render(d){data=d;current=d.month;
  $('submit').textContent='Send '+d.monthLabel+' to the academy';$('submit').disabled=!d.canSubmit;$('submitHelp').textContent=submitHelp(d);
  const date=$('addDate');if(date){date.max=d.today;date.min=d.handMonths[1]+'-01'}
  $('offList').innerHTML=d.timeOffRequests.map(offHtml).join('')||'<p class="muted">No time off requests yet.</p>';
- $('notices').innerHTML=d.notices.map(noticeHtml).join('')||'<p class="muted">No notices.</p>';
+ $('notices').innerHTML=(d.notices.map(noticeHtml).join('')||'<p class="muted">No notices.</p>')+(d.olderNotices?'<p class="muted">Showing your newest '+d.notices.length+' notices. Older ones were emailed to you.</p>':'');
  document.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>act({action:'fix',id:b.dataset.fix,revision:Number(b.dataset.rev),in:$('fixIn-'+b.dataset.fix).value,out:$('fixOut-'+b.dataset.fix).value,reason:$('fixWhy-'+b.dataset.fix).value},'Times saved.'));
  document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{if(confirm('Remove this shift? It stays on record as removed and is not paid.'))act({action:'remove',id:b.dataset.remove,revision:Number(b.dataset.rev)},'Shift removed.')});
  document.querySelectorAll('[data-withdraw]').forEach(b=>b.onclick=()=>act({action:'time-off-withdraw',id:b.dataset.withdraw,revision:Number(b.dataset.rev)},'Request withdrawn.'))}

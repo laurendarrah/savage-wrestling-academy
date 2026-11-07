@@ -917,11 +917,15 @@ await step('family updates the address, emergency contact and allergies; the own
   expect(/20 Railroad St[\s\S]*Huntington Station, NY 11746/.test(details) && /Jordan Example · \(631\) 555-0199/.test(details) && /April 18, 2012 · age \d+/.test(details) && /Peanut allergy/.test(details), 'the owner sees the details: ' + details.slice(0, 200));
   const programs = (await pat.getAttribute('data-programs')).split(' ');
   expect(programs[0] !== 'none', 'Pat\'s wrestler is in a program today');
-  await owner.selectOption('#program', 'none'); expect(await pat.isHidden(), 'a family in a program is hidden under "No current program"');
-  await owner.selectOption('#program', programs[0]); expect(await pat.isVisible(), 'the family shows under its program');
+  // The filter and search run on the server (issue #46): choosing a program reloads the list with it.
+  const choose = async value => { await Promise.all([owner.waitForURL(u => new URL(u).searchParams.get('program') === value), owner.selectOption('#program', value)]); await owner.waitForSelector('#count'); };
+  await choose('none'); expect(await pat.count() === 0, 'a family in a program is not listed under "No current program"');
+  await choose(programs[0]); expect(await pat.isVisible(), 'the family shows under its program');
   expect(/families match/.test(await text(owner, '#count')), 'the count follows the filter');
+  await owner.fill('#find', 'Pat Example'); await Promise.all([owner.waitForURL(/q=Pat\+Example/), owner.click('#filters button[type=submit]')]);
+  expect(await pat.isVisible() && /1 of \d+ famil/.test(await text(owner, '#count')), 'search and program combine on the server');
   await shot(owner, 'owner-accounts-details');
-  await owner.selectOption('#program', '');
+  await owner.goto(BASE + '/accounts');
   const coachView = await coach.request.get(BASE + '/accounts'); expect(coachView.status() !== 200 || !/Peanut allergy/.test(await coachView.text()), 'a coach opened Family accounts');
   const otherFamily = await family2.request.get(BASE + '/accounts'); expect(otherFamily.status() !== 200 || !/Peanut allergy/.test(await otherFamily.text()), 'another family saw the details');
 });

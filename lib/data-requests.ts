@@ -54,7 +54,7 @@ export async function familyRequests(userId: string) {
 }
 
 export async function ownerRequests() {
-  const rows = await all("SELECT r.*,f.payload AS family FROM data_requests r LEFT JOIN family_accounts f ON f.user_id=r.user_id ORDER BY r.status='open' DESC, r.created_at DESC LIMIT 200");
+  const rows = await all("SELECT r.*,f.payload AS family FROM data_requests r LEFT JOIN family_accounts f ON f.user_id=r.user_id ORDER BY r.status='open' DESC, r.created_at DESC");
   return rows.map(r => { const p = r.family ? JSON.parse(r.family) : {}; return {id: r.id, userId: r.user_id, email: r.email, parentName: p.parentName ?? '', wrestlers: (p.wrestlers ?? []).map((w: any) => w.name), kind: r.kind, note: r.note, status: r.status, createdAt: r.created_at, resolvedAt: r.resolved_at, resolution: r.resolution}; });
 }
 

@@ -27,7 +27,7 @@ export async function GET(request:Request){
  const own=rows.find(s=>s.email===OWNER_EMAIL);
  // Open invites, and ones that ended in the last 30 days so the owner can send a new link.
  const recent=new Date(Date.now()-30*86400000).toISOString();
- const invites=(await env.DB!.prepare('SELECT * FROM coach_invites WHERE used_at IS NULL AND revoked_at IS NULL AND expires_at>? ORDER BY created_at DESC LIMIT 100').bind(recent).all<InviteRow>()).results.map(inviteView);
+ const invites=(await env.DB!.prepare('SELECT * FROM coach_invites WHERE used_at IS NULL AND revoked_at IS NULL AND expires_at>? ORDER BY created_at DESC').bind(recent).all<InviteRow>()).results.map(inviteView);
  return accountReply({staff:rows.filter(s=>s.email!==OWNER_EMAIL).map(view),self:own?view(own):null,invites,emailOn:emailConfigured(),inviteDays:INVITE_DAYS},200,auth.headers);
 }
 export async function POST(request:Request){

@@ -6,6 +6,7 @@ import {quoteMembership, quoteBooking, type Quote} from './quotes';
 import {academyToday} from './public-schedule';
 import {withinCapacity} from './capacity';
 import {noticePaymentRecorded, noticeLessonBooked, quietly} from './notify';
+import {BATCH_SIZE, keysetPage, type Page, type SortCol} from './paging';
 
 export const METHODS = ['cash', 'check', 'venmo', 'zelle', 'card-in-person', 'other'] as const;
 // A membership paid upfront for the year is not offered, online or at the academy (decision Q9 in #197, issue #210).
@@ -91,33 +92,56 @@ export async function voidOffline(orderId: string, ownerId: string, reason: stri
 }
 
 export type PaymentFilters = {from?: string; to?: string; status?: string; kind?: string; source?: string};
-export async function listPayments(f: PaymentFilters) {
-  const where = ["o.status IN ('paid','refunded','canceled')", "(o.status<>'canceled' OR o.source='offline')"], args: unknown[] = [];
+// Payments, newest first. The list comes a page at a time (keyset on paid_at and id, issue #46); the totals and the
+// number of matching payments are worked out in the database over every match, not just the page shown.
+const PAYMENT_COLS: SortCol[] = [{expr: 'o.paid_at', desc: true}, {expr: 'o.id', desc: true}];
+const PAYMENT_FIELDS = 'o.id,o.paid_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,f.payload AS family';
+function paymentWhere(f: PaymentFilters) {
+  const where = ["o.status IN ('paid','refunded','canceled')", "(o.status<>'canceled' OR o.source='offline')", 'o.paid_at IS NOT NULL'], args: unknown[] = [];
   if (validDate(f.from)) { where.push('substr(o.paid_at,1,10)>=?'); args.push(f.from); }
   if (validDate(f.to)) { where.push('substr(o.paid_at,1,10)<=?'); args.push(f.to); }
   if (['paid', 'refunded', 'canceled'].includes(String(f.status))) { where.push('o.status=?'); args.push(f.status); }
   if (['annual', 'monthly', 'walkin', 'event', 'live', 'lesson'].includes(String(f.kind))) { where.push('o.kind=?'); args.push(f.kind); }
   if (['stripe', 'offline'].includes(String(f.source))) { where.push('o.source=?'); args.push(f.source); }
-  const rows = (await env.DB!.prepare(
-    `SELECT o.id,o.paid_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,f.payload AS family
-     FROM orders o LEFT JOIN family_accounts f ON f.user_id=o.user_id WHERE ${where.join(' AND ')} AND o.paid_at IS NOT NULL ORDER BY o.paid_at DESC LIMIT 2000`
-  ).bind(...args).all<any>()).results;
-  const payments = rows.map(r => {
-    const p = JSON.parse(r.pricing || '{}'), fam = r.family ? JSON.parse(r.family) : {};
-    return {id: r.id, paidOn: String(r.paid_at).slice(0, 10), status: r.status === 'canceled' ? 'voided' : r.status, source: r.source, kind: r.kind, program: r.program,
-      item: r.item_label, dates: JSON.parse(r.dates || '[]'), wrestler: r.wrestler_name, parent: fam.parentName || '', email: r.email, phone: fam.phone || '',
-      amountCents: r.amount_cents, listCents: r.base_cents, discountCents: r.discount_cents, method: r.source === 'offline' ? p.method : 'stripe', note: p.note || '', voidReason: p.voidReason || '',
-      termStart: r.term_start, termEnd: r.term_end};
-  });
-  const sum = (pred: (x: any) => boolean) => payments.filter(pred).reduce((n, x) => n + x.amountCents, 0);
-  return {payments, totals: {
-    collectedCents: sum(x => x.status === 'paid'), onlineCents: sum(x => x.status === 'paid' && x.source === 'stripe'),
-    offlineCents: sum(x => x.status === 'paid' && x.source === 'offline'), refundedCents: sum(x => x.status === 'refunded'), count: payments.filter(x => x.status === 'paid').length
-  }, truncated: rows.length >= 2000};
+  return {where: where.join(' AND '), args};
+}
+function paymentView(r: any) {
+  const p = JSON.parse(r.pricing || '{}'), fam = r.family ? JSON.parse(r.family) : {};
+  return {id: r.id as string, paidOn: String(r.paid_at).slice(0, 10), status: r.status === 'canceled' ? 'voided' : r.status as string, source: r.source as string, kind: r.kind as string, program: r.program as string | null,
+    item: r.item_label as string, dates: JSON.parse(r.dates || '[]') as string[], wrestler: r.wrestler_name as string, parent: fam.parentName || '', email: r.email as string, phone: fam.phone || '',
+    amountCents: r.amount_cents as number, listCents: r.base_cents as number, discountCents: r.discount_cents as number, method: r.source === 'offline' ? p.method : 'stripe', note: p.note || '', voidReason: p.voidReason || '',
+    termStart: r.term_start as string | null, termEnd: r.term_end as string | null};
+}
+const paymentsPage = (f: PaymentFilters, cursor: unknown, limit: number) => {
+  const {where, args} = paymentWhere(f);
+  return keysetPage<any>({select: PAYMENT_FIELDS, from: 'FROM orders o LEFT JOIN family_accounts f ON f.user_id=o.user_id', where, args, cols: PAYMENT_COLS, keyOf: r => [r.paid_at, r.id], cursor, limit});
+};
+export async function listPayments(f: PaymentFilters, page: {cursor?: unknown; limit?: number} = {}) {
+  const {where, args} = paymentWhere(f);
+  const [rows, t] = await Promise.all([paymentsPage(f, page.cursor, page.limit ?? 100),
+    env.DB!.prepare(`SELECT count(*) AS matched,
+        COALESCE(sum(CASE WHEN o.status='paid' THEN o.amount_cents END),0) AS collected,
+        COALESCE(sum(CASE WHEN o.status='paid' AND o.source='stripe' THEN o.amount_cents END),0) AS online,
+        COALESCE(sum(CASE WHEN o.status='paid' AND o.source='offline' THEN o.amount_cents END),0) AS offline,
+        COALESCE(sum(CASE WHEN o.status='refunded' THEN o.amount_cents END),0) AS refunded,
+        COALESCE(sum(o.status='paid'),0) AS paid FROM orders o WHERE ${where}`).bind(...args).first<Record<string, number>>()]);
+  return {payments: rows.rows.map(paymentView), next: rows.next, matched: Number(t?.matched ?? 0), totals: {
+    collectedCents: Number(t?.collected ?? 0), onlineCents: Number(t?.online ?? 0), offlineCents: Number(t?.offline ?? 0), refundedCents: Number(t?.refunded ?? 0), count: Number(t?.paid ?? 0)
+  }};
+}
+
+// Every matching payment, newest first, in batches: for the spreadsheet export, which never stops at a page.
+export async function* allPayments(f: PaymentFilters, size = BATCH_SIZE) {
+  let cursor: string | null = null;
+  do {
+    const page: Page<any> = await paymentsPage(f, cursor, size);
+    yield page.rows.map(paymentView);
+    cursor = page.next;
+  } while (cursor);
 }
 
 const csvCell = (v: unknown) => { const s = String(v ?? ''); return /[",\n\r]/.test(s) || /^[=+\-@]/.test(s) ? '"' + (/^[=+\-@]/.test(s) ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
-export function paymentsCsv(payments: Awaited<ReturnType<typeof listPayments>>['payments']) {
+export function paymentsCsv(payments: ReturnType<typeof paymentView>[]) {
   const head = ['Paid on', 'Status', 'Paid via', 'Method', 'Type', 'Item', 'Dates', 'Wrestler', 'Parent', 'Email', 'Phone', 'Amount', 'List price', 'Discount', 'Term start', 'Term end', 'Note', 'Void reason'];
   const money = (c: number) => (c / 100).toFixed(2);
   const lines = payments.map(p => [p.paidOn, p.status, p.source === 'offline' ? 'Offline' : 'Online', p.method, p.kind, p.item, p.dates.join(' '), p.wrestler, p.parent, p.email, p.phone,

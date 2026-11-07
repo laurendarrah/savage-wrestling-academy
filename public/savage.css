@@ -115,6 +115,19 @@ html body .holiday-tag{display:block;margin:4px 0 0;font-family:var(--swa-body);
 html body .holiday-tag::before{content:"";display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;border:1.5px solid var(--swa-muted);vertical-align:1px}
 html body .tba{color:var(--swa-muted);font-style:italic}
 
+/* Paging (issue #46). Long lists come a page at a time: a line saying how many are shown out of how many match, and a
+   button or links for the next page. On a phone the controls stack and the buttons fill the width. */
+html body .pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--swa-line)}
+html body .pager>p{margin:0;color:var(--swa-muted);font-size:15px;font-weight:600}
+html body .pager .pager-links{display:flex;flex-wrap:wrap;gap:10px}
+html body .pager button,html body .pager a.button{display:inline-flex;align-items:center;justify-content:center;min-width:180px;padding:0 18px;text-decoration:none}
+html body .pager-note{margin:10px 0 0;padding:10px 14px;border-left:3px solid var(--swa-red);background:#FBF3F3;border-radius:0 8px 8px 0;font-size:15px}
+@media (max-width:640px){
+  html body .pager{flex-direction:column;align-items:stretch}
+  html body .pager .pager-links{flex-direction:column}
+  html body .pager button,html body .pager a.button{width:100%}
+}
+
 /* Phones: bigger tap targets for small links that act like buttons */
 @media (max-width:640px){
   html body main>a:first-child,html body nav a,html body .links a{display:inline-flex;align-items:center;min-height:44px}

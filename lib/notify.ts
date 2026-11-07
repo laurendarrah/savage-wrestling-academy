@@ -8,27 +8,34 @@ import {sendEmailsDetailed} from './email';
 import {currentVersion, FAMILY_KINDS} from './documents';
 import {dayTime, fullDate} from './datetime';
 import {cardSeason, isSeasonEnd, renewalDue} from './usaw';
+import {chunks, eachFamily, jsonChunks, keysetPage} from './paging';
 
 type Notice = {userId: string | null; email: string; kind: string; subject: string; body: string; dedupeKey: string; link?: string};
 
 export const footer = (link = '/inbox') => `\n\n—\nSavage Wrestling Academy\n${appOrigin()}${link}`;
 
-// Saves each new notice and emails it. Notices already sent (same dedupe key) are skipped silently.
+// Saves each new notice and emails it. Notices already sent (same dedupe key) are skipped silently. Works through the
+// list in batches (issue #46): one query per 90 dedupe keys, one email request per 100 messages and one insert per
+// batch, so a morning with thousands of reminders stays inside D1's per-run query limit.
+export const NOTICE_BATCH = 450;
+const INSERT_NOTICES = `INSERT OR IGNORE INTO notifications(id,user_id,email,kind,subject,body,dedupe_key,created_at,read_at,email_status,email_error)
+  SELECT json_extract(value,'$.id'),json_extract(value,'$.userId'),json_extract(value,'$.email'),json_extract(value,'$.kind'),json_extract(value,'$.subject'),
+    json_extract(value,'$.body'),json_extract(value,'$.dedupeKey'),json_extract(value,'$.at'),NULL,json_extract(value,'$.status'),json_extract(value,'$.reason') FROM json_each(?)`;
 export async function notify(list: Notice[]) {
-  const fresh: Notice[] = [];
-  for (const n of list) {
-    const seen = await env.DB!.prepare('SELECT 1 FROM notifications WHERE dedupe_key=?').bind(n.dedupeKey).first();
-    if (!seen) fresh.push(n);
-  }
-  if (!fresh.length) return 0;
-  const results = await sendEmailsDetailed(fresh.map(n => ({to: n.email, subject: n.subject, text: n.body + footer(n.link)})));
-  const at = new Date().toISOString();
+  // The same event twice in one list is one notice.
+  const unique = [...new Map(list.map(n => [n.dedupeKey, n])).values()];
   let saved = 0;
-  for (let i = 0; i < fresh.length; i++) {
-    const n = fresh[i];
-    const r = await env.DB!.prepare('INSERT OR IGNORE INTO notifications(id,user_id,email,kind,subject,body,dedupe_key,created_at,read_at,email_status,email_error) VALUES (?,?,?,?,?,?,?,?,NULL,?,?)')
-      .bind(crypto.randomUUID(), n.userId, n.email, n.kind, n.subject, n.body, n.dedupeKey, at, results[i].status, results[i].reason).run();
-    saved += Number(r.meta?.changes ?? (r as any).changes ?? 0);
+  for (const part of chunks(unique, NOTICE_BATCH)) {
+    const seen = new Set<string>();
+    for (const keys of chunks(part.map(n => n.dedupeKey)))
+      for (const r of (await env.DB!.prepare(`SELECT dedupe_key FROM notifications WHERE dedupe_key IN (${keys.map(() => '?').join(',')})`).bind(...keys).all<{dedupe_key: string}>()).results) seen.add(r.dedupe_key);
+    const fresh = part.filter(n => !seen.has(n.dedupeKey));
+    if (!fresh.length) continue;
+    const results = await sendEmailsDetailed(fresh.map(n => ({to: n.email, subject: n.subject, text: n.body + footer(n.link)})));
+    const at = new Date().toISOString();
+    const rows = fresh.map((n, i) => ({id: crypto.randomUUID(), userId: n.userId, email: n.email, kind: n.kind, subject: n.subject, body: n.body, dedupeKey: n.dedupeKey, at, status: results[i].status, reason: results[i].reason}));
+    const done = await env.DB!.batch(jsonChunks(rows).map(c => env.DB!.prepare(INSERT_NOTICES).bind(JSON.stringify(c))));
+    for (const r of done) saved += Number(r.meta?.changes ?? (r as any).changes ?? 0);
   }
   return saved;
 }
@@ -113,51 +120,61 @@ export function cardExpiredNotice(name: string, exp: string, today: string) {
 
 // Runs at most once per academy day: every morning from the Cron Trigger (build/worker.ts, #123), or on the first
 // family or roster visit of the day if the schedule has not run yet. A per-day record stops a second send.
-// `today` is the academy's date; tests can set it.
+// `today` is the academy's date; tests can set it. Every family is covered (issue #46): families are read in batches
+// of REMINDER_BATCH and each batch's notices are sent before the next batch is read, so the work per step stays the
+// same however many families the academy has.
+export const REMINDER_BATCH = 500;
 export async function dailyReminders(force = false, today = academyToday()) {
   if (!force) {
     const r = await env.DB!.prepare("INSERT OR IGNORE INTO academy_settings(id,payload,updated_at,updated_by) VALUES (?,'{}',?,'system')").bind('reminders:' + today, new Date().toISOString()).run();
     if (!Number(r.meta?.changes ?? (r as any).changes ?? 0)) return 0;
   }
   const soon = renewalDue(today);
-  const families = (await env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts').all<{user_id: string; email: string; payload: string}>()).results;
-  // Family documents in force (the waiver, and the Parent Consent Form once published, issue #195), each with who signed.
+  // Family documents in force (the waiver, and the Parent Consent Form once published, issue #195).
   const docs = [];
-  for (const kind of FAMILY_KINDS) {
-    const version = await currentVersion(kind);
-    if (version) docs.push({kind, version, signed: new Set((await env.DB!.prepare('SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures WHERE version_id=?').bind(version.id).all<any>()).results
-      .map(s => `${s.user_id}|${s.wrestler_id}|${String(s.wrestler_name).trim().toLowerCase()}`))});
-  }
-  const list: Notice[] = [];
-  for (const f of families) {
-    for (const w of JSON.parse(f.payload).wrestlers ?? []) {
-      const exp = w.usawExpires as string | undefined;
-      if (w.usawNumber && exp && exp >= today && exp <= soon)
-        list.push({userId: f.user_id, email: f.email, kind: 'card_expiring', dedupeKey: `card-soon:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
-          ...cardExpiringNotice(w.name, exp)});
-      if (w.usawNumber && exp && exp < today)
-        list.push({userId: f.user_id, email: f.email, kind: 'card_expired', dedupeKey: `card-expired:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
-          ...cardExpiredNotice(w.name, exp, today)});
-      for (const {kind, version, signed} of docs) {
-        if (signed.has(`${f.user_id}|${w.id}|${String(w.name).trim().toLowerCase()}`)) continue;
-        if (kind === 'waiver')
-          list.push({userId: f.user_id, email: f.email, kind: 'waiver_needed', dedupeKey: `waiver:${version.id}:${f.user_id}:${w.id}`, link: '/waiver?wrestler=' + encodeURIComponent(w.id),
-            subject: `Please sign the ${version.title} for ${w.name}`,
-            body: `The academy asks every family to sign the ${version.title}. ${w.name} cannot book until it is signed. It takes about a minute in your family account.`});
-        else
-          list.push({userId: f.user_id, email: f.email, kind: 'consent_needed', dedupeKey: `consent:${version.id}:${f.user_id}:${w.id}`, link: '/consent?wrestler=' + encodeURIComponent(w.id),
-            subject: `Please sign the Parent Consent Form for ${w.name}`,
-            body: `The academy asks a parent or guardian to sign the Parent Consent Form for every wrestler. ${w.name} cannot book until it is signed. It takes about a minute in your family account.`});
+  for (const kind of FAMILY_KINDS) { const version = await currentVersion(kind); if (version) docs.push({kind, version}); }
+  let saved = 0;
+  for await (const families of eachFamily(REMINDER_BATCH)) {
+    // Who signed each document in force, for this batch's families only.
+    const signed = new Map<string, Set<string>>(docs.map(d => [d.version.id, new Set<string>()]));
+    if (docs.length) for (const ids of chunks(families.map(f => f.user_id), 80))
+      for (const s of (await env.DB!.prepare(`SELECT version_id,user_id,wrestler_id,wrestler_name FROM waiver_signatures WHERE version_id IN (${docs.map(() => '?').join(',')}) AND user_id IN (${ids.map(() => '?').join(',')})`)
+        .bind(...docs.map(d => d.version.id), ...ids).all<any>()).results)
+        signed.get(s.version_id)?.add(`${s.user_id}|${s.wrestler_id}|${String(s.wrestler_name).trim().toLowerCase()}`);
+    const list: Notice[] = [];
+    for (const f of families) {
+      for (const w of JSON.parse(f.payload).wrestlers ?? []) {
+        const exp = w.usawExpires as string | undefined;
+        if (w.usawNumber && exp && exp >= today && exp <= soon)
+          list.push({userId: f.user_id, email: f.email, kind: 'card_expiring', dedupeKey: `card-soon:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
+            ...cardExpiringNotice(w.name, exp)});
+        if (w.usawNumber && exp && exp < today)
+          list.push({userId: f.user_id, email: f.email, kind: 'card_expired', dedupeKey: `card-expired:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
+            ...cardExpiredNotice(w.name, exp, today)});
+        for (const {kind, version} of docs) {
+          if (signed.get(version.id)!.has(`${f.user_id}|${w.id}|${String(w.name).trim().toLowerCase()}`)) continue;
+          if (kind === 'waiver')
+            list.push({userId: f.user_id, email: f.email, kind: 'waiver_needed', dedupeKey: `waiver:${version.id}:${f.user_id}:${w.id}`, link: '/waiver?wrestler=' + encodeURIComponent(w.id),
+              subject: `Please sign the ${version.title} for ${w.name}`,
+              body: `The academy asks every family to sign the ${version.title}. ${w.name} cannot book until it is signed. It takes about a minute in your family account.`});
+          else
+            list.push({userId: f.user_id, email: f.email, kind: 'consent_needed', dedupeKey: `consent:${version.id}:${f.user_id}:${w.id}`, link: '/consent?wrestler=' + encodeURIComponent(w.id),
+              subject: `Please sign the Parent Consent Form for ${w.name}`,
+              body: `The academy asks a parent or guardian to sign the Parent Consent Form for every wrestler. ${w.name} cannot book until it is signed. It takes about a minute in your family account.`});
+        }
       }
     }
+    saved += await notify(list);
   }
-  return notify(list);
+  return saved;
 }
 
 // Inbox view and read state for a family.
-export async function familyNotices(userId: string) {
-  return (await env.DB!.prepare('SELECT id,kind,subject,body,created_at,read_at FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 200').bind(userId).all<any>()).results
-    .map(n => ({id: n.id, kind: n.kind, subject: n.subject, body: n.body, at: n.created_at, read: !!n.read_at}));
+// Newest first, a page at a time (issue #46), with a cursor for older notices.
+export async function familyNotices(userId: string, cursor?: unknown, limit = 50) {
+  const page = await keysetPage<any>({select: 'id,kind,subject,body,created_at,read_at', from: 'FROM notifications', where: 'user_id=?', args: [userId],
+    cols: [{expr: 'created_at', desc: true}, {expr: 'id', desc: true}], keyOf: n => [n.created_at, n.id], cursor, limit});
+  return {notices: page.rows.map(n => ({id: n.id, kind: n.kind, subject: n.subject, body: n.body, at: n.created_at, read: !!n.read_at})), noticesNext: page.next};
 }
 export async function markNoticeRead(userId: string, id: unknown) {
   if (typeof id !== 'string') return;

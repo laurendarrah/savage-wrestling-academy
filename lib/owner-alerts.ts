@@ -65,7 +65,8 @@ export async function alertOwner(db: DB, now = new Date()): Promise<'off' | 'non
     if (value.sentAt && now.getTime() - Date.parse(value.sentAt) < ALERT_GAP_MS) return 'waiting';
     const floor = new Date(now.getTime() - LOOKBACK_MS).toISOString();
     const after = value.coveredUntil && value.coveredUntil > floor ? value.coveredUntil : floor;
-    const rows = (await db.prepare('SELECT at, path, status FROM error_log WHERE at>? AND at<=? ORDER BY at, id LIMIT 500').bind(after, now.toISOString()).all<ErrorRow>()).results;
+    // error_log keeps only the latest 500 rows (lib/site-health.ts), so this reads every problem there is (issue #46).
+    const rows = (await db.prepare('SELECT at, path, status FROM error_log WHERE at>? AND at<=? ORDER BY at, id').bind(after, now.toISOString()).all<ErrorRow>()).results;
     if (!rows.length) return 'none';
     // Claim the alert before sending, so two errors at the same moment send one email between them.
     const at = now.toISOString(), next: Marker = {sentAt: at, coveredUntil: rows.at(-1)!.at, count: rows.length, status: 'sending', reason: null};

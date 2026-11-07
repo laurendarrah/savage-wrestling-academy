@@ -113,26 +113,19 @@ html body .safety textarea{min-height:76px}
 .member-details div{min-width:0}
 .member-details dt{font-size:14px;color:#55585F}
 .member-details dd{font-weight:600;margin:3px 0 0;overflow-wrap:anywhere}
-.next-charge{padding:14px;border-left:4px solid #C4222C;background:#FFF3F3;margin-top:16px}
 .billing-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .billing-actions button{padding:0 16px}
 html body .account-action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1.5px solid #141416;background:#fff;border-radius:6px;color:#141416;text-decoration:none;font-weight:600}
 html body .account-action.primary{color:#fff;background:#C4222C;border-color:#C4222C}
 .empty-billing{padding:12px 0}
 .empty-billing h3{margin-bottom:6px}
-.billing-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0}
-.billing-controls label{margin:0}
-.billing-controls select{width:auto;max-width:100%;margin:0}
 .purchase-item{padding:16px 0;border-bottom:1px solid #E1E3E8}
 .purchase-item:last-child{border-bottom:0}
 .purchase-item h4{margin:0 0 5px;font-size:17px}
 .purchase-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
 .purchase-top strong{white-space:nowrap}
 .billing-note{font-size:15px;color:#55585F}
-.sample-billing summary,#yourData summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;list-style:none}.sample-billing summary::-webkit-details-marker,#yourData summary::-webkit-details-marker{display:none}.sample-billing summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);margin-left:12px;flex:none}#yourData summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);margin-left:12px;flex:none}.sample-billing[open]>summary::after,#yourData details[open]>summary::after{transform:rotate(-135deg) translateY(-1px)}
-.sample-label{color:#8E1A22;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
-.sample-receipt{padding:16px;border:1px solid #E1E3E8;background:#fff;margin-top:14px;border-radius:6px}
-.sample-receipt h4{margin-top:0}
+#yourData summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;list-style:none}#yourData summary::-webkit-details-marker{display:none}#yourData summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);margin-left:12px;flex:none}#yourData details[open]>summary::after{transform:rotate(-135deg) translateY(-1px)}
 main>section[id],#status{scroll-margin-top:80px}
 @media(max-width:560px){
  html body main>section,html body main>details.card{padding:16px}
@@ -164,7 +157,6 @@ main>section[id],#status{scroll-margin-top:80px}
 <section id="memberships" class="card" aria-labelledby="membershipsHeading"><div class="section-title"><h2 id="membershipsHeading">Memberships</h2><span class="billing-pill" id="paymentsPill">Nothing paid yet</span></div><p class="billing-note">After you pay for a membership, each wrestler’s program, start date, payments and end date show here.</p><div id="membershipCards"><p>Loading your family…</p></div></section>
 <section id="purchaseHistory" class="card" aria-labelledby="purchaseHeading"><h2 id="purchaseHeading">Purchase history</h2><p class="billing-note">Everything you pay for shows here: memberships, walk-ins, camps, clinics, events and private lessons. Extra practices such as Friday Night Live are separate purchases, with a lower price for members.</p><div id="purchaseList"><div class="empty-billing"><h3>No purchases yet</h3><p>Looking over a registration doesn’t charge you or hold a spot. Each payment shows here with its date and amount after you pay.</p></div></div></section>
 <section id="yourData" class="card" aria-labelledby="yourDataHeading"><h2 id="yourDataHeading">Your data</h2><p class="muted">Download everything the academy holds about your family: profile, payments, attendance, signed waivers, messages and more.</p><a class="account-action" href="/api/my-data?format=download" download>Download my family's data</a><details style="margin-top:14px"><summary>Ask to close my account</summary><form id="closeForm"><label>Anything the academy should know (optional)<textarea id="closeNote" maxlength="1000" rows="3"></textarea></label><button type="submit">Send request to the academy</button></form></details><p id="requestStatus" class="muted"></p></section>
-<details class="sample-billing card" id="billingExample"><summary>See an example membership and purchase history</summary><p class="sample-label">Example only · Fictional wrestler and payments</p><p class="billing-note">These made-up records show what your account will look like. They aren’t yours, and no payment was taken.</p><article class="member-card"><div class="section-title"><h3>Alex Example</h3><span id="sampleMemberStatus" class="billing-pill active">Active</span></div><p>SWA Advance · 12-month commitment paid monthly</p><label>Show the example as<select id="sampleStatus" onchange="renderBillingExample()"><option value="active">Active</option><option value="cancelled">Renewal cancelled</option><option value="past_due">Payment needs attention</option></select></label><div id="sampleMembershipDetails"></div><div class="billing-actions"><button type="button" onclick="toggleSampleReceipt()">View example receipt</button><button type="button" onclick="toggleSampleManagement()">See an example early-release request</button></div><div id="sampleManage" class="sample-receipt" hidden><h4>Example membership management</h4><p>When online memberships open, the plan is that you can send a cancellation or early-release notice, see your term and scheduled payments, and update your payment details here. Your legal cancellation rights always apply.</p><button type="button" disabled>Cancellation unavailable in this example</button><p class="billing-note">Nothing can be changed in this example. You will see the final cancellation terms before you pay for a real membership.</p></div></article><h3>Example purchase history</h3><div class="billing-controls"><label for="samplePurchaseType">Purchase type</label><select id="samplePurchaseType" onchange="renderExamplePurchases()"><option value="all">All purchases</option><option value="membership">Memberships</option><option value="walkin">Walk-ins</option><option value="camp">Camps</option><option value="clinic">Clinics</option><option value="event">Events</option><option value="lesson">Private lessons</option></select></div><div id="samplePurchases"></div><section id="sampleReceipt" class="sample-receipt" hidden tabindex="-1"><h4>Example receipt: no payment taken</h4><p>Reference: EXAMPLE-001<br>Wrestler: Alex Example<br>Item: SWA Advance 12-month membership installment<br>Purchase date: Nov 1, 2026<br>Amount: $200.00 USD<br>Status: Example paid transaction</p><p class="billing-note">This is not a receipt for a real charge. Real receipts come from your actual payments.</p><button type="button" onclick="toggleSampleReceipt()">Close example receipt</button></section></details>
 </main><script>
 let scholarshipAwards=[];
 // A paid checkout (issue #184): a clear green confirmation at the top, not a plain status line.
@@ -350,7 +342,8 @@ function startWrestler(){if($('editor').hidden)editProfile();if(!profile.wrestle
 // Next up: the soonest booked session across the family's wrestlers, with their entry pass.
 let upcoming=[],upcomingLoaded=false;
 async function loadNextUp(){
- const kids=(savedProfile&&savedProfile.wrestlers||[]).slice(0,10);
+ // Every wrestler (a profile holds at most 20, lib/family-records.ts), so none is left out of Next up (issue #46).
+ const kids=(savedProfile&&savedProfile.wrestlers)||[];
  try{const views=await Promise.all(kids.map(w=>fetch('/api/wrestler?id='+encodeURIComponent(w.id),{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null)));
   upcoming=views.filter(v=>v&&Array.isArray(v.upcoming)).flatMap(v=>v.upcoming.map(s=>({...s,wrestlerId:v.id,wrestler:v.name}))).sort((a,b)=>(a.date+(a.start||'99')).localeCompare(b.date+(b.start||'99')));
   upcomingLoaded=true;renderHome()}catch{}
@@ -376,7 +369,7 @@ function renderHome(){
  $('heroLede').textContent=setUp?'':'A few quick steps and your wrestler is ready for the mat.';
  // A family with nothing saved or paid yet doesn't need empty membership, purchase and data sections.
  const fresh=!savedProfile&&!orders.length&&!scholarshipAwards.length;
- for(const id of ['memberships','purchaseHistory','yourData','billingExample'])$(id).hidden=fresh;
+ for(const id of ['memberships','purchaseHistory','yourData'])$(id).hidden=fresh;
  $('membershipsLink').hidden=$('purchasesLink').hidden=$('yourDataLink').hidden=fresh;
 }
 let orders=[];
@@ -418,16 +411,6 @@ function renderMembershipCards(){
  if(history.length)$('membershipCards').innerHTML+='<h3>Past scholarship agreements</h3>'+history.map(a=>`<p>${esc(a.wrestler_name)} · ${esc(a.status)}<br><a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View / print signed copy →</a> · <a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}&amp;download=1">Download copy</a></p>`).join('');
 
 }
-function renderBillingExample(){
- const status=$('sampleStatus').value||'active',cancelled=status==='cancelled',late=status==='past_due';
- $('sampleMemberStatus').textContent=cancelled?'Renewal cancelled':late?'Payment needs attention':'Active';$('sampleMemberStatus').className='billing-pill '+(late?'warning':cancelled?'':'active');
- $('sampleMembershipDetails').innerHTML=`<div class="next-charge"><strong>${cancelled?'No upcoming renewal payment.':late?'Example renewal payment of $200.00 failed on Dec 1, 2026.':'Your next automatic payment is $200.00 on Dec 1, 2026.'}</strong><p style="margin-bottom:0">${cancelled?'Example early release confirmed. Access continues through Nov 30, 2026.':late?'Update your payment method in the live account. Access status must be confirmed; a failed charge is not a payment.':'$200.00 per month × 12 payments · $2,400.00 total. New signup required after the term.'}</p></div><dl class="member-details"><div><dt>Membership started</dt><dd>Nov 1, 2026</dd></div><div><dt>12-month term ends</dt><dd>Oct 31, 2027</dd></div><div><dt>Payment plan</dt><dd>12 monthly payments of $200.00</dd></div><div><dt>Last successful payment</dt><dd>$200.00 · Nov 1, 2026</dd></div><div><dt>Paid access through</dt><dd>Nov 30, 2026</dd></div><div><dt>${cancelled?'Automatic renewal':late?'Renewal payment':'Next payment'}</dt><dd>${cancelled?'Cancelled':late?'Failed · Dec 1, 2026':'$200.00 · Dec 1, 2026'}</dd></div></dl><p class="billing-note">Example only. Actual prices, discounts, and billing dates will come from Stripe. Dates are shown in New York time.</p>`;
-}
-const examplePurchases=[{type:'membership',title:'12-month membership · installment',wrestler:'Alex Example',detail:'SWA Advance · Nov 1–30, 2026',date:'Nov 1, 2026',cents:20000,status:'Paid (example)'},{type:'walkin',title:'Single-practice walk-in',wrestler:'Jamie Example',detail:'SWA Development · Wed, Nov 4 · 6:00 PM–7:30 PM',date:'Nov 2, 2026',cents:4000,status:'Paid (example)'}];
-function renderExamplePurchases(){const kind=$('samplePurchaseType').value||'all',items=examplePurchases.filter(p=>kind==='all'||p.type===kind);$('samplePurchases').innerHTML=items.length?items.map(p=>`<article class="purchase-item"><div class="purchase-top"><div><h4>${esc(p.title)}</h4><span class="billing-pill active">${esc(p.status)}</span></div><strong>$${(p.cents/100).toFixed(2)}</strong></div><p>${esc(p.wrestler)}<br>${esc(p.detail)}</p><p class="muted">Purchased ${esc(p.date)} · Fictional transaction</p></article>`).join(''):'<p class="muted">No example purchases in this category.</p>'}
-function toggleSampleReceipt(){const node=$('sampleReceipt');node.hidden=!node.hidden;if(!node.hidden){node.focus();node.scrollIntoView({behavior:'smooth',block:'nearest'})}}
-function toggleSampleManagement(){const node=$('sampleManage');node.hidden=!node.hidden}
-renderBillingExample();renderExamplePurchases();
 async function signout(){const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(r.ok)location.href='/login';else $('status').textContent='Sign-out failed. Please try again.'}async function checkoutReturn(){
  const q=new URLSearchParams((location&&location.search)||''),state=q.get('checkout'),id=q.get('order');
  if(!state||!id||!/^[0-9a-f-]{36}$/.test(id))return;

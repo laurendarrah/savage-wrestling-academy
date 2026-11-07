@@ -79,22 +79,29 @@ r = await (await familyApi.GET(new Request('https://a.test/api/family'))).json()
 assert.equal(r.cardRenewalDays, 30);
 
 // --- The owner's renewal list on the cards page follows the server's window ---
+// The server filters, counts and pages the cards (issue #46); the page shows the server's counts and the window's
+// length, and marks the cards on the renewal list.
 {
+  const card = (wrestler, expires) => ({userId: 'p', email: 'e', parentName: '', phone: '', wrestlerId: wrestler, wrestler, grade: '8', state: 'verified', number: 'AB', expires, note: '', reviewedAt: null, lookup: null});
+  const cards = [card('In30', addDays(today, 30)), card('In31', addDays(today, 31))];
+  const usawLib = load(path.resolve('lib/usaw.ts'));
+  const listed = JSON.parse(JSON.stringify(usawLib.cardsPage(cards, {show: 'problems', onDate: today})));
+  assert.equal(listed.totals.soon, 1); assert.deepEqual(listed.cards.map(c => c.wrestler), ['In30'], 'In31 is not on the list yet');
   const html = readFileSync('app/cards/screen.html', 'utf8'), script = html.slice(html.lastIndexOf('<script>') + 8, html.lastIndexOf('</script>'));
   const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {id, value: '', textContent: '', innerHTML: '', hidden: false, className: '', previousElementSibling: {textContent: 'Expire within 30 days'}}); return nodes.get(id); };
-  const card = (wrestler, expires) => ({userId: 'p', email: 'e', parentName: '', phone: '', wrestlerId: wrestler, wrestler, grade: '8', state: 'verified', number: 'AB', expires, note: '', reviewedAt: null});
-  const run = async renewalDays => {
+  const run = async (renewalDays, page) => {
     nodes.clear(); el('show').value = 'problems';
-    const data = {today, date: today, renewal: null, renewalDays, cards: [card('In30', addDays(today, 30)), card('In31', addDays(today, 31))]};
-    const ctx = vm.createContext({document: {getElementById: el, querySelectorAll: () => []}, window: {}, navigator: {}, Date, Intl, JSON, Promise, Number, String, encodeURIComponent,
-      fetch: async url => ({ok: true, json: async () => url === '/api/exceptions' ? {exceptions: []} : data})});
+    const data = {today, date: today, renewal: null, renewalDays, ...page};
+    const ctx = vm.createContext({document: {getElementById: el, querySelectorAll: () => []}, window: {}, navigator: {}, Date, Intl, JSON, Promise, Number, String, URLSearchParams, encodeURIComponent,
+      setTimeout, clearTimeout, fetch: async url => ({ok: true, json: async () => url === '/api/exceptions' ? {exceptions: []} : data})});
     vm.runInContext(script, ctx); await new Promise(r => setTimeout(r, 10));
     return el;
   };
-  let page = await run(30);
+  let page = await run(30, listed);
   assert.equal(page('tSoon').textContent, 1); assert.equal(page('tSoon').previousElementSibling.textContent, 'Expire within 30 days');
-  assert.match(page('rows').innerHTML, /In30/); assert.doesNotMatch(page('rows').innerHTML, /In31/, 'not on the list yet');
-  page = await run(45);
+  assert.match(page('rows').innerHTML, /In30/); assert.match(page('rows').innerHTML, /expires soon/); assert.doesNotMatch(page('rows').innerHTML, /In31/, 'not on the list yet');
+  page = await run(45, {cards, totals: {all: 2, blocked: 0, soon: 2, verified: 2}, matched: 2, next: null});
   assert.equal(page('tSoon').textContent, 2, 'changing the constant moves the list'); assert.equal(page('tSoon').previousElementSibling.textContent, 'Expire within 45 days');
+  assert.equal((page('rows').innerHTML.match(/expires soon/g) || []).length, 2, 'both marked with a 45-day window');
 }
 console.log('Passed: one 30-day renewal window (CARD_RENEWAL_DAYS) for the owner cards page, the family page and the daily reminder.');

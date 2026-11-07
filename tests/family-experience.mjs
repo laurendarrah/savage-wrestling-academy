@@ -93,7 +93,7 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   // Only the current step carries a button; later steps are listed quietly (issue #141).
   assert.match(steps, /data-step="details"[\s\S]*Add your details<\/button>/); assert.doesNotMatch(steps, /Add a wrestler<\/button>|href="\/register">Choose training/);
   assert.match(el('startLede').textContent, /^Three steps /, 'the step count in the text matches the list');
-  for (const id of ['memberships', 'purchaseHistory', 'yourData', 'billingExample', 'membershipsLink', 'purchasesLink']) assert.equal(el(id).hidden, true, id + ' waits until there is something to show');
+  for (const id of ['memberships', 'purchaseHistory', 'yourData', 'membershipsLink', 'purchasesLink']) assert.equal(el(id).hidden, true, id + ' waits until there is something to show');
   assert.equal(el('nextUp').hidden, true); assert.equal(el('editor').hidden, false); assert.equal(el('status').textContent, '');
   assert.equal(el('hello').textContent, 'Welcome');
   // Account things live in one menu, not as four buttons at the top.

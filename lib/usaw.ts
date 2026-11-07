@@ -5,6 +5,7 @@ import {env} from 'cloudflare:workers';
 import {USAW_NUMBER} from './family-records';
 import {exceptionFor} from './exceptions';
 import {fullDate} from './datetime';
+import {allFamilies, pageOf, PAGE_SIZE} from './paging';
 
 export type CardWrestler = {id: string; name: string; usawNumber?: string; usawExpires?: string};
 export type Review = {number: string; expires: string; status: 'valid' | 'invalid'; note: string; reviewed_at: string; reviewed_by?: string} | null;
@@ -114,9 +115,10 @@ export async function setReview(userId: string, wrestlerId: string, number: stri
   ]);
 }
 
-// Every wrestler in every family with card status on a date, for the owner's card review page.
+// Every wrestler in every family with card status on a date, for the owner's card review page. Families are read in
+// batches, so the list has every wrestler however many families there are (issue #46).
 export async function listCards(onDate: string) {
-  const families = (await env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts ORDER BY email LIMIT 2000').all<{user_id: string; email: string; payload: string}>()).results;
+  const families = (await allFamilies()).sort((a, b) => a.email < b.email ? -1 : a.email > b.email ? 1 : 0);
   const reviews = (await env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at,reviewed_by FROM usaw_reviews').all<NonNullable<Review> & {user_id: string; wrestler_id: string}>()).results;
   const byKey = new Map(reviews.map(r => [r.user_id + '/' + r.wrestler_id, r]));
   // The latest automatic check on USA Wrestling (issue #202), shown to the owner while it is about the card on file.
@@ -134,6 +136,30 @@ export async function listCards(onDate: string) {
         ...reviewSource(review, status), lookup};
     });
   });
+}
+
+export type CardRow = Awaited<ReturnType<typeof listCards>>[number];
+export const CARD_FILTERS = ['problems', 'all', 'unreviewed'] as const;
+const BLOCKED = ['missing', 'expired', 'invalid', 'recheck'];
+// The owner's filters on the cards page, the same rules the page has always used.
+export const cardBlocked = (c: CardRow) => BLOCKED.includes(c.state);
+// The renewal list (issue #210): a current card expiring within CARD_RENEWAL_DAYS of the chosen date.
+export const cardSoon = (c: CardRow, onDate: string) => (c.state === 'current' || c.state === 'verified') && c.expires <= renewalDue(onDate);
+export const cardFlagged = (c: CardRow) => c.state === 'current' && !!c.lookup && ['inactive', 'not_found', 'mismatch', 'season'].includes(c.lookup.outcome);
+export function cardMatches(c: CardRow, show: string, q: string, onDate: string) {
+  const shown = show === 'all' || (show === 'unreviewed' ? c.state === 'current' || c.state === 'recheck' : cardBlocked(c) || cardSoon(c, onDate) || cardFlagged(c));
+  const text = q.trim().toLowerCase();
+  return shown && (!text || [c.wrestler, c.parentName, c.email].join(' ').toLowerCase().includes(text));
+}
+// Blocked cards first, then by expiration date and wrestler name; family and wrestler ids make the key unique.
+export const cardKey = (c: CardRow) => [cardBlocked(c) ? 0 : 1, c.expires || '', String(c.wrestler || '').toLowerCase(), c.userId, c.wrestlerId];
+// One page of the cards page (issue #46): counts over every wrestler, and the matching cards a page at a time.
+export function cardsPage(cards: CardRow[], o: {show?: string | null; q?: string | null; cursor?: string | null; onDate: string; limit?: number}) {
+  const show = CARD_FILTERS.includes(o.show as any) ? o.show! : 'all';
+  const matching = cards.filter(c => cardMatches(c, show, o.q ?? '', o.onDate));
+  const page = pageOf(matching, cardKey, o.cursor, o.limit ?? PAGE_SIZE);
+  return {cards: page.rows, next: page.next, matched: matching.length,
+    totals: {all: cards.length, blocked: cards.filter(cardBlocked).length, soon: cards.filter(c => cardSoon(c, o.onDate)).length, verified: cards.filter(c => c.state === 'verified').length}};
 }
 
 export async function clearReview(userId: string, wrestlerId: string, ownerId: string) {

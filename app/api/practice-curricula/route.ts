@@ -8,8 +8,8 @@ export async function GET(request:Request){
  const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
  const id=new URL(request.url).searchParams.get('id');
  if(id!==null){if(!identifier(id))return reply({error:'Choose a saved lesson.'},400);const row=await env.DB!.prepare('SELECT id,curriculum_id,lesson_order,name,payload,revision,updated_at FROM practice_curricula WHERE id=?').bind(id).first<{id:string;curriculum_id:string|null;lesson_order:number;name:string;payload:string;revision:number;updated_at:string}>();if(!row)return reply({error:'Lesson not found. Refresh the library.'},404);return reply({curriculum:{id:row.id,curriculumId:row.curriculum_id,lessonOrder:row.lesson_order,name:row.name,data:JSON.parse(row.payload),revision:row.revision,updatedAt:row.updated_at}})}
- const groups=await env.DB!.prepare('SELECT id,program,name,revision,updated_at FROM practice_curriculum_groups ORDER BY program,name_key LIMIT 1000').all();
- const lessons=await env.DB!.prepare('SELECT id,curriculum_id,lesson_order,name,revision,updated_at FROM practice_curricula ORDER BY curriculum_id,lesson_order,name_key LIMIT 5000').all();
+ const groups=await env.DB!.prepare('SELECT id,program,name,revision,updated_at FROM practice_curriculum_groups ORDER BY program,name_key').all();
+ const lessons=await env.DB!.prepare('SELECT id,curriculum_id,lesson_order,name,revision,updated_at FROM practice_curricula ORDER BY curriculum_id,lesson_order,name_key').all();
  return reply({groups:groups.results,curricula:lessons.results});
 }
 export async function POST(request:Request){

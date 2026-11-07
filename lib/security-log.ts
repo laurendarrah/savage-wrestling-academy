@@ -3,6 +3,7 @@
 import {env} from 'cloudflare:workers';
 import {programDetails} from './program-names';
 import {dayDate, fullDate, when} from './datetime';
+import {allFamilies, keysetPage} from './paging';
 
 export type SecurityRow = {actor: string; action: string; target: string; created_at: string};
 export type SecurityNames = {
@@ -138,11 +139,15 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
 type Q<T> = {results: T[]};
 const all = async <T>(sql: string): Promise<T[]> => ((await env.DB!.prepare(sql).all<T>()) as Q<T>).results;
 
-// The latest 100 events, described. ownerIds are the ids the reading owner is recorded under.
-export async function securityLog(ownerIds: string[]): Promise<SecurityEntry[]> {
-  const rows = await all<SecurityRow>('SELECT actor,action,target,created_at FROM security_events ORDER BY created_at DESC LIMIT 100');
+// Events newest first, 100 a page (issue #46), described. ownerIds are the ids the reading owner is recorded under.
+// `cursor` comes from the previous page's `next`, for older events.
+export const SECURITY_PAGE = 100;
+export async function securityLogPage(ownerIds: string[], cursor?: unknown): Promise<{entries: SecurityEntry[]; next: string | null}> {
+  const page = await keysetPage<SecurityRow & {id: string}>({select: 'id,actor,action,target,created_at', from: 'FROM security_events',
+    cols: [{expr: 'created_at', desc: true}, {expr: 'id', desc: true}], keyOf: r => [r.created_at, r.id], cursor, limit: SECURITY_PAGE});
+  const rows = page.rows;
   const names: SecurityNames = {people: {}, you: ownerIds, approvals: {}, waitlist: {}, orders: {}, waivers: {}, wrestlers: {}, requests: {}, curricula: {}, coaches: {}};
-  const families = await all<{user_id: string; email: string; payload: string}>('SELECT user_id,email,payload FROM family_accounts');
+  const families = await allFamilies();
   for (const f of families) {
     let p: any = {}; try { p = JSON.parse(f.payload); } catch {}
     names.people[f.user_id] = p.parentName ? `${p.parentName} (${f.email})` : f.email;
@@ -157,5 +162,6 @@ export async function securityLog(ownerIds: string[]): Promise<SecurityEntry[]> 
   for (const v of await all<{id: string; title: string}>('SELECT id,title FROM waiver_versions')) names.waivers[v.id] = v.title;
   for (const r of await all<{id: string; user_id: string; email: string}>('SELECT id,user_id,email FROM data_requests')) names.requests[r.id] = names.people[r.user_id] ?? r.email;
   for (const c of await all<{id: string; name: string}>('SELECT id,name FROM practice_curricula UNION ALL SELECT id,name FROM practice_curriculum_groups')) names.curricula[c.id] = c.name;
-  return rows.map(r => describeSecurityEvent(r, names));
+  return {entries: rows.map(r => describeSecurityEvent(r, names)), next: page.next};
 }
+export async function securityLog(ownerIds: string[]): Promise<SecurityEntry[]> { return (await securityLogPage(ownerIds)).entries; }
