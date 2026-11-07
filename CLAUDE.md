@@ -21,6 +21,7 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 - Never change the Deploy workflow's backup step, the `DEPLOY_ENABLED` switch or production settings without the owner's approval.
 - Never run migrations, queries, or scripts against the production D1 database or production Supabase project. Use a local D1 and a separate development Supabase project.
 - Never commit secrets. `.env*` and `.dev.vars*` are ignored for that reason.
+- The repository is **public** (since Nov 7, so GitHub Actions minutes are free). Everything committed, including history, issues and pull requests, can be read by anyone. Never commit secrets, real family or coach details, real USA Wrestling card numbers, or real phone numbers or addresses other than the academy's. Use made-up `example.test` people and 555 numbers in tests.
 - Do not edit or reorder existing files in `drizzle/`. Add a new migration with `pnpm db:generate` instead.
 - Do not run `pnpm audit --fix` or broad dependency upgrades. Upgrade one package at a time on a branch and rerun tests and build.
 - Work on a branch and open a pull request. Do not push directly to `main`.
@@ -46,11 +47,17 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 
 ## Payments
 
+- Justin owns the academy's Stripe and Resend accounts and sets them up himself (#4, #87). Lauren helps only if he asks. The first test key confirmed on the Payment setup page decides which Stripe account the site trusts (#255).
+- Families can pay cash at the academy for walk-ins and Friday Night Live (#248). A coach or the owner records it with **Cash received** on the roster, which writes an offline payment naming who collected it (#250). Never mark a cash booking paid any other way.
 - Prices come only from `lib/quotes.ts`. Review screens and checkout both use it. Never accept an amount from the browser.
 - An order becomes paid only in `lib/stripe-webhook.ts`, after the Stripe signature is verified. Never mark anything paid from a redirect or a browser call.
 - Every Stripe event id is stored once in `stripe_events`. Keep webhook handling idempotent and safe for late or out-of-order events.
 - Checkout opens per purchase type with `CHECKOUT_KINDS`. Do not open a type whose terms or refund policy is undecided.
 - Live charging requires `STRIPE_MODE=live`, a live webhook secret, and a restricted `rk_live_` key saved on the owner Payment setup page. Never weaken the separation between test and live keys or secrets.
+
+## Sign-in
+
+- `STAFF_MFA=off` on the Worker temporarily lets the owner and coaches sign in without an authenticator (#204). It must be deleted before families join (#27); the owner's launch checklist shows it in red while it's set.
 
 ## Domain rules
 
