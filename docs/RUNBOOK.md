@@ -67,7 +67,8 @@ Until launch, the authenticator requirement can be off (`STAFF_MFA=off` on the W
 
 - Online payments count only after Stripe confirms them. A family coming back from Stripe isn't proof of payment. If a family says they paid but it isn't on **/payments**, find the payment in the **Stripe dashboard**. If Stripe shows it paid, its notice to the site failed: **Stripe → Developers → Webhooks** → the site's endpoint → resend the event. The site safely ignores a repeated event.
 - Cash, check or Venmo goes in with **/payments → Record an offline payment**. A mistake gets **Void**, not a second entry.
-- Refunds happen in Stripe, and the site picks them up from Stripe's notice.
+- Refunds happen in Stripe, and the site picks them up from Stripe's notice. A partial refund keeps the payment (and the wrestler's place) and shows on **/payments** as "refunded so far"; **/financials** counts it as money out on the day of the refund. A full refund of a one-time payment marks it refunded and takes the wrestler off that roster. Refunding one month of a monthly membership is recorded as money out but doesn't end the membership; cancel the subscription in Stripe for that.
+- Stripe's card fees reach **/financials** (as "Card processing fees") and the **/payments** spreadsheet the day after a payment, or straight away with **/financials → Get fees from Stripe now**. Marking a payment paid never waits for its fee. If the page keeps saying payments are waiting for their fee, or site health shows "Reading card fees from Stripe" failing, the restricted Stripe key is missing the **Balance (read)** permission: in Stripe, edit the key (**Developers → API keys**), allow Balance read, and save. The key itself doesn't change, so nothing needs re-entering on the site.
 
 ## Who to call
 

@@ -32,8 +32,9 @@ fieldset{border:0;padding:0;margin:0 0 14px}legend{font-weight:600;font-size:15p
 .formrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}#formError{color:var(--swa-red-dark,#A11B24);font-weight:700;min-height:1.5em;margin:10px 0 0}
 @media (max-width:640px){.wide{display:none}td.narrow,th.narrow{display:table-cell}span.narrow{display:block}span.abbr{display:inline}.tiles{grid-template-columns:1fr 1fr}table{font-size:14px}section{padding:16px}.monthbar .downloads{margin-left:0}.monthbar select{min-width:0;flex:1}.monthbar label{flex:1}th,td{padding:8px 4px}}
 @media print{.monthbar,form,.actions,#entrySection{display:none}}
-</style><link rel="stylesheet" href="/responsive.css"></head><body><main class="ledger"><h1>Income and expenses</h1><p>The academy's books by month. Card and offline payments are added on their own; add expenses and any other income below. This is a simple record for running the academy, not an accounting system, and card payments are shown before Stripe fees.</p>
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main class="ledger"><h1>Income and expenses</h1><p>The academy's books by month. Card and offline payments are added on their own; add expenses and any other income below. This is a simple record for running the academy, not an accounting system. Card payments are shown in full, and Stripe's card fees are an expense of their own (Card processing fees), read from Stripe once a day. A refund, full or partial, is money out on the day it was made.</p>
 <p id="status" role="status" aria-live="polite">Loading…</p>
+<p id="feesNote" class="notice" hidden><span id="feesText"></span> <button type="button" id="feesNow">Get fees from Stripe now</button></p>
 <p id="testMode" class="notice" hidden>Stripe is in test mode, so card payments shown here are test payments, not real money. Once Stripe is live, only live card payments are counted.</p>
 <div class="monthbar"><button type="button" class="arrow" id="prevMonth" aria-label="Previous month">←</button><label>Month<select id="month"></select></label><button type="button" class="arrow" id="nextMonth" aria-label="Next month">→</button>
 <div class="downloads"><a class="button" id="csvMonth" href="/api/financials?format=csv">Download month (CSV)</a><a class="button" id="csvYear" href="/api/financials?format=csv">Download year (CSV)</a></div></div>
@@ -109,6 +110,8 @@ function hideTip(){$('tip').hidden=true}
 function render(){
  const d=report,t=d.totals,label=monthName(d.month),short=monthName(d.month).split(' ')[0];
  $('testMode').hidden=d.stripeMode!=='test';
+ // Card fees are read from Stripe after the payment (issue #42); until then they are missing from expenses.
+ const waiting=d.feesWaiting||0;$('feesNote').hidden=!waiting;$('feesText').textContent=waiting?(waiting===1?'1 card payment is':waiting+' card payments are')+' still waiting for Stripe\'s fee, so expenses may be missing card fees. Fees are read from Stripe once a day.':'';
  $('month').innerHTML=namedMonthOptions(d.month,'2020-01',thisMonth());$('month').value=d.month;
  $('prevMonth').disabled=d.month<='2020-01';$('nextMonth').disabled=d.month>=thisMonth();
  $('csvMonth').href='/api/financials?format=csv&month='+d.month;$('csvYear').href='/api/financials?format=csv&year='+d.year;
@@ -151,6 +154,9 @@ async function removeEntry(id){const l=entryOf(id);if(!l||busy)return;if(!confir
  busy=true;try{await call('/api/financials',{action:'delete',id,revision:l.revision});if(editing&&editing.id===id)endEdit();await load(report.month);$('status').textContent='Entry deleted.'}catch(err){$('status').textContent=err.message}finally{busy=false}}
 $('entry').onsubmit=submitEntry;$('stopEditing').onclick=endEdit;
 document.querySelectorAll('input[name="kind"]').forEach(r=>r.onchange=()=>{$('categoryList').innerHTML=suggestionOptions()});
+$('feesNow').onclick=async()=>{if(busy)return;busy=true;$('feesNow').disabled=true;$('status').textContent='Reading card fees from Stripe…';
+ try{const r=await call('/api/financials',{action:'fees'});await load(report?report.month:thisMonth());$('status').textContent=r.error?r.error:r.recorded?'Card fees added for '+(r.recorded===1?'1 payment.':r.recorded+' payments.'):'No new card fees yet. Stripe may still be settling recent payments; they are tried again tomorrow.'}
+ catch(err){$('status').textContent=err.message}finally{busy=false;$('feesNow').disabled=false}};
 $('month').onchange=()=>load($('month').value);$('prevMonth').onclick=()=>report&&load(shiftMonth(report.month,-1));$('nextMonth').onclick=()=>report&&load(shiftMonth(report.month,1));
 let resizeTimer=0;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(drawChart,120)});
 const asked=new URLSearchParams(location.search).get('month');load(/^\d{4}-(0[1-9]|1[0-2])$/.test(asked||'')&&asked<=thisMonth()?asked:thisMonth());

@@ -256,3 +256,24 @@ export const coachTimeOff=sqliteTable("coach_time_off",{
 export const removedCoaches=sqliteTable("removed_coaches",{
  id:text("id").primaryKey(),emailHash:text("email_hash").notNull(),email:text("email"),name:text("name"),removedOn:text("removed_on").notNull(),cleanedAt:text("cleaned_at")
 },t=>[uniqueIndex("removed_coaches_email").on(t.emailHash)]);
+
+// Card refunds (issue #42). One row per Stripe charge.refunded event, holding Stripe's cumulative amount_refunded for that
+// payment at the time of the event (never an increment), so replays and late or out-of-order events converge. Each
+// refund in the books is the change from the payment's previous row, dated when Stripe sent the event. id is the
+// Stripe event id; payment_intent identifies the card payment (a one-time order, or one monthly payment).
+export const paymentRefunds=sqliteTable("payment_refunds",{
+ id:text("id").primaryKey(),orderId:text("order_id").notNull(),paymentIntent:text("payment_intent").notNull(),chargeId:text("charge_id"),
+ amountCents:integer("amount_cents").notNull(),refundedCents:integer("refunded_cents").notNull(),refundedAt:text("refunded_at").notNull(),
+ livemode:integer("livemode").notNull(),receivedAt:text("received_at").notNull()
+},t=>[index("payment_refunds_intent").on(t.paymentIntent,t.refundedAt),index("payment_refunds_order").on(t.orderId),
+ check("payment_refund_amounts",sql`${t.refundedCents} >= 0 AND ${t.refundedCents} <= ${t.amountCents}`),check("payment_refund_livemode",sql`${t.livemode} IN (0,1)`)]);
+
+// Stripe card processing fees (issue #42). One row per successful card payment, read from its charge's balance
+// transaction by lib/stripe-fees.ts (the daily job, or the owner's button on /financials), never by the webhook, so a
+// fee lookup can never hold up marking an order paid. A payment without a row is one whose fee is not known yet.
+export const stripeFees=sqliteTable("stripe_fees",{
+ paymentIntent:text("payment_intent").primaryKey(),orderId:text("order_id").notNull(),chargeId:text("charge_id").notNull(),
+ balanceTransaction:text("balance_transaction").notNull(),amountCents:integer("amount_cents").notNull(),feeCents:integer("fee_cents").notNull(),
+ netCents:integer("net_cents").notNull(),chargedAt:text("charged_at").notNull(),livemode:integer("livemode").notNull(),recordedAt:text("recorded_at").notNull()
+},t=>[index("stripe_fees_order").on(t.orderId),index("stripe_fees_charged").on(t.chargedAt),
+ check("stripe_fee_amounts",sql`${t.feeCents} >= 0 AND ${t.amountCents} >= 0`),check("stripe_fee_livemode",sql`${t.livemode} IN (0,1)`)]);

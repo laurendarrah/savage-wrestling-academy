@@ -57,11 +57,12 @@ const worker = (() => {
         if (name.endsWith('/owner-alerts')) return {alertOwner: async db => { alerts.push(db); return 'off'; }};
         if (name.endsWith('/notify')) return {dailyReminders: async () => { reminders++; if (reminderFails) throw Error('mail provider down'); return 0; }};
         if (name.endsWith('/coach-retention')) return {cleanupRemovedCoaches: async () => { cleanups++; if (cleanupFails) throw Error('D1 busy'); return {}; }};
+        if (name.endsWith('/stripe-fees')) return {recordStripeFees: async () => { feeRuns++; return feeRun; }};
         throw Error('unexpected ' + name);
       }});
   return module.exports.default;
 })();
-let reminders = 0, reminderFails = false, cleanups = 0, cleanupFails = false;
+let reminders = 0, reminderFails = false, cleanups = 0, cleanupFails = false, feeRuns = 0, feeRun = {mode: 'test', checked: 0, recorded: 0, failed: 0, waiting: 0, error: null, skipped: null};
 const alerts = [];
 const pending = [];
 const ctx = {waitUntil: p => pending.push(p)};
@@ -112,5 +113,13 @@ pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); aw
 const failed = sqlite.prepare('SELECT * FROM error_log ORDER BY at DESC LIMIT 1').get();
 assert.equal(failed.path, '/coach-retention'); assert.match(failed.message, /D1 busy/);
 assert.equal(alerts.length, before + 3, 'one alert check per run');
+// The same run reads Stripe card fees (issue #42). A fee that can't be read is recorded for the owner, without blocking
+// the reminders or the cleanup.
+assert.equal(feeRuns, 3, 'every scheduled run reads card fees');
+cleanupFails = false; feeRun = {...feeRun, checked: 3, failed: 3, error: 'Stripe would not share card fees with the saved restricted key.'};
+pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
+const feeError = sqlite.prepare("SELECT * FROM error_log WHERE path='/stripe-fees' ORDER BY at DESC LIMIT 1").get();
+assert.match(feeError.message, /3 card fee\(s\) not read: Stripe would not share/); assert.equal(reminders, 4, 'reminders still sent'); assert.equal(cleanups, 4, 'the cleanup still runs');
+assert.equal(alerts.length, before + 4);
 assert.match(readFileSync('vite.config.ts', 'utf8'), /crons: \["41 12 \* \* \*"\]/);
 console.log('Site health tests passed');

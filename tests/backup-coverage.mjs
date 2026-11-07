@@ -70,10 +70,13 @@ function seed(sqlite){
   run("INSERT INTO coach_time_off(id,user_id,coach_email,coach_name,start_date,end_date,reason,status,programs,requested_at,decided_at,decided_by,decision_note,revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",'off-1','coach-1','dana@example.test','Coach Dana','2026-12-10','2026-12-12','Family wedding','approved','["Intermediate"]',now,now,'owner',null,2);
   // Issue #212: a coach removed for good, so a restored file keeps their 3-year clock.
   run("INSERT INTO removed_coaches(id,email_hash,email,name,removed_on,cleaned_at) VALUES (?,?,?,?,?,?)",'gone-1','f'.repeat(64),'former.lee@example.test','Coach Gone','2026-10-01',null);
+  // Issue #42: refund totals from Stripe and card fees.
+  run("INSERT INTO payment_refunds VALUES (?,?,?,?,?,?,?,?,?)",'evt_refund_1','ord-1','pi_1','ch_1',240000,60000,now,0,now);
+  run("INSERT INTO stripe_fees VALUES (?,?,?,?,?,?,?,?,?,?)",'pi_1','ord-1','ch_1','txn_1',240000,6990,233010,now,0,now);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {
@@ -163,6 +166,12 @@ bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad
   b3=clone();delete b3.records.coach_time_entries;delete b3.records.coach_time_off;assert.equal(lib.validBackup(b3),true,'v3 from before timesheets');
   b3=clone();b3.records.coach_time_entries[0].history='{}';assert.equal(lib.validBackup(b3),false,'shift history must be a list');
   b3=clone();b3.records.coach_time_entries[0].approved_cents='6000';assert.equal(lib.validBackup(b3),false,'amounts are whole cents');
+  // And for card refunds and fees (issue #42): a file made before them restores; one that has them is checked.
+  b3=clone();delete b3.records.payment_refunds;delete b3.records.stripe_fees;assert.equal(lib.validBackup(b3),true,'v3 from before refund totals and fees');
+  {const o5=freshDb(),o5Lib=loadBackups(o5.DB);const res=await o5Lib.restoreBackup(b3,await o5Lib.fingerprint(await o5Lib.metadata()),'owner');assert.equal(res.restored.orders,1);assert.equal(dump(o5.sqlite,'stripe_fees').length,0);assert.equal(dump(o5.sqlite,'payment_refunds').length,0)}
+  b3=clone();b3.records.stripe_fees[0].fee_cents=69.9;assert.equal(lib.validBackup(b3),false,'fees are whole cents');
+  b3=clone();b3.records.payment_refunds[0].extra=1;assert.equal(lib.validBackup(b3),false,'refund rows have exactly their columns');
+  b3=clone();b3.records.stripe_fees.push({...b3.records.stripe_fees[0]});assert.equal(lib.validBackup(b3),false,'one fee per payment');
   b3=clone();b3.records.coach_profiles[0].specialties='not json';assert.equal(lib.validBackup(b3),false,'coach profile specialties must be a list');
   b3=clone();b3.records.usaw_reviews.push({...b3.records.usaw_reviews[0]});assert.equal(lib.validBackup(b3),false,'duplicate composite key');
 }

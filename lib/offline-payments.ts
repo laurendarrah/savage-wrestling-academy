@@ -7,6 +7,8 @@ import {academyToday} from './public-schedule';
 import {withinCapacity} from './capacity';
 import {noticePaymentRecorded, noticeLessonBooked, quietly} from './notify';
 import {BATCH_SIZE, keysetPage, type Page, type SortCol} from './paging';
+import {refundedByOrder, type RefundRow} from './card-refunds';
+import {academyDay} from './datetime';
 
 export const METHODS = ['cash', 'check', 'venmo', 'zelle', 'card-in-person', 'other'] as const;
 // A membership paid upfront for the year is not offered, online or at the academy (decision Q9 in #197, issue #210).
@@ -95,7 +97,7 @@ export type PaymentFilters = {from?: string; to?: string; status?: string; kind?
 // Payments, newest first. The list comes a page at a time (keyset on paid_at and id, issue #46); the totals and the
 // number of matching payments are worked out in the database over every match, not just the page shown.
 const PAYMENT_COLS: SortCol[] = [{expr: 'o.paid_at', desc: true}, {expr: 'o.id', desc: true}];
-const PAYMENT_FIELDS = 'o.id,o.paid_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,f.payload AS family';
+const PAYMENT_FIELDS = 'o.id,o.paid_at,o.updated_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,s.payments_made,f.payload AS family';
 function paymentWhere(f: PaymentFilters) {
   const where = ["o.status IN ('paid','refunded','canceled')", "(o.status<>'canceled' OR o.source='offline')", 'o.paid_at IS NOT NULL'], args: unknown[] = [];
   if (validDate(f.from)) { where.push('substr(o.paid_at,1,10)>=?'); args.push(f.from); }
@@ -105,28 +107,59 @@ function paymentWhere(f: PaymentFilters) {
   if (['stripe', 'offline'].includes(String(f.source))) { where.push('o.source=?'); args.push(f.source); }
   return {where: where.join(' AND '), args};
 }
-function paymentView(r: any) {
+// Card refunds (full or partial) and Stripe fees for a page or batch of payments (issue #42).
+type CardMoney = {refunded: Map<string, {cents: number; at: string}>; fees: Map<string, {n: number; fee: number; net: number}>; oldRefundAt: Map<string, string>};
+async function cardMoney(rows: any[]): Promise<CardMoney> {
+  const ids = JSON.stringify(rows.filter(r => r.source === 'stripe').map(r => r.id)), inIds = 'order_id IN (SELECT value FROM json_each(?))';
+  if (ids === '[]') return {refunded: new Map(), fees: new Map(), oldRefundAt: new Map()};
+  const [refundRows, feeRows, oldRefunds] = await env.DB!.batch([
+    env.DB!.prepare(`SELECT id,order_id,payment_intent,amount_cents,refunded_cents,refunded_at FROM payment_refunds WHERE ${inIds}`).bind(ids),
+    env.DB!.prepare(`SELECT order_id,count(*) AS n,sum(fee_cents) AS fee,sum(net_cents) AS net FROM stripe_fees WHERE ${inIds} GROUP BY order_id`).bind(ids),
+    env.DB!.prepare(`SELECT order_id,min(received_at) AS at FROM stripe_events WHERE outcome='refunded' AND ${inIds} GROUP BY order_id`).bind(ids)]);
+  return {refunded: refundedByOrder(refundRows.results as RefundRow[]),
+    fees: new Map((feeRows.results as {order_id: string; n: number; fee: number; net: number}[]).map(f => [f.order_id, f])),
+    oldRefundAt: new Map((oldRefunds.results as {order_id: string; at: string}[]).map(e => [e.order_id, e.at]))};
+}
+const viewsOf = async (rows: any[]) => { const m = await cardMoney(rows); return rows.map(r => paymentView(r, m)); };
+function paymentView(r: any, m: CardMoney) {
   const p = JSON.parse(r.pricing || '{}'), fam = r.family ? JSON.parse(r.family) : {};
+  // A full refund recorded before refund amounts were stored has no refund rows; it refunded the whole amount.
+  const back = m.refunded.get(r.id) ?? (r.source === 'stripe' && r.status === 'refunded' ? {cents: r.amount_cents as number, at: m.oldRefundAt.get(r.id) ?? r.updated_at} : null);
+  // Card payments behind this row: one, or each monthly payment so far. The fee shows once Stripe's fee is in for all of them.
+  const cardPayments: number = r.source === 'stripe' ? (r.kind === 'monthly' ? r.payments_made ?? 1 : 1) : 0, fee = m.fees.get(r.id);
+  const feeKnown = cardPayments > 0 && !!fee && fee.n >= cardPayments;
   return {id: r.id as string, paidOn: String(r.paid_at).slice(0, 10), status: r.status === 'canceled' ? 'voided' : r.status as string, source: r.source as string, kind: r.kind as string, program: r.program as string | null,
     item: r.item_label as string, dates: JSON.parse(r.dates || '[]') as string[], wrestler: r.wrestler_name as string, parent: fam.parentName || '', email: r.email as string, phone: fam.phone || '',
     amountCents: r.amount_cents as number, listCents: r.base_cents as number, discountCents: r.discount_cents as number, method: r.source === 'offline' ? p.method : 'stripe', note: p.note || '', voidReason: p.voidReason || '',
-    termStart: r.term_start as string | null, termEnd: r.term_end as string | null};
+    termStart: r.term_start as string | null, termEnd: r.term_end as string | null,
+    refundedCents: back?.cents ?? 0, refundedOn: back && Number.isFinite(Date.parse(back.at)) ? academyDay(back.at) : '', cardPayments,
+    feeCents: feeKnown ? fee!.fee : null, netCents: feeKnown ? fee!.net : null};
 }
+// Refunded so far for one order, in SQL: the latest Stripe total of each of its card payments, or the whole amount for a
+// full refund recorded before refund amounts were stored. Matches paymentView, so the totals match the rows.
+const REFUNDED_SQL = `COALESCE((SELECT sum(r.refunded_cents) FROM payment_refunds r WHERE r.order_id=o.id AND NOT EXISTS (SELECT 1 FROM payment_refunds r2
+    WHERE r2.payment_intent=r.payment_intent AND (r2.refunded_at>r.refunded_at OR (r2.refunded_at=r.refunded_at AND (r2.refunded_cents>r.refunded_cents OR (r2.refunded_cents=r.refunded_cents AND r2.id>r.id)))))),
+  CASE WHEN o.status='refunded' AND o.source='stripe' THEN o.amount_cents ELSE 0 END)`;
 const paymentsPage = (f: PaymentFilters, cursor: unknown, limit: number) => {
   const {where, args} = paymentWhere(f);
-  return keysetPage<any>({select: PAYMENT_FIELDS, from: 'FROM orders o LEFT JOIN family_accounts f ON f.user_id=o.user_id', where, args, cols: PAYMENT_COLS, keyOf: r => [r.paid_at, r.id], cursor, limit});
+  return keysetPage<any>({select: PAYMENT_FIELDS, from: 'FROM orders o LEFT JOIN family_accounts f ON f.user_id=o.user_id LEFT JOIN subscriptions s ON s.order_id=o.id', where, args, cols: PAYMENT_COLS, keyOf: r => [r.paid_at, r.id], cursor, limit});
 };
 export async function listPayments(f: PaymentFilters, page: {cursor?: unknown; limit?: number} = {}) {
   const {where, args} = paymentWhere(f);
   const [rows, t] = await Promise.all([paymentsPage(f, page.cursor, page.limit ?? 100),
+    // Collected leaves out refunds: a refunded payment entirely, and what was refunded so far from one that is still paid
+    // (issue #42). Fees are every Stripe fee recorded for the matching payments.
     env.DB!.prepare(`SELECT count(*) AS matched,
-        COALESCE(sum(CASE WHEN o.status='paid' THEN o.amount_cents END),0) AS collected,
-        COALESCE(sum(CASE WHEN o.status='paid' AND o.source='stripe' THEN o.amount_cents END),0) AS online,
-        COALESCE(sum(CASE WHEN o.status='paid' AND o.source='offline' THEN o.amount_cents END),0) AS offline,
-        COALESCE(sum(CASE WHEN o.status='refunded' THEN o.amount_cents END),0) AS refunded,
-        COALESCE(sum(o.status='paid'),0) AS paid FROM orders o WHERE ${where}`).bind(...args).first<Record<string, number>>()]);
-  return {payments: rows.rows.map(paymentView), next: rows.next, matched: Number(t?.matched ?? 0), totals: {
-    collectedCents: Number(t?.collected ?? 0), onlineCents: Number(t?.online ?? 0), offlineCents: Number(t?.offline ?? 0), refundedCents: Number(t?.refunded ?? 0), count: Number(t?.paid ?? 0)
+        COALESCE(sum(CASE WHEN x.status='paid' THEN x.amount_cents-x.back END),0) AS collected,
+        COALESCE(sum(CASE WHEN x.status='paid' AND x.source='stripe' THEN x.amount_cents-x.back END),0) AS online,
+        COALESCE(sum(CASE WHEN x.status='paid' AND x.source='offline' THEN x.amount_cents END),0) AS offline,
+        COALESCE(sum(x.back),0) AS refunded, COALESCE(sum(x.fee),0) AS fees,
+        COALESCE(sum(x.status='paid'),0) AS paid
+      FROM (SELECT o.status,o.source,o.amount_cents,${REFUNDED_SQL} AS back,(SELECT COALESCE(sum(fee_cents),0) FROM stripe_fees WHERE order_id=o.id) AS fee
+        FROM orders o WHERE ${where}) x`).bind(...args).first<Record<string, number>>()]);
+  return {payments: await viewsOf(rows.rows), next: rows.next, matched: Number(t?.matched ?? 0), totals: {
+    collectedCents: Number(t?.collected ?? 0), onlineCents: Number(t?.online ?? 0), offlineCents: Number(t?.offline ?? 0), refundedCents: Number(t?.refunded ?? 0),
+    feesCents: Number(t?.fees ?? 0), count: Number(t?.paid ?? 0)
   }};
 }
 
@@ -135,16 +168,20 @@ export async function* allPayments(f: PaymentFilters, size = BATCH_SIZE) {
   let cursor: string | null = null;
   do {
     const page: Page<any> = await paymentsPage(f, cursor, size);
-    yield page.rows.map(paymentView);
+    yield await viewsOf(page.rows);
     cursor = page.next;
   } while (cursor);
 }
 
 const csvCell = (v: unknown) => { const s = String(v ?? ''); return /[",\n\r]/.test(s) || /^[=+\-@]/.test(s) ? '"' + (/^[=+\-@]/.test(s) ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
 export function paymentsCsv(payments: ReturnType<typeof paymentView>[]) {
-  const head = ['Paid on', 'Status', 'Paid via', 'Method', 'Type', 'Item', 'Dates', 'Wrestler', 'Parent', 'Email', 'Phone', 'Amount', 'List price', 'Discount', 'Term start', 'Term end', 'Note', 'Void reason'];
-  const money = (c: number) => (c / 100).toFixed(2);
+  // Refunded, Stripe fee and Net cover every card payment behind the row: one, or each monthly payment so far (Card
+  // payments). A blank fee means Stripe's fee isn't recorded yet. Net after Stripe fee is before any refund, as Stripe shows it.
+  const head = ['Paid on', 'Status', 'Paid via', 'Method', 'Type', 'Item', 'Dates', 'Wrestler', 'Parent', 'Email', 'Phone', 'Amount', 'List price', 'Discount', 'Term start', 'Term end', 'Note', 'Void reason',
+    'Refunded', 'Refunded on', 'Card payments', 'Stripe fee', 'Net after Stripe fee'];
+  const money = (c: number) => (c / 100).toFixed(2), card = (p: typeof payments[number], v: string) => p.source === 'stripe' ? v : '';
   const lines = payments.map(p => [p.paidOn, p.status, p.source === 'offline' ? 'Offline' : 'Online', p.method, p.kind, p.item, p.dates.join(' '), p.wrestler, p.parent, p.email, p.phone,
-    money(p.amountCents), money(p.listCents), money(p.discountCents), p.termStart ?? '', p.termEnd ?? '', p.note, p.voidReason].map(csvCell).join(','));
+    money(p.amountCents), money(p.listCents), money(p.discountCents), p.termStart ?? '', p.termEnd ?? '', p.note, p.voidReason,
+    p.refundedCents ? money(p.refundedCents) : '', p.refundedOn, card(p, String(p.cardPayments)), card(p, p.feeCents === null ? '' : money(p.feeCents)), card(p, p.netCents === null ? '' : money(p.netCents))].map(csvCell).join(','));
   return [head.join(','), ...lines].join('\r\n') + '\r\n';
 }

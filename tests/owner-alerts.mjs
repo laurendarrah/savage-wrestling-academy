@@ -29,6 +29,7 @@ function load(file) {
           ownerIdentity: async () => ({owner: actor.owner ? {userId: actor.id} : null, headers: new Headers()}),
           sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name === 'vinext/server/fetch-handler') return {default: {fetch: async () => handlerResult}};
+        if (name.endsWith('/stripe-fees') && file.endsWith('worker.ts')) return {recordStripeFees: async () => ({mode: 'test', checked: 0, recorded: 0, failed: 0, waiting: 0, error: null, skipped: null})};
         if (name.endsWith('/notify') && file.endsWith('worker.ts')) return {dailyReminders: async () => { if (reminderFails) throw Error('Reminder for sam@example.test failed: D1_ERROR at row 7'); return 0; }};
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'));
         throw Error('unexpected import ' + name);

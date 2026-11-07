@@ -1,15 +1,19 @@
 // The academy's books (issue #194, decided in #197 Q8): income and expenses by month and year.
 //
 // One source of truth for every dollar:
-// - Card payments, monthly installments and refunds are read from orders and stripe_events, which only the verified
-//   Stripe webhook (lib/stripe-webhook.ts) marks paid or refunded.
+// - Card payments, monthly installments and refunds are read from orders, stripe_events and payment_refunds, which only
+//   the verified Stripe webhook (lib/stripe-webhook.ts) writes. A refund, full or partial, goes out on the day Stripe
+//   reported it (lib/card-refunds.ts); the payment itself still came in on the day it was paid.
+// - Stripe's card processing fees are read from stripe_fees (lib/stripe-fees.ts) and go out as an expense on the day of
+//   the payment. Stripe keeps its fee when a payment is refunded, so the fee stays.
 // - Offline payments are read from orders too (lib/offline-payments.ts records them; a voided one drops out).
 // - financial_entries holds only what the owner types in: expenses and other income.
 // Nothing is copied into the books, so a payment can never be counted twice or go missing when it is voided or
-// refunded. Amounts are whole cents. Stripe fees are not stored yet (#42), so card income is before fees.
+// refunded. Amounts are whole cents. Card income is shown before fees, and the fees as their own expense (issue #42).
 import {env} from 'cloudflare:workers';
 import {academyDay} from './datetime';
 import {stripeMode} from './checkout-config';
+import {refundSteps, type RefundRow} from './card-refunds';
 
 export const ENTRY_KINDS = ['expense', 'income'] as const;
 export type EntryKind = typeof ENTRY_KINDS[number];
@@ -26,6 +30,7 @@ export const academyToday = () => academyDay(new Date());
 export const KIND_CATEGORY: Record<string, string> = {
   annual: 'Memberships, paid in full', monthly: 'Monthly memberships', walkin: 'Walk-ins', event: 'Camps, clinics and events', live: 'Friday Night Live', lesson: 'Private lessons',
 };
+export const FEE_CATEGORY = 'Card processing fees';
 const METHOD_LABEL: Record<string, string> = {cash: 'Cash', check: 'Check', venmo: 'Venmo', zelle: 'Zelle', 'card-in-person': 'Card in person', other: 'Other'};
 
 export type LedgerLine = {
@@ -58,7 +63,7 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
   // Payments are stored as UTC instants; read a day either side, then keep those whose New York date is in range.
   const lo = shift(from, -1), hi = shift(to, 2), live = stripeMode() === 'live' ? 1 : 0;
   const inRange = (d: string) => d >= from && d <= to;
-  const [paid, installments, refunds, entries] = await env.DB!.batch([
+  const [paid, installments, refunds, history, fees, entries] = await env.DB!.batch([
     // Card payments for the current Stripe mode, and offline payments. A refunded payment still came in; its refund
     // goes out on the day it was refunded. Voided offline payments (status canceled) were never received.
     env.DB!.prepare(`SELECT o.id,o.paid_at,o.kind,o.item_label,o.wrestler_name,o.amount_cents,o.source,o.pricing,s.payments_total FROM orders o
@@ -68,10 +73,17 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
     // Monthly payments 2 to 12. The webhook counts each once (stripe_events) after checking the amount.
     env.DB!.prepare(`SELECT e.id,e.received_at,e.outcome,o.kind,o.item_label,o.wrestler_name,o.amount_cents FROM stripe_events e JOIN orders o ON o.id=e.order_id
       WHERE e.outcome GLOB 'installment-[0-9]*-of-[0-9]*' AND o.source='stripe' AND o.livemode=? AND o.amount_cents>0 AND e.received_at>=? AND e.received_at<?`).bind(live, lo, hi),
-    // Full refunds, dated when Stripe reported them.
+    // Full refunds recorded before refund amounts were stored (issue #42), dated when Stripe reported them.
     env.DB!.prepare(`SELECT * FROM (SELECT o.id,o.kind,o.item_label,o.wrestler_name,o.amount_cents,
         COALESCE((SELECT min(received_at) FROM stripe_events WHERE order_id=o.id AND outcome='refunded'),o.updated_at) AS refunded_at
-      FROM orders o WHERE o.status='refunded' AND o.source='stripe' AND o.livemode=? AND o.amount_cents>0) WHERE refunded_at>=? AND refunded_at<?`).bind(live, lo, hi),
+      FROM orders o WHERE o.status='refunded' AND o.source='stripe' AND o.livemode=? AND o.amount_cents>0
+        AND NOT EXISTS (SELECT 1 FROM payment_refunds r WHERE r.order_id=o.id)) WHERE refunded_at>=? AND refunded_at<?`).bind(live, lo, hi),
+    // Every refund total Stripe has reported up to the end of the period: each refund is the change from the one before.
+    env.DB!.prepare(`SELECT r.id,r.order_id,r.payment_intent,r.amount_cents,r.refunded_cents,r.refunded_at,o.item_label,o.wrestler_name FROM payment_refunds r JOIN orders o ON o.id=r.order_id
+      WHERE r.livemode=? AND o.source='stripe' AND o.livemode=? AND r.refunded_at<?`).bind(live, live, hi),
+    // Stripe's fee for each card payment, on the day of the payment.
+    env.DB!.prepare(`SELECT f.payment_intent,f.fee_cents,f.charged_at,o.item_label,o.wrestler_name FROM stripe_fees f JOIN orders o ON o.id=f.order_id
+      WHERE f.livemode=? AND o.source='stripe' AND o.livemode=? AND f.fee_cents>0 AND f.charged_at>=? AND f.charged_at<?`).bind(live, live, lo, hi),
     env.DB!.prepare(`SELECT id,kind,entry_date,amount_cents,category,note,receipt,revision FROM financial_entries
       WHERE deleted_at IS NULL AND entry_date>=? AND entry_date<=?`).bind(from, to),
   ]);
@@ -97,6 +109,24 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
     if (!inRange(date)) continue;
     lines.push({...base, id: 'refund:' + r.id, date, type: 'refund', source: 'online', category: 'Refunds',
       description: `Refund: ${r.item_label} · ${r.wrestler_name}`, method: 'Card online', amountCents: r.amount_cents});
+  }
+  const names = new Map((history.results as any[]).map(r => [r.order_id, r]));
+  for (const s of refundSteps(history.results as RefundRow[])) {
+    const date = academyDay(s.refunded_at), o = names.get(s.order_id);
+    if (!inRange(date)) continue;
+    const what = `${o.item_label} · ${o.wrestler_name}`, money = (c: number) => '$' + (c / 100).toFixed(2);
+    // A drop in Stripe's total means a refund failed and the money came back.
+    if (s.changeCents < 0) { lines.push({...base, id: 'refund:' + s.id, date, type: 'income', source: 'online', category: 'Refunds reversed',
+      description: `Refund reversed: ${what}`, method: 'Card online', amountCents: -s.changeCents}); continue; }
+    const kind = s.refunded_cents < s.amount_cents ? `Partial refund (${money(s.refunded_cents)} of ${money(s.amount_cents)} refunded so far)` : s.previousCents ? `Refund of the rest (${money(s.amount_cents)} refunded in all)` : 'Refund';
+    lines.push({...base, id: 'refund:' + s.id, date, type: 'refund', source: 'online', category: 'Refunds',
+      description: `${kind}: ${what}`, method: 'Card online', amountCents: s.changeCents});
+  }
+  for (const r of fees.results as any[]) {
+    const date = academyDay(r.charged_at);
+    if (!inRange(date)) continue;
+    lines.push({...base, id: 'fee:' + r.payment_intent, date, type: 'expense', source: 'online', category: FEE_CATEGORY,
+      description: `Stripe fee: ${r.item_label} · ${r.wrestler_name}`, method: 'Card online', amountCents: r.fee_cents});
   }
   for (const r of entries.results as any[])
     lines.push({id: 'entry:' + r.id, date: r.entry_date, type: r.kind === 'income' ? 'income' : 'expense', source: 'owner', category: r.category,

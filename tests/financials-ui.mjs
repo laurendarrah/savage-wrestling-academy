@@ -28,8 +28,8 @@ const report = (m = month) => {
     suggestions: {expense: ['Rent', 'Equipment', 'Insurance'], income: ['Sponsorship']}};
 };
 const calls = [];
-let reply = () => report();
-const fetch = async (url, opts) => { calls.push({url, body: opts?.body ? JSON.parse(opts.body) : null}); const b = opts?.body ? {ok: true, id: 'new', revision: 1} : reply(url); return {ok: true, status: 200, json: async () => b}; };
+let reply = () => report(), postReply = () => ({ok: true, id: 'new', revision: 1});
+const fetch = async (url, opts) => { calls.push({url, body: opts?.body ? JSON.parse(opts.body) : null}); const b = opts?.body ? postReply(JSON.parse(opts.body)) : reply(url); return {ok: true, status: 200, json: async () => b}; };
 let kind = 'expense';
 const ctx = vm.createContext({Intl, Date, JSON, Math, Number, String, Array, Object, URLSearchParams, Promise, setTimeout, clearTimeout, console, fetch, confirm: () => true,
   location: {search: ''}, history: {replaceState() {}}, window: {addEventListener() {}},
@@ -52,6 +52,7 @@ for (let c = 1; c < 5000; c += 7) assert.equal(run(`toCents('${(c / 100).toFixed
 assert.equal(calls[0].url, '/api/financials?month=' + month);
 assert.equal(el('status').textContent, '');
 assert.equal(el('testMode').hidden, false, 'test mode is called out');
+assert.equal(el('feesNote').hidden, true, 'no fee notice when every card fee is in');
 assert.equal(el('tIn').textContent, '$3,090.00'); assert.equal(el('tRefunds').textContent, '−$2,400.00'); assert.equal(el('tExpenses').textContent, '−$1,851.00', 'the minus sign stays with the amount'); assert.equal(el('tNet').textContent, '-$1,161.00');
 assert.match(el('tNetNote').textContent, /so far: -\$461\.00$/);
 assert.equal(el('csvMonth').href, '/api/financials?format=csv&month=' + month); assert.equal(el('csvYear').href, '/api/financials?format=csv&year=' + month.slice(0, 4));
@@ -142,10 +143,30 @@ assert.match(el('lines').innerHTML, /Nothing recorded for/);
 assert.match(el('catIn').innerHTML, /No money in for/);
 assert.equal(el('date').value, prior + '-01', 'entries for a past month start on its first day');
 
+// Card fees (issue #42): payments still waiting for Stripe's fee are called out, and the owner can fetch them now.
+reply = () => ({...report(), feesWaiting: 3});
+await run('load(report.month)'); await settle();
+assert.equal(el('feesNote').hidden, false);
+assert.match(el('feesText').textContent, /^3 card payments are still waiting for Stripe's fee/);
+calls.length = 0; postReply = () => ({ok: true, mode: 'test', checked: 3, recorded: 2, failed: 1, waiting: 1, error: null});
+reply = () => ({...report(), feesWaiting: 1});
+await el('feesNow').onclick(); await settle();
+assert.deepEqual(calls[0].body, {action: 'fees'}, 'the button only asks the server to read fees; nothing else is sent');
+assert.equal(calls[1].url, '/api/financials?month=' + month, 'the month reloads with the new fees');
+assert.equal(el('status').textContent, 'Card fees added for 2 payments.');
+assert.match(el('feesText').textContent, /^1 card payment is still waiting/);
+postReply = () => ({ok: false, recorded: 0, failed: 2, error: 'Stripe would not share card fees with the saved restricted key.'});
+await el('feesNow').onclick(); await settle();
+assert.match(el('status').textContent, /Stripe would not share card fees/, 'a key without permission is explained');
+postReply = () => ({ok: true, recorded: 0, failed: 0, error: null});
+await el('feesNow').onclick(); await settle();
+assert.match(el('status').textContent, /No new card fees yet/);
+reply = () => report(); postReply = () => ({ok: true, id: 'new', revision: 1});
+
 // The page itself: owner-only route, sentence-case wording, no sample data, an accessible table beside the chart.
 assert.match(readFileSync('app/financials/route.ts', 'utf8'), /ownerPage\(request, html\)/);
 assert.match(html, /<div id="chart" aria-hidden="true">/); assert.match(html, /<caption class="sr" id="yearCaption">/);
-assert.match(html, /not an accounting system/); assert.match(html, /before Stripe fees/);
+assert.match(html, /not an accounting system/); assert.match(html, /Stripe's card fees are an expense of their own \(Card processing fees\)/);
 assert.doesNotMatch(html, /sample|demo|lorem/i);
 assert.doesNotMatch(html, /\son[a-z]+="/, 'no inline handlers');
 console.log('Books page tests passed');
