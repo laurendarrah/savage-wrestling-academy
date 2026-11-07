@@ -31,6 +31,9 @@ Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/RO
 - Put `Closes #<issue>` in the pull request description and fill in the template.
 - Decisions live in issues labeled `needs-decision`. Never encode a business policy that is not decided there.
 - When a plan changes, update `docs/LAUNCH_PLAN.md` in the same pull request.
+- More than one person works here with their own Claude (Lauren and Justin). Before starting, check the open pull requests and issues labeled `in-progress`. If someone is already on it, don't start it; ask in the issue. Label your own issue `in-progress` when you start and remove the label if you stop.
+- Rebase on `origin/main` right before opening a pull request, and again if another one merges first. Merge one pull request at a time and let its Deploy finish before the next, because a newer push to `main` cancels the older checks and skips that deploy.
+- Never overwrite the owner's saved settings with a data migration. A migration may only change rows that a setup migration wrote and nobody has saved since (match on `updated_by`).
 - Full process: `CONTRIBUTING.md`.
 
 ## Things that look real but are not
