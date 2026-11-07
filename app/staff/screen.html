@@ -1,1 +1,94 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach access | Savage</title><style>*{box-sizing:border-box}body{font:15px Arial;line-height:1.6;background:#f5f5f6;color:#18191c;margin:0}main{max-width:900px;margin:auto;padding:24px}section,article{background:white;border:1px solid #ddd;border-radius:10px;padding:22px;margin:20px 0}h1{font-size:30px}button,input,select{font:inherit}button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:white;cursor:pointer;color:#18191c}.primary{background:#d72732;color:white;border-color:#d72732}label{display:block;font-size:13px;font-weight:600;margin:14px 0}input,select{display:block;width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-top:6px}input[type=checkbox]{display:inline;width:auto}a{color:#b12c38}.muted{color:#6d707a;font-size:13px}#status{font-size:14px;font-weight:600}.row{display:flex;gap:12px;flex-wrap:wrap}[hidden]{display:none!important}button:disabled{opacity:.55}</style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Coach access</h1><p>Each coach uses their own email/password account and authenticator. Coaches can manage only their own openings. Owner settings, customer profiles, and backups remain unavailable to them.</p><section><h2>Add or update a coach</h2><form id="staffForm"><label>Name<input name="name" maxlength="100" required></label><label>Coach email<input name="email" type="email" required></label><p>Assigned programs</p><label><input type="checkbox" name="programs" value="Elementary"> SWA Development</label><label><input type="checkbox" name="programs" value="Intermediate"> SWA Intermediate</label><label><input type="checkbox" name="programs" value="Advanced"> SWA Advance</label><button class="primary">Save coach access</button></form><p class="muted">Saving access does not send an invitation. The coach must create and verify their own account using this exact email. Program assignments do not grant access to customer records.</p></section><div id="staff"></div><p id="status" role="status" aria-live="polite"></p></main><script>const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const programName=id=>({Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'}[id]||id);async function call(path,body){const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error(data.error||'Request failed.');return data}async function load(){try{const data=await call('/api/staff');$('staff').innerHTML=data.staff.map(s=>`<article><h2>${esc(s.name)}</h2><p>${esc(s.email)} · ${s.active?'Active':'Revoked'}</p><p>${esc(JSON.parse(s.programs).map(programName).join(', ')||'No program assignments')}</p>${s.active?`<button data-email="${esc(s.email)}">Revoke coach access</button>`:''}</article>`).join('')||'<p>No coaches have access yet.</p>';document.querySelectorAll('[data-email]').forEach(b=>b.onclick=async()=>{if(!confirm('Revoke coach access for '+b.dataset.email+'?'))return;try{await call('/api/staff',{action:'revoke',email:b.dataset.email});await load();$('status').textContent='Coach access revoked.'}catch(e){$('status').textContent=e.message}})}catch(e){$('status').textContent=e.message}}$('staffForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);try{await call('/api/staff',{action:'grant',name:f.get('name'),email:f.get('email'),programs:f.getAll('programs')});await load();$('status').textContent='Coach access saved.'}catch(error){$('status').textContent=error.message}};load();</script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coaches | Savage Wrestling Academy</title><style>
+*{box-sizing:border-box}body{font:16px Arial;line-height:1.55;background:#f4f5f7;color:#141416;margin:0}main{max-width:960px;margin:auto;padding:24px 16px 48px}
+section,article{background:#fff;border:1px solid #e1e3e8;border-radius:6px;padding:20px;margin:18px 0}h1{margin:8px 0 4px}h2{margin:0 0 6px}h3{margin:0;font-size:20px}
+button,input{font:inherit}button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;color:#141416}.primary{background:#c4222c;color:#fff;border-color:#c4222c}
+label{display:block;font-weight:600;margin:14px 0}input:not([type=checkbox]){display:block;width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-top:6px}
+a{color:#c4222c}.muted{color:#55585f}#status{font-weight:600}[hidden]{display:none!important}button:disabled{opacity:.55}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}@media(max-width:620px){.pair{grid-template-columns:1fr}}
+fieldset{border:0;padding:0;margin:12px 0;min-width:0}legend{font-weight:700;padding:0;margin:0 0 4px}
+.checks{display:flex;flex-wrap:wrap;gap:4px 18px}.checks label{display:flex;align-items:center;gap:10px;margin:0;min-height:44px;font-weight:600}
+.linkbox{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}.linkbox label{flex:1 1 280px;margin:0;min-width:0}.linkbox input{font:14px/1.4 ui-monospace,Menlo,Consolas,monospace}
+.result{border-left:4px solid #1f6f3a;background:#f2f9f4}
+.list{display:grid;gap:12px;margin-top:12px}.list article{margin:0}
+.coach-head{display:flex;gap:14px;align-items:flex-start}.avatar{flex:none;width:52px;height:52px;border-radius:50%;background:#141416;color:#fff;display:grid;place-items:center;font:800 21px/1 'Barlow Condensed','Arial Narrow',Arial,sans-serif;text-transform:uppercase;border:2px solid #c4222c}
+.coach-head .grow{flex:1;min-width:0}.coach-head p{margin:2px 0 0;overflow-wrap:anywhere}
+.bio{margin:12px 0 0;white-space:pre-line}.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}.chips li{background:#eef0f2;border-radius:999px;padding:2px 10px;font-size:14px;font-weight:600}
+.warn{margin:10px 0 0;padding:8px 12px;border-left:3px solid #8a5a00;background:#fff8eb;border-radius:0 6px 6px 0}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}.actions a{min-height:44px;display:inline-flex;align-items:center}
+details.change{margin-top:12px}details.change summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:#c4222c}
+.removed{background:#f7f8fa}.invite-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}.invite-row p{margin:0}
+.state{display:inline-block;padding:1px 8px;border-radius:999px;font-size:13px;font-weight:700;background:#e6f2ea;color:#1f6f3a}.state.expired{background:#fff4e5;color:#7a4b00}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main>
+<a href="/">← Owner dashboard</a>
+<h1>Coaches</h1>
+<p>Invite coaches, choose their programs, and keep their profiles up to date. Each coach signs in with their own email, password and authenticator app. Coaches see only their own lessons, today’s roster for their programs and the practice plans you share.</p>
+<section aria-labelledby="inviteTitle"><h2 id="inviteTitle">Invite a coach</h2><p class="muted">The coach gets a link to create their account. It works once, only for this email, and for <span id="inviteDays">7</span> days. You can always copy the link and send it yourself.</p>
+<form id="inviteForm"><div class="pair"><label>Coach’s name<input name="name" maxlength="100" required autocomplete="off"></label><label>Coach’s email<input name="email" type="email" maxlength="254" required autocomplete="off"></label></div>
+<fieldset><legend>Programs they coach</legend><div class="checks" id="invitePrograms"></div></fieldset>
+<button class="primary" id="sendInvite">Create invite link</button></form>
+<div id="inviteResult" class="result" hidden style="margin-top:16px;padding:14px 16px;border-radius:0 6px 6px 0"><p id="inviteNote" style="margin:0 0 10px;font-weight:600"></p>
+<div class="linkbox"><label>Invite link<input id="inviteLink" readonly></label><button type="button" id="copyLink">Copy link</button></div></div></section>
+<section id="self" aria-labelledby="selfTitle"><h2 id="selfTitle">You as a coach</h2><div id="selfBody"><p class="muted">Loading…</p></div></section>
+<section aria-labelledby="staffTitle"><h2 id="staffTitle">Your coaches</h2><div id="staff" class="list"><p class="muted">Loading…</p></div></section>
+<section id="invitesBox" aria-labelledby="invitesTitle" hidden><h2 id="invitesTitle">Invitations not yet accepted</h2><div id="invites" class="list"></div></section>
+<section id="removedBox" aria-labelledby="removedTitle" hidden><h2 id="removedTitle">Removed coaches</h2><p class="muted">They can’t sign in as coaches. Their past lessons, payments and pay records stay in your reports.</p><div id="removed" class="list"></div></section>
+<p id="status" role="status" aria-live="polite"></p></main>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PROGRAMS=[['Elementary','SWA Development'],['Intermediate','SWA Intermediate'],['Advanced','SWA Advance']];
+const programName=id=>(PROGRAMS.find(p=>p[0]===id)||[id,id])[1];
+const shortDate=iso=>new Date(iso).toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric'});
+const initials=n=>String(n||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('')||'?';
+const checks=(name,chosen=[])=>PROGRAMS.map(([v,n])=>`<label><input type="checkbox" name="${name}" value="${v}"${chosen.includes(v)?' checked':''}> ${n}</label>`).join('');
+const picked=(root,name)=>[...root.querySelectorAll(`input[name="${name}"]:checked`)].map(i=>i.value);
+const say=t=>{$('status').textContent=t};
+let state=null;
+async function call(body){const r=await fetch('/api/staff',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error(data.error||'Request failed.');return data}
+function profileBits(s){return `${s.bio?`<p class="bio">${esc(s.bio)}</p>`:'<p class="bio muted">No profile yet. The coach can add a bio from coach home, or you can.</p>'}${s.specialties.length?`<ul class="chips">${s.specialties.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}`}
+function coachCard(s){
+ const upcoming=s.upcomingLessons?`<p class="warn">${s.upcomingLessons} booked lesson${s.upcomingLessons===1?'':'s'} still to come.</p>`:'';
+ return `<article data-coach="${esc(s.email)}"><div class="coach-head"><div class="avatar" aria-hidden="true">${esc(initials(s.displayName))}</div><div class="grow"><h3>${esc(s.displayName)}</h3>
+ <p class="muted">${esc(s.email)}${s.phone?' · <a href="tel:'+esc(s.phone)+'">'+esc(s.phone)+'</a>':''}</p><p>${esc(s.programs.map(programName).join(', ')||'No programs yet')}</p></div></div>${profileBits(s)}${upcoming}
+ <details class="change"><summary>Change name or programs</summary><label>Name on your lists<input data-name value="${esc(s.name)}" maxlength="100"></label><div class="checks">${checks('p-'+s.email,s.programs)}</div><button type="button" data-save>Save changes</button></details>
+ <div class="actions"><a href="/coach-profile?email=${encodeURIComponent(s.email)}">Edit profile →</a><button type="button" data-remove>Remove access</button></div></article>`}
+function removedCard(s){return `<article class="removed" data-coach="${esc(s.email)}"><div class="coach-head"><div class="avatar" aria-hidden="true">${esc(initials(s.displayName))}</div><div class="grow"><h3>${esc(s.displayName)}</h3><p class="muted">${esc(s.email)} · removed ${esc(shortDate(s.updatedAt))}</p></div></div>
+ ${s.upcomingLessons?`<p class="warn">${s.upcomingLessons} booked lesson${s.upcomingLessons===1?'':'s'} still to come. Move or refund them before removing this coach for good.</p>`:''}
+ <div class="actions"><button type="button" data-restore>Restore access</button><button type="button" data-delete>Remove permanently</button></div></article>`}
+function inviteCard(i){const expired=i.status==='expired';return `<article data-invite="${esc(i.id)}"><div class="invite-row"><div><h3>${esc(i.name)}</h3><p class="muted">${esc(i.email)} · ${esc(i.programs.map(programName).join(', ')||'No programs')}</p>
+ <p><span class="state${expired?' expired':''}">${expired?'Expired':'Waiting'}</span> <span class="muted">${expired?'Ended':'Works until'} ${esc(shortDate(i.expiresAt))}</span></p></div>
+ <div class="actions" style="margin:0"><button type="button" data-renew>New link</button>${expired?'':'<button type="button" data-cancel>Cancel invite</button>'}</div></div></article>`}
+function selfHtml(me){
+ if(me&&me.active)return `<p>You coach <b>${esc(me.programs.map(programName).join(', ')||'no programs yet')}</b>. Families can book the lesson openings you post, and your lessons show in the coach pay report.</p>
+  <div class="actions"><a class="button primary" href="/coach">Open Coach view →</a><a href="/coach-profile">Edit your coach profile →</a></div>
+  <details class="change"><summary>Change your programs</summary><div class="checks">${checks('self',me.programs)}</div><button type="button" id="selfSave">Save programs</button></details>
+  <div class="actions"><button type="button" id="selfStop">Stop coaching</button></div>`;
+ return `<p>Do you coach too? Add yourself to post private lesson openings, take on programs and appear in the coach pay report. You keep your owner account and sign-in.</p>
+  <label>Name families see<input id="selfName" maxlength="100" value="${esc(me?.name||'')}" placeholder="Coach Justin"></label><fieldset><legend>Programs you coach</legend><div class="checks">${checks('self',me?.programs||[])}</div></fieldset>
+  <button type="button" class="primary" id="selfAdd">Add yourself as a coach</button>`}
+async function act(body,done){try{await call(body);await load();say(done)}catch(e){say(e.message)}}
+function bind(){
+ document.querySelectorAll('#staff [data-coach]').forEach(card=>{const email=card.dataset.coach;
+  card.querySelector('[data-save]').onclick=()=>act({action:'grant',email,name:card.querySelector('[data-name]').value,programs:picked(card,'p-'+email)},'Coach saved.');
+  card.querySelector('[data-remove]').onclick=()=>{if(!confirm('Remove coach access for '+email+'? They can no longer sign in as a coach. Their past lessons and pay records stay.'))return;act({action:'revoke',email},'Coach access removed.')}});
+ document.querySelectorAll('#removed [data-coach]').forEach(card=>{const email=card.dataset.coach;
+  card.querySelector('[data-restore]').onclick=()=>act({action:'restore',email},'Coach access restored.');
+  card.querySelector('[data-delete]').onclick=()=>{if(!confirm('Remove '+email+' permanently? Their profile and any open times they posted are deleted and they leave this list. Past lessons, payments and pay records are kept. This can’t be undone.'))return;act({action:'delete',email,confirmed:true},'Coach removed permanently. Their lesson and pay history is kept.')}});
+ document.querySelectorAll('#invites [data-invite]').forEach(card=>{const id=card.dataset.invite;
+  card.querySelector('[data-renew]').onclick=async()=>{try{const r=await call({action:'renew',id});showLink(r);await load()}catch(e){say(e.message)}};
+  const cancel=card.querySelector('[data-cancel]');if(cancel)cancel.onclick=()=>{if(!confirm('Cancel this invite? The link stops working.'))return;act({action:'cancel-invite',id},'Invite canceled.')}});
+ const add=$('selfAdd');if(add)add.onclick=()=>act({action:'self',name:$('selfName').value,programs:picked($('self'),'self')},'You are now a coach too. Open Coach view to post lesson openings.');
+ const save=$('selfSave');if(save)save.onclick=()=>act({action:'self',programs:picked($('self'),'self')},'Your programs are saved.');
+ const stop=$('selfStop');if(stop)stop.onclick=()=>{if(!confirm('Stop coaching? Families can no longer book your open times. Your past lessons and pay records stay.'))return;act({action:'self-stop'},'You are no longer listed as a coach.')};
+}
+function showLink(r){$('inviteLink').value=r.link;$('inviteNote').textContent=(r.emailStatus==='sent'?'Invite emailed to '+r.invite.email+'. ':r.emailStatus==='failed'?'The email could not be sent. ':'Email isn’t set up yet, so nothing was sent. ')+'Copy the link and send it to '+r.invite.name+'. It works until '+shortDate(r.invite.expiresAt)+'.';$('inviteResult').hidden=false;$('inviteResult').scrollIntoView({behavior:'smooth',block:'nearest'})}
+async function load(){try{state=await call();$('inviteDays').textContent=state.inviteDays;
+ const active=state.staff.filter(s=>s.active),removed=state.staff.filter(s=>!s.active);
+ $('staff').innerHTML=active.map(coachCard).join('')||'<p class="muted">No coaches yet. Invite your first coach above.</p>';
+ $('removed').innerHTML=removed.map(removedCard).join('');$('removedBox').hidden=!removed.length;
+ $('invites').innerHTML=state.invites.map(inviteCard).join('');$('invitesBox').hidden=!state.invites.length;
+ $('selfBody').innerHTML=selfHtml(state.self);bind()}catch(e){say(e.message)}}
+$('invitePrograms').innerHTML=checks('programs');
+$('inviteForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);$('sendInvite').disabled=true;try{const r=await call({action:'invite',name:f.get('name'),email:f.get('email'),programs:f.getAll('programs')});e.target.reset();showLink(r);await load();say('Invite created for '+r.invite.name+'.')}catch(error){say(error.message)}finally{$('sendInvite').disabled=false}};
+$('copyLink').onclick=async()=>{try{await navigator.clipboard.writeText($('inviteLink').value);say('Invite link copied.')}catch{$('inviteLink').select();say('Select and copy the invite link above.')}};
+load();
+</script></body></html>

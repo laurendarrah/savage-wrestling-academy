@@ -7,6 +7,7 @@ import {privateFormats, academyToday} from '../../../lib/public-schedule';
 import {lessonSettings, openLessons, familyGroups, openingByInvite, groupView, requestGroup, cancelGroup} from '../../../lib/lessons';
 import {checkoutKinds} from '../../../lib/checkout-config';
 import {rateLimited} from '../../../lib/rate-limit';
+import {publicProfiles} from '../../../lib/coach-profile';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
@@ -28,8 +29,15 @@ export async function GET(request: Request) {
   const formats = privateFormats.map(f => ({...f, cents: typeof prices[f.id] === 'number' ? prices[f.id] : null}));
   // Families get an opaque coach key for filtering, never the coach's email address (issue #97).
   const key = async (email: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email)))).slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join('');
-  const openings = await Promise.all((await openLessons(today, undefined, {includeClosed: !!owner.owner})).map(async ({coachEmail, ...o}) => ({...o, coachKey: await key(coachEmail)})));
-  const body: Record<string, unknown> = {formats, openings, paymentsOpen: checkoutKinds().has('lesson')};
+  const list = await openLessons(today, undefined, {includeClosed: !!owner.owner});
+  // About each coach with open times (issue #190): name, bio and specialties from their profile, by coach key.
+  const profiles = await publicProfiles(list.map(o => o.coachEmail)), coaches: Record<string, {name: string; bio: string; specialties: string[]}> = {};
+  const openings = await Promise.all(list.map(async ({coachEmail, ...o}) => {
+    const k = await key(coachEmail), p = profiles.get(coachEmail.toLowerCase());
+    if (p && (p.bio || p.specialties.length)) coaches[k] = p;
+    return {...o, coachKey: k};
+  }));
+  const body: Record<string, unknown> = {formats, openings, coaches, paymentsOpen: checkoutKinds().has('lesson')};
   if (userId) {
     body.mine = await familyGroups(userId, today);
     const join = new URL(request.url).searchParams.get('join');

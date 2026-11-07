@@ -4,7 +4,7 @@
 //
 // Usage: see scripts/e2e/run.sh
 import {createRequire} from 'node:module';
-import {start, sessionCookie} from './fake-supabase.mjs';
+import {start, sessionCookie, users} from './fake-supabase.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 for (const p of ['playwright', '/opt/node-tools/node_modules/playwright']) { try { playwright = require(p); break; } catch {} }
@@ -35,6 +35,8 @@ async function step(name, fn) {
 }
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 const text = async (page, sel) => (await page.locator(sel).first().textContent({timeout: 20000})) ?? '';
+// waitText that names what it waited for when it times out.
+const at = (page, sel, re, ms) => waitText(page, sel, re, ms).catch(async e => { throw new Error(`${sel} never matched ${re}: "${((await page.locator(sel).first().textContent().catch(() => '')) || '').slice(0, 160)}"`); });
 const waitText = async (page, sel, re, ms = 20000) => { await page.waitForFunction(([s, r]) => new RegExp(r).test(document.querySelector(s)?.textContent || ''), [sel, re.source], {timeout: ms}); };
 const api = async (page, url, body) => page.evaluate(async ([u, b]) => { const r = await fetch(u, b ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b)} : {cache: 'no-store'}); return {status: r.status, body: await r.json().catch(() => null)}; }, [url, body]);
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({path: `${SHOTS}/${name}.png`, fullPage: true}); };
@@ -491,11 +493,66 @@ const draw = async (page, sel) => {
   for (let i = 0; i < 25; i++) await page.mouse.move(box.x + 30 + i * 12, box.y + 40 + Math.sin(i / 3) * 18);
   await page.mouse.up();
 };
-await step('owner grants coach access on /staff', async () => {
-  await owner.goto(BASE + '/staff'); await owner.waitForSelector('#staffForm');
-  await owner.fill('#staffForm [name=name]', 'Coach Lee'); await owner.fill('#staffForm [name=email]', 'coach.lee@example.test');
-  await owner.check('#staffForm [name=programs][value=Elementary]'); await owner.click('#staffForm button');
-  await waitText(owner, '#staff', /Coach Lee/);
+// ---------- Coach invitation and onboarding (issue #190) ----------
+let lee;
+await step('owner invites a coach; the coach accepts, sets up the authenticator and lands on coach home', async () => {
+  await owner.goto(BASE + '/staff'); await owner.waitForSelector('#inviteForm');
+  await owner.fill('#inviteForm [name=name]', 'Coach Lee'); await owner.fill('#inviteForm [name=email]', 'coach.lee@example.test');
+  await owner.check('#inviteForm [name=programs][value=Elementary]'); await owner.click('#sendInvite');
+  await owner.waitForFunction(() => document.querySelector('#inviteLink')?.value, null, {timeout: 8000});
+  const link = await owner.inputValue('#inviteLink');
+  expect(link.startsWith(BASE + '/coach-join#invite=') && /#invite=[a-f0-9]{64}$/.test(link), 'invite link from appOrigin(): ' + link);
+  await waitText(owner, '#inviteNote', /Email isn’t set up yet[\s\S]*Copy the link/);
+  await waitText(owner, '#invites', /Coach Lee[\s\S]*Waiting/);
+  await shot(owner, 'staff-invite');
+  lee = await as('invitee');
+  await lee.goto(link); await lee.waitForSelector('#acceptInvite', {state: 'visible'});
+  await waitText(lee, '#details', /Coach Lee[\s\S]*SWA Development/);
+  await shot(lee, 'coach-join');
+  await lee.click('#acceptInvite'); await lee.waitForURL(/\/security$/);
+  const reuse = await api(lee, '/api/coach-invite', {action: 'accept', token: link.split('#invite=')[1]});
+  expect(reuse.status === 410, 'an invite works once: ' + reuse.status);
+  // The stand-in cannot check a real authenticator code, so the walkthrough plays a finished setup.
+  users.invitee.factors = [{id: 'f-lee', status: 'verified', factor_type: 'totp'}]; users.invitee.aal = 'aal2';
+  const c = sessionCookie('invitee', AUTH); await lee.context().addCookies([{name: c.name, value: c.value, url: BASE}]);
+  await lee.goto(BASE + '/security'); await lee.waitForSelector('#continue', {state: 'visible'}); await lee.click('#continue');
+  await lee.waitForURL(/\/coach$/); await waitText(lee, '#heading', /Coach Lee/);
+  await waitText(lee, '#programs', /SWA Development/);
+  await owner.goto(BASE + '/staff'); await waitText(owner, '#staff', /Coach Lee[\s\S]*SWA Development/);
+  expect(!(await owner.isVisible('#invitesBox')), 'the accepted invite leaves the waiting list');
+});
+await step('the new coach writes a profile and posts a weekly opening; families see the bio beside the times', async () => {
+  await lee.goto(BASE + '/coach'); await lee.click('text=Your profile'); await lee.waitForSelector('#profileForm');
+  await lee.fill('#displayName', 'Lee Tran'); await lee.fill('#bio', 'Ten years coaching folkstyle. Former state qualifier.');
+  await lee.fill('#specialties', 'Takedowns, Mat returns'); await lee.fill('#phone', '(631) 555-0199');
+  await lee.click('#saveProfile'); await at(lee, '#status', /Profile saved/);
+  await at(lee, '#preview', /Lee Tran[\s\S]*Ten years[\s\S]*Takedowns/);
+  await shot(lee, 'coach-profile');
+  await lee.goto(BASE + '/coach'); await lee.waitForSelector('#opening');
+  await lee.fill('#opening [name=date]', ny(9)); await lee.fill('#opening [name=start]', '17:00'); await lee.fill('#opening [name=end]', '18:00');
+  await lee.selectOption('#weeks', '3'); await at(lee, '#repeatHelp', /Adds 3 openings/);
+  await lee.click('#opening button.primary'); await at(lee, '#status', /3 openings saved/);
+  expect((await lee.locator('[data-slot]').count()) === 3, 'three weekly openings');
+  await shot(lee, 'coach-weekly');
+  const listing = await api(family, '/api/lessons');
+  const mine = listing.body.openings.filter(o => o.coach === 'Lee Tran');
+  expect(mine.length === 3 && JSON.stringify(listing.body).indexOf('555-0199') < 0 && JSON.stringify(listing.body).indexOf('coach.lee@example.test') < 0, 'family sees the openings, not the phone or email');
+  await family.goto(BASE + '/lesson'); await family.click('[data-path="one"]');
+  await family.selectOption('#coach', {label: 'Lee Tran'});
+  await at(family, '#coachAbout', /About Lee Tran[\s\S]*Ten years coaching folkstyle[\s\S]*Takedowns/);
+  await shot(family, 'lesson-coach-about');
+});
+await step('the owner adds himself as a coach, opens Coach view and posts an opening', async () => {
+  await owner.goto(BASE + '/staff'); await owner.waitForSelector('#selfAdd');
+  await owner.fill('#selfName', 'Justin'); await owner.check('#self [name=self][value=Advanced]'); await owner.click('#selfAdd');
+  await waitText(owner, '#status', /You are now a coach too/);
+  await owner.goto(BASE + '/'); await owner.click('a.toollink[href="/coach"]'); await owner.waitForURL(/\/coach$/);
+  await waitText(owner, '#heading', /Justin/); expect(await owner.isVisible('#ownerNote'), 'owner note in Coach view');
+  await owner.fill('#opening [name=date]', ny(10)); await owner.fill('#opening [name=start]', '08:00'); await owner.fill('#opening [name=end]', '09:00');
+  await owner.click('#opening button.primary'); await waitText(owner, '#status', /Opening saved/);
+  await shot(owner, 'owner-coach-view');
+  const listing = await api(family, '/api/lessons');
+  expect(listing.body.openings.some(o => o.coach === 'Justin' && o.date === ny(10)), 'families can book the owner');
 });
 await step('family requests SWA Advance approval; owner approves; transfer to SWA Advance goes through', async () => {
   await family.goto(BASE + `/register?program=Advanced&wrestler=${samId}`); await family.waitForSelector('#requestApproval');
@@ -647,9 +704,9 @@ await step('family pages fit a phone screen', async () => {
 // ---------- Accessibility (axe-core) on every page, as each role ----------
 const axeSource = (await import('node:fs')).readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const a11yPages = {
-  public: ['/welcome', '/calendar', '/login', '/membership-terms', '/help'],
+  public: ['/welcome', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
-  coach: ['/coach', '/roster', '/help/coach'],
+  coach: ['/coach', '/roster', '/help/coach', '/coach-profile'],
   owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula'],
 };
 const a11y = [];

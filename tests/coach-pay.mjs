@@ -28,7 +28,7 @@ function load(file) {
           strongAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
           sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name.endsWith('/rate-limit')) return {rateLimited: async () => false};
-        if (name.endsWith('/access-control')) return {accountRole: async () => actor.coach ? {role: 'coach', staff: {email: actor.coach, name: 'Coach Dana', programs: ['Intermediate']}} : {role: 'family', staff: null}};
+        if (name.endsWith('/access-control')) return {coachAccess: async () => actor.coach ? {email: actor.coach, name: 'Coach Dana', programs: actor.programs ?? ['Intermediate'], owner: false} : null, accountRole: async () => actor.coach ? {role: 'coach', staff: {email: actor.coach, name: 'Coach Dana', programs: ['Intermediate']}} : {role: 'family', staff: null}};
         if (name.endsWith('/stripe-test')) return {storedStripeKeyFor: async () => null, stripeClientFor: () => null, stripeMode: () => 'test'};
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'));
         throw Error('unexpected import ' + name);
