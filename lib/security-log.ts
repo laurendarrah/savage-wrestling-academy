@@ -2,7 +2,7 @@
 // email instead of internal ids. Records are never changed; this only reads them and looks up names.
 import {env} from 'cloudflare:workers';
 import {programDetails} from './program-names';
-import {dayDate, fullDate, when} from './datetime';
+import {dayDate, dayTime, fullDate, when} from './datetime';
 import {allFamilies, keysetPage} from './paging';
 
 export type SecurityRow = {actor: string; action: string; target: string; created_at: string};
@@ -27,6 +27,9 @@ const TITLES: Record<string, string> = {
   coach_opening_added: 'Lesson opening added',
   coach_opening_removed: 'Lesson opening removed',
   coach_opening_changed: 'Lesson type or spots changed',
+  owner_opening_added: 'Lesson openings added for a coach',
+  owner_opening_changed: 'A coach’s lesson type or spots changed',
+  owner_opening_removed: 'A coach’s lesson opening removed',
   lesson_group_requested: 'Private lesson group asked for',
   lesson_group_canceled: 'Private lesson group called off',
   stripe_test_key_saved: 'Stripe test key saved',
@@ -62,6 +65,9 @@ const TITLES: Record<string, string> = {
   coach_contract_published: 'Coach contract published',
   coach_contract_retired: 'Coach contract no longer asked for',
   coach_contract_signed: 'Coach contract signed',
+  waiver_reissued: 'Family asked to sign the waiver again',
+  parent_consent_reissued: 'Family asked to sign the Parent Consent Form again',
+  coach_contract_reissued: 'Coach asked to sign the contract again',
   membership_transferred: 'Membership moved to another program',
   booking_exception_granted: 'Booking allowed anyway',
   booking_exception_removed: 'Booking exception removed',
@@ -117,6 +123,15 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
       const [version, ...w] = t.split('/'); const key = row.actor + '/' + w.join('/');
       detail = [names.waivers[version], names.wrestlers[key]].filter(Boolean).join(' · '); break;
     }
+    // Issue #239: "version/account/wrestler" for a family, "email version" for a coach.
+    case 'waiver_reissued': case 'parent_consent_reissued': {
+      const [version, ...w] = t.split('/');
+      detail = [names.waivers[version], wrestler(w.join('/'))].filter(Boolean).join(' · '); break;
+    }
+    case 'coach_contract_reissued': {
+      const coach = first.startsWith('former-coach-') ? 'A former coach' : names.coaches[first.toLowerCase()] ?? first;
+      detail = [coach, names.waivers[rest[0] ?? '']].filter(Boolean).join(' · '); break;
+    }
     case 'offline_payment_recorded': {
       const o = order(first); detail = [o?.wrestler, o?.item, money(rest[1] ?? '')].filter(Boolean).join(' · '); break;
     }
@@ -128,6 +143,12 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     case 'booking_exception_granted': {
       const m = /^(\w+) (\S+) until (\S+)$/.exec(t);
       detail = m ? `${wrestler(m[2])} may book without a ${m[1] === 'usaw' ? 'current USA Wrestling card' : m[1] === 'parent_consent' ? 'signed Parent Consent Form' : 'signed waiver'} until ${fullDate(m[3])}` : ''; break;
+    }
+    // The owner changing a coach's openings (issue #239): "email count", "email openingId" or "email date start".
+    case 'owner_opening_added': case 'owner_opening_changed': case 'owner_opening_removed': {
+      const coach = first.startsWith('former-coach-') ? 'A former coach' : names.coaches[first.toLowerCase()] ?? first;
+      detail = [coach, row.action === 'owner_opening_added' && rest[0] ? plural(Number(rest[0]), 'opening', 'openings')
+        : row.action === 'owner_opening_removed' && rest[0] ? dayTime(rest[0], rest[1]) : ''].filter(Boolean).join(' · '); break;
     }
     case 'announcement_sent': detail = rest[0] ? 'Sent to ' + plural(Number(rest[0]), 'family', 'families') : ''; break;
     case 'emails_resent': detail = t; break;

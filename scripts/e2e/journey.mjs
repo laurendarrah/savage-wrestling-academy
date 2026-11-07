@@ -428,6 +428,41 @@ await step('coach removes an opening nobody booked; the booked one stays', async
   await coach.waitForFunction(n => document.querySelectorAll('[data-slot]').length === n - 1, before);
 });
 
+// ---------- The owner manages a coach's openings; families see a month view (issue #239) ----------
+await step('owner adds an opening for a coach; the coach and families see it, in a list or a month; owner removes it', async () => {
+  await owner.goto(BASE + '/staff'); await owner.waitForSelector('#staff [data-coach="coach.dana@example.test"]');
+  await owner.click('#staff [data-coach="coach.dana@example.test"] a[href^="/coach-openings"]');
+  await at(owner, 'h1', /Lesson openings: Coach Dana/); await owner.waitForSelector('#weeks option[value="12"]', {state: 'attached'});
+  await owner.fill('#date', ny(8)); await owner.fill('#start', '12:00'); await owner.dispatchEvent('#start', 'change');
+  expect(await owner.inputValue('#end') === '13:00', 'the end time follows the start');
+  await owner.click('#save'); await at(owner, '#status', /Opening saved/);
+  await at(owner, '#slots', /Open for families to book/);
+  await shot(owner, 'owner-coach-openings');
+  // The coach sees it on coach home; families can choose it, from the list or the month.
+  await coach.goto(BASE + '/coach'); await at(coach, '#slots', /Open for families to book/);
+  await family.goto(BASE + '/lesson'); await family.waitForSelector('[data-path="one"][aria-pressed="true"]');
+  await family.click('#viewMonth'); await family.waitForSelector('#times .cal-item[data-opening]');
+  const month = await text(family, '#times');
+  expect(/Coach Dana/.test(month) && /\$60\.00/.test(month), 'the month shows the coach and the price: ' + month.slice(0, 160));
+  await family.selectOption('#monthSel', ny(8).slice(0, 7));
+  await family.locator(`#times .cal-item:has-text("12:00 PM")`).first().click();
+  await at(family, '#summary', /One-on-one lesson[\s\S]*Coach Dana[\s\S]*\$60\.00/);
+  await shot(family, 'lesson-month');
+  const phone = await phoneAs('family'); await phone.goto(BASE + '/lesson'); await phone.waitForSelector('[data-path="one"][aria-pressed="true"]');
+  await phone.click('#viewMonth'); await phone.waitForSelector('#times .cal-item');
+  const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); expect(over <= 1, `/lesson month scrolls sideways by ${over}px on a phone`);
+  expect(await phone.$eval('#times .cal-dow', d => getComputedStyle(d).display === 'none'), 'phones get a list of days, not the 7-column grid');
+  if (SHOTS) await phone.screenshot({path: `${SHOTS}/phone-lesson-month.png`, fullPage: true});
+  await phone.close();
+  // The owner removes it again (nobody booked it); the change is in the security log.
+  await owner.goto(BASE + '/coach-openings?email=coach.dana%40example.test'); await owner.waitForSelector('#slots [data-slot]');
+  const before = await owner.locator('#slots [data-slot]').count();
+  await owner.locator('#slots article', {hasText: '12:00 PM'}).locator('[data-slot]').click(); await at(owner, '#status', /Opening removed/);
+  await owner.waitForFunction(n => document.querySelectorAll('#slots [data-slot]').length === n - 1, before);
+  await owner.goto(BASE + '/security-log'); const log = await owner.content();
+  expect(log.includes('Lesson openings added for a coach') && log.includes('A coach’s lesson opening removed') && log.includes('Coach Dana'), 'owner changes are in the security log');
+});
+
 // ---------- A full camp is full: no waitlist (#210) ----------
 await step('camp fills; family 2 sees it is full, with no waitlist to join', async () => {
   await family2.goto(BASE + '/family'); await family2.waitForSelector('#familyForm');
@@ -1073,7 +1108,7 @@ const a11yPages = {
   public: ['/welcome', '/team', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/consent', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
   coach: ['/coach', '/roster', '/help/coach', '/coach-profile', '/contract', '/coach-time'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/consent-forms', '/contracts', '/lesson-settings', '/coach-pay', '/timesheets', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/consent-forms', '/contracts', '/lesson-settings', '/coach-pay', '/timesheets', '/transfers', '/messages', '/staff', '/coach-openings?email=coach.dana%40example.test', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {

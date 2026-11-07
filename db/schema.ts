@@ -156,8 +156,18 @@ export const waiverVersions=sqliteTable("waiver_versions",{
 export const waiverSignatures=sqliteTable("waiver_signatures",{
  id:text("id").primaryKey(),versionId:text("version_id").notNull(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),
  wrestlerName:text("wrestler_name").notNull(),signer:text("signer").notNull(),email:text("email").notNull(),
- signatureRecord:text("signature_record").notNull(),signedAt:text("signed_at").notNull()
-},t=>[uniqueIndex("waiver_signature_per_child").on(t.versionId,t.userId,t.wrestlerId,t.wrestlerName),index("waiver_signatures_family").on(t.userId,t.wrestlerId)]);
+ signatureRecord:text("signature_record").notNull(),signedAt:text("signed_at").notNull(),
+ // Issue #239: 0 for the first signature of a version; after the owner asks for it again (signature_reissues), the new
+ // signature is 1, then 2. Each round signs once, so a person still cannot sign the same version twice at once.
+ round:integer("round").notNull().default(0)
+},t=>[uniqueIndex("waiver_signature_per_round").on(t.versionId,t.userId,t.wrestlerId,t.wrestlerName,t.round),index("waiver_signatures_family").on(t.userId,t.wrestlerId)]);
+// The owner asks one family (or one coach) to sign a document again (issue #239, Justin's entry 27). The signature row
+// is never changed: this row marks it replaced, with the owner's reason, and from then on it no longer counts, so the
+// wrestler is unsigned for booking until a parent signs again. One row per signature, never deleted (except with the
+// coach's records under issue #212).
+export const signatureReissues=sqliteTable("signature_reissues",{
+ signatureId:text("signature_id").primaryKey(),userId:text("user_id").notNull(),reason:text("reason").notNull(),reissuedBy:text("reissued_by").notNull(),reissuedAt:text("reissued_at").notNull()
+},t=>[index("signature_reissues_user").on(t.userId)]);
 // Owner settings that are not part of the published academy state, as one JSON document per key (issue #70: lesson
 // prices and coach pay splits).
 export const academySettings=sqliteTable("academy_settings",{

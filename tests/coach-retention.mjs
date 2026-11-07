@@ -113,8 +113,8 @@ function seedCoach(p, email, uid, name, lessonDay) {
   notice(p + '-n1', null, email, 'coach_time_off_approved', 'time-off-decided:' + p + '-off');
   notice(p + '-n2', null, 'team.coach@example.test', 'coach_time_off_team', `time-off-team:${p}-off:team.coach@example.test`);
   notice(p + '-n3', 'alice-uuid', 'alice@example.test', 'card_expiring', p + '-card-soon');
-  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)", p + '-contract', 'contract-1', uid, '', '', name, email.toUpperCase(), '{"strokes":[]}', now);
-  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)", p + '-waiver', 'waiver-1', 'alice-uuid', 'w-alice', 'Wrestler alice ' + p, 'Alice', 'alice@example.test', '{"strokes":[]}', now);
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)", p + '-contract', 'contract-1', uid, '', '', name, email.toUpperCase(), '{"strokes":[]}', now);
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)", p + '-waiver', 'waiver-1', 'alice-uuid', 'w-alice', 'Wrestler alice ' + p, 'Alice', 'alice@example.test', '{"strokes":[]}', now);
   run('INSERT INTO coach_profiles(email,display_name,bio,specialties,phone,photo_key,updated_at,updated_by) VALUES (?,?,?,?,?,NULL,?,?)', email, name, 'Bio', '[]', '555-0199', now, uid);
   run("INSERT INTO coach_invites(id,token_hash,email,name,programs,created_by,created_at,expires_at,revoked_at) VALUES (?,?,?,?,'[]','owner-uuid',?,?,?)", p + '-inv', p + '-hash', email, name, now, now, now);
 }

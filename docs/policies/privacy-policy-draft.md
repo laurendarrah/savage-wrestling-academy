@@ -20,7 +20,7 @@ Accounts are created by a **parent or guardian** (or an adult wrestler). Childre
 - Each wrestler's birth date, and any allergies or medical notes (or that there are none). This is health information about a child. The academy owner sees it, and coaches see allergies and the emergency contact on the check-in roster for their own programs. You can update it at any time.
 
 [Decided in #197, question 14: these details are required, and coaches see allergies and emergency contacts on the check-in roster. Attorney: confirm how allergy and medical notes about minors must be handled and disclosed.]
-- Signatures: when you sign a waiver or scholarship agreement, the drawing of your signature, your typed name, and the date and time.
+- Signatures: when you sign a waiver or scholarship agreement, the drawing of your signature, your typed name, and the date and time. If the academy asks you to sign a document again, the earlier signature is kept with the date and the reason the academy gave.
 - Messages you send the academy, and notes you add to requests (for example, an account closure request).
 - Requests for SWA Advance approval, and the private conversation about them.
 

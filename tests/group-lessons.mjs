@@ -149,7 +149,7 @@ sqlite.prepare("DELETE FROM orders WHERE id='hold'").run();
 as('p6'); assert.match((await quote('p6', partner)).error, /needs a current USA Wrestling card/);
 sqlite.prepare("INSERT INTO waiver_versions(id,title,body,sha256,published_at,published_by,retired_at) VALUES ('wv','Participation waiver','text','h',?,'o',NULL)").run(new Date().toISOString());
 let wq = await quote('p5', partner); assert.equal(wq.ok, false); assert.match(wq.error, /needs a signed Participation waiver/); assert.equal(wq.extra.waiverRequired, true);
-const sign = (u, w, name) => sqlite.prepare("INSERT INTO waiver_signatures VALUES (?, 'wv', ?, ?, ?, 'P', 'e', '{}', 'x')").run('sig-' + w, u, w, name);
+const sign = (u, w, name) => sqlite.prepare("INSERT INTO waiver_signatures VALUES (?, 'wv', ?, ?, ?, 'P', 'e', '{}', 'x', 0)").run('sig-' + w, u, w, name);
 for (const [u, w, n] of [['p1', 'w-p1', 'Sam'], ['p1', 'w-p1b', 'Sasha'], ['p2', 'w-p2', 'Riley'], ['p3', 'w-p3', 'Max'], ['p4', 'w-p4', 'Jo']]) sign(u, w, n);
 assert.equal((await quote('p5', partner)).ok, false, 'Noa still has not signed');
 

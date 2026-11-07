@@ -33,7 +33,29 @@ fieldset{border:0;padding:0;margin:10px 0 0;min-width:0}legend{font-weight:700;p
 .about .avatar{flex:none;width:48px;height:48px;border-radius:50%;background:#141416;color:#fff;display:grid;place-items:center;font:800 19px/1 'Barlow Condensed','Arial Narrow',Arial,sans-serif;text-transform:uppercase;border:2px solid #C4222C}
 .about p{margin:0}.about p+p{margin-top:4px}.about .bio{white-space:pre-line}.about .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}.about .chips li{background:#fff;border:1px solid #E1E3E8;border-radius:999px;padding:1px 10px;font-size:14px;font-weight:600}
 [hidden]{display:none!important}
-</style></head><body><main><h1>Book a private lesson</h1><p class="muted" id="intro">One-on-one, with a partner, or in a small group of up to six. Each family books and pays for their own wrestler at the price per wrestler. Times are New York time.</p>
+/* List or month (issue #239). The month is the coach month calendar's grid (#214, #230) with the program color tokens:
+   open times and one-on-ones in Development white, partner and small groups in Intermediate gray, the time you chose in
+   event red. Phones get a list of the days that have open times. */
+.view-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin:14px 0 4px}
+.seg{display:inline-flex;border:1px solid #CDD0D6;border-radius:8px;overflow:hidden}
+html body .seg button{min-height:44px;margin:0;border:0;border-radius:0;box-shadow:none;padding:0 18px;background:var(--swa-white);color:var(--swa-ink)}
+html body .seg button+button{border-left:1px solid #CDD0D6}
+html body .seg button[aria-pressed="true"]{background:var(--swa-ink);color:#FFFFFF}
+.view-bar .month-picker{flex:1 1 260px;max-width:360px}
+.cal-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0;font-size:14px;color:var(--swa-muted)}.cal-key span{display:inline-flex;align-items:center;gap:6px}.cal-key i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--swa-prog-development-line)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:12px}
+.cal-dow{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--swa-muted);padding:0 4px}
+.cal-day{border:1px solid var(--swa-line);border-radius:8px;padding:7px 6px;min-height:104px;min-width:0;background:var(--swa-white)}
+html body .cal-day h3{margin:0;font-size:14px;font-weight:700;color:var(--swa-muted)}html body .cal-day.is-today h3{color:var(--swa-ink)}.cal-day .d-long{display:none}
+html body .cal .cal-item{display:block;width:100%;min-height:0;margin:6px 0 0;padding:5px 6px;border-radius:6px;text-align:left;font-family:var(--swa-body);font-size:12px;font-weight:400;line-height:1.35;letter-spacing:0;text-transform:none;overflow-wrap:break-word;hyphens:auto;cursor:pointer;box-shadow:none;
+ background:var(--swa-prog-development);color:var(--swa-prog-development-ink);border:1px solid var(--swa-prog-development-line)}
+html body .cal .cal-item b,html body .cal .cal-item span,html body .cal .cal-item small{display:block}html body .cal .cal-item small{margin-top:2px;font-size:11px;font-weight:700;letter-spacing:.3px}
+html body .cal .cal-item.f-group,.cal-key i.f-group{background:var(--swa-prog-intermediate);color:var(--swa-prog-intermediate-ink);border-color:var(--swa-prog-intermediate)}
+html body .cal .cal-item[aria-pressed="true"],.cal-key i.f-chosen{background:var(--swa-prog-event);color:var(--swa-prog-event-ink);border-color:var(--swa-prog-event)}
+html body .cal .cal-item:hover{border-color:var(--swa-red);box-shadow:0 0 0 2px var(--swa-red)}
+html body .cal .cal-item .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media(max-width:760px){.cal{grid-template-columns:1fr}.cal-dow,.cal-blank,.cal-day.empty{display:none}.cal-day{min-height:0;padding:10px 12px}.cal-day .d-num{display:none}.cal-day .d-long{display:inline}html body .cal .cal-item{font-size:15px;padding:10px 12px}html body .cal .cal-item small{font-size:13px}}
+</style><script src="/month-picker.js"></script></head><body><main><h1>Book a private lesson</h1><p class="muted" id="intro">One-on-one, with a partner, or in a small group of up to six. Each family books and pays for their own wrestler at the price per wrestler. Times are New York time.</p>
 <section id="closed" class="closed" hidden aria-labelledby="closedHeading"><h2 id="closedHeading">No open lesson times right now</h2><p id="closedText">No coach has open lesson times right now. Coaches add new times often, so check back soon, or message the academy to ask about a lesson.</p><div class="go"><a class="button" href="/family" id="addWrestler" hidden>Add a wrestler</a><a class="button primary" href="/inbox" id="messageAcademy">Message the academy</a></div></section>
 <p id="status" role="status" aria-live="polite">Loading…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
 <section id="joinBox" hidden aria-labelledby="joinHeading"><h2 id="joinHeading">Join a private group</h2><div id="joinInfo"></div><label id="joinWrestlerLabel">Your wrestler<select id="joinWrestler"></select></label></section>
@@ -43,7 +65,10 @@ fieldset{border:0;padding:0;margin:10px 0 0;min-width:0}legend{font-weight:700;p
 <label id="wrestlerLabel">Wrestler<select id="wrestler"></select></label>
 <div id="requestOptions" hidden><fieldset><legend>Group size</legend><div class="kinds" id="kinds"></div></fieldset><label id="spotsLabel" hidden>Number of wrestlers in the group<select id="spots"><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
 <fieldset><legend>Your wrestlers in this group</legend><div id="ownWrestlers"></div><p class="muted" id="ownHelp">Their spots are kept for them. The other spots are for families you invite.</p></fieldset></div></section>
-<section id="stepTime" hidden aria-labelledby="timeHeading"><h2 id="timeHeading">3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="coachAbout" class="about" hidden></div><div id="times"></div></section>
+<section id="stepTime" hidden aria-labelledby="timeHeading"><h2 id="timeHeading">3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="coachAbout" class="about" hidden></div>
+<div class="view-bar" id="viewBar" hidden><div class="seg" role="group" aria-label="Show open times as"><button type="button" id="viewList" aria-pressed="true">List</button><button type="button" id="viewMonth" aria-pressed="false">Month</button></div>
+<div class="month-picker" id="monthPicker" hidden><button type="button" class="month-step" id="monthPrev" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="monthSel"></select></label><button type="button" class="month-step" id="monthNext" aria-label="Next month">→</button></div></div>
+<div id="times"></div></section>
 <section id="reviewBox" hidden aria-labelledby="reviewHeading"><h2 id="reviewHeading">4. Review</h2><div class="summary" id="summary"></div>
 <div id="payArea"><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label><button class="primary" id="pay" disabled>Pay securely</button></div>
 <p id="notOpen" class="calm" hidden>Online payment for lessons isn’t open yet. To book this spot, pay the academy for your wrestler. Nothing is reserved until the academy records your payment.</p>
@@ -57,6 +82,34 @@ const spotsText=(left,cap)=>left+' of '+cap+' spot'+(cap===1?'':'s')+' left';
 // Three ways to book (issue #177): one = a one-on-one at an open time, group = a spot in a partner or small group a
 // coach posted, request = turn an open time into a private group and invite other families. join = an invite link.
 let data=null,family=null,path='',kind='',opening='',review=null,joinCode='';
+// ---- The month view of open times (issue #239) ----
+// The same open times as the list, drawn as the coach month calendar draws its month (lib/practice-calendar.ts):
+// weeks start on Monday, today is ringed and holidays are labels. Each time keeps its seats and price per wrestler.
+let view='list',shownMonth='';
+const picker=()=>({select:$('monthSel'),prev:$('monthPrev'),next:$('monthNext')});
+const longDay=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long',month:'long',day:'numeric'});
+function lessonMonth(list,month,today,holidays){
+ const [y,m]=month.split('-').map(Number),count=new Date(Date.UTC(y,m,0)).getUTCDate(),days=[];
+ for(let d=1;d<=count;d++){const date=month+'-'+String(d).padStart(2,'0');
+  days.push({date,today:date===today,holidays:(holidays||[]).filter(h=>h.date===date).map(h=>h.name),items:list.filter(o=>o.date===date).sort((a,b)=>a.start.localeCompare(b.start)||String(a.coach).localeCompare(String(b.coach)))})}
+ return {month,lead:(new Date(Date.UTC(y,m-1,1)).getUTCDay()+6)%7,days};
+}
+// What one time costs and how many seats it has, for the way the family is booking.
+function seatLine(o,way){
+ if(way==='request')return 'Open time: start your group';
+ const f=way==='one'?'one-on-one':o.format,price=priced(f)?money(fmt(f).cents)+(o.capacity>1?' per wrestler':''):'';
+ return [o.capacity>1?spotsText(o.spotsLeft,o.capacity):'1 spot',price].filter(Boolean).join(' · ');
+}
+function monthItem(o,way){const group=o.capacity>1||o.format==='partner'||o.format==='small-group';
+ return '<button type="button" class="cal-item'+(group?' f-group':'')+'" data-opening="'+esc(o.id)+'" aria-pressed="'+(o.id===opening)+'"><span class="vh">'+esc(day(o.date))+': </span><b>'+esc(clock(o.start))+'–'+esc(clock(o.end))+'</b><span>'+esc(o.coach)+(way==='group'?' · '+esc(nameOf(o.format)):'')+'</span><small>'+esc(seatLine(o,way))+'</small></button>'}
+function monthHtml(cal,way){
+ const days=cal.days.map(d=>{const quiet=!d.items.length&&!d.holidays.length&&!d.today;
+  return '<div class="cal-day'+(d.today?' is-today':'')+(quiet?' empty':'')+'"'+(d.today?' aria-current="date"':'')+'><h3><span class="d-num">'+Number(d.date.slice(8))+'</span><span class="d-long">'+esc(longDay(d.date))+'</span>'+(d.today?'<span class="today-tag">Today</span>':'')+'</h3>'
+   +d.holidays.map(h=>'<span class="holiday-tag">'+esc(h)+'</span>').join('')+d.items.map(o=>monthItem(o,way)).join('')+'</div>'}).join('');
+ return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=>'<div class="cal-dow" aria-hidden="true">'+w+'</div>').join('')+'<div class="cal-blank" aria-hidden="true"></div>'.repeat(cal.lead)+days
+  +(cal.days.some(d=>d.items.length)?'':'<p class="muted" style="grid-column:1/-1">No open times this month. Try the next month.</p>')}
+function monthKey(way){return '<p class="cal-key">'+(way==='group'?'':'<span><i></i>One-on-one or open time</span>')+(way==='one'?'':'<span><i class="f-group"></i>Partner or small group</span>')+'<span><i class="f-chosen"></i>Your choice</span></p>'}
+function setView(v){view=v;render()}
 async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login?next='+encodeURIComponent(location.pathname+location.search);throw Error('Sign in again.')}const d=await r.json();if(!r.ok){const e=Error(d.error||'Something went wrong.');e.data=d;throw e}return d}
 const fmt=id=>(data?.formats||[]).find(f=>f.id===id);
 const priced=id=>{const f=fmt(id);return !!f&&f.cents!==null&&f.cents!==undefined};
@@ -122,7 +175,15 @@ function render(){
  if(opening&&!list.some(o=>o.id===opening))opening='';
  const days=[...new Set(list.map(o=>o.date))];
  aboutCoach(opening?(list.find(o=>o.id===opening)||{}).coachKey:coach||(new Set(list.map(o=>o.coachKey)).size===1?list[0].coachKey:''));
- $('times').innerHTML=days.length?days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b><span>${esc(o.coach)}</span>${path==='group'?`<span>${esc(nameOf(o.format))}</span><span class="left">${spotsText(o.spotsLeft,o.capacity)}</span>`:''}</button>`).join('')}</div>`).join(''):'<p class="muted">This coach has no open times for this right now. Choose Any coach to see every open time.</p>';
+ // List or month (issue #239): the same open times, seats and prices either way; choosing one works the same.
+ $('viewBar').hidden=!days.length;$('viewList').setAttribute('aria-pressed',String(view==='list'));$('viewMonth').setAttribute('aria-pressed',String(view==='month'));
+ const months=[...new Set(days.map(d=>d.slice(0,7)))];
+ if(view==='month'&&days.length&&!months.includes(shownMonth))shownMonth=opening?list.find(o=>o.id===opening).date.slice(0,7):months[0];
+ $('monthPicker').hidden=view!=='month'||!days.length;
+ if(view==='month'&&days.length&&typeof MonthPicker!=='undefined')MonthPicker.set(picker(),shownMonth,{min:months[0],max:months[months.length-1]});
+ $('times').innerHTML=!days.length?'<p class="muted">This coach has no open times for this right now. Choose Any coach to see every open time.</p>'
+  :view==='month'?monthKey(path)+'<div class="cal">'+monthHtml(lessonMonth(list,shownMonth,data.today||'',data.holidays||[]),path)+'</div>'
+  :days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b><span>${esc(o.coach)}</span>${path==='group'?`<span>${esc(nameOf(o.format))}</span><span class="left">${spotsText(o.spotsLeft,o.capacity)}</span>`:''}</button>`).join('')}</div>`).join('');
  document.querySelectorAll('[data-opening]').forEach(b=>b.onclick=()=>{opening=b.dataset.opening;review=null;render();check()});
  renderReview();
 }
@@ -188,6 +249,8 @@ $('pay').onclick=async()=>{if(!review||!$('acceptTerms').checked)return;$('pay')
  try{const d=await call('/api/checkout',{source:'booking',type:'lesson',wrestlerId:path==='join'?$('joinWrestler').value:$('wrestler').value,openingId:path==='join'?data.invite.id:opening,...(path==='join'?{invite:joinCode}:{}),acceptTerms:true});location.assign(d.url)}
  catch(e){$('status').textContent=e.message;$('pay').disabled=false;if(/booked|no longer available|full/.test(e.message)){opening='';review=null;await reload()}}};
 $('acceptTerms').onchange=()=>{$('pay').disabled=!$('acceptTerms').checked};
+$('viewList').onclick=()=>setView('list');$('viewMonth').onclick=()=>setView('month');
+if(typeof MonthPicker!=='undefined')MonthPicker.wire(picker(),m=>{shownMonth=m;render()});
 $('wrestler').onchange=check;$('joinWrestler').onchange=check;$('coach').onchange=()=>{render()};$('spots').onchange=checkRequest;
 // The help link goes to the document named in the message: the Parent Consent Form or the waiver (issue #195).
 function signHelp(p,t){const a=p.querySelector('a'),consent=/Parent Consent Form/.test(t);if(a){a.href=consent?'/consent':'/waiver';a.textContent=consent?'Sign the Parent Consent Form →':'Sign the waiver →'}}

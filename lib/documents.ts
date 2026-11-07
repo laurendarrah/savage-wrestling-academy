@@ -55,11 +55,22 @@ export async function currentVersion(kind: Kind) {
   return v && !v.retired_at ? v : null;
 }
 
+// A signature the owner asked to be signed again (issue #239) is kept but no longer counts. Every query that asks
+// "has this been signed" adds this condition for the signature row aliased s.
+export const LIVE_SIGNATURE = 'NOT EXISTS (SELECT 1 FROM signature_reissues r WHERE r.signature_id=s.id)';
+
 // A family signature belongs to the wrestler it was signed for, by name as well as id (issue #97): renaming a signed
 // entry to another child does not carry the signature over. A coach's own signature has an empty wrestler id and name.
 export async function signatureFor(versionId: string, userId: string, wrestlerId: string, name: string) {
-  return await env.DB!.prepare('SELECT id,signer,signed_at FROM waiver_signatures WHERE version_id=? AND user_id=? AND wrestler_id=? AND lower(trim(wrestler_name))=lower(trim(?))')
+  return await env.DB!.prepare(`SELECT s.id,s.signer,s.signed_at FROM waiver_signatures s WHERE s.version_id=? AND s.user_id=? AND s.wrestler_id=? AND lower(trim(s.wrestler_name))=lower(trim(?)) AND ${LIVE_SIGNATURE}`)
     .bind(versionId, userId, wrestlerId, name).first<{id: string; signer: string; signed_at: string}>();
+}
+// Earlier signatures of this version for the same person, each replaced at the owner's request. The next signature is
+// the next round, so the unique index still allows one signature per round.
+async function nextRound(versionId: string, userId: string, wrestlerId: string, name: string) {
+  const r = await env.DB!.prepare('SELECT COALESCE(MAX(round)+1,0) AS n FROM waiver_signatures WHERE version_id=? AND user_id=? AND wrestler_id=? AND lower(trim(wrestler_name))=lower(trim(?))')
+    .bind(versionId, userId, wrestlerId, name).first<{n: number}>();
+  return Number(r?.n ?? 0);
 }
 
 // The message a family sees when booking is refused for this document, or null when it is not needed or signed.
@@ -97,6 +108,32 @@ export async function retireDocument(kind: Kind, ownerId: string) {
   return {status: 200};
 }
 
+// The owner asks one family (or one coach) to sign again (issue #239, Justin's entry 27), for example after a mistake
+// on the form. Only a signature of the version in force that still counts can be reissued. The signature itself is not
+// changed: signature_reissues marks it replaced with the reason, so it stops counting at once. A wrestler is then
+// unsigned for booking (documentProblem) until a parent signs the same version again; a coach sees the to-do again.
+export const REISSUE_REASON = {min: 3, max: 300};
+export async function reissueSignature(kind: Kind, signatureId: unknown, reason: unknown, ownerId: string) {
+  const spec = DOCUMENTS[kind], current = await currentVersion(kind);
+  const why = typeof reason === 'string' ? reason.replace(/\s+/g, ' ').trim() : '';
+  if (why.length < REISSUE_REASON.min || why.length > REISSUE_REASON.max) return {status: 400, error: `Say why it needs signing again, in ${REISSUE_REASON.min} to ${REISSUE_REASON.max} characters. The ${spec.signer === 'coach' ? 'coach' : 'family'} sees your reason.`};
+  const s = typeof signatureId === 'string' && signatureId.length <= 80 ? await env.DB!.prepare(`SELECT s.id,s.version_id,s.user_id,s.email,s.wrestler_id,s.wrestler_name FROM waiver_signatures s WHERE s.id=? AND ${LIVE_SIGNATURE}`)
+    .bind(signatureId).first<{id: string; version_id: string; user_id: string; email: string; wrestler_id: string; wrestler_name: string}>() : null;
+  if (!s || !current || s.version_id !== current.id) return {status: 404, error: `That signed ${spec.name} is not one that counts now. Reload the page.`};
+  const at = new Date().toISOString();
+  try {
+    await env.DB!.batch([
+      env.DB!.prepare('INSERT INTO signature_reissues(signature_id,user_id,reason,reissued_by,reissued_at) VALUES (?,?,?,?,?)').bind(s.id, s.user_id, why, ownerId, at),
+      env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, kind + '_reissued',
+        // A coach's: their email first, so removing the coach for good (issue #212) clears it from the log like the rest.
+        spec.signer === 'parent' ? `${current.id}/${s.user_id}/${s.wrestler_id}` : `${s.email.toLowerCase()} ${current.id}`, at)
+    ]);
+  } catch {
+    return {status: 409, error: `This ${spec.name} was already sent back to be signed again.`};
+  }
+  return {status: 200, signature: s, version: current, reason: why};
+}
+
 // Signs the version in force. A family document is signed for one of the family's saved wrestlers by a parent or
 // guardian; a coach contract is signed by the coach for themselves (the route checks they are a coach).
 export async function signDocument(kind: Kind, user: {id: string; email: string}, input: any) {
@@ -118,12 +155,12 @@ export async function signDocument(kind: Kind, user: {id: string; email: string}
   if (!signature || signature.method !== 'drawn') return {status: 400, error: 'Draw your signature in the box.'};
   const already = spec.signer === 'parent' ? `${who.name}'s ${spec.name} is already signed.` : `Your ${spec.name} is already signed.`;
   if (await signatureFor(current.id, user.id, who.id, who.name)) return {status: 409, error: already};
-  const at = new Date().toISOString(), id = crypto.randomUUID();
+  const at = new Date().toISOString(), id = crypto.randomUUID(), round = await nextRound(current.id, user.id, who.id, who.name);
   const record: SignatureRecord = {version: 1, method: 'drawn', strokes: signature.strokes, waiverId: current.id, waiverSha256: current.sha256, signedAt: at, signer, accountEmail: user.email, consent: spec.consent, kind, signerRole: spec.signer};
   try {
     await env.DB!.batch([
-      env.DB!.prepare('INSERT INTO waiver_signatures(id,version_id,user_id,wrestler_id,wrestler_name,signer,email,signature_record,signed_at) VALUES (?,?,?,?,?,?,?,?,?)')
-        .bind(id, current.id, user.id, who.id, who.name, signer, user.email, JSON.stringify(record), at),
+      env.DB!.prepare('INSERT INTO waiver_signatures(id,version_id,user_id,wrestler_id,wrestler_name,signer,email,signature_record,signed_at,round) VALUES (?,?,?,?,?,?,?,?,?,?)')
+        .bind(id, current.id, user.id, who.id, who.name, signer, user.email, JSON.stringify(record), at, round),
       env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), user.id, kind + '_signed', spec.signer === 'parent' ? `${current.id}/${who.id}` : current.id, at)
     ]);
   } catch {
@@ -137,7 +174,8 @@ export async function signDocument(kind: Kind, user: {id: string; email: string}
 export async function myDocuments(kind: Kind, userId: string) {
   const current = await currentVersion(kind), parent = DOCUMENTS[kind].signer === 'parent';
   const names = parent ? new Map(((await familyProfile(userId))?.wrestlers ?? []).map(w => [w.id, w.name.trim().toLowerCase()])) : new Map([['', '']]);
-  const signed = (await env.DB!.prepare(`SELECT s.id,s.version_id,s.wrestler_id,s.wrestler_name,s.signer,s.signed_at,v.title FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id
+  const signed = (await env.DB!.prepare(`SELECT s.id,s.version_id,s.wrestler_id,s.wrestler_name,s.signer,s.signed_at,v.title,r.reason AS replaced_reason,r.reissued_at AS replaced_at
+    FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id LEFT JOIN signature_reissues r ON r.signature_id=s.id
     WHERE s.user_id=? AND v.kind=? ORDER BY s.signed_at DESC`).bind(userId, kind).all<any>()).results;
   const rule = DOCUMENTS[kind].rule, today = academyToday();
   return {
@@ -147,8 +185,10 @@ export async function myDocuments(kind: Kind, userId: string) {
     // Wrestlers the owner is letting book without signing for now (issue #89).
     exceptions: rule ? Object.fromEntries((await env.DB!.prepare('SELECT wrestler_id,max(ends_on) AS ends FROM booking_exceptions WHERE user_id=? AND rule=? AND revoked_at IS NULL AND starts_on<=? AND ends_on>=? GROUP BY wrestler_id')
       .bind(userId, rule, today, today).all<{wrestler_id: string; ends: string}>()).results.map(r => [r.wrestler_id, r.ends])) : {},
+    // replaced: the academy asked for this one to be signed again (issue #239), with its reason. It never counts again.
     signatures: signed.map(s => ({id: s.id, versionId: s.version_id, wrestlerId: s.wrestler_id, wrestler: s.wrestler_name, signer: s.signer, signedAt: s.signed_at, title: s.title,
-      current: s.version_id === current?.id && names.get(s.wrestler_id) === String(s.wrestler_name).trim().toLowerCase()}))
+      replaced: s.replaced_at ? {reason: s.replaced_reason, at: s.replaced_at} : null,
+      current: !s.replaced_at && s.version_id === current?.id && names.get(s.wrestler_id) === String(s.wrestler_name).trim().toLowerCase()}))
   };
 }
 
@@ -156,27 +196,34 @@ export async function myDocuments(kind: Kind, userId: string) {
 // list every saved wrestler; the coach contract lists every active coach except `exclude` (the owner, who may also
 // coach but does not sign a contract with the academy).
 export async function ownerDocuments(kind: Kind, exclude = '') {
-  const versions = (await env.DB!.prepare('SELECT v.id,v.title,v.published_at,v.retired_at,(SELECT COUNT(*) FROM waiver_signatures s WHERE s.version_id=v.id) AS signed FROM waiver_versions v WHERE v.kind=? ORDER BY v.published_at DESC').bind(kind).all<any>()).results;
+  const versions = (await env.DB!.prepare(`SELECT v.id,v.title,v.published_at,v.retired_at,(SELECT COUNT(*) FROM waiver_signatures s WHERE s.version_id=v.id AND ${LIVE_SIGNATURE}) AS signed FROM waiver_versions v WHERE v.kind=? ORDER BY v.published_at DESC`).bind(kind).all<any>()).results;
   const current = await currentVersion(kind);
-  const sigs = current ? (await env.DB!.prepare('SELECT id,user_id,email,wrestler_id,wrestler_name,signer,signed_at FROM waiver_signatures WHERE version_id=?').bind(current.id).all<any>()).results : [];
+  const all = current ? (await env.DB!.prepare(`SELECT s.id,s.user_id,s.email,s.wrestler_id,s.wrestler_name,s.signer,s.signed_at,r.reason,r.reissued_at FROM waiver_signatures s
+    LEFT JOIN signature_reissues r ON r.signature_id=s.id WHERE s.version_id=? ORDER BY s.signed_at`).bind(current.id).all<any>()).results : [];
+  const sigs = all.filter(s => !s.reissued_at), replaced = all.filter(s => s.reissued_at);
+  // Someone the owner asked to sign again (issue #239) and who has not yet: the latest replaced signature and its reason.
+  const asked = (s: any) => s ? {signatureId: s.id, reason: s.reason, at: s.reissued_at} : null;
   const head = {kind, current: current ? {id: current.id, title: current.title, body: current.body, publishedAt: current.published_at} : null, versions};
   if (DOCUMENTS[kind].signer === 'coach') {
-    const byEmail = new Map(sigs.map(s => [String(s.email).toLowerCase(), s]));
+    const byEmail = new Map(sigs.map(s => [String(s.email).toLowerCase(), s])), askedOf = new Map(replaced.map(s => [String(s.email).toLowerCase(), s]));
     const staff = (await env.DB!.prepare('SELECT s.email,s.name,p.display_name FROM staff_access s LEFT JOIN coach_profiles p ON p.email=s.email WHERE s.active=1 AND s.email<>? ORDER BY s.name')
       .bind(exclude.toLowerCase()).all<{email: string; name: string; display_name: string | null}>()).results;
     return {...head, coaches: staff.map(c => {
       const s = byEmail.get(c.email.toLowerCase());
-      return {email: c.email, name: c.display_name || c.name, signed: !!s, signatureId: s?.id ?? null, signer: s?.signer ?? null, signedAt: s?.signed_at ?? null};
+      return {email: c.email, name: c.display_name || c.name, signed: !!s, signatureId: s?.id ?? null, signer: s?.signer ?? null, signedAt: s?.signed_at ?? null,
+        reissued: s ? null : asked(askedOf.get(c.email.toLowerCase()))};
     })};
   }
   // Every family, read in batches (issue #46); the owner's page shows them a page at a time (signersPage).
   const families = (await allFamilies()).sort((a, b) => a.email < b.email ? -1 : a.email > b.email ? 1 : 0);
-  const byKey = new Map(sigs.map(s => [s.user_id + '/' + s.wrestler_id + '/' + String(s.wrestler_name).trim().toLowerCase(), s]));
+  const keyOf = (s: any) => s.user_id + '/' + s.wrestler_id + '/' + String(s.wrestler_name).trim().toLowerCase();
+  const byKey = new Map(sigs.map(s => [keyOf(s), s])), askedOf = new Map(replaced.map(s => [keyOf(s), s]));
   const wrestlers = families.flatMap(f => {
     const p = JSON.parse(f.payload || '{}');
     return (p.wrestlers || []).map((w: any) => {
-      const s = byKey.get(f.user_id + '/' + w.id + '/' + String(w.name).trim().toLowerCase());
-      return {userId: f.user_id, email: f.email, parentName: p.parentName || '', wrestlerId: w.id, wrestler: w.name, grade: w.grade, signed: !!s, signatureId: s?.id ?? null, signer: s?.signer ?? null, signedAt: s?.signed_at ?? null};
+      const k = f.user_id + '/' + w.id + '/' + String(w.name).trim().toLowerCase(), s = byKey.get(k);
+      return {userId: f.user_id, email: f.email, parentName: p.parentName || '', wrestlerId: w.id, wrestler: w.name, grade: w.grade, signed: !!s, signatureId: s?.id ?? null, signer: s?.signer ?? null, signedAt: s?.signed_at ?? null,
+        reissued: s ? null : asked(askedOf.get(k))};
     });
   });
   return {...head, wrestlers};
@@ -205,15 +252,19 @@ export async function signedCopy(id: string, viewer: {userId: string; owner: boo
   try { record = JSON.parse(s.signature_record); } catch { return {error: 'The signature record needs review. Contact SWA.'}; }
   if (!v || !isKind(v.kind) || !cleanSignature(record) || record.waiverSha256 !== v.sha256 || (record.kind && record.kind !== v.kind) || await sha256(v.title + '\n\n' + v.body) !== v.sha256)
     return {error: `The ${label} record needs review. Contact SWA.`};
-  return {signature: s, version: v, record};
+  // A copy the owner asked to be signed again (issue #239) still opens, marked replaced with the reason.
+  const replaced = await env.DB!.prepare('SELECT reason,reissued_at FROM signature_reissues WHERE signature_id=?').bind(id).first<{reason: string; reissued_at: string}>();
+  return {signature: s, version: v, record, replaced};
 }
 
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]!));
-export function signedCopyHtml(c: {signature: any; version: DocumentVersion; record: SignatureRecord}, nonce: string) {
+export function signedCopyHtml(c: {signature: any; version: DocumentVersion; record: SignatureRecord; replaced?: {reason: string; reissued_at: string} | null}, nonce: string) {
   const {signature: s, version: v, record: r} = c, spec = DOCUMENTS[isKind(v.kind) ? v.kind : 'waiver'];
+  const replacedOn = c.replaced ? new Intl.DateTimeFormat('en-US', {timeZone: 'America/New_York', dateStyle: 'long'}).format(new Date(c.replaced.reissued_at)) : '';
+  const replaced = c.replaced ? `<p class="replaced"><strong>Replaced.</strong> On ${esc(replacedOn)} the academy asked for this ${esc(spec.name)} to be signed again. Reason: ${esc(c.replaced.reason.replace(/[.!?\s]+$/, ''))}. This copy is kept as a record and no longer counts.</p>` : '';
   const ink = `<svg role="img" aria-label="Drawn signature" viewBox="0 0 800 200">${r.strokes.map(stroke => `<polyline points="${stroke.map(([x, y]) => (x * 800).toFixed(2) + ',' + (y * 200).toFixed(2)).join(' ')}" fill="none" stroke="#18191c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`).join('')}</svg>`;
   const date = new Intl.DateTimeFormat('en-US', {timeZone: 'America/New_York', dateStyle: 'long', timeStyle: 'short'}).format(new Date(s.signed_at));
   // Waivers signed before #195 could be signed by an adult wrestler, so only records that say so name the parent role.
   const who = spec.signer === 'coach' ? `<strong>Coach</strong> ${esc(s.signer)}` : `<strong>Wrestler</strong> ${esc(s.wrestler_name)}<br><strong>Signed by</strong> ${esc(s.signer)}${r.signerRole === 'parent' ? ', parent or guardian' : ''}`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signed ${esc(spec.name)} | Savage Wrestling Academy</title><style>body{font:16px/1.65 Arial;color:#18191c;max-width:860px;margin:24px auto;padding:24px}h1,h2{line-height:1.2}button{padding:10px 14px;background:#fff;border:1px solid #aaa;border-radius:5px;font:inherit;cursor:pointer}.terms{white-space:pre-wrap;overflow-wrap:anywhere;border-top:1px solid #ccc;border-bottom:1px solid #ccc;padding:20px 0}.signature{max-width:600px;border-bottom:1px solid #18191c;margin:20px 0;break-inside:avoid}.signature svg{width:100%;height:150px}.metadata{font-size:13px;overflow-wrap:anywhere}@media print{body{margin:0;padding:0;max-width:none}button{display:none}}</style></head><body><h1>Savage Wrestling Academy</h1><h2>${esc(v.title)}</h2><p>${who}</p><p><button id="print">Print / Save as PDF</button></p><div class="terms">${esc(v.body)}</div><h2>Signature</h2><div class="signature">${ink}</div><p>Signed electronically by <strong>${esc(s.signer)}</strong> · ${esc(date)} New York time</p><p class="metadata">Account · ${esc(r.accountEmail)}<br>Consent · ${esc(r.consent)}<br>${esc(spec.label)} version · ${esc(v.id)} published ${esc(v.published_at.slice(0, 10))}<br>${esc(spec.label)} text SHA-256 · ${esc(v.sha256)}<br>Signature ID · ${esc(s.id)}</p><script nonce="${esc(nonce)}">document.getElementById('print').addEventListener('click',()=>window.print());</script></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signed ${esc(spec.name)} | Savage Wrestling Academy</title><style>body{font:16px/1.65 Arial;color:#18191c;max-width:860px;margin:24px auto;padding:24px}h1,h2{line-height:1.2}button{padding:10px 14px;background:#fff;border:1px solid #aaa;border-radius:5px;font:inherit;cursor:pointer}.terms{white-space:pre-wrap;overflow-wrap:anywhere;border-top:1px solid #ccc;border-bottom:1px solid #ccc;padding:20px 0}.signature{max-width:600px;border-bottom:1px solid #18191c;margin:20px 0;break-inside:avoid}.signature svg{width:100%;height:150px}.metadata{font-size:13px;overflow-wrap:anywhere}.replaced{border:2px solid #c4222c;border-radius:6px;padding:12px 14px}@media print{body{margin:0;padding:0;max-width:none}button{display:none}}</style></head><body><h1>Savage Wrestling Academy</h1><h2>${esc(v.title)}</h2><p>${who}</p>${replaced}<p><button id="print">Print / Save as PDF</button></p><div class="terms">${esc(v.body)}</div><h2>Signature</h2><div class="signature">${ink}</div><p>Signed electronically by <strong>${esc(s.signer)}</strong> · ${esc(date)} New York time</p><p class="metadata">Account · ${esc(r.accountEmail)}<br>Consent · ${esc(r.consent)}<br>${esc(spec.label)} version · ${esc(v.id)} published ${esc(v.published_at.slice(0, 10))}<br>${esc(spec.label)} text SHA-256 · ${esc(v.sha256)}<br>Signature ID · ${esc(s.id)}</p><script nonce="${esc(nonce)}">document.getElementById('print').addEventListener('click',()=>window.print());</script></body></html>`;
 }

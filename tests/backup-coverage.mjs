@@ -48,7 +48,7 @@ function seed(sqlite){
   run("INSERT INTO attendance VALUES (?,?,?,?,?,?,?,?,?)",'att-1','practice:Advanced:2026-11-05:18:00','2026-11-05','parent-1','w-1','Sam Example','Member',now,'owner');
   run("INSERT INTO usaw_reviews VALUES (?,?,?,?,?,?,?,?)",'parent-1','w-1','AB1234','2027-08-31','valid','','owner',now);
   run("INSERT INTO waiver_versions(id,title,body,sha256,published_at,published_by,retired_at) VALUES (?,?,?,?,?,?,?)",'wv-1','Waiver','Approved text.','c'.repeat(64),now,'owner',null);
-  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)",'ws-1','wv-1','parent-1','w-1','Sam Example','Pat Parent','pat@example.test','{"strokes":[]}',now);
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)",'ws-1','wv-1','parent-1','w-1','Sam Example','Pat Parent','pat@example.test','{"strokes":[]}',now);
   run("INSERT INTO academy_settings VALUES (?,?,?,?)",'lessons','{"prices":{"one-on-one":6000}}',now,'owner');
   run("INSERT INTO wrestler_passes VALUES (?,?,?,?,?,?,?)",'pass-1','parent-1','w-1','t'.repeat(32),now,null,null);
   run("INSERT INTO waitlist_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",'wl-1','camp','full','["2026-12-20"]','parent-1','w-1','Sam Example','pat@example.test','waiting',now,null,null,null,0,null,null);
@@ -73,10 +73,12 @@ function seed(sqlite){
   // Issue #42: refund totals from Stripe and card fees.
   run("INSERT INTO payment_refunds VALUES (?,?,?,?,?,?,?,?,?)",'evt_refund_1','ord-1','pi_1','ch_1',240000,60000,now,0,now);
   run("INSERT INTO stripe_fees VALUES (?,?,?,?,?,?,?,?,?,?)",'pi_1','ord-1','ch_1','txn_1',240000,6990,233010,now,0,now);
+  // Issue #239: the owner asked for a signature to be signed again.
+  run("INSERT INTO signature_reissues VALUES (?,?,?,?,?)",'ws-1','parent-1','Signed for the wrong wrestler','owner',now);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {
@@ -202,8 +204,8 @@ bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad
   const run=(sql,...v)=>src.sqlite.prepare(sql).run(...v);
   run("INSERT INTO waiver_versions(id,kind,title,body,sha256,published_at,published_by) VALUES (?,?,?,?,?,?,?)",'pc-1','parent_consent','Parent Consent Form','Approved consent.','d'.repeat(64),now,'owner');
   run("INSERT INTO waiver_versions(id,kind,title,body,sha256,published_at,published_by) VALUES (?,?,?,?,?,?,?)",'cc-1','coach_contract','Coach contract','Contract text.','e'.repeat(64),now,'owner');
-  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)",'pcs-1','pc-1','parent-1','w-1','Sam Example','Pat Parent','pat@example.test','{"strokes":[]}',now);
-  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)",'ccs-1','cc-1','coach-1','','','Dana Coach','dana@example.test','{"strokes":[]}',now);
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)",'pcs-1','pc-1','parent-1','w-1','Sam Example','Pat Parent','pat@example.test','{"strokes":[]}',now);
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)",'ccs-1','cc-1','coach-1','','','Dana Coach','dana@example.test','{"strokes":[]}',now);
   run("INSERT INTO booking_exceptions VALUES (?,?,?,?,?,?,?,?,?,?,?)",'ex-2','parent-1','w-1','parent_consent','2026-11-05','2026-12-05','Paper form on file','owner',now,null,null);
   const b=JSON.parse(JSON.stringify(await loadBackups(src.DB).readBackup()));
   assert.deepEqual(b.records.waiver_versions.map(v=>v.kind).sort(),['coach_contract','parent_consent','waiver']);
@@ -220,6 +222,20 @@ bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad
   assert.equal(dump(o.sqlite,'waiver_versions')[0].kind,'waiver','an older version restores as a waiver');
   let bad=JSON.parse(JSON.stringify(b));bad.records.waiver_versions[0].kind=null;assert.equal(lib.validBackup(bad),false,'a kind, when present, must be text');
   bad=JSON.parse(JSON.stringify(older));delete bad.records.waiver_versions[0].sha256;assert.equal(lib.validBackup(bad),false,'only the later column may be left out');
+  // Issue #239: a signature the owner asked to be signed again, and the new signing (round 1), restore exactly; a file
+  // from before rounds restores its signatures as first signings, and one without the reissue section still restores.
+  run("INSERT INTO signature_reissues VALUES (?,?,?,?,?)",'pcs-1','parent-1','Wrong wrestler named','owner',now);
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,1)",'pcs-2','pc-1','parent-1','w-1','Sam Example','Pat Parent','pat@example.test','{"strokes":[]}',now);
+  const r2=JSON.parse(JSON.stringify(await loadBackups(src.DB).readBackup()));
+  assert.equal(r2.records.signature_reissues.length,2);assert.equal(lib.validBackup(r2),true);
+  const t2=freshDb(),t2l=loadBackups(t2.DB);
+  assert.equal((await t2l.restoreBackup(r2,await t2l.fingerprint(await t2l.metadata()),'owner')).restored.signature_reissues,2);
+  for(const table of ['waiver_signatures','signature_reissues'])assert.deepEqual(dump(t2.sqlite,table),dump(src.sqlite,table),table+' identical after restore');
+  const noRounds=JSON.parse(JSON.stringify(backup));for(const s of noRounds.records.waiver_signatures)delete s.round;delete noRounds.records.signature_reissues;
+  assert.equal(lib.validBackup(noRounds),true,'v3 from before rounds and reissues');
+  const n=freshDb(),nl=loadBackups(n.DB);await nl.restoreBackup(noRounds,await nl.fingerprint(await nl.metadata()),'owner');
+  assert.equal(dump(n.sqlite,'waiver_signatures')[0].round,0,'an older signature restores as a first signing');
+  bad=JSON.parse(JSON.stringify(r2));bad.records.waiver_signatures[0].round='1';assert.equal(lib.validBackup(bad),false,'a round, when present, is a whole number');
 }
 
 // 7. Version 1 backups from before this change still validate and restore.

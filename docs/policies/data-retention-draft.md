@@ -7,7 +7,7 @@ How long the academy keeps each kind of record, and what happens when a family a
 | Record | What it is | Proposed keep period | Why |
 |---|---|---|---|
 | Payments and refunds | Orders, amounts, dates, method | [Decision: 7 years] | Tax and accounting |
-| Signed waivers | Text version, signature drawing, signer, date | [Attorney: until the wrestler turns 18 plus the limitations period] | Liability defense |
+| Signed waivers | Text version, signature drawing, signer, date, and any request from the academy to sign again with its date and reason (the earlier signature is kept) | [Attorney: until the wrestler turns 18 plus the limitations period] | Liability defense |
 | Scholarship agreements | Terms and signature | [Decision: 7 years after the scholarship ends] | Contract record |
 | Attendance | Check-ins by date | [Decision: 3 years] | Safety and insurance questions |
 | USA Wrestling card details and reviews | Number, expiration, academy review | [Decision: until the account is closed] | Needed only while training |
@@ -54,7 +54,7 @@ What the cleanup does with each kind of record. Anything a family or the academy
 | Approved shifts (the pay record for that month) | `coach_time_entries` | Kept with the date, minutes, role, rate and amount; the coach, their notes and the change history are removed |
 | Shifts never approved, or voided | `coach_time_entries` | Deleted |
 | Time off | `coach_time_off` | Deleted, with the notices about it to the coach and to the coaches covering |
-| Signed contract | `waiver_signatures` (coach contract) | Deleted. The contract text stays, because other coaches signed it |
+| Signed contract | `waiver_signatures` (coach contract), and `signature_reissues` for any request to sign it again | Deleted. The contract text stays, because other coaches signed it |
 | Notices to the coach | `notifications` | Deleted |
 | Their lesson pay share | `academy_settings` (`lessons`) | Moved to the "former-coach-…" key, so pay for past months adds up the same |
 | Team page listing | `academy_settings` (`website`) | Removed from the list of coaches shown |

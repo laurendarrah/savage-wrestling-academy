@@ -8,6 +8,7 @@ import {lessonSettings, openLessons, familyGroups, openingByInvite, groupView, r
 import {checkoutKinds} from '../../../lib/checkout-config';
 import {rateLimited} from '../../../lib/rate-limit';
 import {publicProfiles} from '../../../lib/coach-profile';
+import {holidaysInMonth} from '../../../lib/holidays';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
@@ -37,7 +38,10 @@ export async function GET(request: Request) {
     if (p && (p.bio || p.specialties.length)) coaches[k] = p;
     return {...o, coachKey: k};
   }));
-  const body: Record<string, unknown> = {formats, openings, coaches, paymentsOpen: checkoutKinds().has('lesson')};
+  // For the month view (issue #239): the academy's date, so the page marks today, and U.S. holidays as labels in every
+  // month that has an open time.
+  const months = [...new Set(list.map(o => o.date.slice(0, 7)))];
+  const body: Record<string, unknown> = {formats, openings, coaches, paymentsOpen: checkoutKinds().has('lesson'), today, holidays: months.flatMap(holidaysInMonth)};
   if (userId) {
     body.mine = await familyGroups(userId, today);
     const join = new URL(request.url).searchParams.get('join');
