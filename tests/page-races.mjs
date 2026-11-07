@@ -143,7 +143,7 @@ const submit = form => form.onsubmit({preventDefault() {}});
     if (url.startsWith('/api/payments?families')) return {families: [{userId: 'u1', parentName: 'Riley Parent', email: 'family.b@example.test', wrestlers: [{id: 'w1', name: 'Riley Two', grade: 8}]}]};
     if (body?.action === 'preview') return {item: 'Partner lesson', wrestler: 'Riley Two', dates: ['2026-11-13'], listCents: 4500, suggestedCents: 4500};
     if (body?.action === 'record') return {ok: true};
-    return {payments: [], totals: {collectedCents: 0, onlineCents: 0, offlineCents: 0, refundedCents: 0, count: 0}};
+    return {payments: [], next: null, matched: 0, totals: {collectedCents: 0, onlineCents: 0, offlineCents: 0, refundedCents: 0, count: 0}};
   });
   const {el} = page('app/payments/screen.html', net.fetch);
   el('kind').value = 'annual';
