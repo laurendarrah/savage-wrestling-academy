@@ -74,6 +74,53 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.equal(el('paymentsPill').hidden, true, 'an ended membership is not active');
 }
 
+// ---------- Family profile: disabled until the saved profile is in, and while it saves ----------
+// The same race as /coach-profile and /website (issue #220): a late answer from /api/family must not overwrite what a
+// parent has typed. The stand-in server holds each answer until the test releases it, as in tests/page-races.mjs.
+{
+  const html = read('app/family/screen.html');
+  const fieldset = html.match(/<form id="familyForm"><fieldset id="familyFields" disabled>([\s\S]*?)<\/fieldset><\/form>/);
+  assert.ok(fieldset, 'the profile form starts disabled');
+  for (const id of ['homeAddress', 'homeCity', 'homeState', 'homeZip', 'emergencyContactName', 'emergencyContactPhone', 'wrestlers', 'save', 'cancelEdit']) assert.match(fieldset[1], new RegExp(`id="${id}"`), id + ' is inside the disabled fieldset');
+  assert.match(fieldset[1], /name="parentName"[\s\S]*name="phone"[\s\S]*onclick="addWrestler\(\)"/, 'name, phone and + Add wrestler wait too');
+  const held = [];
+  const hold = (url, init) => new Promise(resolve => held.push({url, method: init?.method || 'GET', body: init?.body ? JSON.parse(init.body) : null,
+    reply: (data, status = 200) => resolve({ok: status < 400, status, json: async () => (data === undefined ? Promise.reject(SyntaxError('Unexpected token <')) : data)})}));
+  const fetch = async (url, init) => (url === '/api/family' ? hold(url, init) : json({}));
+  const open = () => { held.length = 0; const p = run('app/family/screen.html', {fetch}); p.el('familyFields').disabled = true; return p; };
+  const saved = {parentName: 'Pat Example', phone: '555-0100', homeAddress: '20 Railroad St', wrestlers: []};
+
+  let {el} = open(); await settle();
+  assert.equal(el('familyFields').disabled, true, 'nothing can be typed before the profile loads');
+  assert.equal(el('save').disabled, true, 'the walkthrough waits for #save to turn on (familyReady)');
+  assert.equal(el('status').textContent, 'Loading…');
+  held[0].reply({email: 'pat@example.test', data: saved, revision: 3, updatedAt: null}); await settle();
+  assert.equal(el('familyFields').disabled, false); assert.equal(el('save').disabled, false);
+  assert.equal(el('familyForm').elements.parentName.value, 'Pat Example', 'the saved profile is in the form');
+  assert.equal(el('homeAddress').value, '20 Railroad St');
+  // Saving: disabled until the server answers.
+  el('familyForm').elements.parentName.value = 'Pat Q. Example';
+  el('familyForm').onsubmit({preventDefault() {}}); await settle();
+  assert.equal(el('familyFields').disabled, true, 'disabled while saving'); assert.equal(el('status').textContent, 'Saving…');
+  const put = held.find(h => h.method === 'PUT');
+  assert.equal(put.body.revision, 3); assert.equal(put.body.data.parentName, 'Pat Q. Example');
+  put.reply({revision: 4, updatedAt: '2026-11-07T15:00:00Z', data: {...saved, parentName: 'Pat Q. Example'}}); await settle();
+  assert.equal(el('familyFields').disabled, false); assert.match(el('status').textContent, /^Your changes are saved\./);
+  // A failed save gives the fields back and says so.
+  el('familyForm').onsubmit({preventDefault() {}}); await settle();
+  held.filter(h => h.method === 'PUT').at(-1).reply({error: 'Enter the ZIP code.'}, 400); await settle();
+  assert.equal(el('familyFields').disabled, false); assert.equal(el('status').textContent, 'Enter the ZIP code. Your changes have not been saved.');
+
+  // If the profile cannot load, the form stays disabled and says why: saving would replace a profile the parent never saw.
+  ({el} = open()); await settle();
+  held[0].reply({error: 'Check your sign-in and try again.'}, 403); await settle();
+  assert.equal(el('familyFields').disabled, true); assert.equal(el('save').disabled, true); assert.equal(el('status').textContent, 'Check your sign-in and try again.');
+  // An answer that isn't JSON (a proxy error page) gives the plain message, not a parser error.
+  ({el} = open()); await settle();
+  held[0].reply(undefined, 502); await settle();
+  assert.equal(el('familyFields').disabled, true); assert.equal(el('status').textContent, 'We couldn’t load your family account. Refresh the page to try again.');
+}
+
 // ---------- Inbox: announcements first ----------
 {
   const html = read('app/inbox/screen.html');
@@ -111,12 +158,14 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(W.renderWelcome(tpl, site, coach, null), /<a class="herolink" href="\/team">Meet our coaches →<\/a>/);
   assert.doesNotMatch(W.renderWelcome(tpl, site, coach, null), /coaches and wrestlers/);
 
-  // A coach with no bio gets a compact card that keeps to its own height (the card's markup has no .coach__bio).
-  const teamCss = style(read('app/team/screen.html'));
-  assert.match(teamCss, /\.coach:not\(:has\(\.coach__bio\)\)\{[^}]*align-self:start/);
+  // A coach with no bio gets a compact card that keeps to its own height (the card's markup has no .coach__bio). The
+  // rule is in the shared card styles, so the coach profile page's preview shows the same card (#223).
+  assert.match(W.COACH_CARD_CSS, /\.coach:not\(:has\(\.coach__bio\)\)\{[^}]*align-self:start/);
   const team = W.renderTeam(read('app/team/screen.html'), site, [{name: 'Lee Tran', bio: 'Ten years.', specialties: []}, {name: 'Justin', bio: '', specialties: []}], null);
+  assert.ok(team.includes(W.COACH_CARD_CSS), 'the team page carries the card styles');
   assert.equal((team.match(/class="coach__bio"/g) || []).length, 1, 'only the coach with a bio has a bio block');
-  // Shared width and page ground. (The coach card's own styles move to lib/website.ts in #223, so they are left as they are.)
+  // Shared width and page ground.
+  const teamCss = style(read('app/team/screen.html'));
   for (const css of [teamCss, style(tpl)]) { assert.match(css, /max-width:var\(--swa-width-wide\)/); assert.match(css, /background:var\(--swa-ground\)/); assert.doesNotMatch(css, /#F4F5F7|1080px/i); }
   assert.doesNotMatch(style(tpl), /#C4222C/i, 'the welcome page takes red from the token');
 }

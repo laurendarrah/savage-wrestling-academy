@@ -130,7 +130,9 @@ html body .coach h3{margin:0;font-family:'Barlow Condensed','Arial Narrow',Arial
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
 .chips li{background:#EEF0F2;border-radius:999px;padding:3px 11px;font-size:14px;font-weight:600;overflow-wrap:anywhere}
 .coach__bio p{margin:0 0 10px;color:#2A2B30;overflow-wrap:anywhere}
-.coach__bio p:last-child{margin:0}`;
+.coach__bio p:last-child{margin:0}
+/* A coach with no bio yet (issue #231): a compact card at its own height, not a tall empty box beside a coach with one. */
+.coach:not(:has(.coach__bio)){align-self:start;padding:16px 20px}`;
 // Fill <!--slot:name--> markers. A function replacement, so "$&" or "$1" in owner text stays literal.
 export function fill(template: string, slots: Record<string, string>) {
   return template.replace(/<!--slot:([a-z]+)-->/g, (m, k: string) => (k in slots ? slots[k] : m));
