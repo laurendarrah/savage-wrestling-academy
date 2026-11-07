@@ -23,7 +23,7 @@ next-env.d.ts
 # OS and editor noise
 .DS_Store
 *.log
-!handoff/**/*.log
+!docs/archive/**/*.log
 
 # Browser walkthrough output (pnpm e2e): screenshots, screenshots of failed steps, and the log CI keeps
 e2e-screenshots/

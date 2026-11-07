@@ -227,8 +227,9 @@ assert.doesNotMatch(runbook, /Resend, plus Worker settings in Cloudflare \| Laur
 assert.match(readFileSync('docs/GO_LIVE.md', 'utf8'), /Yes, connect this account[\s\S]*Connect a different Stripe account/);
 
 // No Stripe account or price list is built in (issue #255): checkout sends each price from the program settings. The old
-// setup's test catalog, which named its Stripe account, is gone, and nothing outside the historical handoff/ names it.
+// setup's test catalog, which named its Stripe account, is gone, and nothing outside the historical handoff (now
+// docs/archive/handoff-2026-11-05/, issue #267) names it.
 assert.ok(!existsSync('config/stripe-test-catalog.json'), 'the old Stripe test catalog is removed');
-for (const dir of ['lib', 'app', 'build', 'scripts', 'public', 'docs']) for (const f of readdirSync(dir, {recursive: true}).filter(f => /\.(ts|tsx|mjs|js|html|md|json)$/.test(f)))
+for (const dir of ['lib', 'app', 'build', 'scripts', 'public', 'docs']) for (const f of readdirSync(dir, {recursive: true}).filter(f => /\.(ts|tsx|mjs|js|html|md|json)$/.test(f) && !(dir === 'docs' && f.startsWith('archive'))))
   assert.doesNotMatch(readFileSync(path.join(dir, f), 'utf8'), /stripe-test-catalog|acct_1U8nF9/, `${dir}/${f} names the old Stripe setup`);
 console.log('Passed: owner/MFA boundary, CSRF, key format, no hard-coded account, first key records its own account only after confirmation, mismatched keys refused, confirmed reset clears and logs, setting overrides, malformed setting refuses, encrypted and separated storage, safe errors, page confirmation and reset.');

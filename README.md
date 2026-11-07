@@ -9,7 +9,7 @@ Registration, scheduling, scholarships and coaching tools for Savage Wrestling A
 - **Policy drafts for attorney review:** [docs/policies/](docs/policies/README.md)
 - **Work tracking:** [Issues](../../issues) grouped by [milestone](../../milestones)
 - **How we work together:** [CONTRIBUTING.md](CONTRIBUTING.md)
-- **Original technical review from Justin:** [handoff/](handoff/README.md)
+- **Original technical review from Justin:** [docs/archive/handoff-2026-11-05/](docs/archive/handoff-2026-11-05/README.md)
 
 ## What works today
 
@@ -86,7 +86,7 @@ Without Supabase settings, public pages work and every signed-in page refuses re
 | `lib/` | Shared server logic: auth, pricing, approvals, scholarships, backups |
 | `db/schema.ts`, `drizzle/` | Database schema and ordered migrations |
 | `tests/` | Node test scripts using VM sandboxes and in-memory SQLite |
-| `handoff/` | Justin's November 5 technical review, docs and evidence |
+| `docs/archive/handoff-2026-11-05/` | The November 5 handoff review, docs and evidence (historical) |
 | `docs/` | Launch plan and other working documents |
 
 ## Rules that protect the live site

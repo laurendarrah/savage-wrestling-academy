@@ -3,8 +3,8 @@
 Registration, scheduling, scholarship, and coaching platform for Savage Wrestling Academy.
 Cloudflare Worker built with Vinext and Vite, on the academy's own Cloudflare account, Cloudflare D1 for business data, Supabase for sign-in only, Stripe for payments, in test mode unless deliberately switched.
 
-Read `handoff/README.md` and `handoff/docs/ARCHITECTURE.md` before larger changes.
-Known issues and priorities are in `handoff/docs/ISSUES.md` and `handoff/docs/ROADMAP.md`.
+Read `docs/README.md` and `docs/ARCHITECTURE.md` before larger changes.
+Known issues and priorities are in `docs/ISSUES.md` and `docs/LAUNCH_PLAN.md`.
 
 ## Commands
 
