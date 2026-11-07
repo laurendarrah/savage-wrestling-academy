@@ -30,7 +30,7 @@ Proposed steps for the owner (to confirm):
 4. Keep what must be kept (payments, signed waivers, scholarship agreements) until its period above ends.
 5. Record what was done on **Data requests**. The family sees it in their account.
 
-Today steps 3 and 4 are done by the person who maintains the site, at the owner's request. Once the retention periods are decided, a one-click "close account" action can be built that removes exactly the agreed records and keeps the rest.
+Steps 3 and 4 are done with **Delete this family account** on **Family accounts** (#259). The owner types the family's name to confirm, and it refuses while anything is still active (step 2). It removes the profile (parent, wrestlers, address and safety details), bookings, USA Wrestling card details and checks, entry passes, waitlist entries, booking exceptions, messages, notices and data requests. Payments and refunds are kept for the books, with the family's name, email and account replaced by "Deleted family". Signed waivers and Parent Consent Forms, scholarship agreements, check-ins and SWA Advance approvals are kept unchanged, unless the owner ticks "This is a test account". The Security activity entry has counts only. The family's sign-in stays with Supabase until the owner deletes it there. [Decision: once the periods above are decided, change it to remove exactly the agreed records.]
 
 ## When a coach is removed permanently
 

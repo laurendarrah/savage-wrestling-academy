@@ -80,6 +80,7 @@ const TITLES: Record<string, string> = {
   cash_booking_canceled: 'Pay-at-the-academy booking canceled',
   account_closure_requested: 'Family asked to close their account',
   data_request_handled: 'Data request handled',
+  family_account_deleted: 'Family account deleted',
   stripe_event_rejected: 'Stripe message refused',
   lesson_double_booked: 'Lesson paid for twice',
   event_over_capacity: 'Event paid over its seat limit',
@@ -161,6 +162,12 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     case 'stripe_account_recorded': case 'stripe_account_reset': detail = /^acct_[A-Za-z0-9]{8,64}$/.test(t) ? 'Stripe account ' + t : ''; break;
     case 'account_closure_requested': detail = names.people[t] ?? ''; break;
     case 'data_request_handled': detail = names.requests[t] ?? ''; break;
+    // Counts only (issue #259): "deleted-family-<id> deleted:12 payments-kept:2 test:1".
+    case 'family_account_deleted': {
+      const n = Object.fromEntries(rest.map(p => p.split(':')).map(([k, v]) => [k, Number(v) || 0]));
+      detail = [n.test ? 'A test account' : '', plural(n.deleted ?? 0, 'record', 'records') + ' deleted',
+        n['payments-kept'] ? plural(n['payments-kept'], 'payment', 'payments') + ' kept for the books as “Deleted family”' : ''].filter(Boolean).join(' · '); break;
+    }
     case 'program_curriculum_saved': case 'curriculum_lesson_created': case 'curriculum_lesson_updated': detail = names.curricula[t] ?? ''; break;
     case 'stripe_event_rejected': detail = REJECTIONS[rest[0] ?? ''] ?? 'Stripe sent a payment message the site could not match.'; break;
     case 'lesson_double_booked': case 'event_over_capacity': {

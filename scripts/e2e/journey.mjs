@@ -1157,6 +1157,37 @@ await step('family downloads their data and asks to close the account; owner rec
   await waitText(owner, '#list', /Handled/);
 });
 
+// ---------- Delete a test family account (issue #259, the last step of docs/LAUNCH_TEST_PASS.md) ----------
+await step('owner deletes a test family account; a family with a lesson still to come is refused', async () => {
+  const fresh = await as('newfam');
+  await fresh.goto(BASE + '/family');
+  const saved = await fresh.evaluate(async () => { const g = await (await fetch('/api/family', {cache: 'no-store'})).json(); const r = await fetch('/api/family', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision: g.revision, data: {parentName: 'Taylor Testfamily', phone: '555-0142', homeAddress: '1 Test Lane', homeCity: 'Huntington', homeState: 'NY', homeZip: '11746', emergencyContactName: 'Casey Test', emergencyContactPhone: '631-555-0142', wrestlers: [{id: 'w-test', name: 'Toby Testfamily', grade: '5', birthDate: '2015-05-05', allergies: 'None'}]}})}); return r.status; });
+  expect(saved === 200, 'the test family saves a profile: ' + saved);
+  const remove = async (name, typed) => {
+    await owner.goto(BASE + '/accounts?q=' + encodeURIComponent(name));
+    const card = owner.locator('#families article', {hasText: name});
+    await card.locator('summary', {hasText: 'Delete this family account'}).click();
+    const button = card.locator('button.danger');
+    await card.locator('input[name=confirm]').fill(name.split(' ')[0]); expect(await button.isDisabled(), 'the button waits for the whole name');
+    await card.locator('input[name=confirm]').fill(typed); await card.locator('input[name=test]').check();
+    await button.click(); return card;
+  };
+  // Riley has paid lessons still to come, so nothing is deleted and the page says why.
+  let card = await remove('Riley Parent', 'riley parent');
+  await at(owner, '#families article .delete-status', /still has a paid session that hasn't happened yet/);
+  expect(await card.locator('button.danger').isEnabled(), 'the owner can try again after fixing it');
+  card = await remove('Taylor Testfamily', 'Taylor Testfamily');
+  await at(owner, '#families article', /Family account deleted[\s\S]*records deleted[\s\S]*delete it there too/);
+  await shot(owner, 'owner-family-deleted');
+  await owner.goto(BASE + '/accounts'); const list = await owner.content();
+  expect(!list.includes('Taylor Testfamily') && list.includes('Riley Parent'), 'the test family is gone and Riley stays');
+  await owner.goto(BASE + '/security-log'); await at(owner, 'main', /Family account deleted[\s\S]*A test account · \d+ records? deleted/);
+  expect(!(await owner.content()).includes('Taylor Testfamily'), 'Security activity names no one');
+  // Signing in again with the same login starts an empty family account.
+  await fresh.goto(BASE + '/family'); await fresh.waitForSelector('#start:not([hidden])');
+  await fresh.context().close();
+});
+
 // ---------- Guides ----------
 await step('each role has a guide linked from its home page; guides are role-only', async () => {
   await family.goto(BASE + '/family'); await family.click('#accountMenu summary'); await family.click('#accountMenu a:has-text("Help")'); await waitText(family, 'h1', /Help for families/);
