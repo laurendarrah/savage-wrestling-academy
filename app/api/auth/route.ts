@@ -1,3 +1,5 @@
+import {env} from 'cloudflare:workers';
+import {mfaSwitchedOff} from '../../../lib/mfa-policy';
 import { rateLimited } from '../../../lib/rate-limit';
 import { accountRole,roleDestination } from '../../../lib/access-control';
 import { accountClient, accountReply, sameOrigin, verifiedOwner, appOrigin } from '../../../lib/account-auth';
@@ -36,7 +38,9 @@ export async function POST(request:Request){
  const {role}=await accountRole(data.user);
  const {data:level}=await auth.client.auth.mfa.getAuthenticatorAssuranceLevel();
  const hasFactor=!!data.user.factors?.some(f=>f.status==='verified');
- return reply({redirect:((role==='owner'||role==='coach'||hasFactor)&&level?.currentLevel!=='aal2')?'/security':roleDestination(role)});
+ // Staff need the authenticator unless STAFF_MFA=off (issue #204); anyone who set one up always uses it.
+ const staffNeedCode=(role==='owner'||role==='coach')&&!mfaSwitchedOff((env as {STAFF_MFA?:string}).STAFF_MFA);
+ return reply({redirect:((staffNeedCode||hasFactor)&&level?.currentLevel!=='aal2')?'/security':roleDestination(role)});
  }
  if(action==='reset'){
  const {error}=await auth.client.auth.resetPasswordForEmail(email,{redirectTo:appOrigin()+'/auth/confirm?next=change'});

@@ -9,7 +9,8 @@ import ts from 'typescript';
 function loadAuth(env){
   const module={exports:{}};
   const source=ts.transpileModule(readFileSync('lib/account-auth.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
-  const deps={'cloudflare:workers':{env},'@supabase/ssr':{createServerClient(){},parseCookieHeader(){return []},serializeCookieHeader(){return ''}}};
+  const policy={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync('lib/mfa-policy.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module:policy,exports:policy.exports,String});
+  const deps={'./mfa-policy':policy.exports,'cloudflare:workers':{env},'@supabase/ssr':{createServerClient(){},parseCookieHeader(){return []},serializeCookieHeader(){return ''}}};
   vm.runInNewContext(source,{module,exports:module.exports,URL,Headers,Response,require:name=>{if(name in deps)return deps[name];throw Error('unexpected import '+name)}});
   return module.exports;
 }

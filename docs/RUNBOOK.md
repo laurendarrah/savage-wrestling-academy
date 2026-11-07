@@ -45,6 +45,10 @@ Don't make more changes until you know what happened.
 - Check that the email links point at the site: **Supabase → Authentication → URL Configuration** lists the site address and the two `/auth/confirm` addresses (`docs/GO_LIVE.md`, step 6).
 - The family can use **Didn't get the confirmation email?** on the sign-in page to send it again.
 
+## Before families join: turn the authenticator back on
+
+Until launch, the authenticator requirement can be off (`STAFF_MFA=off` on the Worker, issue #204), and the owner's launch checklist shows it in red. Before families join: **Cloudflare → Workers & Pages → savage-wrestling-academy → Settings → Variables and Secrets → delete `STAFF_MFA`**. The owner and coaches are then asked to set up an authenticator at their next sign-in.
+
 ## Someone lost the phone with their authenticator
 
 **A coach or family:** the owner removes their access. For a coach, that's **Coaches (/staff) → remove**, then add them again so they set up a new authenticator. A family with an authenticator turned on needs the same reset as the owner, below.

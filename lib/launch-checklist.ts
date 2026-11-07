@@ -4,7 +4,7 @@
 import {kindList} from './purchase-kinds';
 
 type Settings = {APP_ORIGIN?: string; SUPABASE_URL?: string; SUPABASE_PUBLISHABLE_KEY?: string; EMAIL_API_KEY?: string; MAIL_FROM?: string;
-  STRIPE_TEST_WEBHOOK_SECRET?: string; STRIPE_CONFIG_ENCRYPTION_KEY?: string; CHECKOUT_KINDS?: string};
+  STRIPE_TEST_WEBHOOK_SECRET?: string; STRIPE_CONFIG_ENCRYPTION_KEY?: string; CHECKOUT_KINDS?: string; STAFF_MFA?: string};
 // `action` names a one-click fix on the dashboard itself (publish-programs: save the default programs, issue #147).
 export type Item = {key: string; group: string; label: string; status: 'done' | 'todo' | 'waiting' | 'info'; detail: string; href?: string; section?: string; action?: 'publish-programs'};
 
@@ -65,6 +65,8 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
     ...(authenticators === undefined ? [] : [{key: 'authenticator', group: 'Safety', label: 'Backup authenticator', href: '/security',
       status: authenticators >= 2 ? 'done' as const : 'todo' as const,
       detail: authenticators >= 2 ? `${authenticators} authenticators can open the dashboard` : 'Add a second authenticator, on another phone or in a password manager, so a lost phone can’t lock you out'}]),
+    ...(String(settings.STAFF_MFA ?? '').trim().toLowerCase() === 'off' ? [{key: 'mfa-off', group: 'Safety', label: 'Authenticator sign-in is turned off', status: 'todo' as const,
+      detail: 'Anyone with the owner or a coach password can sign in without an authenticator code. Before families join, ask whoever maintains the site to delete the STAFF_MFA setting in Cloudflare'}] : []),
     {key: 'health', group: 'Safety', label: 'Site health', href: '/site-health', status: errors ? 'todo' : 'done',
       detail: errors ? `${errors} server error${errors === 1 ? '' : 's'} in the last 24 hours` : 'No server errors in the last 24 hours'},
     {key: 'families', group: 'Families', label: 'Families signed up', href: '/accounts', status: 'info', detail: `${families} famil${families === 1 ? 'y' : 'ies'}`},

@@ -79,6 +79,10 @@ for (const [o, ok] of [['http://register.savagewrestling.example', false], ['htt
 const routeText = readFileSync('app/api/launch-checklist/route.ts', 'utf8');
 assert.match(routeText, /factors \?\? \[\]\)\.filter\(f => f\.status === 'verified'\)/, 'counts only verified authenticators');
 
+// Issue #204: a red Safety item while STAFF_MFA=off; nothing otherwise.
+assert.equal(by(await launchChecklist(DB, {...settings, STAFF_MFA: 'off'}, today, now))['mfa-off'].status, 'todo');
+assert.equal(by(await launchChecklist(DB, settings, today, now))['mfa-off'], undefined);
+
 // The page is owner-only and the dashboard shows it.
 const route = readFileSync('app/api/launch-checklist/route.ts', 'utf8');
 assert.match(route, /ownerIdentity/); assert.match(route, /if \(!auth\.owner\) return/);

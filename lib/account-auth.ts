@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
 import type { User } from '@supabase/supabase-js';
+import { fullySignedIn, mfaSwitchedOff } from './mfa-policy';
 
 export const OWNER_EMAIL = 'savagewrestlingclub@gmail.com';
 // Origin used in sign-up, resend and password-reset email links.
@@ -37,8 +38,10 @@ export async function strongAccount(request: Request) {
  const auth=await verifiedAccount(request);
  let strong=false;
  if(auth.user?.email_confirmed_at){
+ const hasVerifiedFactor=!!auth.user.factors?.some(f=>f.status==='verified'&&f.factor_type==='totp');
  const {data,error}=await auth.client.auth.mfa.getAuthenticatorAssuranceLevel();
- strong=!error&&data?.currentLevel==='aal2'&&!!auth.user.factors?.some(f=>f.status==='verified'&&f.factor_type==='totp');
+ // STAFF_MFA=off lets accounts without an authenticator through until launch (issue #204, lib/mfa-policy.ts).
+ strong=fullySignedIn({emailConfirmed:true,aal2:!error&&data?.currentLevel==='aal2',hasVerifiedFactor,mfaOff:mfaSwitchedOff((env as {STAFF_MFA?:string}).STAFF_MFA)});
  }
  return {...auth,strong};
 }
