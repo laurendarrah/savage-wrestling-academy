@@ -81,7 +81,8 @@ Without Supabase settings, public pages work and every signed-in page refuses re
 |---|---|
 | `app/api/*/route.ts` | JSON API routes |
 | `app/*/route.ts` and `screen.html` | Server-rendered pages |
-| `app/portal.html` | Owner workspace, about 155 KB of HTML and inline JavaScript |
+| `app/portal.html` | Owner dashboard and settings editors, about 84 KB of HTML and inline JavaScript that draws the pages and saves |
+| `lib/workspace/` | The owner workspace's typed program, grade, schedule, event and price rules, bundled to `/portal-workspace.js` at build time (issue #45) |
 | `lib/` | Shared server logic: auth, pricing, approvals, scholarships, backups |
 | `db/schema.ts`, `drizzle/` | Database schema and ordered migrations |
 | `tests/` | Node test scripts using VM sandboxes and in-memory SQLite |

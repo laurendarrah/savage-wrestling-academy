@@ -1,6 +1,7 @@
 import vinext from "vinext";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { readExecutionProfile } from "./scripts/execution-profile.mjs";
+import { WORKSPACE_SCRIPT, workspaceScript } from "./scripts/workspace-script.mjs";
 
 // The academy's Cloudflare Worker and its D1 database (issue #119). Locally the database is a throwaway Miniflare
 // copy; the deploy job sets WORKER_NAME and D1_DATABASE_ID for the academy's real account.
@@ -25,6 +26,28 @@ const workerConfig = {
 
 const managedLinux = readExecutionProfile() === "managed-linux";
 
+// The owner workspace's typed modules (lib/workspace/), bundled into /portal-workspace.js for app/portal.html (issue #45):
+// built fresh on each request in development, and written next to the other static files in the build.
+function ownerWorkspaceScript(): Plugin {
+  return {
+    name: "swa-owner-workspace-script",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split("?")[0] !== "/" + WORKSPACE_SCRIPT) return next();
+        workspaceScript().then(code => {
+          res.setHeader("Content-Type", "text/javascript; charset=utf-8");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(code);
+        }, next);
+      });
+    },
+    async generateBundle() {
+      if (this.environment.name !== "client") return;
+      this.emitFile({ type: "asset", fileName: WORKSPACE_SCRIPT, source: await workspaceScript() });
+    },
+  };
+}
+
 export default defineConfig(async () => {
   // Use Miniflare's local Request.cf placeholder unless fetching is requested.
   process.env.CLOUDFLARE_CF_FETCH_ENABLED ??= "false";
@@ -39,6 +62,7 @@ export default defineConfig(async () => {
   return {
     server: managedLinux ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] } : {},
     plugins: [
+      ownerWorkspaceScript(),
       vinext(),
       cloudflare({ viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] }, inspectorPort: false, config: workerConfig }),
     ],
