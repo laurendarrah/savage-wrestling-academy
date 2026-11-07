@@ -5,7 +5,7 @@ import {env} from 'cloudflare:workers';
 import {appOrigin} from './account-auth';
 import {academyToday} from './public-schedule';
 import {sendEmailsDetailed} from './email';
-import {currentWaiver} from './waivers';
+import {currentVersion, FAMILY_KINDS} from './documents';
 import {dayTime, fullDate, when} from './datetime';
 import {cardSeason, isSeasonEnd} from './usaw';
 
@@ -131,9 +131,13 @@ export async function dailyReminders(force = false, today = academyToday()) {
   }
   const soon = new Date(Date.parse(today + 'T12:00:00Z') + 30 * 86400000).toISOString().slice(0, 10);
   const families = (await env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts').all<{user_id: string; email: string; payload: string}>()).results;
-  const waiver = await currentWaiver();
-  const signed = waiver ? new Set((await env.DB!.prepare('SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures WHERE version_id=?').bind(waiver.id).all<any>()).results
-    .map(s => `${s.user_id}|${s.wrestler_id}|${String(s.wrestler_name).trim().toLowerCase()}`)) : new Set<string>();
+  // Family documents in force (the waiver, and the Parent Consent Form once published, issue #195), each with who signed.
+  const docs = [];
+  for (const kind of FAMILY_KINDS) {
+    const version = await currentVersion(kind);
+    if (version) docs.push({kind, version, signed: new Set((await env.DB!.prepare('SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures WHERE version_id=?').bind(version.id).all<any>()).results
+      .map(s => `${s.user_id}|${s.wrestler_id}|${String(s.wrestler_name).trim().toLowerCase()}`))});
+  }
   const list: Notice[] = [];
   for (const f of families) {
     for (const w of JSON.parse(f.payload).wrestlers ?? []) {
@@ -144,10 +148,17 @@ export async function dailyReminders(force = false, today = academyToday()) {
       if (w.usawNumber && exp && exp < today)
         list.push({userId: f.user_id, email: f.email, kind: 'card_expired', dedupeKey: `card-expired:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
           ...cardExpiredNotice(w.name, exp, today)});
-      if (waiver && !signed.has(`${f.user_id}|${w.id}|${String(w.name).trim().toLowerCase()}`))
-        list.push({userId: f.user_id, email: f.email, kind: 'waiver_needed', dedupeKey: `waiver:${waiver.id}:${f.user_id}:${w.id}`, link: '/waiver?wrestler=' + encodeURIComponent(w.id),
-          subject: `Please sign the ${waiver.title} for ${w.name}`,
-          body: `The academy asks every family to sign the ${waiver.title}. ${w.name} cannot book until it is signed. It takes about a minute in your family account.`});
+      for (const {kind, version, signed} of docs) {
+        if (signed.has(`${f.user_id}|${w.id}|${String(w.name).trim().toLowerCase()}`)) continue;
+        if (kind === 'waiver')
+          list.push({userId: f.user_id, email: f.email, kind: 'waiver_needed', dedupeKey: `waiver:${version.id}:${f.user_id}:${w.id}`, link: '/waiver?wrestler=' + encodeURIComponent(w.id),
+            subject: `Please sign the ${version.title} for ${w.name}`,
+            body: `The academy asks every family to sign the ${version.title}. ${w.name} cannot book until it is signed. It takes about a minute in your family account.`});
+        else
+          list.push({userId: f.user_id, email: f.email, kind: 'consent_needed', dedupeKey: `consent:${version.id}:${f.user_id}:${w.id}`, link: '/consent?wrestler=' + encodeURIComponent(w.id),
+            subject: `Please sign the Parent Consent Form for ${w.name}`,
+            body: `The academy asks a parent or guardian to sign the Parent Consent Form for every wrestler. ${w.name} cannot book until it is signed. It takes about a minute in your family account.`});
+      }
     }
   }
   return notify(list);

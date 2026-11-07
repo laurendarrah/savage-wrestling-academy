@@ -725,6 +725,63 @@ await step('a coach asks for time off; the owner approves; only coaches in the s
   await coach.goto(BASE + '/coach-time'); await at(coach, '#offList', /Approved/); await at(coach, '#notices', /Time off approved/);
   expect((await api(owner, '/api/staff', {action: 'grant', email: 'coach.lee@example.test', name: 'Coach Lee', programs: ['Elementary']})).status === 200, 'Lee back to SWA Development');
 });
+// ---------- Coach contracts and the Parent Consent Form (issue #195) ----------
+await step('owner publishes a coach contract; the coach sees a to-do, signs it on /contract, and the owner sees who signed', async () => {
+  await owner.goto(BASE + '/contracts'); await at(owner, 'h1', /Coach contracts/);
+  await owner.fill('#wTitle', 'Coach contract 2026'); await owner.fill('#wBody', 'Sample contract text for testing only. '.repeat(8));
+  await owner.click('#publish'); await at(owner, '#status', /Published/);
+  await coach.goto(BASE + '/coach'); await at(coach, '#contractTodo', /To do:[\s\S]*Coach contract 2026/);
+  expect(await coach.isVisible('#opening'), 'an unsigned contract does not block coaching');
+  await coach.click('#contractTodo a'); await coach.waitForURL(/\/contract$/); await coach.waitForSelector('#signatureCanvas');
+  expect(!(await coach.isVisible('#wrestlerField')), 'a coach signs for themselves, with no wrestler to choose');
+  await coach.fill('#signer', 'Dana Coach'); await draw(coach, '#signatureCanvas');
+  await coach.check('#accepted'); await coach.check('#electronicConsent'); await coach.click('#sign');
+  await at(coach, '#status', /Signed\. A copy is saved below/);
+  const copy = await coach.locator('a:has-text("View / print")').first().getAttribute('href');
+  const res = await coach.request.get(BASE + copy), page = await res.text();
+  expect(res.status() === 200 && /Coach contract 2026/.test(page) && /<strong>Coach<\/strong> Dana Coach/.test(page), 'signed contract copy');
+  const other = await family.request.get(BASE + copy); expect(other.status() === 404, 'a family cannot open a coach contract, got ' + other.status());
+  await shot(coach, 'contract-signed');
+  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#slots article, #slots p'); await coach.waitForTimeout(600);
+  expect(!(await coach.isVisible('#contractTodo')), 'the to-do goes away once signed');
+  await owner.goto(BASE + '/contracts'); await owner.selectOption('#show', 'all');
+  await at(owner, '#rows', /coach\.dana@example\.test/);
+  expect(/Signed/.test(await owner.locator('#rows tr', {hasText: 'coach.dana@example.test'}).textContent()), 'the owner sees the coach signed');
+  expect(/Not signed/.test(await owner.locator('#rows tr', {hasText: 'coach.lee@example.test'}).textContent()), 'and who has not');
+  expect(!(await owner.locator('#rows').textContent()).includes('savagewrestlingclub@gmail.com'), 'the owner does not sign a coach contract');
+  await shot(owner, 'contracts-owner');
+  await owner.goto(BASE + '/contract'); await at(owner, '#noneText', /As the owner/);
+});
+await step('owner publishes the Parent Consent Form; booking waits until a parent signs it on /consent', async () => {
+  // Until the owner publishes it (after the attorney's review), the launch checklist lists it and nothing changes for families.
+  await owner.goto(BASE + '/'); await owner.waitForSelector('[data-launch="consent"]');
+  expect(await owner.getAttribute('[data-launch="consent"]', 'data-status') === 'todo', 'consent form is a launch to-do');
+  await at(owner, '[data-launch="consent"]', /Publish the Parent Consent Form \(after attorney review\)/);
+  // A lesson inquiry passes every other check for Sam (card, waiver), so only the form can refuse it.
+  const quote = () => api(family, '/api/booking-review', {type: 'lesson', wrestlerId: samId, format: 'one-on-one'});
+  const open = await quote(); expect(open.status === 200, 'nothing blocks Sam before the form is published: ' + JSON.stringify(open.body));
+  await owner.goto(BASE + '/consent-forms'); await at(owner, '#publishNotice', /attorney has not reviewed/);
+  expect(await owner.inputValue('#wTitle') === 'Parent Consent Form', 'default title');
+  await owner.fill('#wBody', 'Sample consent form text for testing only. '.repeat(8)); await owner.click('#publish'); await at(owner, '#status', /Published/);
+  const blocked = await quote();
+  expect(blocked.status === 403 && /Sam Example needs a signed Parent Consent Form before booking/.test(blocked.body.error), 'expected consent block: ' + JSON.stringify(blocked.body));
+  await family.goto(BASE + '/family'); await at(family, '#savedDetails', /Parent Consent Form not signed/);
+  await family.goto(BASE + '/waiver'); await at(family, '#also', /Also needed[\s\S]*Parent Consent Form/);
+  await family.goto(BASE + '/consent?wrestler=' + samId); await family.waitForSelector('#signatureCanvas'); await at(family, 'h1', /Parent Consent Form/);
+  // Decision Q16: a parent or guardian signs, never the wrestler.
+  await family.fill('#signer', 'Sam Example'); await draw(family, '#signatureCanvas');
+  await family.check('#accepted'); await family.check('#electronicConsent'); await family.click('#sign');
+  await at(family, '#status', /parent or guardian signs for every wrestler/);
+  await family.fill('#signer', 'Pat Example'); await family.click('#sign'); await at(family, '#status', /Signed for Sam Example/);
+  const after = await quote(); expect(after.status === 200, 'signed: the form no longer blocks booking: ' + JSON.stringify(after.body));
+  await shot(family, 'consent-signed');
+  await owner.goto(BASE + '/consent-forms'); await owner.selectOption('#show', 'all');
+  await at(owner, '#rows', /Sam Example/);
+  expect(/Signed/.test(await owner.locator('#rows tr', {hasText: 'Sam Example'}).textContent()), 'the owner sees the signature');
+  await shot(owner, 'consent-forms-owner');
+  // The rest of the walkthrough runs without the form, as the live site will until the attorney has reviewed it.
+  await owner.click('#retire'); await at(owner, '#status', /Form retired/);
+});
 await step('family requests SWA Advance approval; owner approves; transfer to SWA Advance goes through', async () => {
   await family.goto(BASE + `/register?program=Advanced&wrestler=${samId}`); await family.waitForSelector('#requestApproval');
   await family.waitForFunction(() => !document.querySelector('#requestApproval').closest('[hidden]'), null, {timeout: 8000});
@@ -865,10 +922,11 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   // Email is not set up locally: the page says so instead of promising alerts (issues #47, #35).
   await waitText(owner, '#emailOff', /Email isn’t set up yet, so families aren’t getting emails/); expect(await owner.isVisible('#emailOff'), 'email-off notice on site health');
 });
+// Signed documents: Sam's waiver and Parent Consent Form, and the coach's contract (issue #195).
 await step('backup export includes payments and signed waivers', async () => {
   const r = await api(owner, '/api/backups');
   const b = r.body?.backup;
-  expect(r.status === 200 && b?.version === 3 && b.records.orders.length >= 3 && b.records.waiver_signatures.length === 1 && b.records.wrestler_passes.length >= 1, 'backup export ' + r.status + ' ' + JSON.stringify(r.body).slice(0, 200));
+  expect(r.status === 200 && b?.version === 3 && b.records.orders.length >= 3 && b.records.waiver_signatures.length === 3 && b.records.wrestler_passes.length >= 1, 'backup export ' + r.status + ' ' + JSON.stringify(r.body).slice(0, 200));
   // Restoring the same backup is accepted (real data passes validation) and changes nothing.
   const fp = (await api(owner, '/api/backups?mode=preview')).body.fingerprint;
   const back = await api(owner, '/api/backups', {action: 'restore', fingerprint: fp, backup: b});
@@ -907,7 +965,7 @@ await step('one family cannot see another family\'s data', async () => {
 });
 await step('family pages fit a phone screen', async () => {
   const phone = await (async () => { const p = await (await browser.newContext({viewport: {width: 390, height: 844}, deviceScaleFactor: SHOTS ? 3 : 1, isMobile: true, hasTouch: true})); const c = (await import('./fake-supabase.mjs')).sessionCookie('family', AUTH); await p.addCookies([{name: c.name, value: c.value, url: BASE}]); return p.newPage(); })();
-  for (const path of ['/welcome', '/help', '/family', '/register', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
+  for (const path of ['/welcome', '/help', '/family', '/register', '/lesson', '/waiver', '/consent', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
     await phone.goto(BASE + path); await phone.waitForTimeout(700);
     const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(over <= 1, `${path} scrolls sideways by ${over}px on a phone`);
@@ -950,9 +1008,9 @@ await step('owner sees payments in the books and adds an expense', async () => {
 const axeSource = (await import('node:fs')).readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
 const a11yPages = {
   public: ['/welcome', '/team', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
-  family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
-  coach: ['/coach', '/roster', '/help/coach', '/coach-profile', '/coach-time'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/lesson-settings', '/coach-pay', '/timesheets', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
+  family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/consent', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
+  coach: ['/coach', '/roster', '/help/coach', '/coach-profile', '/contract', '/coach-time'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/consent-forms', '/contracts', '/lesson-settings', '/coach-pay', '/timesheets', '/waitlists', '/transfers', '/messages', '/staff', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {

@@ -47,7 +47,7 @@ function seed(sqlite){
   run("INSERT INTO subscriptions VALUES (?,?,?,?,?,?,?,?,?,?)",'ord-1','sub_1','active',1,12,'2026-11-05','2027-11-04','2026-12-04','2027-11-05',now);
   run("INSERT INTO attendance VALUES (?,?,?,?,?,?,?,?,?)",'att-1','practice:Advanced:2026-11-05:18:00','2026-11-05','parent-1','w-1','Sam Example','Member',now,'owner');
   run("INSERT INTO usaw_reviews VALUES (?,?,?,?,?,?,?,?)",'parent-1','w-1','AB1234','2027-08-31','valid','','owner',now);
-  run("INSERT INTO waiver_versions VALUES (?,?,?,?,?,?,?)",'wv-1','Waiver','Approved text.','c'.repeat(64),now,'owner',null);
+  run("INSERT INTO waiver_versions(id,title,body,sha256,published_at,published_by,retired_at) VALUES (?,?,?,?,?,?,?)",'wv-1','Waiver','Approved text.','c'.repeat(64),now,'owner',null);
   run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)",'ws-1','wv-1','parent-1','w-1','Sam Example','Pat Parent','pat@example.test','{"strokes":[]}',now);
   run("INSERT INTO academy_settings VALUES (?,?,?,?)",'lessons','{"prices":{"one-on-one":6000}}',now,'owner');
   run("INSERT INTO wrestler_passes VALUES (?,?,?,?,?,?,?)",'pass-1','parent-1','w-1','t'.repeat(32),now,null,null);
@@ -182,6 +182,33 @@ bad=clone();bad.archive.security_events[0].id=5;assert.equal(lib.validBackup(bad
   target.sqlite.prepare("UPDATE coach_time_entries SET approved_cents=5000,approved_minutes=75 WHERE id='shift-1'").run();
   await targetLib.restoreBackup(backup,await targetLib.fingerprint(await targetLib.metadata()),'owner');
   assert.equal(dump(target.sqlite,'coach_time_entries')[0].approved_cents,5000,'restore does not overwrite an existing shift');
+}
+
+// Issue #195: every signed document (waiver, Parent Consent Form, coach contract), its signatures and consent-form
+// exceptions back up and restore exactly. A version 3 file made before documents had a kind restores them as waivers.
+{
+  const src=freshDb();seed(src.sqlite);
+  const run=(sql,...v)=>src.sqlite.prepare(sql).run(...v);
+  run("INSERT INTO waiver_versions(id,kind,title,body,sha256,published_at,published_by) VALUES (?,?,?,?,?,?,?)",'pc-1','parent_consent','Parent Consent Form','Approved consent.','d'.repeat(64),now,'owner');
+  run("INSERT INTO waiver_versions(id,kind,title,body,sha256,published_at,published_by) VALUES (?,?,?,?,?,?,?)",'cc-1','coach_contract','Coach contract','Contract text.','e'.repeat(64),now,'owner');
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)",'pcs-1','pc-1','parent-1','w-1','Sam Example','Pat Parent','pat@example.test','{"strokes":[]}',now);
+  run("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)",'ccs-1','cc-1','coach-1','','','Dana Coach','dana@example.test','{"strokes":[]}',now);
+  run("INSERT INTO booking_exceptions VALUES (?,?,?,?,?,?,?,?,?,?,?)",'ex-2','parent-1','w-1','parent_consent','2026-11-05','2026-12-05','Paper form on file','owner',now,null,null);
+  const b=JSON.parse(JSON.stringify(await loadBackups(src.DB).readBackup()));
+  assert.deepEqual(b.records.waiver_versions.map(v=>v.kind).sort(),['coach_contract','parent_consent','waiver']);
+  assert.equal(lib.validBackup(b),true);
+  const t=freshDb(),tl=loadBackups(t.DB);
+  const res=await tl.restoreBackup(b,await tl.fingerprint(await tl.metadata()),'owner');
+  assert.equal(res.restored.waiver_versions,3);assert.equal(res.restored.waiver_signatures,3);assert.equal(res.restored.booking_exceptions,2);
+  for(const table of ['waiver_versions','waiver_signatures','booking_exceptions'])assert.deepEqual(dump(t.sqlite,table),dump(src.sqlite,table),table+' identical after restore');
+  // An older file: no kind on any version.
+  const older=JSON.parse(JSON.stringify(backup));for(const v of older.records.waiver_versions)delete v.kind;
+  assert.equal(lib.validBackup(older),true,'v3 from before document kinds');
+  const o=freshDb(),ol=loadBackups(o.DB);
+  assert.equal((await ol.restoreBackup(older,await ol.fingerprint(await ol.metadata()),'owner')).restored.waiver_versions,1);
+  assert.equal(dump(o.sqlite,'waiver_versions')[0].kind,'waiver','an older version restores as a waiver');
+  let bad=JSON.parse(JSON.stringify(b));bad.records.waiver_versions[0].kind=null;assert.equal(lib.validBackup(bad),false,'a kind, when present, must be text');
+  bad=JSON.parse(JSON.stringify(older));delete bad.records.waiver_versions[0].sha256;assert.equal(lib.validBackup(bad),false,'only the later column may be left out');
 }
 
 // 7. Version 1 backups from before this change still validate and restore.

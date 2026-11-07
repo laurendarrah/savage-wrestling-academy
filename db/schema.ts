@@ -139,10 +139,14 @@ export const usawLookups=sqliteTable("usaw_lookups",{
  check("usaw_lookup_status",sql`${t.status} IN ('active','inactive','not_found','unavailable')`),
  check("usaw_lookup_outcome",sql`${t.outcome} IN ('verified','inactive','not_found','mismatch','season','unavailable')`)]);
 // Waivers (issue #69). Each published text is a new, never-edited version; families sign per wrestler per version.
+// Signed documents (issue #195): the same two tables hold every document people sign on the site. `kind` is 'waiver',
+// 'parent_consent' or 'coach_contract' (checked in lib/documents.ts); rows from before #195 are all waivers. A coach
+// contract signature has an empty wrestler_id and wrestler_name: the coach signs for themselves.
 export const waiverVersions=sqliteTable("waiver_versions",{
  id:text("id").primaryKey(),title:text("title").notNull(),body:text("body").notNull(),sha256:text("sha256").notNull(),
- publishedAt:text("published_at").notNull(),publishedBy:text("published_by").notNull(),retiredAt:text("retired_at")
-},t=>[index("waiver_versions_published").on(t.publishedAt)]);
+ publishedAt:text("published_at").notNull(),publishedBy:text("published_by").notNull(),retiredAt:text("retired_at"),
+ kind:text("kind").notNull().default("waiver")
+},t=>[index("waiver_versions_published").on(t.publishedAt),index("waiver_versions_kind").on(t.kind,t.publishedAt)]);
 export const waiverSignatures=sqliteTable("waiver_signatures",{
  id:text("id").primaryKey(),versionId:text("version_id").notNull(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),
  wrestlerName:text("wrestler_name").notNull(),signer:text("signer").notNull(),email:text("email").notNull(),
@@ -186,12 +190,13 @@ export const familyMessages=sqliteTable("family_messages",{
  id:text("id").primaryKey(),userId:text("user_id").notNull(),senderRole:text("sender_role").notNull(),body:text("body").notNull(),createdAt:text("created_at").notNull(),
  readAt:text("read_at"),emailStatus:text("email_status").notNull(),emailError:text("email_error")
 },t=>[index("family_messages_thread").on(t.userId,t.createdAt),check("family_message_sender",sql`${t.senderRole} IN ('owner','family')`)]);
-// Owner exceptions to the card and waiver booking blocks (issue #89). Each has a reason and an end date.
+// Owner exceptions to the card, waiver and Parent Consent Form booking blocks (issues #89, #195). Each has a reason and
+// an end date.
 export const bookingExceptions=sqliteTable("booking_exceptions",{
  id:text("id").primaryKey(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),rule:text("rule").notNull(),
  startsOn:text("starts_on").notNull(),endsOn:text("ends_on").notNull(),reason:text("reason").notNull(),
  createdBy:text("created_by").notNull(),createdAt:text("created_at").notNull(),revokedAt:text("revoked_at"),revokedBy:text("revoked_by")
-},t=>[index("booking_exceptions_wrestler").on(t.userId,t.wrestlerId,t.rule),check("booking_exception_rule",sql`${t.rule} IN ('usaw','waiver')`)]);
+},t=>[index("booking_exceptions_wrestler").on(t.userId,t.wrestlerId,t.rule),check("booking_exception_rule",sql`${t.rule} IN ('usaw','waiver','parent_consent')`)]);
 // Automatic notices to families and coaches (issue #105). dedupe_key makes each event notify once.
 export const notifications=sqliteTable("notifications",{
  id:text("id").primaryKey(),userId:text("user_id"),email:text("email").notNull(),kind:text("kind").notNull(),subject:text("subject").notNull(),body:text("body").notNull(),

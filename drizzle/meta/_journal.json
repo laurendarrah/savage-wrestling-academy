@@ -260,6 +260,13 @@
       "when": 1794015317367,
       "tag": "0036_lumpy_silver_samurai",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1794018062981,
+      "tag": "0037_oval_sunspot",
+      "breakpoints": true
     }
   ]
 }

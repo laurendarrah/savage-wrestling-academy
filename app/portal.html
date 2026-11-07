@@ -195,9 +195,9 @@ function removeEvent(index){const e=savedEvents()[index];if(!e||!confirm('Remove
 function realTools(){
  // Issue #143: the daily four are big tiles; the rest are short grouped lists; settings fold away.
  const daily=[['/roster','Roster & check-in','Who has paid for each session. Check wrestlers in at the door.'],['/payments','Payments','Every payment, online and offline. Record cash or check.'],['/messages','Messages','Announcements and private conversations with families.'],['/cards','USA Wrestling cards','Missing or expired cards block booking.']];
- const groups=[['Families',[['/accounts','Family accounts'],['/approvals','SWA Advance approvals'],['/scholarships','Scholarships'],['/waivers','Waivers'],['/waitlists','Waitlists'],['/transfers','Program transfers']]],
+ const groups=[['Families',[['/accounts','Family accounts'],['/approvals','SWA Advance approvals'],['/scholarships','Scholarships'],['/waivers','Waivers'],['/consent-forms','Parent Consent Form'],['/waitlists','Waitlists'],['/transfers','Program transfers']]],
   ['Schedule & programs',[['#Schedules','Practice schedules'],['#Programs & pricing','Programs & pricing'],['#Camps & events','Camps & events'],['/practice-plans','Practice plans'],['/curricula','Curricula'],['/website','Public website']]],
-  ['Coaches & lessons',[['/staff','Coaches'],['/coach','Coach view'],['/lesson-settings','Private lesson prices'],['/timesheets','Coach hours']]],
+  ['Coaches & lessons',[['/staff','Coaches'],['/coach','Coach view'],['/contracts','Coach contracts'],['/lesson-settings','Private lesson prices'],['/timesheets','Coach hours']]],
   ['Money',[['/financials','Income & expenses'],['/coach-pay','Coach pay']]]];
  const more=[['/payment-setup','Online payment setup'],['/backups','Backups'],['/site-health','Site health'],['/data-requests','Data requests'],['/security-log','Security activity'],['/help/owner','Owner guide']];
  const link=([href,t])=>href[0]==='#'?`<li><button type="button" class="toollink" onclick="go('${href.slice(1)}')">${t}</button></li>`:`<li><a class="toollink" href="${href}">${t}</a></li>`;
@@ -221,13 +221,14 @@ async function loadLaunch(){
 async function loadToday(){
  const get=async u=>{try{const r=await fetch(u,{cache:'no-store'});return r.ok?await r.json():null}catch{return null}};
  const month=academyToday().slice(0,8)+'01';
- const [roster,cards,waivers,messages,waitlists,payments,site,requests]=await Promise.all(['/api/roster','/api/usaw-cards','/api/waivers','/api/messages','/api/waitlists','/api/payments?from='+month,'/api/site-health','/api/data-requests'].map(get));
+ const [roster,cards,waivers,messages,waitlists,payments,site,requests,consent]=await Promise.all(['/api/roster','/api/usaw-cards','/api/waivers','/api/messages','/api/waitlists','/api/payments?from='+month,'/api/site-health','/api/data-requests','/api/waivers?kind=parent_consent'].map(get));
  const el=document.getElementById('todayTiles');if(!el)return;
  const tile=(href,label,value,note,warn)=>`<a class="tool metric" href="${href}"><span class="muted">${esc(label)}</span><b style="font-size:28px${warn?';color:#b12c38':''}">${esc(value)}</b><span class="muted small">${esc(note)}</span></a>`;
  const t=[];
  if(roster){const s=roster.sessions||[],all=s.reduce((n,x)=>n+x.entries.length,0),inn=s.reduce((n,x)=>n+x.checkedIn,0);t.push(tile('/roster','Sessions today',s.length,s.length?inn+' of '+all+' wrestlers checked in':'Nothing scheduled today'))}
  if(cards){const b=(cards.cards||[]).filter(c=>['missing','expired','invalid','recheck'].includes(c.state)).length;t.push(tile('/cards','Blocked by USA Wrestling card',b,b?'Missing, expired or not valid':'Every card is current',b>0))}
  if(waivers&&waivers.current){const n=(waivers.wrestlers||[]).filter(w=>!w.signed).length;t.push(tile('/waivers','Waiver not signed',n,n?'Cannot book until signed':'Everyone has signed',n>0))}
+ if(consent&&consent.current){const n=(consent.wrestlers||[]).filter(w=>!w.signed).length;t.push(tile('/consent-forms','Consent form not signed',n,n?'Cannot book until signed':'Everyone has signed',n>0))}
  if(messages){const n=(messages.families||[]).reduce((a,f)=>a+(f.unread||0),0);t.push(tile('/messages','Unread family messages',n,n?'Families are waiting for a reply':'All caught up',n>0))}
  if(waitlists){const e=(waitlists.events||[]).flatMap(x=>x.entries),w=e.filter(x=>x.status==='waiting').length,o=e.filter(x=>x.status==='offered').length;t.push(tile('/waitlists','On waitlists',w,o?o+' seat'+(o===1?'':'s')+' offered':'No seats offered'))}
  if(payments){t.push(tile('/payments','Collected this month',new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((payments.totals?.collectedCents||0)/100),(payments.totals?.count||0)+' payments, online and offline'))}
