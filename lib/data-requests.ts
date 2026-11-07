@@ -19,6 +19,8 @@ export async function familyExport(userId: string) {
     account: {email: fam.email, profileUpdatedAt: fam.updated_at},
     profile: JSON.parse(fam.payload),
     payments: orders,
+    // Walk-ins and extra practices booked to pay cash at the academy (issue #248). A paid one is also under payments.
+    cashBookings: await all('SELECT kind,program,item_label,session_date,start_time,wrestler_name,amount_cents,status,created_at,canceled_at,cancel_reason FROM cash_bookings WHERE user_id=? ORDER BY created_at', userId),
     subscriptions: await all('SELECT s.status,s.payments_made,s.payments_total,s.term_start,s.term_end,s.paid_through FROM subscriptions s JOIN orders o ON o.id=s.order_id WHERE o.user_id=?', userId),
     attendance: await all('SELECT session_date,session_key,wrestler_name,checked_in_at FROM attendance WHERE user_id=? ORDER BY session_date', userId),
     usaWrestlingCardReviews: await all('SELECT wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id=?', userId),

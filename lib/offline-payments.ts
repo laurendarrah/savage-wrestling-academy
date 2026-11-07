@@ -71,6 +71,10 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
     await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=?").bind(at, id).run();
     return {status: 409, error: charge.kind === 'lesson' ? 'This lesson just filled up. The payment was not recorded.' : 'This event just filled up. The payment was not recorded.'};
   }
+  // A walk-in or extra practice the family booked to pay at the academy (issue #248) is now paid: link it, so it stops
+  // showing as due and can't be collected a second time.
+  if (charge.kind === 'walkin' || charge.kind === 'live')
+    await env.DB!.prepare("UPDATE cash_bookings SET status='paid',order_id=?,updated_at=? WHERE dedupe_key=? AND status='due'").bind(id, at, charge.dedupeKey).run();
   await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
     .bind(crypto.randomUUID(), ownerId, 'offline_payment_recorded', `${id} ${charge.kind} ${amount}`, at).run();
   await quietly(() => noticePaymentRecorded(id));
@@ -78,7 +82,8 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
   return {status: 200, orderId: id};
 }
 
-// Undo an offline payment entered by mistake. Online payments are refunded in Stripe instead.
+// Undo an offline payment entered by mistake. Online payments are refunded in Stripe instead. A mistaken "Cash received"
+// (issue #248) is undone the same way, and its booking goes back to "pay at the academy", amount due.
 export async function voidOffline(orderId: string, ownerId: string, reason: string) {
   const at = new Date().toISOString();
   const row = await env.DB!.prepare("SELECT id,source,status,pricing FROM orders WHERE id=?").bind(orderId).first<{id: string; source: string; status: string; pricing: string}>();
@@ -88,7 +93,8 @@ export async function voidOffline(orderId: string, ownerId: string, reason: stri
   const pricing = {...JSON.parse(row.pricing || '{}'), voidedBy: ownerId, voidedAt: at, voidReason: String(reason || '').trim().slice(0, 300)};
   await env.DB!.batch([
     env.DB!.prepare("UPDATE orders SET status='canceled',pricing=?,updated_at=? WHERE id=? AND status='paid'").bind(JSON.stringify(pricing), at, orderId),
-    env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'offline_payment_voided', orderId, at)
+    env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'offline_payment_voided', orderId, at),
+    env.DB!.prepare("UPDATE cash_bookings SET status='due',order_id=NULL,updated_at=? WHERE order_id=? AND status='paid'").bind(at, orderId)
   ]);
   return {status: 200};
 }

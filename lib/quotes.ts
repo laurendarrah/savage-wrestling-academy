@@ -141,7 +141,9 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     const review = {
       type: 'live', title: session.name, wrestler: w.name, dates: [session.date], start: session.start, end: session.end,
       cents, memberEligible: member, memberCents: session.memberCents, nonMemberCents: session.nonMemberCents, includedInMembership: false, status: 'registration_review',
-      message: (member ? 'Your membership is active, so the member price applies to this extra practice.' : 'Extra practices are a separate purchase for every wrestler, including members. The non-member price applies.') + tail(opts, 'live')
+      // An extra practice can always be booked to pay cash at the academy (issue #248), so the review never says to wait.
+      message: (member ? 'Your membership is active, so the member price applies to this extra practice.' : 'Extra practices are a separate purchase for every wrestler, including members. The non-member price applies.')
+        + (opts?.checkoutKinds?.has('live') ? tail(opts, 'live') : ' Online payment isn’t open yet. You can book now and pay cash at the academy.')
     };
     const charge: Charge | null = cents === null || cents === undefined ? null : {
       kind: 'live', program: null, itemId: String(session.id), itemLabel: `${session.name} on ${dayDate(session.date)}`, dates: [session.date],

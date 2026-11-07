@@ -21,7 +21,7 @@ import {academyDay} from './datetime';
 export const RETENTION_YEARS = 3;
 export const FORMER_COACH = 'Former coach';
 export const BATCH = 500, MAX_STATEMENTS = 100;
-// A coach whose records are all done still takes one statement per step (17) plus the settings (4), so a run always
+// A coach whose records are all done still takes one statement per step (18) plus the settings (4), so a run always
 // has room to finish at least one coach.
 const MIN_STATEMENTS = 24;
 export const formerKey = (id: string) => 'former-coach-' + id;
@@ -97,7 +97,7 @@ function steps(email: string, key: string, accounts: string[]): Step[] {
     // The security log keeps every event; the coach's email and account in it are replaced. A target that names the
     // coach is their email, alone or followed by a space and details (coach_month_approved).
     set('security_events', 'target=?||substr(target,?)', [key, email.length + 1], 'lower(target)=? OR lower(substr(target,1,?))=?', [email, email.length + 1, email + ' ']),
-    set('security_events', 'actor=?', [key], `${inList('actor')} AND (action LIKE 'coach%' OR action LIKE 'practice_plan%')`, [ids]),
+    set('security_events', 'actor=?', [key], `${inList('actor')} AND (action LIKE 'coach%' OR action LIKE 'practice_plan%' OR action='cash_received')`, [ids]),
     // Notices about the coach's time off (to them and to the coaches covering), and every notice to the coach.
     del('notifications', `kind LIKE 'coach_time_off%' AND EXISTS (SELECT 1 FROM coach_time_off t WHERE t.coach_email=?
       AND (notifications.dedupe_key='time-off-decided:'||t.id OR substr(notifications.dedupe_key,1,length(t.id)+15)='time-off-team:'||t.id||':'))`, [email]),
@@ -106,6 +106,10 @@ function steps(email: string, key: string, accounts: string[]): Step[] {
     set('orders', `pricing=json_set(pricing,'$.coachEmail',?,'$.coachName',?),
       item_label=CASE WHEN json_extract(pricing,'$.coachName') IS NULL THEN item_label ELSE replace(item_label,' with '||json_extract(pricing,'$.coachName')||', ',' with '||?||', ') END`,
       [key, FORMER_COACH, FORMER_COACH], `kind='lesson' AND lower(json_extract(pricing,'$.coachEmail'))=?`, [email]),
+    // Cash a coach collected at the door (issue #248): the family's payment stays exactly as paid; who collected it becomes
+    // "Former coach".
+    set('orders', "pricing=json_set(pricing,'$.recordedBy',?,'$.collectedBy',?,'$.collectedByEmail',?),terms_accepted=json_set(terms_accepted,'$.recordedBy',?)",
+      [key, FORMER_COACH, key, key], "source='offline' AND lower(json_extract(pricing,'$.collectedByEmail'))=?", [email]),
     // Lesson times nobody booked go; booked ones stay (families' orders point at them) under the former-coach key.
     del('coach_openings', `${coachOpening} AND NOT EXISTS (SELECT 1 FROM orders x WHERE x.kind='lesson' AND x.item_id=coach_openings.id)`, [email, ids]),
     set('coach_openings', 'coach_email=?,user_id=?', [key, key], coachOpening, [email, ids]),
@@ -134,7 +138,8 @@ async function candidateEmails() {
       SELECT coach_email AS e FROM coach_openings UNION SELECT coach_email FROM coach_time_entries UNION SELECT coach_email FROM coach_time_off
       UNION SELECT email FROM coach_profiles UNION SELECT email FROM coach_invites UNION SELECT email FROM notifications WHERE user_id IS NULL
       UNION SELECT s.email FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE v.kind='coach_contract'
-      UNION SELECT json_extract(pricing,'$.coachEmail') FROM orders WHERE kind='lesson')
+      UNION SELECT json_extract(pricing,'$.coachEmail') FROM orders WHERE kind='lesson'
+      UNION SELECT json_extract(pricing,'$.collectedByEmail') FROM orders WHERE source='offline')
     WHERE e IS NOT NULL AND e NOT LIKE 'former-coach-%'`).all<{e: string}>()).results.map(r => r.e);
   const settings = await readSettings();
   return [...new Set([...rows, ...Object.keys(settings.lessons?.splits ?? {}), ...(settings.website?.coaches ?? [])].map(e => String(e).toLowerCase()))];
@@ -194,8 +199,9 @@ export async function cleanupRemovedCoaches(opts: {today?: string; batch?: numbe
     const key = formerKey(tomb.id);
     const accounts = (await db().prepare(`SELECT user_id AS id FROM coach_openings WHERE coach_email=? UNION SELECT user_id FROM coach_time_entries WHERE coach_email=?
       UNION SELECT user_id FROM coach_time_off WHERE coach_email=?
-      UNION SELECT s.user_id FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE v.kind='coach_contract' AND lower(s.email)=?`)
-      .bind(email, email, email, email).all<{id: string}>()).results.map(r => r.id).filter(id => id && !id.startsWith('former-coach-'));
+      UNION SELECT s.user_id FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE v.kind='coach_contract' AND lower(s.email)=?
+      UNION SELECT json_extract(pricing,'$.recordedBy') FROM orders WHERE source='offline' AND lower(json_extract(pricing,'$.collectedByEmail'))=?`)
+      .bind(email, email, email, email, email).all<{id: string}>()).results.map(r => r.id).filter(id => id && !id.startsWith('former-coach-'));
     let done = true;
     for (const step of steps(email, key, accounts)) {
       for (;;) {

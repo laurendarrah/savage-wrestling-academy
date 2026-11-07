@@ -164,7 +164,11 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
         // If the family started a newer checkout for the same item, that newer one is canceled so the paid order wins.
         env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE dedupe_key=? AND status='pending' AND id<>?").bind(at, order.dedupe_key, orderId),
         env.DB!.prepare("UPDATE orders SET status='paid',paid_at=?,updated_at=?,stripe_session_id=?,stripe_payment_intent=?,term_start=?,term_end=? WHERE id=? AND status IN ('pending','expired','canceled')")
-          .bind(at, at, obj.id, typeof obj.payment_intent === 'string' ? obj.payment_intent : null, term?.start ?? null, term?.end ?? null, orderId)
+          .bind(at, at, obj.id, typeof obj.payment_intent === 'string' ? obj.payment_intent : null, term?.start ?? null, term?.end ?? null, orderId),
+        // Checkout refuses to start while a pay-at-the-academy booking is open (issue #248), but a late payment for an older
+        // checkout can still arrive after one was made. It was paid online, so nothing is due at the academy any more.
+        env.DB!.prepare("UPDATE cash_bookings SET status='canceled',canceled_at=?,canceled_by='stripe',cancel_reason='Paid online',updated_at=? WHERE dedupe_key=? AND status='due'")
+          .bind(at, at, order.dedupe_key)
       ]};
     }
     if (event.type === 'checkout.session.completed') return none('awaiting-payment', orderId);

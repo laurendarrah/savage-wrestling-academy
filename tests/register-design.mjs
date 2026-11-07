@@ -14,7 +14,7 @@ assert.match(form, /<div class="reviewbar"><p id="price" class="price"><\/p><but
 
 // Headings carry no trailing period (issue #130).
 for (const [, text] of body.matchAll(/<h[12][^>]*>([^<]+)<\/h[12]>/g)) assert.doesNotMatch(text, /\.$/, text);
-assert.match(body, /<h2>Review your selection<\/h2>/);
+assert.match(body, /<h2 id="reviewHeading">Review your selection<\/h2>/);
 
 // Prices are never written into the page; they come from the server catalog and review.
 assert.doesNotMatch(body, /\$\d/, 'no hard-coded prices');

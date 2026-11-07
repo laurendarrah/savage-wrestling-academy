@@ -1,9 +1,11 @@
-// Owner payments (issue #62): every payment with totals and CSV export, plus recording and voiding offline payments.
+// Owner payments (issue #62): every payment with totals and CSV export, plus recording and voiding offline payments, and
+// the walk-ins and extra practices booked to pay cash at the academy that are still unpaid (issue #248).
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {allPayments, listPayments, paymentsCsv, previewOffline, recordOffline, voidOffline} from '../../../lib/offline-payments';
 import {rateLimited} from '../../../lib/rate-limit';
 import {findFamilies} from '../../../lib/family-search';
 import {pageSize} from '../../../lib/paging';
+import {unpaidCashBookings, receiveCash, cancelByOwner} from '../../../lib/cash-bookings';
 export const dynamic = 'force-dynamic';
 const FAMILY_PICKER = 50;
 
@@ -16,6 +18,8 @@ export async function GET(request: Request) {
     const found = await findFamilies(q.get('q'), FAMILY_PICKER);
     return reply({more: found.more, families: found.rows.map(r => { const p = JSON.parse(r.payload); return {userId: r.user_id, email: r.email, parentName: p.parentName || '', wrestlers: (p.wrestlers || []).map((w: any) => ({id: w.id, name: w.name, grade: w.grade}))}; })});
   }
+  // Walk-ins and extra practices booked to pay cash at the academy and not paid yet (issue #248), to follow up or cancel.
+  if (q.get('cash') === 'due') return reply(await unpaidCashBookings());
   const filters = {from: q.get('from') ?? undefined, to: q.get('to') ?? undefined, status: q.get('status') ?? undefined, kind: q.get('kind') ?? undefined, source: q.get('source') ?? undefined};
   // The spreadsheet has every matching payment, read in batches.
   if (q.get('format') === 'csv') {
@@ -51,6 +55,14 @@ export async function POST(request: Request) {
   if (input?.action === 'void') {
     if (typeof input.orderId !== 'string') return reply({error: 'Choose a payment.'}, 400);
     const r = await voidOffline(input.orderId, auth.owner.userId, input.reason);
+    return r.status === 200 ? reply({ok: true}) : reply({error: r.error}, r.status);
+  }
+  if (input?.action === 'cash-received') {
+    const r = await receiveCash(input.bookingId, {id: auth.owner.userId, name: 'Owner', email: null}, {role: 'owner'});
+    return r.status === 200 ? reply({ok: true, orderId: r.orderId}) : reply({error: r.error}, r.status);
+  }
+  if (input?.action === 'cash-cancel') {
+    const r = await cancelByOwner(auth.owner.userId, input.bookingId, input.reason);
     return r.status === 200 ? reply({ok: true}) : reply({error: r.error}, r.status);
   }
   return reply({error: 'Unknown action.'}, 400);

@@ -120,6 +120,9 @@ html body .safety textarea{min-height:76px}
 .empty-billing h3{margin-bottom:6px}
 .purchase-item{padding:16px 0;border-bottom:1px solid #E1E3E8}
 .purchase-item:last-child{border-bottom:0}
+/* Booked to pay cash at the academy (issue #248): the amount due stands out, with Cancel until the practice starts. */
+.purchase-item.cash-due strong.due{color:var(--swa-warn-ink)}
+.purchase-item.cash-due button{margin-top:4px;min-height:44px}
 .purchase-item h4{margin:0 0 5px;font-size:17px}
 .purchase-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
 .purchase-top strong{white-space:nowrap}
@@ -329,7 +332,7 @@ function setupSteps(){
   const unsigned=kids.filter(w=>!consentInfo.signatures.some(x=>x.current&&x.wrestlerId===w.id));
   steps.push({key:'consent',title:'Sign the Parent Consent Form',done:kids.length>0&&!unsigned.length,text:!kids.length?'Once your wrestler is added, a parent or guardian signs the Parent Consent Form for them.':unsigned.length?'A parent or guardian signs the Parent Consent Form for '+esc(unsigned.map(w=>w.name).join(', '))+'.':'The Parent Consent Form is signed for every wrestler.',button:'<a class="button" href="/consent'+(unsigned[0]?'?wrestler='+encodeURIComponent(unsigned[0].id):'')+'">Sign the form</a>'});
  }
- const training=orders.some(o=>o.status==='paid')||scholarshipAwards.some(a=>a.status==='active');
+ const training=orders.some(o=>o.status==='paid')||scholarshipAwards.some(a=>a.status==='active')||cashBookings.length>0;
  steps.push({key:'training',title:'Choose training',done:training,text:training?'Your training is booked.':checkoutOpen?'Choose a membership or a walk-in practice and pay online. It shows here once it’s paid.':'Choose a membership or a walk-in practice, then pay at the academy. It shows here once the academy records your payment.',button:'<a class="button" href="/register">Choose training</a>'});
  return steps;
 }
@@ -355,6 +358,8 @@ async function loadNextUp(){
   upcomingLoaded=true;renderHome()}catch{}
 }
 const sessionName=s=>s.type==='practice'?s.title+' practice':s.title;
+// Booked to pay cash at the academy and not paid yet (issue #248): "Pay at the academy: $40.00 due".
+const dueText=s=>typeof s.dueCents==='number'?'Pay at the academy: '+dollars(s.dueCents)+' due':'';
 const why={Membership:'Included in the membership',Scholarship:'Included in the scholarship','Walk-in':'Walk-in',Paid:'Paid',Registered:'Registered'};
 function renderNextUp(setUp){
  const next=upcoming[0];
@@ -362,7 +367,7 @@ function renderNextUp(setUp){
  if($('nextUp').hidden)return;
  if(!next){$('nextUpBody').innerHTML='<p>Nothing is booked for the next three weeks.</p><p><a class="button" href="/calendar">See the calendar</a></p>';return}
  const same=upcoming.filter(s=>s.date===next.date&&s.start===next.start&&s.title===next.title).map(s=>s.wrestler);
- $('nextUpBody').innerHTML='<p class="next-when">'+esc(dayTime(next.date,next.start))+'</p><p class="next-what"><strong>'+esc(sessionName(next))+'</strong> · '+esc([...new Set(same)].join(', '))+'<br><span class="muted">'+esc(why[next.why]||next.why||'')+(next.end?' · ends '+esc(clock(next.end)):'')+'</span></p><a class="button primary" href="/pass?wrestler='+encodeURIComponent(next.wrestlerId)+'">Show entry pass</a>'
+ $('nextUpBody').innerHTML='<p class="next-when">'+esc(dayTime(next.date,next.start))+'</p><p class="next-what"><strong>'+esc(sessionName(next))+'</strong> · '+esc([...new Set(same)].join(', '))+'<br><span class="muted">'+esc(dueText(next)||why[next.why]||next.why||'')+(next.end?' · ends '+esc(clock(next.end)):'')+'</span></p><a class="button primary" href="/pass?wrestler='+encodeURIComponent(next.wrestlerId)+'">Show entry pass</a>'
   +(upcoming.length>1?'<ul class="later" aria-label="Also coming up">'+upcoming.slice(1,4).map(x=>'<li><b>'+esc(dayTime(x.date,x.start))+'</b><span>'+esc(sessionName(x))+' · '+esc(x.wrestler)+'</span></li>').join('')+'</ul>':'');
 }
 function renderHome(){
@@ -374,18 +379,18 @@ function renderHome(){
  if(missing.length)$('finishText').textContent='The academy now asks every family for a home address, an emergency contact, and each wrestler’s birth date and any allergies or medical notes, so coaches can look after your wrestler at practice. Still to add: '+missing.join(', ')+'.';
  $('heroLede').textContent=setUp?'':'A few quick steps and your wrestler is ready for the mat.';
  // A family with nothing saved or paid yet doesn't need empty membership, purchase and data sections.
- const fresh=!savedProfile&&!orders.length&&!scholarshipAwards.length;
+ const fresh=!savedProfile&&!orders.length&&!scholarshipAwards.length&&!cashBookings.length;
  for(const id of ['memberships','purchaseHistory','yourData'])$(id).hidden=fresh;
  $('membershipsLink').hidden=$('purchasesLink').hidden=$('yourDataLink').hidden=fresh;
 }
-let orders=[];
+let orders=[],cashBookings=[];
 // Dates read "Nov 9, 2026"; moments read "Mon, Nov 9 · 3:00 PM" in New York time (issue #127).
 const longDate=d=>d?new Date(String(d).length===10?d+'T12:00:00Z':d).toLocaleDateString('en-US',{timeZone:String(d).length===10?'UTC':'America/New_York',month:'short',day:'numeric',year:'numeric'}):'';
 const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
 const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(String(t||''));if(!m)return '';const h=Number(m[1]);return (h%12||12)+':'+m[2]+' '+(h<12?'AM':'PM')};
 const dayTime=(d,t)=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'})+(t?' · '+clock(t):'');
 const dollars=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(c||0)/100);
-async function loadOrders(){try{const r=await fetch('/api/orders',{cache:'no-store'}),d=await r.json();if(!r.ok)return;orders=Array.isArray(d.orders)?d.orders:[];checkoutOpen=d.checkoutOpen===true;renderMembershipCards();renderPurchases();renderStatusCopy();refreshHome()}catch{}}
+async function loadOrders(){try{const r=await fetch('/api/orders',{cache:'no-store'}),d=await r.json();if(!r.ok)return;orders=Array.isArray(d.orders)?d.orders:[];cashBookings=Array.isArray(d.cashBookings)?d.cashBookings:[];checkoutOpen=d.checkoutOpen===true;renderMembershipCards();renderPurchases();renderStatusCopy();refreshHome()}catch{}}
 // Wording that depends on whether online payment is open and whether this family has paid for anything.
 let checkoutOpen=false;
 function renderStatusCopy(){
@@ -398,10 +403,15 @@ function renderStatusCopy(){
  else if(checkoutOpen)$('notEnrolledNote').innerHTML='<strong>No membership has been purchased yet.</strong> Choose one below when you are ready.';
 }
 function activeMembership(w){const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});return orders.find(o=>o.wrestler_id===w.id&&o.status==='paid'&&(o.kind==='annual'||o.kind==='monthly')&&o.term_start<=today&&o.term_end>=today)}
+// Walk-ins and extra practices booked to pay cash at the academy (issue #248) come first, with the amount due and, until
+// the session starts, a Cancel button. Once the academy records the cash, they show below as paid like any purchase.
+function cashItem(b){return `<article class="purchase-item cash-due"><div class="purchase-top"><div><h4>${esc(b.item)}</h4><span class="billing-pill warning">Pay at the academy</span></div><strong class="due">${dollars(b.amountCents)} due</strong></div><p>${esc(b.wrestler)}<br>${esc(dayTime(b.date,b.start))}</p><p class="muted">${esc(b.label)}. ${b.past?'The academy will follow up with you about this payment.':'Bring the cash to the '+(b.kind==='live'?'session':'practice')+'.'+(b.cancellable?' You can cancel until it starts; nothing is charged.':'')}</p>${b.cancellable?`<button type="button" data-cash-cancel="${esc(b.id)}">Cancel booking</button>`:''}</article>`}
+async function cancelCash(id){const b=cashBookings.find(x=>x.id===id);if(!b||!confirm('Cancel '+b.wrestler+'’s booking for '+b.item+'? Nothing is charged.'))return;try{const r=await fetch('/api/cash-bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel',id})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not cancel. Please try again.');cashBookings=d.bookings||[];renderPurchases();refreshHome();loadNextUp();$('status').textContent='Booking canceled. Nothing was charged.'}catch(e){$('status').textContent=e.message}}
 function renderPurchases(){
- if(!Array.isArray(orders)||!orders.length)return;
+ if((!Array.isArray(orders)||!orders.length)&&!cashBookings.length){$('purchaseList').innerHTML='<div class="empty-billing"><h3>No purchases yet</h3><p>Looking over a registration doesn’t charge you or hold a spot. Each payment shows here with its date and amount after you pay.</p></div>';return}
  const label={paid:'Paid',refunded:'Refunded',pending:'Checkout not finished'},cls={paid:'active',refunded:'',pending:'warning'};
- $('purchaseList').innerHTML=orders.map(o=>`<article class="purchase-item"><div class="purchase-top"><div><h4>${esc(o.item_label)}</h4><span class="billing-pill ${cls[o.status]||''}">${esc(label[o.status]||o.status)}</span></div><strong>${dollars(o.amount_cents)}</strong></div><p>${esc(o.wrestler_name)}${o.dates&&o.dates.length?'<br>'+o.dates.map(longDate).map(esc).join(' · '):''}${o.discount_cents?'<br>Includes '+dollars(o.discount_cents)+' discount':''}</p><p class="muted">${o.status==='paid'?'Paid '+esc(longDate(o.paid_at)):o.status==='refunded'?'Refunded after payment on '+esc(longDate(o.paid_at)):'Started '+esc(longDate(o.created_at))+'. Nothing has been charged.'}</p></article>`).join('');
+ $('purchaseList').innerHTML=cashBookings.map(cashItem).join('')+orders.map(o=>`<article class="purchase-item"><div class="purchase-top"><div><h4>${esc(o.item_label)}</h4><span class="billing-pill ${cls[o.status]||''}">${esc(label[o.status]||o.status)}</span></div><strong>${dollars(o.amount_cents)}</strong></div><p>${esc(o.wrestler_name)}${o.dates&&o.dates.length?'<br>'+o.dates.map(longDate).map(esc).join(' · '):''}${o.discount_cents?'<br>Includes '+dollars(o.discount_cents)+' discount':''}</p><p class="muted">${o.status==='paid'?'Paid '+esc(longDate(o.paid_at)):o.status==='refunded'?'Refunded after payment on '+esc(longDate(o.paid_at)):'Started '+esc(longDate(o.created_at))+'. Nothing has been charged.'}</p></article>`).join('');
+ document.querySelectorAll('[data-cash-cancel]').forEach(b=>b.onclick=()=>cancelCash(b.dataset.cashCancel));
 }
 function renderMembershipCards(){
  const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};

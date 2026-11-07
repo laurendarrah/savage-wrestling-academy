@@ -342,6 +342,34 @@ await step('family reviews a walk-in once card and waiver are in order', async (
   await shot(family, 'register-review');
 });
 
+// ---------- Pay cash at the academy (issue #248) ----------
+await step('family books today\'s walk-in to pay cash; the coach sees $40 due and taps Cash received; Payments shows it', async () => {
+  await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${today}`);
+  await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family.click('#reviewButton');
+  await family.waitForSelector('#payChoice:not([hidden])');
+  // Online checkout is closed in this walkthrough, so cash is the only way offered, and it is already chosen.
+  expect(!(await family.isVisible('#payOnlineOption')) && await family.isVisible('#cashBox'), 'Pay cash at the academy is offered while online payment is closed');
+  await at(family, '#cashHint', /Book now and pay \$40\.00 in cash at the practice/);
+  await family.click('#cashButton');
+  await at(family, '#cashDone', /Pay at the academy: \$40\.00 due[\s\S]*Sam Example/);
+  await shot(family, 'register-cash-booked');
+  const again = await api(family, '/api/cash-bookings', {action: 'book', source: 'membership', plan: 'walkin', wrestlerId: samId, program: 'Intermediate', date: today, practiceId: (await api(family, '/api/cash-bookings')).body.bookings[0].itemId});
+  expect(again.status === 409, 'a second booking for the same practice is refused: ' + JSON.stringify(again.body));
+  await family.goto(BASE + '/family'); await at(family, '#purchaseList', /Pay at the academy[\s\S]*\$40\.00 due/);
+  // The coach sees it on today's roster, taps Cash received, and it counts as paid.
+  await coach.goto(BASE + '/roster'); await at(coach, '#sessions', /Sam Example[\s\S]*Pay at the academy · \$40\.00 due/);
+  await coach.locator('.row', {hasText: 'Sam Example'}).first().locator('[data-cash]').click();
+  await at(coach, '#status', /Cash received: \$40\.00 for Sam Example/);
+  await at(coach, '#sessions', /Sam Example[\s\S]*Walk-in paid[\s\S]*Cash received/);
+  await shot(coach, 'roster-cash-received');
+  await openPayments(owner);
+  await at(owner, '#rows', /Sam Example[\s\S]*SWA Intermediate walk-in[\s\S]*Cash[\s\S]*\$40\.00/);
+  await at(owner, '#cashSummary', /Nothing is waiting to be paid at the academy/);
+  await owner.goto(BASE + '/security-log'); const log = await owner.content();
+  expect(log.includes('Cash received at the academy') && log.includes('Sam Example'), 'the security log has the cash received');
+});
+
 // ---------- No year paid upfront; a membership paid upfront earlier still counts; roster, check-in and QR ----------
 await step('no year paid upfront anywhere; a membership paid upfront before the change still counts', async () => {
   // Families are offered the monthly membership and walk-ins only (#210).

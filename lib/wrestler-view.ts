@@ -10,7 +10,8 @@ import {currentVersion} from './documents';
 import {academyToday} from './public-schedule';
 import {programOn} from './transfers';
 
-type Upcoming = {date: string; start: string | null; end: string | null; title: string; type: string; why: string};
+// dueCents: booked to pay cash at the academy and not paid yet (issue #248); shown as "Pay at the academy: $40.00 due".
+type Upcoming = {date: string; start: string | null; end: string | null; title: string; type: string; why: string; dueCents?: number};
 const addDays = (d: string, n: number) => new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 
 export async function upcomingFor(userId: string, wrestlerId: string, from: string, days = 21): Promise<Upcoming[]> {
@@ -21,7 +22,9 @@ export async function upcomingFor(userId: string, wrestlerId: string, from: stri
     .bind(userId, wrestlerId).all<{program: string; accepted_at: string}>()).results;
   const transfers = (await env.DB!.prepare('SELECT t.order_id,t.from_program,t.effective_date,t.created_at FROM membership_transfers t JOIN orders o ON o.id=t.order_id WHERE o.user_id=? AND o.wrestler_id=?')
     .bind(userId, wrestlerId).all<any>()).results;
-  const nothing = !orders.length && !scholarships.length;
+  const cash = (await env.DB!.prepare("SELECT kind,item_id,session_date,amount_cents FROM cash_bookings WHERE user_id=? AND wrestler_id=? AND status='due' AND session_date>=? AND session_date<=?")
+    .bind(userId, wrestlerId, from, to).all<{kind: string; item_id: string; session_date: string; amount_cents: number}>()).results;
+  const nothing = !orders.length && !scholarships.length && !cash.length;
   const out: Upcoming[] = [];
   if (!nothing) {
     const state = await academyState();
@@ -36,7 +39,9 @@ export async function upcomingFor(userId: string, wrestlerId: string, from: stri
           const id = s.key.split(':')[1];
           if (orders.some(o => o.kind === s.type && o.item_id === id && o.dates.includes(d))) why = s.type === 'live' ? 'Paid' : 'Registered';
         }
-        if (why) out.push({date: d, start: s.start, end: s.end, title: s.title, type: s.type, why});
+        const owed = !why && cash.find(c => c.session_date === d && (s.type === 'practice' ? c.kind === 'walkin' && c.item_id === `${s.program}:${d}:${s.start}` : s.type === 'live' && c.kind === 'live' && c.item_id === s.key.split(':')[1]));
+        if (owed) out.push({date: d, start: s.start, end: s.end, title: s.title, type: s.type, why: 'Pay at the academy', dueCents: owed.amount_cents});
+        else if (why) out.push({date: d, start: s.start, end: s.end, title: s.title, type: s.type, why});
       }
     }
   }
