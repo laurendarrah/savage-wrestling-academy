@@ -281,6 +281,13 @@
       "when": 1794027570131,
       "tag": "0039_fuzzy_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1794048938669,
+      "tag": "0040_nice_zombie",
+      "breakpoints": true
     }
   ]
 }
