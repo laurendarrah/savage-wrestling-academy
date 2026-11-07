@@ -368,7 +368,7 @@ function page(file, {fetch, hidden = []}) {
   const nodes = new Map();
   const el = id => {
     if (!nodes.has(id)) nodes.set(id, {id, value: '', hidden: hidden.includes(id), checked: false, disabled: false, innerHTML: '', textContent: '', className: '', style: {}, dataset: {},
-      elements: {parentName: {value: '', focus() {}}, phone: {value: ''}}, focus() {}, scrollIntoView() {}, setAttribute() {}, querySelector() { return null; }, classList: {add() {}, remove() {}, toggle() {}}});
+      elements: {parentName: {value: '', focus() {}}, phone: {value: ''}}, focus() {}, scrollIntoView() {}, setAttribute() {}, removeAttribute() {}, querySelector() { return null; }, classList: {add() {}, remove() {}, toggle() {}}});
     return nodes.get(id);
   };
   const ctx = vm.createContext({Intl, Date, JSON, URLSearchParams, Promise, setTimeout: f => setImmediate(f), structuredClone, console, crypto: {randomUUID: () => 'new-id'},
