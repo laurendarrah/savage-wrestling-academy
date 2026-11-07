@@ -54,7 +54,7 @@ for (let i = 0; i < N; i++) {
   sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(u, u + '@x.test', JSON.stringify({parentName: 'P' + i, phone: '', wrestlers: [{id: w, name: 'Wrestler ' + String(i).padStart(2, '0'), grade: '8', ...(i % 4 ? {usawNumber: 'AB' + (1000 + i), usawExpires: i % 4 === 1 ? ny(-1) : '2099-12-31'} : {})}]}), 1, 'x');
   sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
     VALUES (?,?,'e',?,'W','annual','Intermediate','Intermediate','M','[]',1,0,1,'usd','{}','{}','paid',?,0,'t','t','t',?,?,'offline')`).run('o' + i, u, w, 'k' + i, ny(-5), ny(300));
-  if (i % 2) sqlite.prepare("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)").run('s' + i, 'wv', u, w, 'Wrestler ' + String(i).padStart(2, '0'), 'P', 'e', '{}', 't');
+  if (i % 2) sqlite.prepare("INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)").run('s' + i, 'wv', u, w, 'Wrestler ' + String(i).padStart(2, '0'), 'P', 'e', '{}', 't');
 }
 sqlite.prepare("INSERT INTO usaw_reviews VALUES ('u2','w2','AB1002','2099-12-31','invalid','Not found','o','t')").run();
 sqlite.prepare("INSERT INTO booking_exceptions VALUES ('x1','u0','w0','usaw',?,?,'Renewal pending','o','t',NULL,NULL)").run(ny(-1), ny(10));

@@ -159,6 +159,8 @@ Batches A to I are defined in the next section. "Skip" means no port.
 
 ### 3. Batch B: Coach profiles, invitation and onboarding. Size M; L with photos. R2 needed for photos only.
 
+**Outcome (#239):** the owner-managed openings and the families' month view from entry 05 are built: **Lesson openings** on Coaches (`/coach-openings`) uses coach home's own functions in `lib/lessons.ts`, and `/lesson` has a List or Month toggle.
+
 - **Entries:** 01, 03, the owner directory, invite copy and owner-managed openings from 05, the permanent coach deletion from 15, and the weekly recurring openings from 38.
 - **What:**
   - A coach join page (`/coach-join`) and sign-up that lands coaches on the coach home.
@@ -254,6 +256,8 @@ Batches A to I are defined in the next section. "Skip" means no port.
   - The launch plan currently keeps bookkeeping outside the app.
 
 ### 8. Batch H: Documents and contracts beside the waiver. Size L. No R2. Needs the attorney.
+
+**Outcome (#239):** reissuing (entry 27) is built. #195 could only ask everyone to sign again, with a new version. Now the owner can ask one family, or one coach for the contract, to sign again with a reason: the signature stays unchanged and is marked replaced (`signature_reissues`), booking treats the wrestler as unsigned until a parent signs again, and the owner's documents page and the family home show it.
 
 - **Entries:** 02, 04, the reissue part of 27, and 29.
 - **What:**

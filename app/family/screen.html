@@ -290,7 +290,10 @@ function consentLine(w){return docLine(consentInfo&&consentInfo.document,consent
 function docLine(doc,info,w,label,page,action){
  if(!doc)return '';
  const s=info.signatures.find(x=>x.current&&x.wrestlerId===w.id);
- return s?'<span class="billing-pill active">'+label+' signed</span> <a href="/waiver-copy?id='+encodeURIComponent(s.id)+'" target="_blank" rel="noopener">View copy</a>':'<span class="billing-pill warning">'+label+' not signed</span> '+(info.exceptions&&info.exceptions[w.id]?'The academy is allowing bookings until '+esc(longDate(info.exceptions[w.id]))+'.':'<strong>Booking is blocked until it is signed.</strong>')+' <a href="'+page+'?wrestler='+encodeURIComponent(w.id)+'">'+action+' →</a>';
+ // The academy asked for it to be signed again (issue #239): say so, with its reason, and keep the earlier copy at hand.
+ const asked=!s&&info.signatures.find(x=>x.replaced&&x.versionId===doc.id&&x.wrestlerId===w.id);
+ const again=asked?'<span class="billing-pill warning">Sign the '+(label==='Waiver'?'waiver':label)+' again</span> The academy asked you to sign it again: '+esc(asked.replaced.reason)+' <a href="/waiver-copy?id='+encodeURIComponent(asked.id)+'" target="_blank" rel="noopener">Earlier copy</a> ':'';
+ return s?'<span class="billing-pill active">'+label+' signed</span> <a href="/waiver-copy?id='+encodeURIComponent(s.id)+'" target="_blank" rel="noopener">View copy</a>':(again||'<span class="billing-pill warning">'+label+' not signed</span> ')+(info.exceptions&&info.exceptions[w.id]?'The academy is allowing bookings until '+esc(longDate(info.exceptions[w.id]))+'.':'<strong>Booking is blocked until it is signed.</strong>')+' <a href="'+page+'?wrestler='+encodeURIComponent(w.id)+'">'+action+' →</a>';
 }
 async function refreshCards(){try{const r=await fetch('/api/family',{cache:'no-store'}),d=await r.json();if(r.ok){cards=d.cards||{};refreshHome()}}catch{}}
 // Redraws what depends on cards, waivers, orders and scholarships once each of them arrives.

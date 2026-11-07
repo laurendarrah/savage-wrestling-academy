@@ -41,7 +41,11 @@ export const RECORD_TABLES:Record<string,Col[]>={
  usaw_reviews:[['user_id','text'],['wrestler_id','text'],['number','text'],['expires','text'],['status','text'],['note','text'],['reviewed_by','text'],['reviewed_at','text']],
  // kind (issue #195): waiver, parent_consent or coach_contract. Files made before it have none; see LATER_COLUMNS.
  waiver_versions:[['id','text'],['title','text'],['body','text',false,BIG],['sha256','text'],['published_at','text'],['published_by','text'],['retired_at','text',true],['kind','text']],
- waiver_signatures:[['id','text'],['version_id','text'],['user_id','text'],['wrestler_id','text'],['wrestler_name','text'],['signer','text'],['email','text'],['signature_record','text',false,BIG],['signed_at','text']],
+ // round (issue #239): which signing of the version this is, after the owner asked for it again. Older files: 0.
+ waiver_signatures:[['id','text'],['version_id','text'],['user_id','text'],['wrestler_id','text'],['wrestler_name','text'],['signer','text'],['email','text'],['signature_record','text',false,BIG],['signed_at','text'],['round','int']],
+ // Signatures the owner asked to be signed again, with the reason (issue #239). Added after version 3 first shipped
+ // (V3_LATER). Restoring never removes one, so a file cannot make a replaced signature count again.
+ signature_reissues:[['signature_id','text'],['user_id','text'],['reason','text'],['reissued_by','text'],['reissued_at','text']],
  academy_settings:[['id','text'],['payload','text',false,BIG],['updated_at','text'],['updated_by','text']],
  wrestler_passes:[['id','text'],['user_id','text'],['wrestler_id','text'],['token','text'],['created_at','text'],['revoked_at','text',true],['revoked_by','text',true]],
  waitlist_entries:[['id','text'],['event_id','text'],['option','text'],['dates','text',false,BIG],['user_id','text'],['wrestler_id','text'],['wrestler_name','text'],['email','text'],['status','text'],['created_at','text'],['offered_at','text',true],['offer_expires_at','text',true],['offer_hours','int',true],['auto_next','int'],['offered_by','text',true],['closed_at','text',true]],
@@ -63,18 +67,18 @@ export const RECORD_TABLES:Record<string,Col[]>={
  removed_coaches:[['id','text'],['email_hash','text'],['email','text',true],['name','text',true],['removed_on','text'],['cleaned_at','text',true]],
 };
 // Tables whose primary key is not a single id column.
-export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],stripe_fees:['payment_intent'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
+export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],signature_reissues:['signature_id'],stripe_fees:['payment_intent'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
 const keysOf=(t:string)=>RECORD_KEYS[t]??['id'];
 // JSON columns must parse to the expected shape, so a damaged or tampered file cannot store data that crashes a page.
 const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[['specialties','array']],orders:[['dates','array'],['pricing','object'],['terms_accepted','object']],waitlist_entries:[['dates','array']],academy_settings:[['payload','object']],waiver_signatures:[['signature_record','object']],announcements:[['audience','object']],coach_time_entries:[['history','array']],coach_time_off:[['programs','array']]};
 const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
 // Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
 // and still restores; a file that has the section is checked like any other.
-const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees'];
+const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues'];
 // Columns added to a version 3 table after it first shipped, with the value an older file's rows mean. A row may leave
 // them out and is restored with that value; a row that has one is checked like any other column. Issue #195: every
-// signed-document version in an older file is a waiver.
-const LATER_COLUMNS:Record<string,Record<string,string>>={waiver_versions:{kind:'waiver'}};
+// signed-document version in an older file is a waiver. Issue #239: every signature in an older file is a first signing.
+const LATER_COLUMNS:Record<string,Record<string,string>>={waiver_versions:{kind:'waiver'},waiver_signatures:{round:'0'}};
 const V2_TABLES=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
 const ARCHIVE_COLS:Col[]=[['id','text'],['actor','text'],['action','text'],['target','text',false,2000],['created_at','text']];
 // Limits (issues #46 and #221). Every table is read in batches, so no row is left out; a backup that would not fit fails

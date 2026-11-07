@@ -2,9 +2,9 @@
 // signed. Without a kind it is the waiver; ?kind= (or "kind" when posting) chooses the Parent Consent Form or the coach
 // contract.
 import {ownerIdentity, accountReply, sameOrigin, OWNER_EMAIL} from '../../../lib/account-auth';
-import {DOCUMENTS, isKind, ownerDocuments, publishDocument, retireDocument, signersPage, type Kind} from '../../../lib/documents';
+import {DOCUMENTS, isKind, ownerDocuments, publishDocument, retireDocument, reissueSignature, signersPage, type Kind} from '../../../lib/documents';
 import {pageSize, PAGE_SIZE} from '../../../lib/paging';
-import {dailyReminders, quietly} from '../../../lib/notify';
+import {dailyReminders, noticeReissue, quietly} from '../../../lib/notify';
 export const dynamic = 'force-dynamic';
 const kindOf = (k: unknown): Kind | null => k === undefined || k === null || k === '' ? 'waiver' : isKind(k) ? k : null;
 
@@ -31,8 +31,15 @@ export async function POST(request: Request) {
   try { input = JSON.parse(raw); } catch { return reply({error: 'Invalid request.'}, 400); }
   const kind = kindOf(input?.kind);
   if (!kind) return reply({error: 'Choose a document.'}, 400);
+  // Ask one family or coach to sign again (issue #239): their signature stays as a record, marked replaced with the reason.
+  if (input?.action === 'reissue') {
+    const r = await reissueSignature(kind, input.signatureId, input.reason, auth.owner.userId);
+    if (r.status !== 200) return reply({error: r.error}, r.status);
+    await quietly(() => noticeReissue(kind, r.signature!, r.version!, r.reason!));
+    return reply({ok: true});
+  }
   const r = input?.action === 'publish' ? await publishDocument(kind, input.title, input.body, auth.owner.userId)
-    : input?.action === 'retire' ? await retireDocument(kind, auth.owner.userId) : {status: 400, error: 'Choose publish or retire.'};
+    : input?.action === 'retire' ? await retireDocument(kind, auth.owner.userId) : {status: 400, error: 'Choose publish, retire or reissue.'};
   // Families hear about a new family document at once (the daily reminder, sent now); coaches see a to-do on coach home.
   if (r.status === 200 && input.action === 'publish' && DOCUMENTS[kind].signer === 'parent') await quietly(() => dailyReminders(true));
   return r.status === 200 ? reply({ok: true}) : reply({error: (r as any).error}, r.status);

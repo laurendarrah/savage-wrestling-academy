@@ -93,7 +93,7 @@ for (let i = 0; i < F; i++) {
   const wrestlers = [{id: 'a' + i, name: 'Alex ' + pad(i), grade: '8', ...(i % 3 ? {usawNumber: '12345' + pad(i), usawExpires: i % 3 === 1 ? ny(-2) : ny(10)} : {})}];
   if (i % 2) wrestlers.push({id: 'b' + i, name: 'Blair ' + pad(i), grade: 'K'});
   sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run(u, `fam${pad(i)}@example.test`, JSON.stringify({parentName: 'Parent ' + pad(i), phone: '555-' + pad(i), wrestlers}), 1, '2026-10-01T00:00:00Z');
-  if (i % 4 === 0) sqlite.prepare('INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)').run('s' + i, 'wv', u, 'a' + i, 'Alex ' + pad(i), 'P', 'e', '{}', 't');
+  if (i % 4 === 0) sqlite.prepare('INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)').run('s' + i, 'wv', u, 'a' + i, 'Alex ' + pad(i), 'P', 'e', '{}', 't');
   // Two payments each, some on the same second, so the id breaks ties.
   for (const n of [0, 1]) sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
     VALUES (?,?,?,?,?,?,'Intermediate','Intermediate','Walk-in','[]',?,0,?,'usd',?,'{}',?,?,0,'t','t',?,NULL,NULL,?)`).run(`o${pad(i)}${n}`, u, `fam${pad(i)}@example.test`, 'a' + i, 'Alex ' + pad(i), 'walkin', 4000 + n * 100, 4000 + n * 100,

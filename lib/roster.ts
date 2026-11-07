@@ -3,6 +3,7 @@ import {env} from 'cloudflare:workers';
 import {publicSchedule} from './public-schedule';
 import {cardStatus, type CardStatus} from './usaw';
 import {currentWaiver} from './waivers';
+import {LIVE_SIGNATURE} from './documents';
 import {PROGRAM_ON} from './transfers';
 import {fullDate} from './datetime';
 
@@ -101,7 +102,7 @@ export async function rosterFor(date: string, scope: Scope) {
   const [fams, reviews, signed, exceptions, attendance] = await env.DB!.batch([
     env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
-    env.DB!.prepare('SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?))').bind(waiver?.id ?? '', ids),
+    env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures s WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?)) AND ${LIVE_SIGNATURE}`).bind(waiver?.id ?? '', ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
     env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date)
   ]);

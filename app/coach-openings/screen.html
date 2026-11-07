@@ -1,0 +1,93 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lesson openings | Savage Wrestling Academy</title><style>
+*{box-sizing:border-box}body{margin:0}main{max-width:var(--swa-width-wide,1000px);margin:auto;padding:24px 16px 56px}
+html body main>section{margin:18px 0}h2{margin:0 0 8px}
+label{display:flex;flex-direction:column;gap:4px;font-weight:600;margin:12px 0}
+input,select{font:inherit}input,select{width:100%;min-width:0}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 16px}
+@media(max-width:620px){.pair,.three{grid-template-columns:1fr}}
+.pick{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-end}.pick label{flex:1 1 260px;margin:0}
+#status{font-weight:600;min-height:1.5em}[hidden]{display:none!important}
+.list{display:grid;gap:12px;margin-top:12px}
+html body .list article{margin:0;padding:16px 18px;border:1px solid var(--swa-line);border-radius:10px;background:var(--swa-white)}
+html body .list article.booked{border-color:var(--swa-ok);box-shadow:inset 3px 0 0 var(--swa-ok)}
+.when{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.when h3{margin:0;font-size:18px}.when p{margin:0;font-variant-numeric:tabular-nums}
+.spots{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.kind{margin:4px 0 0;font-size:15px}
+.roster{list-style:none;padding:0;margin:10px 0 0;border-top:1px solid var(--swa-line)}.roster li{padding:8px 0;border-bottom:1px solid var(--swa-line);overflow-wrap:anywhere}
+.tag{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--swa-warn-bg);color:var(--swa-warn-ink);font-size:13px;font-weight:700}
+details.edit{margin-top:10px}details.edit summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:var(--swa-red)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.note{margin:10px 0 0;padding:10px 14px;border-left:3px solid var(--swa-silver);background:var(--swa-ground);border-radius:0 6px 6px 0}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main>
+<a class="swa-back" href="/staff">← Coaches</a>
+<h1 id="heading">Lesson openings</h1>
+<p id="intro">Add, change and remove a coach’s one-hour private lesson openings. Families book them with that coach, and the coach is paid for the lessons they teach. Times are New York time.</p>
+<p id="status" role="status" aria-live="polite">Loading…</p>
+<section aria-label="Coach"><div class="pick"><label>Coach<select id="coach"></select></label><a id="profileLink" href="/coach-profile">Coach profile →</a></div><p class="muted" id="coachNote"></p></section>
+<section aria-labelledby="addTitle"><h2 id="addTitle">Add a one-hour opening</h2>
+<form id="openingForm"><div class="three"><label>Date<input id="date" type="date" required></label><label>Start time<input id="start" type="time" required></label><label>End time<input id="end" type="time" required></label></div>
+<div class="pair"><label>Lesson type<select id="format"><option value="">Open time: families choose</option><option value="one-on-one">One-on-one only</option><option value="partner">Partner lesson: 2 wrestlers</option><option value="small-group">Small group: 3 to 6 wrestlers</option></select></label><label id="spotsLabel" hidden>Spots<select id="spots"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label></div>
+<label>Repeat<select id="weeks"><option value="1">Just this date</option></select></label><p class="muted" id="repeatHelp" hidden></p>
+<button class="primary" id="save">Save opening</button></form>
+<p class="note">An open time is booked as a one-on-one, or a family can ask for it as a private partner or small group and invite other families. A partner or small-group lesson is listed for every family, one spot per wrestler, until it fills. The coach gets an email when you add or remove their openings.</p></section>
+<section aria-labelledby="listTitle"><h2 id="listTitle">Coming up</h2><p class="muted">Booked lessons first, then open times. An opening can be removed until a family books it.</p><div id="slots" class="list"></div></section>
+</main><script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clock=t=>{const [h,m]=String(t).split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
+const dayDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
+const addDays=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')+n*864e5).toISOString().slice(0,10);
+const statusTag={paying:'Paying now',kept:'Not paid yet'};
+const formatOptions=f=>[['','Open time'],['one-on-one','One-on-one only'],['partner','Partner lesson: 2 wrestlers'],['small-group','Small group']].map(([v,n])=>`<option value="${v}"${v===(f||'')?' selected':''}>${n}</option>`).join('');
+let data=null,coachEmail='';
+async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
+function rosterHtml(list){return '<ul class="roster">'+list.map(r=>`<li><b>${esc(r.wrestler)}</b>${statusTag[r.status]?' <span class="tag">'+statusTag[r.status]+'</span>':''}<br>Parent: ${esc(r.parent||'Not saved')}${r.phone?' · <a href="tel:'+esc(r.phone)+'">'+esc(r.phone)+'</a>':''}${r.email?' · '+esc(r.email):''}</li>`).join('')+'</ul>'}
+// One lesson or open time, as on coach home: who is booked, spots left, and the same change and remove rules.
+function slotHtml(s){
+ const roster=s.roster||[],taken=roster.some(r=>r.status!=='kept'),group=s.capacity>1;
+ const when=`<div class="when"><h3>${esc(dayDate(s.date))}</h3><p>${esc(clock(s.start))}–${esc(clock(s.end))}</p></div>`;
+ let body;
+ if(group){
+  const kind=s.hosted==='family'?'Family-requested private group, organised by '+esc(s.organizer)+'. Only families with their invite link can book it.':'Coach-hosted: listed for every family until it fills.';
+  body=`<div class="when"><p><strong>${esc(s.formatName)}</strong></p><span class="spots">${s.spotsLeft} of ${s.capacity} spot${s.capacity===1?'':'s'} left</span></div><p class="kind muted">${kind}</p>${roster.length?rosterHtml(roster):'<p class="muted">Nobody has booked yet.</p>'}`;
+ }else if(roster.length){
+  body=`<p><strong>Booked: ${esc(s.formatName)}</strong></p>${rosterHtml(roster)}`;
+ }else body=`<p class="muted">${s.format==='one-on-one'?'Open for families to book a one-on-one.':'Open for families to book. A family can book a one-on-one or ask for a private partner or small group.'}</p>`;
+ const edit=s.hosted==='family'?'':`<details class="edit"><summary>Change lesson type</summary><div class="pair"><label>Lesson type<select data-edit-format="${esc(s.id)}">${formatOptions(s.format)}</select></label><label>Spots (small group)<select data-edit-spots="${esc(s.id)}">${[3,4,5,6].map(n=>`<option${n===(s.format==='small-group'?s.capacity:4)?' selected':''}>${n}</option>`).join('')}</select></label></div><button type="button" data-edit="${esc(s.id)}">Save lesson type</button></details>`;
+ const remove=taken?'':`<div class="actions"><button type="button" data-slot="${esc(s.id)}"${s.hosted==='family'?' data-family="1"':''}>Remove opening</button></div>`;
+ return `<article${roster.length?' class="booked"':''}>${when}${body}${edit}${remove}</article>`;
+}
+function openingInput(){const f=$('format').value,w=Number($('weeks').value)||1;return {action:'add',email:coachEmail,date:$('date').value,start:$('start').value,end:$('end').value,format:f||null,...(f==='small-group'?{spots:Number($('spots').value)}:{}),...(w>1?{weeks:w}:{})}}
+function repeatOptions(max){const n=Number(max)||1,sel=$('weeks');if(sel.dataset.max===String(n))return;const keep=sel.value||'1';sel.dataset.max=String(n);
+ sel.innerHTML='<option value="1">Just this date</option>'+Array.from({length:n-1},(_,i)=>i+2).map(w=>`<option value="${w}">Every week for ${w} weeks</option>`).join('');sel.value=Number(keep)<=n?keep:'1';repeatHelp()}
+function repeatHelp(){const w=Number($('weeks').value)||1,d=$('date').value;$('repeatHelp').hidden=w<2;if(w<2)return;
+ $('repeatHelp').textContent='Adds '+w+' openings, one each week'+(d?' from '+dayDate(d)+' to '+dayDate(addDays(d,7*(w-1))):'')+', all with the same lesson type and spots. A week that overlaps one of '+(data?data.coach.name+'’s':'the coach’s')+' openings is skipped.'}
+const savedText=r=>{const n=(r.created||[]).length,skip=r.skipped||[];return (n>1?n+' openings saved.':'Opening saved.')+(skip.length?' Skipped '+skip.map(dayDate).join(', ')+': '+(skip.length===1?'it overlaps':'they overlap')+' one of '+data.coach.name+'’s openings.':'')};
+function render(){
+ const c=data.coach;$('heading').textContent=c.you?'Your lesson openings':'Lesson openings: '+c.name;
+ $('coachNote').textContent=c.you?'You coach too, so these are your own openings. Coach view shows them as well.':'Families book these with '+c.name+'. Lesson pay for them goes to '+c.name+'.';
+ $('profileLink').href=c.you?'/coach-profile':'/coach-profile?email='+encodeURIComponent(c.email);
+ repeatOptions(data.maxWeeks);
+ const booked=data.openings.filter(s=>(s.roster||[]).length),open=data.openings.filter(s=>!(s.roster||[]).length);
+ $('slots').innerHTML=[...booked,...open].map(slotHtml).join('')||'<p class="muted">No lessons or open times coming up. Add an opening above.</p>';
+ document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>removeSlot(b.dataset.slot,!!b.dataset.family));
+ document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>saveType(b.dataset.edit));
+}
+async function removeSlot(id,family){if(!confirm(family?'A family asked for this time as a private group. Remove it and tell them it is called off?':'Remove this opening? Families can no longer book it.'))return;
+ try{await call('/api/coach-openings',{action:'remove',email:coachEmail,id});await load(coachEmail);$('status').textContent='Opening removed.'}catch(e){$('status').textContent=e.message}}
+async function saveType(id){const f=document.querySelector('[data-edit-format="'+id+'"]').value,n=Number(document.querySelector('[data-edit-spots="'+id+'"]').value);
+ try{await call('/api/coach-openings',{action:'update',email:coachEmail,id,format:f||null,spots:f==='small-group'?n:undefined});await load(coachEmail);$('status').textContent='Lesson type saved.'}catch(e){$('status').textContent=e.message}}
+async function load(email){data=await call('/api/coach-openings?email='+encodeURIComponent(email));coachEmail=data.coach.email;render()}
+// Every coach with access, and the owner when they coach too.
+function coachOptions(staff){const list=[...(staff.self&&staff.self.active?[{...staff.self,displayName:(staff.self.displayName||'You')+' (you)'}]:[]),...(staff.staff||[]).filter(s=>s.active)];
+ return list.map(s=>`<option value="${esc(s.email)}"${s.email===coachEmail?' selected':''}>${esc(s.displayName||s.name)}</option>`).join('')}
+async function start(){
+ try{const staff=await call('/api/staff');coachEmail=new URLSearchParams(location.search).get('email')||'';
+  const opts=coachOptions(staff);if(!opts){$('coach').innerHTML='';$('status').textContent='No coaches yet. Invite a coach on Coaches first.';$('openingForm').hidden=true;return}
+  $('coach').innerHTML=opts;if(!coachEmail)coachEmail=$('coach').value||((staff.self&&staff.self.active)?staff.self.email:(staff.staff||[]).find(s=>s.active)?.email)||'';
+  await load(coachEmail);$('status').textContent=''}catch(e){$('status').textContent=e.message}}
+$('coach').onchange=async()=>{try{await load($('coach').value);history.replaceState(null,'','?email='+encodeURIComponent(coachEmail));$('status').textContent=''}catch(e){$('status').textContent=e.message}};
+$('format').onchange=()=>{$('spotsLabel').hidden=$('format').value!=='small-group'};
+$('weeks').onchange=repeatHelp;$('date').onchange=repeatHelp;
+$('start').onchange=()=>{const v=$('start').value;if(/^\d\d:\d\d$/.test(v)&&+v.slice(0,2)<23)$('end').value=String(+v.slice(0,2)+1).padStart(2,'0')+v.slice(2)};
+$('openingForm').onsubmit=async e=>{e.preventDefault();if(!data)return;$('save').disabled=true;try{const r=await call('/api/coach-openings',openingInput());await load(coachEmail);$('status').textContent=savedText(r)}catch(error){$('status').textContent=error.message}finally{$('save').disabled=false}};
+start();
+</script></body></html>

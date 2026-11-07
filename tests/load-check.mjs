@@ -41,7 +41,7 @@ sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(J
     {id: 'Advanced', name: 'SWA Advance', description: 'Grades 7 to 12, with coach approval.', priceCents: 20000, walkInPriceCents: 4000}]}));
 sqlite.prepare("INSERT INTO waiver_versions VALUES ('wv','Participation waiver and release','The approved waiver text.','h',?,'o',NULL,'waiver')").run('2026-09-01T00:00:00Z');
 const family = sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)');
-const signature = sqlite.prepare('INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)');
+const signature = sqlite.prepare('INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)');
 const review = sqlite.prepare("INSERT INTO usaw_reviews VALUES (?,?,?,?,'valid','','owner',?)");
 const order = sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
   VALUES (?,?,?,?,?,?,?,?,?,?,?,0,?,'usd',?,'{}',?,?,0,?,?,?,?,?,?)`);
@@ -110,7 +110,7 @@ const waivers = await timed('Waivers, first page', async () => (await call(waive
 assert.deepEqual({...waivers.totals}, {all: WRESTLERS, signed: signatures, missing: WRESTLERS - signatures}); assert.equal(waivers.matched, WRESTLERS - signatures);
 // The Parent Consent Form (#218), published and signed for a third of the wrestlers, and the coach contract list.
 sqlite.prepare("INSERT INTO waiver_versions VALUES ('pc','Parent Consent Form','The approved form.','h2',?,'o',NULL,'parent_consent')").run('2026-09-05T00:00:00Z');
-sqlite.exec("INSERT INTO waiver_signatures SELECT 'pcs'||id,'pc',user_id,wrestler_id,wrestler_name,signer,email,signature_record,signed_at FROM waiver_signatures WHERE version_id='wv' AND CAST(substr(wrestler_id,2) AS INTEGER)%3=0");
+sqlite.exec("INSERT INTO waiver_signatures SELECT 'pcs'||id,'pc',user_id,wrestler_id,wrestler_name,signer,email,signature_record,signed_at,0 FROM waiver_signatures WHERE version_id='wv' AND CAST(substr(wrestler_id,2) AS INTEGER)%3=0");
 const consentSigned = sqlite.prepare("SELECT count(*) AS n FROM waiver_signatures WHERE version_id='pc'").get().n;
 const consent = await timed('Parent Consent Form, first page', async () => (await call(waiversApi, '/api/waivers?kind=parent_consent&show=missing')).body);
 assert.deepEqual({...consent.totals}, {all: WRESTLERS, signed: consentSigned, missing: WRESTLERS - consentSigned}); assert.equal(consent.wrestlers.length, 50);

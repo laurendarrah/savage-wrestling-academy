@@ -5,7 +5,7 @@ import {env} from 'cloudflare:workers';
 import {appOrigin} from './account-auth';
 import {academyToday} from './public-schedule';
 import {sendEmailsDetailed} from './email';
-import {currentVersion, FAMILY_KINDS} from './documents';
+import {currentVersion, FAMILY_KINDS, LIVE_SIGNATURE, DOCUMENTS, type Kind} from './documents';
 import {dayTime, fullDate} from './datetime';
 import {cardSeason, isSeasonEnd, renewalDue} from './usaw';
 import {chunks, eachFamily, jsonChunks, keysetPage} from './paging';
@@ -138,7 +138,7 @@ export async function dailyReminders(force = false, today = academyToday()) {
     // Who signed each document in force, for this batch's families only.
     const signed = new Map<string, Set<string>>(docs.map(d => [d.version.id, new Set<string>()]));
     if (docs.length) for (const ids of chunks(families.map(f => f.user_id), 80))
-      for (const s of (await env.DB!.prepare(`SELECT version_id,user_id,wrestler_id,wrestler_name FROM waiver_signatures WHERE version_id IN (${docs.map(() => '?').join(',')}) AND user_id IN (${ids.map(() => '?').join(',')})`)
+      for (const s of (await env.DB!.prepare(`SELECT version_id,user_id,wrestler_id,wrestler_name FROM waiver_signatures s WHERE version_id IN (${docs.map(() => '?').join(',')}) AND user_id IN (${ids.map(() => '?').join(',')}) AND ${LIVE_SIGNATURE}`)
         .bind(...docs.map(d => d.version.id), ...ids).all<any>()).results)
         signed.get(s.version_id)?.add(`${s.user_id}|${s.wrestler_id}|${String(s.wrestler_name).trim().toLowerCase()}`);
     const list: Notice[] = [];
@@ -167,6 +167,21 @@ export async function dailyReminders(force = false, today = academyToday()) {
     saved += await notify(list);
   }
   return saved;
+}
+
+// The owner asked one family (or one coach) to sign a document again (issue #239), with the reason.
+export async function noticeReissue(kind: Kind, s: {id: string; user_id: string; email: string; wrestler_id: string; wrestler_name: string}, version: {title: string}, reason: string) {
+  const spec = DOCUMENTS[kind], name = kind === 'waiver' ? version.title : spec.name;
+  if (spec.signer === 'coach') {
+    await notify([{userId: null, email: s.email, kind: 'contract_reissued', dedupeKey: `reissue:${s.id}`, link: '/contract',
+      subject: 'Please sign your coach contract again', body: `The academy asked you to sign your coach contract again. Reason: ${reason.replace(/[.!?\s]+$/, '')}. Your earlier signed copy is kept. Sign again from coach home; it takes about a minute.`}]);
+    return;
+  }
+  const f = await family(s.user_id);
+  if (!f) return;
+  await notify([{userId: s.user_id, email: f.email, kind: kind + '_reissued', dedupeKey: `reissue:${s.id}`, link: (kind === 'waiver' ? '/waiver' : '/consent') + '?wrestler=' + encodeURIComponent(s.wrestler_id),
+    subject: `Please sign the ${name} again for ${s.wrestler_name}`,
+    body: `The academy asked you to sign the ${name} again for ${s.wrestler_name}. Reason: ${reason.replace(/[.!?\s]+$/, '')}. ${s.wrestler_name} cannot book until it is signed again. Your earlier signed copy is kept in your family account.`}]);
 }
 
 // Inbox view and read state for a family.

@@ -12,6 +12,8 @@ import {cardProblem} from './usaw';
 import {waiverProblem} from './waivers';
 import {familyProfile} from './program-approval';
 import {securityEvent} from './security-events';
+import {notify, quietly} from './notify';
+import {dayTime} from './datetime';
 
 export type LessonSettings = {prices: Record<string, number | null>; splits: Record<string, number>; defaultSplit: number | null};
 // Justin's decision on #197 (Q2): a lesson pays the coach 65% by default, for every lesson type. A share set for one
@@ -227,28 +229,102 @@ export async function cancelGroup(userId: string, openingId: unknown, today: str
   return {status: 200};
 }
 
-// A coach changes the lesson type or spots of their own opening. Once anything is booked the type stays, and the spots
-// cannot drop below the wrestlers booked. A family's private group is theirs, so the coach cannot change it.
-export async function updateOpening(coachUserId: string, input: any) {
-  const o = typeof input?.id === 'string' ? await env.DB!.prepare('SELECT id,format,closed FROM coach_openings WHERE id=? AND user_id=?').bind(input.id, coachUserId).first<{id: string; format: string | null; closed: number}>() : null;
+// Whose openings (issue #239): the coach's staff email, which families book against, and the account the coach signs in
+// with. Openings match either, so ones made before issue #70 (no email yet) and ones the owner added before the coach
+// ever opened coach home (filed under a placeholder account until then, claimOpenings) both belong to the coach.
+// The same functions serve coach home and the owner, so the rules are the same for both. byOwner only changes wording.
+export type CoachRef = {email: string; name: string; userId: string};
+type Who = {byOwner?: boolean};
+const MINE = '(coach_email=? OR user_id=?)';
+const mine = (c: CoachRef) => [c.email.toLowerCase(), c.userId];
+// How many weeks a repeating opening can cover (issue #190): up to 12 weeks ahead (#197, question 21).
+export const MAX_WEEKS = 12;
+export const pendingAccount = (email: string) => 'staff:' + email.toLowerCase();
+// The account an owner-added opening is filed under: the coach's own account when the site has seen it sign in as this
+// coach, otherwise the placeholder.
+export async function coachAccount(email: string) {
+  const e = email.toLowerCase(), real = "user_id NOT LIKE 'staff:%' AND user_id NOT LIKE 'former-coach-%'";
+  const r = await env.DB!.prepare(`SELECT user_id FROM coach_openings WHERE coach_email=? AND ${real} UNION ALL SELECT user_id FROM coach_time_entries WHERE coach_email=? AND ${real}
+    UNION ALL SELECT user_id FROM coach_time_off WHERE coach_email=? AND ${real} LIMIT 1`).bind(e, e, e).first<{user_id: string}>();
+  return r?.user_id ?? pendingAccount(e);
+}
+// On coach home: link openings made before issue #70 to the coach's email, and claim the ones the owner added for them.
+export async function claimOpenings(coach: CoachRef) {
+  await env.DB!.batch([
+    env.DB!.prepare('UPDATE coach_openings SET coach_email=? WHERE user_id=? AND coach_email IS NULL').bind(coach.email.toLowerCase(), coach.userId),
+    env.DB!.prepare('UPDATE coach_openings SET user_id=? WHERE coach_email=? AND user_id=?').bind(coach.userId, coach.email.toLowerCase(), pendingAccount(coach.email))
+  ]);
+}
+
+const realDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d;
+const clockText = (t: unknown): t is string => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
+const addDays = (date: string, n: number) => new Date(Date.parse(date + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+
+// Adds a one-hour opening. The lesson type (issue #177): blank is an ordinary open time; partner and small group are
+// coach-hosted groups. Repeat weekly (issue #190): the same time, type and spots on the same weekday for up to MAX_WEEKS
+// weeks, each week its own opening. A week that overlaps one of the coach's openings is skipped, never doubled.
+export async function addOpenings(coach: CoachRef, input: any, who: Who = {}): Promise<{status: number; error?: string; created?: string[]; skipped?: string[]}> {
+  if (!realDate(input?.date) || !clockText(input.start) || !clockText(input.end)) return {status: 400, error: 'Choose a valid date and times.'};
+  if (toMinutes(input.end) - toMinutes(input.start) !== 60) return {status: 400, error: 'Each opening must be exactly one hour.'};
+  const type = lessonSpots(input.format, input.spots);
+  if ('error' in type) return {status: 400, error: type.error};
+  const weeks = input.weeks === undefined || input.weeks === null ? 1 : typeof input.weeks === 'string' && /^\d+$/.test(input.weeks) ? Number(input.weeks) : input.weeks;
+  if (!Number.isInteger(weeks) || weeks < 1 || weeks > MAX_WEEKS) return {status: 400, error: `Repeat for 1 to ${MAX_WEEKS} weeks.`};
+  const dates = Array.from({length: weeks}, (_, i) => addDays(input.date, 7 * i));
+  const insert = (date: string) => env.DB!.prepare(`INSERT INTO coach_openings (id,user_id,date,start,end,coach_email,format,capacity) SELECT ?,?,?,?,?,?,?,?
+    WHERE NOT EXISTS (SELECT 1 FROM coach_openings WHERE ${MINE} AND date=? AND start<? AND end>?) RETURNING date`)
+    .bind(crypto.randomUUID(), coach.userId, date, input.start, input.end, coach.email.toLowerCase(), type.format, type.capacity, ...mine(coach), date, input.end, input.start);
+  const results = await env.DB!.batch(dates.map(insert));
+  const created = dates.filter((_, i) => (results[i] as any).results?.length), skipped = dates.filter(d => !created.includes(d));
+  const theirs = who.byOwner ? `one of ${coach.name}’s existing openings` : 'one of your existing openings';
+  if (!created.length) return {status: 409, error: weeks === 1 ? `This opening overlaps ${theirs}.` : `Every one of those weeks overlaps ${theirs}.`};
+  return {status: 200, created, skipped};
+}
+
+// Removes an opening nobody has booked. A paid lesson or a checkout in progress keeps it, checked again in the delete
+// itself so a checkout that starts meanwhile still wins. A family's private group request on this time is called off
+// with it, and the family is told (issue #177).
+export async function removeOpening(coach: CoachRef, id: unknown, who: Who = {}): Promise<{status: number; error?: string; removed?: {date: string; start: string}}> {
+  if (typeof id !== 'string' || id.length > 80) return {status: 404, error: 'Opening not found.'};
+  const booked = `A family has booked this lesson (or is paying for it now). ${who.byOwner ? 'Move or refund it' : 'Ask the academy to move or refund it'} before removing the opening.`;
+  if (await openingTaken(id)) return {status: 409, error: booked};
+  const since = new Date(Date.now() - HOLD_MINUTES * 60000).toISOString();
+  const row = await env.DB!.prepare(`DELETE FROM coach_openings WHERE id=? AND ${MINE}
+    AND NOT EXISTS (SELECT 1 FROM orders x WHERE x.kind='lesson' AND x.item_id=coach_openings.id AND (x.status='paid' OR (x.status='pending' AND x.created_at>=?))) RETURNING date,start,organizer_id`)
+    .bind(id, ...mine(coach), since).first<{date: string; start: string; organizer_id: string | null}>();
+  if (!row) return await env.DB!.prepare(`SELECT 1 FROM coach_openings WHERE id=? AND ${MINE}`).bind(id, ...mine(coach)).first() ? {status: 409, error: booked} : {status: 404, error: 'Opening not found.'};
+  if (row.organizer_id) {
+    const fam = await env.DB!.prepare('SELECT email FROM family_accounts WHERE user_id=?').bind(row.organizer_id).first<{email: string}>();
+    if (fam) await quietly(() => notify([{userId: row.organizer_id, email: fam.email, kind: 'lesson_group_canceled', dedupeKey: `lesson-group-off:${id}`, link: '/lesson',
+      subject: `Lesson called off: ${dayTime(row.date, row.start)}`,
+      body: `${coach.name} can no longer teach at ${dayTime(row.date, row.start)}, so the private group you asked for is called off. Nothing was paid for it. Choose another time on the lesson page.`}]));
+  }
+  return {status: 200, removed: {date: row.date, start: row.start}};
+}
+
+// Changes the lesson type or spots of an opening. Once anything is booked the type stays, and the spots cannot drop
+// below the wrestlers booked. A family's private group is theirs, so neither the coach nor the owner changes it here.
+export async function updateOpening(coach: CoachRef, input: any, who: Who = {}) {
+  const o = typeof input?.id === 'string' ? await env.DB!.prepare(`SELECT id,format,closed FROM coach_openings WHERE id=? AND ${MINE}`).bind(input.id, ...mine(coach)).first<{id: string; format: string | null; closed: number}>() : null;
   if (!o) return {status: 404, error: 'Opening not found.'};
-  if (o.closed === 1) return {status: 409, error: 'A family asked for this time as a private group, so the lesson type is theirs. Ask the academy to change it.'};
+  if (o.closed === 1) return {status: 409, error: `A family asked for this time as a private group, so the lesson type is theirs. ${who.byOwner ? 'Message the family' : 'Ask the academy'} to change it.`};
   const next = lessonSpots(input.format, input.spots);
   if ('error' in next) return {status: 400, error: next.error};
   const booked = ((await lessonHolders([o.id])).get(o.id) ?? []).length;
   if (booked && (next.format ?? 'one-on-one') !== (o.format ?? 'one-on-one')) return {status: 409, error: 'A family has booked this lesson, so its type can’t change.'};
   if (booked > (next.capacity ?? 1)) return {status: 409, error: `${booked} wrestlers are booked, so this lesson needs at least ${booked} spots.`};
-  await env.DB!.prepare('UPDATE coach_openings SET format=?,capacity=? WHERE id=? AND user_id=?').bind(next.format, next.capacity, o.id, coachUserId).run();
+  await env.DB!.prepare(`UPDATE coach_openings SET format=?,capacity=? WHERE id=? AND ${MINE}`).bind(next.format, next.capacity, o.id, ...mine(coach)).run();
   return {status: 200};
 }
 
 // A coach's openings with each lesson's roster, for the coach page: the wrestlers with their parent's name and phone,
 // spots left, and whether the coach posted it or a family asked for it as a private group.
-export async function coachSchedule(userId: string) {
+// from: only lessons on or after this date (the owner's view of a coach lists what is still to come).
+export async function coachSchedule(coach: CoachRef, from = '') {
   const rows = (await env.DB!.prepare(
     `SELECT o.id,o.date,o.start,o.end,o.format,o.capacity,o.closed,o.organizer_id,o.organizer_wrestlers,f.payload AS organizer FROM coach_openings o
-     LEFT JOIN family_accounts f ON f.user_id=o.organizer_id WHERE o.user_id=? ORDER BY o.date,o.start`
-  ).bind(userId).all<any>()).results;
+     LEFT JOIN family_accounts f ON f.user_id=o.organizer_id WHERE (o.coach_email=? OR o.user_id=?) AND o.date>=? ORDER BY o.date,o.start`
+  ).bind(...mine(coach), from).all<any>()).results;
   const holders = await lessonHolders(rows.map(r => r.id));
   const names = new Map(privateFormats.map(f => [f.id, f.name]));
   return rows.map(r => {

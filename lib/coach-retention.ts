@@ -115,7 +115,9 @@ function steps(email: string, key: string, accounts: string[]): Step[] {
       'coach_email=? AND approved_at IS NOT NULL AND voided_at IS NULL', [email]),
     del('coach_time_entries', 'coach_email=?', [email]),
     del('coach_time_off', 'coach_email=?', [email]),
-    // Their signed contract (the contract text itself stays: other coaches signed it too).
+    // Their signed contract (the contract text itself stays: other coaches signed it too), and any request to sign it
+    // again (issue #239), whose reason is about the coach.
+    del('signature_reissues', "signature_id IN (SELECT s.id FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE v.kind='coach_contract' AND lower(s.email)=?)", [email]),
     del('waiver_signatures', "lower(email)=? AND version_id IN (SELECT id FROM waiver_versions WHERE kind='coach_contract')", [email]),
     del('coach_profiles', 'email=?', [email]),
     del('coach_invites', 'lower(email)=?', [email]),
