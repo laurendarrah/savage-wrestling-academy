@@ -32,12 +32,14 @@ export const view = (r: Row) => ({id: r.id, revision: r.revision, coachEmail: r.
   requestedAt: r.requested_at, decidedAt: r.decided_at, decisionNote: r.decision_note, programs: JSON.parse(r.programs || '[]')});
 
 export async function myTimeOff(email: string) {
-  return (await db().prepare(`SELECT ${COLUMNS} FROM coach_time_off WHERE coach_email=? ORDER BY start_date DESC,requested_at DESC LIMIT 60`).bind(email).all<Row>()).results.map(view);
+  return (await db().prepare(`SELECT ${COLUMNS} FROM coach_time_off WHERE coach_email=? ORDER BY start_date DESC,requested_at DESC`).bind(email).all<Row>()).results.map(view);
 }
-// Notices addressed to a coach (team time off, decisions on their own requests, lessons booked with them).
+// Notices addressed to a coach (team time off, decisions on their own requests, lessons booked with them): the newest
+// COACH_NOTICES, and whether there are older ones, so the page can say it shows only the newest (issue #46).
+export const COACH_NOTICES = 15;
 export async function coachNotices(email: string) {
-  return (await db().prepare('SELECT id,kind,subject,body,created_at FROM notifications WHERE email=? AND user_id IS NULL ORDER BY created_at DESC LIMIT 15').bind(email).all<any>()).results
-    .map(n => ({id: n.id, kind: n.kind, subject: n.subject, body: n.body, at: n.created_at}));
+  const rows = (await db().prepare(`SELECT id,kind,subject,body,created_at FROM notifications WHERE email=? AND user_id IS NULL ORDER BY created_at DESC LIMIT ${COACH_NOTICES + 1}`).bind(email).all<any>()).results;
+  return {notices: rows.slice(0, COACH_NOTICES).map(n => ({id: n.id, kind: n.kind, subject: n.subject, body: n.body, at: n.created_at})), olderNotices: rows.length > COACH_NOTICES};
 }
 
 export async function requestTimeOff(coach: Coach, userId: string, input: any, now = new Date()) {
@@ -115,17 +117,17 @@ export async function coverFor(r: ReturnType<typeof view>, state: any) {
     for (const p of cat.practices) if (p.date >= r.start && p.date <= r.end && r.programs.includes(p.program))
       practices.push({date: p.date, title: String(names.get(p.program) ?? PROGRAM_NAMES[p.program] ?? p.program), time: clockRange(p.start, p.end)});
   }
-  const openings = (await db().prepare('SELECT id,date,start,end,format FROM coach_openings WHERE coach_email=? AND date BETWEEN ? AND ? ORDER BY date,start LIMIT 200').bind(r.coachEmail, r.start, r.end)
+  const openings = (await db().prepare('SELECT id,date,start,end,format FROM coach_openings WHERE coach_email=? AND date BETWEEN ? AND ? ORDER BY date,start').bind(r.coachEmail, r.start, r.end)
     .all<{id: string; date: string; start: string; end: string; format: string | null}>()).results;
   const holders = openings.length ? await lessonHolders(openings.map(o => o.id)) : new Map();
   const lessons = openings.map(o => ({date: o.date, time: clockRange(o.start, o.end), booked: (holders.get(o.id) ?? []).length}));
-  return {practices: practices.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).slice(0, 120), lessons};
+  return {practices: practices.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)), lessons};
 }
 // The owner's list: requests waiting for a decision, and approved time off that has not ended, each with its cover list.
 export async function ownerTimeOff(now = new Date()) {
   const today = academyDay(now), state = await academyState();
-  const pending = (await db().prepare(`SELECT ${COLUMNS} FROM coach_time_off WHERE status='pending' ORDER BY start_date,requested_at LIMIT 200`).all<Row>()).results.map(view);
-  const approved = (await db().prepare(`SELECT ${COLUMNS} FROM coach_time_off WHERE status='approved' AND end_date>=? ORDER BY start_date LIMIT 100`).bind(today).all<Row>()).results.map(view);
+  const pending = (await db().prepare(`SELECT ${COLUMNS} FROM coach_time_off WHERE status='pending' ORDER BY start_date,requested_at`).all<Row>()).results.map(view);
+  const approved = (await db().prepare(`SELECT ${COLUMNS} FROM coach_time_off WHERE status='approved' AND end_date>=? ORDER BY start_date`).bind(today).all<Row>()).results.map(view);
   const withCover = [];
   for (const a of approved) withCover.push({...a, cover: await coverFor(a, state)});
   // A pending request shows what would need cover too, using the coach's programs today.

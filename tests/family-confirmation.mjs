@@ -22,15 +22,12 @@ console.log('Passed: saved-profile landing, save confirmation, edit, cancel, and
 // Billing UI must not mistake a saved profile or a registration review for a payment.
 assert.match(element('membershipCards').innerHTML,/Not enrolled/);assert.match(element('membershipCards').innerHTML,/Updated Wrestler/);assert.match(element('membershipCards').innerHTML,/wrestler=test-id/);assert.doesNotMatch(element('membershipCards').innerHTML,/\$200|November 1, 2026|Next automatic payment/);
 vm.runInContext("profile.wrestlers[0].membership={status:'active',nextCharge:1};renderMembershipCards()",context);assert.match(element('membershipCards').innerHTML,/Not enrolled/);
-assert.match(html,/No purchases yet/);assert.match(html,/Fictional wrestler and payments/);
-vm.runInContext("renderBillingExample()",context);assert.match(element('sampleMembershipDetails').innerHTML,/next automatic payment is \$200.00 on Dec 1, 2026/);assert.match(element('sampleMembershipDetails').innerHTML,/Nov 30, 2026/);
-element('sampleStatus').value='cancelled';vm.runInContext('renderBillingExample()',context);assert.match(element('sampleMembershipDetails').innerHTML,/No upcoming renewal payment/);assert.equal(element('sampleMemberStatus').textContent,'Renewal cancelled');
-element('sampleStatus').value='past_due';vm.runInContext('renderBillingExample()',context);assert.match(element('sampleMembershipDetails').innerHTML,/failed on Dec 1, 2026/);assert.match(element('sampleMembershipDetails').innerHTML,/Last successful payment/);assert.equal(element('sampleMemberStatus').textContent,'Payment needs attention');
-element('samplePurchaseType').value='walkin';vm.runInContext('renderExamplePurchases()',context);assert.match(element('samplePurchases').innerHTML,/Single-practice walk-in/);assert.match(element('samplePurchases').innerHTML,/\$40.00/);assert.doesNotMatch(element('samplePurchases').innerHTML,/Monthly membership/);
-element('samplePurchaseType').value='clinic';vm.runInContext('renderExamplePurchases()',context);assert.match(element('samplePurchases').innerHTML,/No example purchases/);
-element('sampleReceipt').hidden=true;vm.runInContext('toggleSampleReceipt()',context);assert.equal(element('sampleReceipt').hidden,false);assert.equal(element('sampleReceipt').focused,true);vm.runInContext('toggleSampleReceipt()',context);assert.equal(element('sampleReceipt').hidden,true);
+assert.match(html,/No purchases yet/);
+// Issue #147 and #46: no example membership or purchase history with a fictional wrestler. Only the family's own records show.
+for(const gone of [/Alex Example/,/Jamie Example/,/billingExample/,/sample-billing/,/sample-receipt/,/renderBillingExample/,/examplePurchases/,/renderExamplePurchases/,/toggleSampleReceipt/,/toggleSampleManagement/,/Fictional/i,/EXAMPLE-001/,/example receipt/i])assert.doesNotMatch(html,gone,String(gone));
+assert.doesNotMatch(html,/\.sample-|\.next-charge|\.billing-controls/,'no CSS left for the removed example');
 vm.runInContext("profile.wrestlers=[];renderMembershipCards()",context);assert.match(element('membershipCards').innerHTML,/Add your wrestler/);
-console.log('Passed: unpaid account membership cards, wrestler-specific registration link, no client-forged billing state, separated examples, renewal/cancelled/failed payment displays, purchase filters, example receipt and empty family.');
+console.log('Passed: unpaid account membership cards, wrestler-specific registration link, no client-forged billing state, no fictional example history, and empty family.');
 
 vm.runInContext(`profile.wrestlers=[{id:'scholar-kid',name:'Scholar Wrestler',grade:'7'}];scholarshipAwards=[{wrestler_id:'scholar-kid',status:'active',program:'Intermediate',accepted_at:'2026-11-05T17:00:00Z',terms_text:'Accepted scholarship terms',signer:'Parent'}];renderMembershipCards()`,context);
 assert.match(element('membershipCards').innerHTML,/Active scholarship/);
