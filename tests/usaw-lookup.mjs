@@ -428,9 +428,10 @@ function page(file, {fetch, hidden = []}) {
     row({wrestlerId: 'w4', wrestler: 'Ash', state: 'current', lookup: {status: 'inactive', outcome: 'inactive', name: 'Ash Example', state: 'NY', checkedAt: '2026-11-06T15:00:00Z'}}),
     row({wrestlerId: 'w5', wrestler: 'Bo', state: 'current', lookup: {status: 'unavailable', outcome: 'unavailable', name: null, state: null, checkedAt: '2026-11-06T15:00:00Z'}}),
     row({wrestlerId: 'w6', wrestler: 'Cy', state: 'expired', expires: '2020-08-31'})];
-  const posted = [];
+  const posted = [], asked = [];
   const {el, ctx} = page('app/cards/screen.html', {fetch: async (url, init) => {
     if (url === '/api/exceptions') return json({exceptions: []});
+    if (!init?.method) asked.push(url);
     if (init?.method === 'POST') { posted.push(JSON.parse(init.body)); return json({ok: true, outcome: 'inactive', cached: true}); }
     return json({today, date: today, cards: list, renewal: {august: false, ends: SEASON, count: 1, label: 'Cards expire Aug 31'}});
   }});
@@ -446,10 +447,12 @@ function page(file, {fetch, hidden = []}) {
   for (const n of ['Sam Example', 'Lee', 'Kai', 'Ash', 'Bo']) assert.match(of(n), /onclick="checkUsaw\(\d+\)">Check with USA Wrestling<\/button>/, n);
   assert.doesNotMatch(of('Cy'), /Check with USA Wrestling/, 'not for an expired card');
   assert.match(of('Kai'), /Look up on USA Wrestling/, 'the manual lookup stays');
-  // Flagged cards show under "Blocked or expiring soon" so the owner sees them.
-  el('show').value = 'problems'; vm.runInContext('render()', ctx);
-  const problems = el('rows').innerHTML;
-  assert.match(problems, /<strong>Kai<\/strong>/); assert.match(problems, /<strong>Ash<\/strong>/); assert.doesNotMatch(problems, /<strong>Bo<\/strong>/);
+  // Flagged cards show under "Blocked or expiring soon" so the owner sees them. The server filters (issue #46): the
+  // page asks for the chosen filter, and the filter keeps Kai and Ash but not Bo.
+  el('show').value = 'problems'; el('show').onchange(); await settle();
+  assert.match(asked.at(-1), /^\/api\/usaw-cards\?date=[\d-]+&show=problems$/);
+  const problems = JSON.parse(JSON.stringify(load(path.resolve('lib/usaw.ts')).cardsPage(list, {show: 'problems', onDate: today}).cards)).map(c => c.wrestler);
+  assert.deepEqual(problems, ['Cy', 'Ash', 'Kai'], 'blocked first, then by expiry and name');
   await vm.runInContext('checkUsaw(3)', ctx); await settle();
   assert.deepEqual(posted, [{userId: 'p1', wrestlerId: 'w4', number: '1234567890', expires: SEASON, status: 'lookup'}]);
   assert.equal(el('status').textContent, 'Ash: the card is not active (checked earlier today).');

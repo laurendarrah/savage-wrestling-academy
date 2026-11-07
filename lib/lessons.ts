@@ -124,7 +124,7 @@ export const spotsLeft = (o: Opening, holders: Holder[]) => Math.max(0, o.capaci
 // Openings a family can still book: in the future, from an active coach, not a private group, with a spot left.
 // The owner (recording payments) also sees private groups. Invite codes are never included.
 export async function openLessons(today: string, nowMinutes = academyMinutes(), opts: {includeClosed?: boolean} = {}) {
-  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.date>=? ${opts.includeClosed ? '' : 'AND o.closed=0'} ORDER BY o.date,o.start,coach LIMIT 500`).bind(today).all<any>()).results
+  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.date>=? ${opts.includeClosed ? '' : 'AND o.closed=0'} ORDER BY o.date,o.start,coach`).bind(today).all<any>()).results
     .map(opening).filter(o => upcoming(o, today, nowMinutes));
   const holders = await lessonHolders(rows.map(o => o.id));
   const organizers = new Map<string, string>();
@@ -180,7 +180,7 @@ export async function groupView(o: Opening, userId: string) {
 
 // The private groups this family organised that have not happened yet.
 export async function familyGroups(userId: string, today: string, nowMinutes = academyMinutes()) {
-  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.organizer_id=? AND o.closed=1 AND o.date>=? ORDER BY o.date,o.start LIMIT 50`).bind(userId, today).all<any>()).results
+  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.organizer_id=? AND o.closed=1 AND o.date>=? ORDER BY o.date,o.start`).bind(userId, today).all<any>()).results
     .map(opening).filter(o => upcoming(o, today, nowMinutes));
   return Promise.all(rows.map(o => groupView(o, userId)));
 }

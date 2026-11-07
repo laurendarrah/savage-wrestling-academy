@@ -7,7 +7,7 @@ import {PROGRAM_ON} from './transfers';
 import {programDetails} from './program-names';
 import {sendEmailsDetailed} from './email';
 import {familyNotices, markNoticeRead} from './notify';
-import {keysetPage, type SortCol} from './paging';
+import {jsonChunks, keysetPage, type SortCol} from './paging';
 import {familyMatch} from './family-search';
 
 export type Audience = {type: 'all'} | {type: 'program'; program: string} | {type: 'event'; eventId: string};
@@ -57,10 +57,13 @@ export async function sendAnnouncement(ownerId: string, input: any) {
   if (!audience.families.length) return {status: 409, error: 'No families match this audience yet.'};
   const id = crypto.randomUUID(), sentAt = at();
   const results = await sendEmailsDetailed(audience.families.map(f => ({to: f.email, subject: subject, text: body + footer()})));
+  // Recipients go in a few hundred per statement (issue #46), all in one transaction with the announcement.
+  const recipients = audience.families.map((f, i) => ({userId: f.userId, email: f.email, status: results[i].status, reason: results[i].reason}));
   await env.DB!.batch([
     env.DB!.prepare('INSERT INTO announcements(id,subject,body,audience,audience_label,sent_by,sent_at,recipients) VALUES (?,?,?,?,?,?,?,?)')
       .bind(id, subject, body, JSON.stringify(input.audience), audience.label, ownerId, sentAt, audience.families.length),
-    ...audience.families.map((f, i) => env.DB!.prepare('INSERT INTO announcement_recipients(announcement_id,user_id,email,read_at,email_status,email_error) VALUES (?,?,?,NULL,?,?)').bind(id, f.userId, f.email, results[i].status, results[i].reason)),
+    ...jsonChunks(recipients).map(part => env.DB!.prepare(`INSERT INTO announcement_recipients(announcement_id,user_id,email,read_at,email_status,email_error)
+      SELECT ?,json_extract(value,'$.userId'),json_extract(value,'$.email'),NULL,json_extract(value,'$.status'),json_extract(value,'$.reason') FROM json_each(?)`).bind(id, JSON.stringify(part))),
     env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'announcement_sent', `${id} ${audience.families.length}`, sentAt)
   ]);
   return {status: 200, id, recipients: audience.families.length, emailed: results.filter(r => r.status === 'sent').length};

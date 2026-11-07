@@ -16,7 +16,7 @@ export async function recordError(db: DB, request: Request, status: number, mess
 
 export async function recentErrors(db: D1Database, hours = 24 * 7) {
   const since = new Date(Date.now() - hours * 3600000).toISOString();
-  const rows = (await db.prepare('SELECT at,method,path,status,message FROM error_log WHERE at>=? ORDER BY at DESC LIMIT 200').bind(since).all<any>()).results;
+  const rows = (await db.prepare('SELECT at,method,path,status,message FROM error_log WHERE at>=? ORDER BY at DESC').bind(since).all<any>()).results;
   const day = new Date(Date.now() - 86400000).toISOString();
   return {errors: rows, last24h: rows.filter(r => r.at >= day).length};
 }

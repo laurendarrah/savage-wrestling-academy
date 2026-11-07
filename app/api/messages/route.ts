@@ -2,7 +2,7 @@
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {familiesPage, ownerMessages, ownerThread, sendAnnouncement, sentPage, postMessage, resolveAudience} from '../../../lib/messages';
 import {emailConfigured} from '../../../lib/email';
-import {failedEmails, retryFailedEmails} from '../../../lib/email-failures';
+import {failedEmailCount, failedEmails, retryFailedEmails} from '../../../lib/email-failures';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const auth = await ownerIdentity(request);
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   if (family) return accountReply(await ownerThread(family, cursor), 200, auth.headers);
   if (q.get('families') === '1') return accountReply(await familiesPage(q.get('q'), cursor), 200, auth.headers);
   if (q.get('sent') === '1') return accountReply(await sentPage(cursor), 200, auth.headers);
-  return accountReply({...(await ownerMessages(q.get('q'))), emailOn: emailConfigured(), failedEmails: await failedEmails()}, 200, auth.headers);
+  return accountReply({...(await ownerMessages(q.get('q'))), emailOn: emailConfigured(), failedEmails: await failedEmails(), failedTotal: await failedEmailCount()}, 200, auth.headers);
 }
 export async function POST(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   // Emails that didn't send (issue #35): try them again.
   if (input?.action === 'retry') {
     const r = await retryFailedEmails(input.items, auth.owner.userId);
-    return r.status === 200 ? reply({...r, failedEmails: await failedEmails()}) : reply({error: r.error}, r.status);
+    return r.status === 200 ? reply({...r, failedEmails: await failedEmails(), failedTotal: await failedEmailCount()}) : reply({error: r.error}, r.status);
   }
   return reply({error: 'Unknown action.'}, 400);
 }

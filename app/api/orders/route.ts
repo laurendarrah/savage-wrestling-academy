@@ -18,6 +18,6 @@ export async function GET(request: Request) {
     const row = await env.DB!.prepare(`SELECT ${FIELDS} ${FROM} WHERE o.id=? AND o.user_id=?`).bind(one, auth.user.id).first<Record<string, unknown>>();
     return row ? reply({order: {...row, dates: JSON.parse(String(row.dates))}}) : reply({error: 'Order not found.'}, 404);
   }
-  const rows = await env.DB!.prepare(`SELECT ${FIELDS} ${FROM} WHERE o.user_id=? AND o.status IN ('pending','paid','refunded') ORDER BY o.created_at DESC LIMIT 200`).bind(auth.user.id).all<Record<string, unknown>>();
+  const rows = await env.DB!.prepare(`SELECT ${FIELDS} ${FROM} WHERE o.user_id=? AND o.status IN ('pending','paid','refunded') ORDER BY o.created_at DESC`).bind(auth.user.id).all<Record<string, unknown>>();
   return reply({orders: rows.results.map(r => ({...r, dates: JSON.parse(String(r.dates))})), checkoutOpen: checkoutKinds().size > 0});
 }
