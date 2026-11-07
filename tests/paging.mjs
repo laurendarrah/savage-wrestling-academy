@@ -87,7 +87,7 @@ console.log('Passed: cursors, keyset SQL with mixed directions, ties, filters, P
 const ny = k => new Date(Date.now() + k * 86400000).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 const today = ny(0), F = 260, pad = i => String(i).padStart(3, '0');
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2, programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}], seasons: [], events: []}));
-sqlite.prepare("INSERT INTO waiver_versions VALUES ('wv','Participation waiver','text','h',?, 'o', NULL)").run(new Date().toISOString());
+sqlite.prepare("INSERT INTO waiver_versions VALUES ('wv','Participation waiver','text','h',?, 'o', NULL, 'waiver')").run(new Date().toISOString());
 for (let i = 0; i < F; i++) {
   const u = 'u' + pad(i);
   const wrestlers = [{id: 'a' + i, name: 'Alex ' + pad(i), grade: '8', ...(i % 3 ? {usawNumber: '12345' + pad(i), usawExpires: i % 3 === 1 ? ny(-2) : ny(10)} : {})}];

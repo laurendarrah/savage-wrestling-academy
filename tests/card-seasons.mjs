@@ -214,11 +214,12 @@ function page(file, {fetch, hidden = [], extra = {}}) {
 }
 
 // ---------- Owner cards page: renewal tile and "Look up on USA Wrestling" ----------
-async function cardsPage({renewal, clipboard}) {
-  const cards = [{userId: 'p1', email: 'p1@example.test', parentName: 'Pat', phone: '', wrestlerId: 'w1', wrestler: 'Sam', grade: '8', state: 'current', number: 'AB-1234', expires: '2027-08-31', note: '', reviewedAt: null},
+const seasonCards = [{userId: 'p1', email: 'p1@example.test', parentName: 'Pat', phone: '', wrestlerId: 'w1', wrestler: 'Sam', grade: '8', state: 'current', number: 'AB-1234', expires: '2027-08-31', note: '', reviewedAt: null},
     {userId: 'p2', email: 'p2@example.test', parentName: 'Riley', phone: '', wrestlerId: 'w4', wrestler: 'Lee', grade: '9', state: 'missing', number: '', expires: '', note: '', reviewedAt: null}];
+async function cardsPage({renewal, clipboard}) {
+  const cards = seasonCards;
   const selection = {ranges: [], removeAllRanges() { this.ranges = []; }, addRange(r) { this.ranges.push(r); }};
-  const p = page('app/cards/screen.html', {fetch: async url => json(url === '/api/exceptions' ? {exceptions: []} : {today: '2027-08-20', date: '2027-08-20', cards, renewal, renewalDays: 30}),
+  const p = page('app/cards/screen.html', {fetch: async url => json(url === '/api/exceptions' ? {exceptions: []} : {today: '2027-08-20', date: '2027-08-20', cards, renewal, renewalDays: 30, totals: {all: 2, blocked: 1, soon: 1, verified: 0}, matched: 2, next: null}),
     extra: {navigator: clipboard === undefined ? {} : {clipboard}, window: {getSelection: () => selection}}});
   p.ctx.document.createRange = () => ({selectNodeContents(n) { this.node = n; }});
   p.el('show').value = 'all'; p.el('q').value = '';
@@ -233,6 +234,8 @@ async function cardsPage({renewal, clipboard}) {
   const rows = el('rows').innerHTML;
   // The renewal list (#210): Sam's card ends Aug 31, within 30 days of Aug 20.
   assert.match(rows, /<span class="badge soon">On file · expires soon<\/span>/); assert.equal(el('tSoon').textContent, 1);
+  // The server counts the renewal list over every card (issue #46): Sam is on it, Lee (no card) is not.
+  {const usaw = load(path.resolve('lib/usaw.ts')); assert.equal(usaw.cardsPage(seasonCards, {show: 'all', onDate: '2027-08-20'}).totals.soon, 1);}
   assert.match(rows, /<span class="usaw-id" id="num0">AB-1234<\/span>/);
   assert.match(rows, /<a class="button lookup" href="https:\/\/www\.usawmembership\.com\/verify_membership" target="_blank" rel="noopener" data-lookup="0">Look up on USA Wrestling<\/a>/);
   assert.equal((rows.match(/data-lookup=/g) || []).length, 1, 'no lookup for a wrestler without a card number');

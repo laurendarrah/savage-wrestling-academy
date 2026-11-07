@@ -237,14 +237,19 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
   const s = scriptOf('app/waivers/screen.html');
   for (const [path, kind] of [['/waivers', 'waiver'], ['/consent-forms', 'parent_consent'], ['/contracts', 'coach_contract']]) {
     const ctx = {esc, when: d => d, location: {pathname: path}};
-    vm.runInNewContext(s.slice(s.indexOf('const DOCS='), s.indexOf('let data=null;')) + ';this.DOC=DOC;this.peopleOf=peopleOf;this.statusCell=statusCell;this.personCells=personCells;this.matches=matches', ctx);
+    vm.runInNewContext(s.slice(s.indexOf('const DOCS='), s.indexOf('let data=null;')) + ';this.DOC=DOC;this.peopleOf=peopleOf;this.statusCell=statusCell;this.personCells=personCells', ctx);
     assert.equal(ctx.DOC.kind, kind);
     if (kind === 'parent_consent') { assert.match(ctx.DOC.notice, /attorney has not reviewed/); assert.equal(ctx.DOC.rule, 'parent_consent'); assert.equal(ctx.DOC.defaultTitle, 'Parent Consent Form'); }
     if (kind === 'waiver') { assert.equal(ctx.DOC.rule, 'waiver'); assert.equal(ctx.DOC.defaultTitle, 'Participation waiver and release'); }
     if (kind === 'coach_contract') {
       assert.equal(ctx.DOC.rule, undefined, 'no booking exceptions for contracts');
       const people = ctx.peopleOf(ctx.DOC, {coaches: [{email: 'c@x.test', name: 'Cora', signed: false}]});
-      assert.equal(people[0].wrestler, 'Cora'); assert.ok(ctx.matches(people[0], 'cora')); assert.ok(ctx.matches(people[0], 'c@x'));
+      assert.equal(people[0].wrestler, 'Cora');
+      // The search runs on the server (issue #46): a coach is found by name or email.
+      const coaches = [{email: 'c@x.test', name: 'Cora', signed: false}, {email: 'd@x.test', name: 'Dale', signed: true}];
+      assert.deepEqual(JSON.parse(JSON.stringify(docs.signersPage(coaches, {q: 'cora'}).rows)).map(c => c.name), ['Cora']);
+      assert.deepEqual(JSON.parse(JSON.stringify(docs.signersPage(coaches, {q: 'c@x'}).rows)).map(c => c.name), ['Cora']);
+      assert.deepEqual(JSON.parse(JSON.stringify(docs.signersPage(coaches, {show: 'missing'}))).totals, {all: 2, signed: 1, missing: 1});
       const cell = ctx.statusCell(ctx.DOC, people[0]);
       assert.match(cell, /Not signed/); assert.match(cell, /Email coach/); assert.doesNotMatch(cell, /Allow booking anyway/);
       assert.match(ctx.personCells(ctx.DOC, people[0]), /<td><strong>Cora<\/strong><\/td><td>c@x\.test<\/td>/);

@@ -29,7 +29,7 @@ const strokes = Array.from({length: 3}, (_, s) => Array.from({length: 80}, (_, p
 const record = JSON.stringify({version: 1, method: 'drawn', strokes, waiverId: 'wv', waiverSha256: 'a'.repeat(64), signedAt: '2026-09-01T12:00:00Z', signer: 'Parent', accountEmail: 'parent@example.test', consent: 'I consent'});
 sqlite.exec('BEGIN');
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2, programs: [{id: 'Elementary', name: 'SWA Development', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}], seasons: [], events: []}));
-sqlite.prepare("INSERT INTO waiver_versions VALUES ('wv','Participation waiver and release','The approved waiver text.','h',?,'o',NULL)").run('2026-09-01T00:00:00Z');
+sqlite.prepare("INSERT INTO waiver_versions VALUES ('wv','Participation waiver and release','The approved waiver text.','h',?,'o',NULL,'waiver')").run('2026-09-01T00:00:00Z');
 const family = sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)');
 const signature = sqlite.prepare('INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?)');
 const review = sqlite.prepare("INSERT INTO usaw_reviews VALUES (?,?,?,?,'valid','','owner',?)");
@@ -98,6 +98,14 @@ assert.equal(allCards.size, 4500);
 const waiversApi = load('app/api/waivers/route.ts');
 const waivers = await timed('Waivers, first page', async () => (await call(waiversApi, '/api/waivers?show=missing')).body);
 assert.deepEqual({...waivers.totals}, {all: 4500, signed: signatures, missing: 4500 - signatures}); assert.equal(waivers.matched, 4500 - signatures);
+// The Parent Consent Form (#218), published and signed for a third of the wrestlers, and the coach contract list.
+sqlite.prepare("INSERT INTO waiver_versions VALUES ('pc','Parent Consent Form','The approved form.','h2',?,'o',NULL,'parent_consent')").run('2026-09-05T00:00:00Z');
+sqlite.exec("INSERT INTO waiver_signatures SELECT 'pcs'||id,'pc',user_id,wrestler_id,wrestler_name,signer,email,signature_record,signed_at FROM waiver_signatures WHERE version_id='wv' AND CAST(substr(wrestler_id,2) AS INTEGER)%3=0");
+const consentSigned = sqlite.prepare("SELECT count(*) AS n FROM waiver_signatures WHERE version_id='pc'").get().n;
+const consent = await timed('Parent Consent Form, first page', async () => (await call(waiversApi, '/api/waivers?kind=parent_consent&show=missing')).body);
+assert.deepEqual({...consent.totals}, {all: 4500, signed: consentSigned, missing: 4500 - consentSigned}); assert.equal(consent.wrestlers.length, 50);
+const contracts = await timed('Coach contracts, first page', async () => (await call(waiversApi, '/api/waivers?kind=coach_contract')).body);
+assert.ok(Array.isArray(contracts.coaches));
 
 // --- Payments: totals over all 6,000, the spreadsheet has every row ---
 const payApi = load('app/api/payments/route.ts');
@@ -119,13 +127,15 @@ assert.equal((log.match(/<article>/g) || []).length, 100); assert.match(log, /re
 
 // --- The daily job: every family in batches, inside D1's per-run query limit ---
 const notify = load('lib/notify.ts');
-const sent = await timed('Daily reminders (cards and waivers), all families', () => notify.dailyReminders(false, today));
+const sent = await timed('Daily reminders (cards, waiver and consent form), all families', () => notify.dailyReminders(false, today));
 const reminderQueries = timings.at(-1).queries;
 const expected = sqlite.prepare(`SELECT
   (SELECT count(*) FROM family_accounts f, json_each(f.payload,'$.wrestlers') w WHERE json_extract(w.value,'$.usawNumber') IS NOT NULL AND json_extract(w.value,'$.usawExpires')<=?) +
-  (SELECT count(*) FROM family_accounts f, json_each(f.payload,'$.wrestlers') w WHERE NOT EXISTS (SELECT 1 FROM waiver_signatures s WHERE s.user_id=f.user_id AND s.wrestler_id=json_extract(w.value,'$.id'))) AS n`)
+  (SELECT count(*) FROM family_accounts f, json_each(f.payload,'$.wrestlers') w, (SELECT 'wv' AS v UNION SELECT 'pc') d
+     WHERE NOT EXISTS (SELECT 1 FROM waiver_signatures s WHERE s.version_id=d.v AND s.user_id=f.user_id AND s.wrestler_id=json_extract(w.value,'$.id'))) AS n`)
   .get(new Date(Date.parse(today + 'T12:00:00Z') + 30 * 86400000).toISOString().slice(0, 10)).n;
-assert.equal(sent, expected, 'a notice for every card due and every unsigned waiver');
+assert.equal(sent, expected, 'a notice for every card due and every unsigned waiver and consent form');
+assert.equal(sqlite.prepare("SELECT count(*) AS n FROM notifications WHERE kind='consent_needed'").get().n, 4500 - consentSigned);
 assert.ok(reminderQueries < D1_LIMITS.queriesPerRun, `daily reminders used ${reminderQueries} queries`);
 assert.equal(await notify.dailyReminders(true, today), 0, 'never twice');
 

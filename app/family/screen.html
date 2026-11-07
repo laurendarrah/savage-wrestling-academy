@@ -342,7 +342,8 @@ function startWrestler(){if($('editor').hidden)editProfile();if(!profile.wrestle
 // Next up: the soonest booked session across the family's wrestlers, with their entry pass.
 let upcoming=[],upcomingLoaded=false;
 async function loadNextUp(){
- const kids=(savedProfile&&savedProfile.wrestlers||[]).slice(0,10);
+ // Every wrestler (a profile holds at most 20, lib/family-records.ts), so none is left out of Next up (issue #46).
+ const kids=(savedProfile&&savedProfile.wrestlers)||[];
  try{const views=await Promise.all(kids.map(w=>fetch('/api/wrestler?id='+encodeURIComponent(w.id),{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null)));
   upcoming=views.filter(v=>v&&Array.isArray(v.upcoming)).flatMap(v=>v.upcoming.map(s=>({...s,wrestlerId:v.id,wrestler:v.name}))).sort((a,b)=>(a.date+(a.start||'99')).localeCompare(b.date+(b.start||'99')));
   upcomingLoaded=true;renderHome()}catch{}
