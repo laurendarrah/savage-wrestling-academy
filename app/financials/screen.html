@@ -3,11 +3,10 @@
 main{max-width:1100px;margin:auto;padding:20px 16px 60px}h1{margin:12px 0 4px}h2{margin:0 0 12px}h3{margin:0 0 10px;font-size:17px}
 section{background:#fff;border-radius:12px;padding:20px;margin:18px 0}.muted{color:var(--swa-muted,#55585F)}.small{font-size:14px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.notice{background:#FFF7E6;border:1px solid #F0D49C;padding:12px 14px;margin:12px 0}
+.notice{background:var(--swa-warn-bg,#FFF7E6);border:1px solid var(--swa-warn-line,#F0D49C);color:var(--swa-warn-ink,#5C3B00);border-radius:8px;padding:12px 14px;margin:12px 0}
 #status{font-weight:700;min-height:1.5em}
 /* Month controls and downloads, one row above everything they scope */
-.monthbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:8px 0 6px}.monthbar label{display:flex;flex-direction:column;gap:4px}
-.monthbar select{min-width:210px}.monthbar .arrow{min-width:48px;padding:0 12px}.monthbar .downloads{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+.monthbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 6px}.monthbar .month-picker{flex:0 1 340px}.monthbar .downloads{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
 .monthbar a.button{display:inline-flex;align-items:center;padding:0 14px;text-decoration:none}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0}
 .tiles .tile b{white-space:nowrap;font-size:clamp(24px,7.4vw,34px)}.tile small{display:block;margin-top:6px;font-size:12px;letter-spacing:0;text-transform:none;font-weight:600}
@@ -30,14 +29,14 @@ button.month{min-height:40px;padding:0;font-size:16px}button.month[aria-current=
 form .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}form label{display:flex;flex-direction:column;gap:4px}
 fieldset{border:0;padding:0;margin:0 0 14px}legend{font-weight:600;font-size:15px;margin-bottom:6px}.choice{display:flex;gap:18px;flex-wrap:wrap}.choice label{flex-direction:row;align-items:center;gap:8px;min-height:44px}
 .formrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}#formError{color:var(--swa-red-dark,#A11B24);font-weight:700;min-height:1.5em;margin:10px 0 0}
-@media (max-width:640px){.wide{display:none}td.narrow,th.narrow{display:table-cell}span.narrow{display:block}span.abbr{display:inline}.tiles{grid-template-columns:1fr 1fr}table{font-size:14px}section{padding:16px}.monthbar .downloads{margin-left:0}.monthbar select{min-width:0;flex:1}.monthbar label{flex:1}th,td{padding:8px 4px}}
+@media (max-width:640px){.wide{display:none}td.narrow,th.narrow{display:table-cell}span.narrow{display:block}span.abbr{display:inline}.tiles{grid-template-columns:1fr 1fr}table{font-size:14px}section{padding:16px}.monthbar .downloads{margin-left:0}.monthbar .month-picker{flex:1 1 100%}.monthbar .downloads a.button{flex:1 1 100%;justify-content:center}th,td{padding:8px 4px}}
 @media print{.monthbar,form,.actions,#entrySection{display:none}}
-</style><link rel="stylesheet" href="/responsive.css"></head><body><main class="ledger"><h1>Income and expenses</h1><p>The academy's books by month. Card and offline payments are added on their own; add expenses and any other income below. This is a simple record for running the academy, not an accounting system. Card payments are shown in full, and Stripe's card fees are an expense of their own (Card processing fees), read from Stripe once a day. A refund, full or partial, is money out on the day it was made.</p>
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main class="ledger"><a class="swa-back" href="/">← Owner dashboard</a><h1>Income and expenses</h1><p>The academy's books by month. Card and offline payments are added on their own; add expenses and any other income below. This is a simple record for running the academy, not an accounting system. Card payments are shown in full, and Stripe's card fees are an expense of their own (Card processing fees), read from Stripe once a day. A refund, full or partial, is money out on the day it was made.</p>
 <p id="status" role="status" aria-live="polite">Loading…</p>
 <p id="feesNote" class="notice" hidden><span id="feesText"></span> <button type="button" id="feesNow">Get fees from Stripe now</button></p>
 <p id="testMode" class="notice" hidden>Stripe is in test mode, so card payments shown here are test payments, not real money. Once Stripe is live, only live card payments are counted.</p>
-<div class="monthbar"><button type="button" class="arrow" id="prevMonth" aria-label="Previous month">←</button><label>Month<select id="month"></select></label><button type="button" class="arrow" id="nextMonth" aria-label="Next month">→</button>
-<div class="downloads"><a class="button" id="csvMonth" href="/api/financials?format=csv">Download month (CSV)</a><a class="button" id="csvYear" href="/api/financials?format=csv">Download year (CSV)</a></div></div>
+<div class="monthbar"><div class="month-picker"><button type="button" class="month-step" id="prevMonth" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="month"></select></label><button type="button" class="month-step" id="nextMonth" aria-label="Next month">→</button></div>
+<div class="downloads"><a class="button" id="csvMonth" href="/api/financials?format=csv">Download spreadsheet: month</a><a class="button" id="csvYear" href="/api/financials?format=csv">Download spreadsheet: year</a></div></div>
 <div class="tiles"><div class="tile">Money in<b id="tIn">–</b><small id="tInNote"></small></div><div class="tile">Refunds<b id="tRefunds">–</b></div><div class="tile">Expenses<b id="tExpenses">–</b></div><div class="tile">Net<b id="tNet">–</b><small id="tNetNote"></small></div></div>
 <section><h2 id="yearHeading">Month by month</h2><p class="legend" aria-hidden="true"><span><i class="key in"></i>Money in</span><span><i class="key out"></i>Money out (expenses and refunds)</span></p>
 <figure><div id="chart" aria-hidden="true"></div><div id="tip" class="tip" hidden></div><figcaption class="muted small">Each month's money in and money out. The table below has every figure; choose a month to see its details.</figcaption></figure>
@@ -50,19 +49,15 @@ fieldset{border:0;padding:0;margin:0 0 14px}legend{font-weight:600;font-size:15p
 <label>Note (optional)<input id="note" maxlength="300" autocomplete="off" placeholder="What it was for"></label><label>Receipt reference (optional)<input id="receipt" maxlength="200" autocomplete="off" placeholder="Receipt or invoice number, or where it is filed"></label></div>
 <p id="formError" role="alert"></p><div class="formrow"><button type="submit" class="primary" id="saveEntry">Add entry</button><button type="button" id="stopEditing" hidden>Cancel editing</button></div></form></section>
 <section><h2 id="linesHeading">Everything this month</h2><div class="table"><table><thead><tr><th scope="col">Date</th><th scope="col">What</th><th scope="col" class="wide">Category</th><th scope="col" class="wide">From</th><th scope="col" class="right">Amount</th><th scope="col"><span class="sr">Change</span></th></tr></thead><tbody id="lines"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody></table></div></section>
-</main><script>
+</main><script src="/month-picker.js"></script><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);
 const shortDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric'});
 const minus=c=>c?'−'+money(c):money(0);
 const longDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'});
 const monthName=(m,style='long')=>new Date(m+'-01T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:style,...(style==='long'?{year:'numeric'}:{})});
-function namedMonthOptions(key,min='2020-01',max='2100-12'){
- if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(key))return '';
- const [year,month]=key.split('-').map(Number),fmt=new Intl.DateTimeFormat('en-US',{month:'long',year:'numeric',timeZone:'UTC'});
- return Array.from({length:25},(_,i)=>new Date(Date.UTC(year,month-13+i,1))).map(date=>[date.toISOString().slice(0,7),fmt.format(date)]).filter(([value])=>value>=min&&value<=max).map(([value,label])=>'<option value="'+value+'"'+(value===key?' selected':'')+'>'+label+'</option>').join('');
-}
-function shiftMonth(key,delta){const [y,m]=key.split('-').map(Number);return new Date(Date.UTC(y,m-1+delta,1)).toISOString().slice(0,7)}
+// The month picker shared with /timesheets and /coach-time (public/month-picker.js, issue #232).
+const picker={select:$('month'),prev:$('prevMonth'),next:$('nextMonth')},shiftMonth=MonthPicker.shift;
 // Dollars as typed ("1,250", "$80.5") to whole cents, without floating-point rounding. Null if it is not an amount.
 function toCents(v){const s=String(v??'').replace(/[$,\s]/g,'');if(!/^\d{1,7}(\.\d{1,2})?$/.test(s))return null;const [d,f='']=s.split('.'),c=Number(d)*100+Number(f.padEnd(2,'0'));return c>=1&&c<=100000000?c:null}
 const centsText=c=>(c/100).toFixed(2);
@@ -112,10 +107,9 @@ function render(){
  $('testMode').hidden=d.stripeMode!=='test';
  // Card fees are read from Stripe after the payment (issue #42); until then they are missing from expenses.
  const waiting=d.feesWaiting||0;$('feesNote').hidden=!waiting;$('feesText').textContent=waiting?(waiting===1?'1 card payment is':waiting+' card payments are')+' still waiting for Stripe\'s fee, so expenses may be missing card fees. Fees are read from Stripe once a day.':'';
- $('month').innerHTML=namedMonthOptions(d.month,'2020-01',thisMonth());$('month').value=d.month;
- $('prevMonth').disabled=d.month<='2020-01';$('nextMonth').disabled=d.month>=thisMonth();
+ MonthPicker.set(picker,d.month,{min:'2020-01',max:thisMonth()});
  $('csvMonth').href='/api/financials?format=csv&month='+d.month;$('csvYear').href='/api/financials?format=csv&year='+d.year;
- $('csvMonth').textContent='Download '+short+' (CSV)';$('csvYear').textContent='Download '+d.year+' (CSV)';
+ $('csvMonth').textContent='Download spreadsheet: '+short;$('csvYear').textContent='Download spreadsheet: '+d.year;
  $('tIn').textContent=money(t.incomeCents);$('tRefunds').textContent=minus(t.refundsCents);$('tExpenses').textContent=minus(t.expensesCents);$('tNet').textContent=money(t.netCents);
  $('tInNote').textContent='in '+label;$('tNetNote').textContent=d.year+' so far: '+money(d.yearTotals.netCents);
  $('yearHeading').textContent=d.year+' month by month';$('yearCaption').textContent='Money in, refunds, expenses and net for each month of '+d.year;
@@ -157,7 +151,7 @@ document.querySelectorAll('input[name="kind"]').forEach(r=>r.onchange=()=>{$('ca
 $('feesNow').onclick=async()=>{if(busy)return;busy=true;$('feesNow').disabled=true;$('status').textContent='Reading card fees from Stripe…';
  try{const r=await call('/api/financials',{action:'fees'});await load(report?report.month:thisMonth());$('status').textContent=r.error?r.error:r.recorded?'Card fees added for '+(r.recorded===1?'1 payment.':r.recorded+' payments.'):'No new card fees yet. Stripe may still be settling recent payments; they are tried again tomorrow.'}
  catch(err){$('status').textContent=err.message}finally{busy=false;$('feesNow').disabled=false}};
-$('month').onchange=()=>load($('month').value);$('prevMonth').onclick=()=>report&&load(shiftMonth(report.month,-1));$('nextMonth').onclick=()=>report&&load(shiftMonth(report.month,1));
+MonthPicker.wire(picker,load);
 let resizeTimer=0;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(drawChart,120)});
 const asked=new URLSearchParams(location.search).get('month');load(/^\d{4}-(0[1-9]|1[0-2])$/.test(asked||'')&&asked<=thisMonth()?asked:thisMonth());
 </script></body></html>

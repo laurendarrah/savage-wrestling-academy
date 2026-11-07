@@ -7,11 +7,12 @@ fieldset{min-width:0}
 img,video,svg{max-width:100%}
 .mobile-menu-button,.mobile-calendar{display:none}
 .owner-tools{margin-top:8px}.owner-tools summary{cursor:pointer;font-weight:600;padding:10px 0}.owner-tools>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.owner-tools a{display:inline-flex;align-items:center;min-height:44px;padding:6px 8px}
-/* Calendar colors use stable program IDs, including previously saved programs. */
-.event.cal-advanced,.mobile-practice.cal-advanced,.calendar-key .cal-advanced,.program-color.cal-advanced{background:#000;color:#fff;border:1px solid #000}
-.event.cal-intermediate,.mobile-practice.cal-intermediate,.calendar-key .cal-intermediate,.program-color.cal-intermediate{background:#686868;color:#fff;border:1px solid #686868}
-.event.cal-elementary,.mobile-practice.cal-elementary,.calendar-key .cal-elementary,.program-color.cal-elementary{background:#fff;color:#18191c;border:1px solid #999}
-.event.cal-special,.mobile-practice.cal-special,.calendar-key .cal-special,.program-color.cal-special{background:#d72732;color:#fff;border:1px solid #d72732}
+/* Calendar colors use stable program IDs, including previously saved programs. The colors are the program tokens from
+   savage.css (issue #227); the values after the commas only cover a page shown without it. */
+.event.cal-advanced,.mobile-practice.cal-advanced,.calendar-key .cal-advanced,.program-color.cal-advanced{background:var(--swa-prog-advance,#000);color:var(--swa-prog-advance-ink,#fff);border:1px solid var(--swa-prog-advance,#000)}
+.event.cal-intermediate,.mobile-practice.cal-intermediate,.calendar-key .cal-intermediate,.program-color.cal-intermediate{background:var(--swa-prog-intermediate,#686868);color:var(--swa-prog-intermediate-ink,#fff);border:1px solid var(--swa-prog-intermediate,#686868)}
+.event.cal-elementary,.mobile-practice.cal-elementary,.calendar-key .cal-elementary,.program-color.cal-elementary{background:var(--swa-prog-development,#fff);color:var(--swa-prog-development-ink,#18191c);border:1px solid var(--swa-prog-development-line,#999)}
+.event.cal-special,.mobile-practice.cal-special,.calendar-key .cal-special,.program-color.cal-special{background:var(--swa-prog-event,#d72732);color:var(--swa-prog-event-ink,#fff);border:1px solid var(--swa-prog-event,#d72732)}
 .calendar-key{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}.calendar-key span{border-radius:5px;padding:6px 10px;font-size:12px;font-weight:600}
 .event:hover,.mobile-practice:hover{box-shadow:0 0 0 2px #71747d}.event:focus-visible,.mobile-practice:focus-visible{outline:3px solid #1769aa;outline-offset:2px}
 @media screen and (max-width:1024px){

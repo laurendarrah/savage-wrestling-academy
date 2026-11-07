@@ -71,7 +71,7 @@ sqlite.exec("UPDATE waiver_versions SET retired_at='2026-11-05T13:00:00Z' WHERE 
 sqlite.prepare("INSERT INTO error_log(id,at,method,path,status,message) VALUES ('x',?,'GET','/a',500,'boom')").run('2026-11-06T14:00:00Z');
 r = await launchChecklist(DB, settings, today, now); i = by(r);
 assert.equal(i.backup.status, 'todo'); assert.match(i.backup.detail, /Download a fresh one/);
-assert.equal(i.waiver.status, 'todo'); assert.equal(i.consent.status, 'done', 'retiring the waiver leaves the consent form'); assert.equal(i.health.status, 'todo'); assert.match(i.health.detail, /1 server error /);
+assert.equal(i.waiver.status, 'todo'); assert.equal(i.consent.status, 'done', 'retiring the waiver leaves the consent form'); assert.equal(i.health.status, 'todo'); assert.match(i.health.detail, /1 site error /);
 
 // An insecure public address is flagged; a local test address is fine.
 for (const [o, ok] of [['http://register.savagewrestling.example', false], ['http://127.0.0.1:8799', true], ['https://x.workers.dev', true]]) {

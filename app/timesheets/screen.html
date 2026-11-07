@@ -5,24 +5,24 @@ h1{line-height:1.15;margin:12px 0 4px}h2{margin:0 0 6px;font-size:20px}h3{margin
 input,button,select{font:inherit}input,select{padding:9px;border:1px solid #ccc;border-radius:6px;font-weight:normal}
 button,a.button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#18191c;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}.primary{background:#c4222c;color:#fff;border-color:#c4222c}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}.tile{background:#fff;border:1px solid #ddd;border-radius:10px;padding:14px}.tile b{display:block;font-size:22px}
-.month-nav{display:flex;align-items:center;gap:6px}.month-nav b{min-width:9ch;text-align:center}
+.row .month-picker{flex:0 1 320px}
 .head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;align-items:baseline}
 .badge{display:inline-block;background:#eef0f2;color:#18191c}.badge.submitted{background:#141416;color:#fff}.badge.approved{background:#e6f2ea;color:#1f6f3a}.badge.open,.badge.not-submitted{background:#fdecee;color:#a11b24}
 .breakdown{margin:10px 0;padding:0;list-style:none}.breakdown li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #eef0f2;font-variant-numeric:tabular-nums}
 .shift{border:1px solid #e4e6ea;border-radius:10px;padding:12px 14px;margin:10px 0}.shift.voided{opacity:.6}.shift.voided .what{text-decoration:line-through}.shift p{margin:3px 0}
-.flags{margin:8px 0 0;padding:8px 12px 8px 28px;background:#fff7e6;border-radius:8px;color:#5c3b00;font-size:15px}.flags li+li{margin-top:4px}
+.flags{margin:8px 0 0;padding:8px 12px 8px 28px;background:var(--swa-warn-bg,#FFF7E6);border-radius:8px;color:var(--swa-warn-ink,#5C3B00);font-size:15px}.flags li+li{margin-top:4px}
 details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:#a92330}
 .form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end;margin-top:8px}.form .wide{grid-column:1/-1}
 .history{margin:6px 0 0;padding-left:20px;font-size:14px;color:#626672}
 .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
-.warn{background:#fff7e6;border:1px solid #f0d49c;border-radius:8px;padding:10px 12px}
+.warn{background:var(--swa-warn-bg,#FFF7E6);border:1px solid var(--swa-warn-line,#F0D49C);color:var(--swa-warn-ink,#5C3B00);border-radius:8px;padding:10px 12px}
 .off{border-top:1px solid #eee;padding:14px 0}.off:first-of-type{border-top:0}.off p{margin:3px 0}.cover{margin:6px 0 0;padding-left:20px}.cover li{margin:2px 0}
 #status{font-weight:bold;min-height:1.5em}[hidden]{display:none!important}@media print{.row,a,button,details{display:none}section{border:0}}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <a class="swa-back" href="/">← Owner dashboard</a>
 <h1>Coach hours</h1>
 <p>Review each coach’s month after they send it, fix anything with a reason, approve it, and download the month’s hours with lesson shares. Practices are paid for the scheduled practice time only, at the rate for the role the coach worked.</p>
-<section><div class="row"><div class="month-nav"><button type="button" id="prev" aria-label="Previous month">←</button><b id="monthLabel">–</b><button type="button" id="next" aria-label="Next month">→</button></div>
+<section><div class="row"><div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="month"></select></label><button type="button" class="month-step" id="next" aria-label="Next month">→</button></div>
 <label>Coach<select id="coach"><option value="">All coaches</option></select></label>
 <a class="button" id="csv" href="#">Download spreadsheet</a></div>
 <p class="muted" id="rates"></p>
@@ -32,6 +32,7 @@ details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align
 <section id="offBox" aria-labelledby="offTitle"><h2 id="offTitle">Time off</h2><p class="muted">When you approve, the other coaches in the same programs get a notice (without the reason), and the coach’s practices and lessons in those dates are listed here for cover. Nothing is cancelled.</p><div id="offPending"></div><h3 id="coverTitle">Needs cover</h3><div id="offApproved"></div></section>
 <div id="coaches"></div></main>
 <script src="/hours-text.js"></script>
+<script src="/month-picker.js"></script>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1]%12||12)+':'+m[2]+' '+(+m[1]<12?'AM':'PM'):''};
@@ -66,8 +67,10 @@ function coverHtml(cover){if(!cover)return '';const p=cover.practices||[],l=cove
  return '<ul class="cover">'+p.map(x=>`<li>${esc(dayText(x.date))} · ${esc(x.time)} · ${esc(x.title)} practice</li>`).join('')+l.map(x=>`<li>${esc(dayText(x.date))} · ${esc(x.time)} · private lesson${x.booked?' · '+x.booked+' wrestler'+(x.booked===1?'':'s')+' booked':' (open time)'}</li>`).join('')+'</ul>'}
 function offHtml(r,pending){return `<div class="off"><p><b>${esc(r.coachName)}</b> · ${esc(r.text)}</p><p class="muted">Reason: ${esc(r.reason)}</p>${pending?'<p>Would need cover:</p>':''}${coverHtml(r.cover)}${pending?`<div class="form"><label class="wide">Note to the coach (optional)<input id="n-${esc(r.id)}" maxlength="300"></label></div><div class="actions"><button type="button" class="primary" data-off="${esc(r.id)}" data-rev="${r.revision}" data-decision="approve">Approve</button><button type="button" data-off="${esc(r.id)}" data-rev="${r.revision}" data-decision="decline">Decline</button></div>`:''}</div>`}
 let data=null,month='';
+// The month picker shared with /financials and /coach-time (public/month-picker.js, issue #232).
+const picker={select:$('month'),prev:$('prev'),next:$('next')};
 function render(d){data=d;month=d.month;
- $('monthLabel').textContent=d.monthLabel;$('csv').href='/api/timesheets?format=csv&month='+encodeURIComponent(d.month);
+ MonthPicker.set(picker,d.month,{max:[d.month,String(d.today||'').slice(0,7)].sort().pop()});$('csv').href='/api/timesheets?format=csv&month='+encodeURIComponent(d.month);
  $('rates').textContent='Rates: '+d.rates.map(r=>r.label+' '+money(r.centsPerHour)+' an hour').join(', ')+'.';
  const sel=$('coach'),keep=d.coach||'';sel.innerHTML='<option value="">All coaches</option>'+d.choices.map(c=>`<option value="${esc(c.email)}">${esc(c.name)}${c.active?'':' (removed)'}</option>`).join('');sel.value=keep;
  $('tMinutes').textContent=hoursText(d.overall.minutes);$('tPractice').textContent=money(d.overall.practiceCents);$('tLessons').textContent=money(d.overall.lessonCents);$('tWaiting').textContent=d.overall.waiting+' shift'+(d.overall.waiting===1?'':'s');
@@ -84,6 +87,6 @@ function render(d){data=d;month=d.month;
 const approveBody=(c,m)=>({action:'approve',coach:c.email,month:m,shifts:c.shifts.filter(s=>s.status==='submitted').map(s=>({id:s.id,revision:s.revision}))});
 async function load(m){const q=new URLSearchParams();if(m)q.set('month',m);if($('coach').value)q.set('coach',$('coach').value);try{render(await call(null,'?'+q))}catch(e){$('status').textContent=e.message}}
 async function act(body,done){try{const r=await call(body);await load(month);$('status').textContent=typeof done==='function'?done(r):done}catch(e){$('status').textContent=e.message}}
-$('prev').onclick=()=>data&&load(data.previous);$('next').onclick=()=>data&&load(data.next);$('coach').onchange=()=>load(month);
+MonthPicker.wire(picker,load);$('coach').onchange=()=>load(month);
 load(new URLSearchParams(location.search).get('month')||'');
 </script></body></html>
