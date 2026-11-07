@@ -1,0 +1,986 @@
+{
+ "programs.defaults": {
+  "sha256": "050b043e43e88cdb3b0223618ab834fa21ef81e510793dd2e7173ab5484b819f",
+  "length": 468
+ },
+ "hydrate.new": {
+  "sha256": "0bf33be0e77c7f8acb452e21d4d02119d4456a599aa6538223d220b4a43ec68d",
+  "length": 2553
+ },
+ "hydrate.oldNames": {
+  "sha256": "acd8a570f165cf07041c3614128f875c35216abb98f50f156e32791a07b58e4b",
+  "length": 2093
+ },
+ "hydrate.saved": {
+  "sha256": "65fc5f6f60b55c7e552b95d9a0bb262b104b9e7b0691fc1ccac8994c13cb817c",
+  "length": 751
+ },
+ "hydrate.fromPage": {
+  "sha256": "2378ca7afcf1d3cb4f142611bf8ae2cfb09ef9b3a0b58192c22b441d886acd49",
+  "length": 2071
+ },
+ "hydrate.unknownId": {
+  "sha256": "858a78c235a702e9f5d7505ec4f740c7903d5f9254707d3a78438b514ccc7501",
+  "length": 331
+ },
+ "ensurePortalData": [
+  {
+   "name": "a",
+   "id": "id-1"
+  },
+  {
+   "id": "keep",
+   "name": "b"
+  },
+  {
+   "id": "id-2",
+   "name": "c"
+  }
+ ],
+ "ensurePortalData.none": [],
+ "normalizeFridayLive": [],
+ "programName": [
+  "Elementary",
+  "Intermediate",
+  "Advanced",
+  "Camps, clinics & events",
+  "All programs"
+ ],
+ "calendarProgramColor": [
+  "cal-elementary",
+  "cal-intermediate",
+  "cal-advanced",
+  "cal-elementary"
+ ],
+ "offeringGradeFields.": {
+  "sha256": "433f82a80a484f468a8b558807415fb17d84031486be1a0530ed5a2edb0856ad",
+  "length": 1478
+ },
+ "offeringGradeFields.K": {
+  "sha256": "78d06f9377aecb40571a6681fbdaa2dbf7ecb49e3b3133982e6d4ed00ec05ca2",
+  "length": 1494
+ },
+ "offeringGradeFields.6": {
+  "sha256": "9c01c3fa89eb0a66e9b2fd61931d0401beda2e3f20aa5b012e88bf2bd64c65cf",
+  "length": 1494
+ },
+ "offeringGradeFields.K–6": {
+  "sha256": "fc1c99bef3947d93ee9fb815d00f399275a2ec49b6f6df9036ccc62130de7c91",
+  "length": 1498
+ },
+ "offeringGradeFields.7-12": {
+  "sha256": "d0b0ff4d6a926d7f5787318beeb4eb5ca39a0788f2adfa2ee7808891d1b6f979",
+  "length": 1500
+ },
+ "offeringGradeFields.3 – 5": {
+  "sha256": "df0ec184937b693e2fbe4670b1da93bab2d478bbed95dc1dc5d5082abfe9b2d7",
+  "length": 1502
+ },
+ "offeringGradeFields.All grades": {
+  "sha256": "719ce2aa5eb7bffb8428bd017cc3091a529d180403ee167645bf9844db79712c",
+  "length": 1512
+ },
+ "offeringGradeFields.Adults": {
+  "sha256": "b3f882ab8cb17be34875182b0ce770380b1596b38679c6e81a92322ca20ee5b1",
+  "length": 1486
+ },
+ "offeringGradeFields.12–K": {
+  "sha256": "b31d069f278da1e012848cb5443ad4a5aa7e75bc71cd835e283bbf38099f4c0d",
+  "length": 1500
+ },
+ "offeringGradeFields.<b>": {
+  "sha256": "1dbb348df7f51c8aee7e10f170fc58a71502692c39f3922df319ee743c78ee1b",
+  "length": 1492
+ },
+ "offeringGrades": [
+  "K",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12"
+ ],
+ "updateOfferingGrades": [
+  [
+   "K",
+   "K",
+   "K",
+   "Selected: K"
+  ],
+  [
+   "K",
+   "6",
+   "K–6",
+   "Selected: K–6"
+  ],
+  [
+   "9",
+   "9",
+   "9",
+   "Selected: 9"
+  ],
+  [
+   "3",
+   "3",
+   "3",
+   "Selected: 3"
+  ],
+  [
+   "",
+   "",
+   "",
+   "No grade limit"
+  ],
+  [
+   "12",
+   "12",
+   "12",
+   "Selected: 12"
+  ],
+  [
+   "12",
+   "12",
+   "12",
+   "Selected: 12"
+  ],
+  [
+   "12",
+   "12",
+   "12",
+   "Selected: 12"
+  ]
+ ],
+ "offeringDetails": [
+  "",
+  "<p><strong>Grade range:</strong> K–6</p><p style=\"white-space:pre-wrap;overflow-wrap:anywhere\">&lt;x&gt;\nline</p>"
+ ],
+ "clockTime.all": {
+  "sha256": "adb58a80ce98b2fbbfb18bbcf834a6f3915b3251bfce874ba173efc70c6a80c7",
+  "length": 14761
+ },
+ "clockLabel.all": {
+  "sha256": "adb58a80ce98b2fbbfb18bbcf834a6f3915b3251bfce874ba173efc70c6a80c7",
+  "length": 14761
+ },
+ "federalHolidays": {
+  "sha256": "316ec3262d4cb827d59ee716db418988490e09cd67834b188be9c935420d5cd5",
+  "length": 18599
+ },
+ "holidayNamesOn": [
+  [
+   "New Year’s Day"
+  ],
+  [
+   "New Year’s Day (observed)"
+  ],
+  [
+   "Christmas Day (observed)"
+  ],
+  [
+   "Independence Day (observed)"
+  ],
+  [
+   "Veterans Day"
+  ],
+  [
+   "Thanksgiving Day"
+  ],
+  [],
+  [
+   "Christmas Day"
+  ]
+ ],
+ "dateKey": [
+  "2026-01-01",
+  "2026-12-31",
+  "2027-03-14",
+  "2026-11-01"
+ ],
+ "academyToday": [
+  "2026-10-16",
+  "2026-10-17",
+  "2026-03-08",
+  "2026-03-08",
+  "2026-11-01",
+  "2026-12-31",
+  "2027-01-01"
+ ],
+ "extraPracticeDateLabel": [
+  "Jan 5, 2026",
+  "Dec 31, 2026",
+  "Feb 28, 2027"
+ ],
+ "nyWhen": [
+  "Fri, Nov 6 · 2:16 PM",
+  "2:16 PM",
+  "Fri, Jul 3 · 11:05 PM",
+  "11:05 PM",
+  "Thu, Dec 31 · 11:59 PM",
+  "11:59 PM"
+ ],
+ "namedMonthOptions": {
+  "sha256": "a4c9dd01fbc94c76144c94cdb9d2f9d12d552833d69beb860b49cc4df2e904d5",
+  "length": 2976
+ },
+ "weekdays": [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday"
+ ],
+ "practiceSlot.year": {
+  "sha256": "92be15108725bc03ec4ae4e0abec36ea5063cfad9470c4b865b00c9f3c5be655",
+  "length": 8665
+ },
+ "practiceSlot.noSeasons": 0,
+ "seasonTimes": {
+  "sha256": "3b1737762abf942f0ade930a3bbc779b0446126f072c813ff8fa5092305a0658",
+  "length": 372
+ },
+ "seasonExceptions": {
+  "sha256": "3687792e9315cb38fbd1b57b66068346b71e2fb6e19fdd52337ce061552b5197",
+  "length": 546
+ },
+ "visiblePlannerMonth": [
+  "2026-11",
+  "2027-03",
+  "2027-03",
+  "2026-02",
+  "2026-11"
+ ],
+ "movePlannerMonth": [
+  "2027-01",
+  "2025-12",
+  "2026-12",
+  "2027-07",
+  "2024-05"
+ ],
+ "saveSeason.ok": {
+  "sha256": "09ebc34ba706789cd31e75c36faea7669bdf467576dc937a8cad7993c3293ccc",
+  "length": 396
+ },
+ "saveSeason.noDays": {
+  "seasons": [],
+  "count": 5,
+  "saves": 0,
+  "toast": "<div class=\"toast\">Select at least one practice day.</div>",
+  "plannerExcluded": [
+   "2027-03-15"
+  ],
+  "plannerMonth": "2027-03",
+  "editingSeason": null
+ },
+ "saveSeason.backwards": {
+  "seasons": [],
+  "count": 5,
+  "saves": 0,
+  "toast": "<div class=\"toast\">Semester end date must follow the first practice date.</div>",
+  "plannerExcluded": [
+   "2027-03-15"
+  ],
+  "plannerMonth": "2027-03",
+  "editingSeason": null
+ },
+ "saveSeason.sameDay": {
+  "sha256": "f7905ffad050c4c6835811d71c93cea1ed3f3bbf72e7a2fc6cf87e3111ec68c5",
+  "length": 327
+ },
+ "saveSeason.badTime": {
+  "seasons": [],
+  "count": 5,
+  "saves": 0,
+  "toast": "<div class=\"toast\">Friday: end time must follow start time.</div>",
+  "plannerExcluded": [
+   "2027-03-15"
+  ],
+  "plannerMonth": "2027-03",
+  "editingSeason": null
+ },
+ "saveSeason.noTime": {
+  "seasons": [],
+  "count": 5,
+  "saves": 0,
+  "toast": "<div class=\"toast\">Monday: end time must follow start time.</div>",
+  "plannerExcluded": [
+   "2027-03-15"
+  ],
+  "plannerMonth": "2027-03",
+  "editingSeason": null
+ },
+ "saveSeason.edit": {
+  "sha256": "a3bc38f2376c53f94637a28e5b867d3cf408ef30a14634f901ac9b13987ca7d8",
+  "length": 355
+ },
+ "events.read": {
+  "sha256": "9f6b19221fced46385ff41d83626b48ea19ce6a7a0cb458e82e0ed862433d61a",
+  "length": 1488
+ },
+ "eventSession.odd": [
+  null,
+  null,
+  {
+   "date": "d",
+   "start": "1",
+   "end": "2"
+  }
+ ],
+ "eventFormSchedule": [
+  [],
+  [],
+  [
+   {
+    "date": "2026-12-01",
+    "start": "08:00",
+    "end": "08:30"
+   },
+   {
+    "date": "2026-12-02",
+    "start": "09:00",
+    "end": "10:00"
+   }
+  ],
+  null,
+  null,
+  null,
+  null,
+  null,
+  [
+   {
+    "date": "d",
+    "start": "23:00",
+    "end": "23:59"
+   }
+  ]
+ ],
+ "saveEvent.camp": {
+  "sha256": "dd2f672f81ead5bd1f2c9b570ef4f0b104a5835f67c7409a5504feca41767072",
+  "length": 347
+ },
+ "saveEvent.campOneDay": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.campSameDay": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.campBadDate": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.campHalfTime": {
+  "added": null,
+  "saves": 0,
+  "error": "Give each day both a start and an end time, with the end after the start. Or leave both blank to show “Time to be announced”.",
+  "archiveView": false
+ },
+ "saveEvent.clinic": {
+  "sha256": "8cae77325c352394c1e7b8cded1689d621455e87cce897412f18f2a5df8906ff",
+  "length": 307
+ },
+ "saveEvent.clinicNoDate": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.event": {
+  "added": {
+   "archived": false,
+   "archivedAt": null,
+   "id": "id-5",
+   "name": "Gala",
+   "gradeRange": "",
+   "description": "",
+   "type": "Event",
+   "dates": [
+    "2027-01-09"
+   ],
+   "schedule": [],
+   "date": "Jan 9, 2027",
+   "price": 0,
+   "day": null,
+   "slots": 1
+  },
+  "saves": 1,
+  "error": "",
+  "archiveView": false
+ },
+ "saveEvent.noName": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.badType": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.tooMuch": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.negative": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.fraction": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.noSeats": {
+  "added": null,
+  "saves": 0,
+  "error": "Enter a title, valid prices and capacity. Camps need at least two different dates; clinics need exactly one date.",
+  "archiveView": false
+ },
+ "saveEvent.badDay": {
+  "added": {
+   "archived": false,
+   "archivedAt": null,
+   "id": "id-6",
+   "name": "Camp",
+   "gradeRange": "",
+   "description": "",
+   "type": "Camp",
+   "dates": [
+    "2026-12-29",
+    "2026-12-30"
+   ],
+   "schedule": [],
+   "date": "Dec 29, 2026 · Dec 30, 2026",
+   "price": 100,
+   "day": 0,
+   "slots": 20
+  },
+  "saves": 1,
+  "error": "",
+  "archiveView": false
+ },
+ "saveEvent.pastDates": {
+  "added": {
+   "archived": false,
+   "archivedAt": null,
+   "id": "id-7",
+   "name": "Past",
+   "gradeRange": "",
+   "description": "",
+   "type": "Clinic",
+   "dates": [
+    "2026-01-09"
+   ],
+   "schedule": [],
+   "date": "Jan 9, 2026",
+   "price": 10,
+   "day": null,
+   "slots": 1
+  },
+  "saves": 1,
+  "error": "",
+  "archiveView": true
+ },
+ "saveEvent.edit": {
+  "first": {
+   "archived": false,
+   "archivedAt": null,
+   "id": "camp",
+   "name": "Clinic",
+   "gradeRange": "",
+   "description": "",
+   "type": "Clinic",
+   "dates": [
+    "2026-12-30"
+   ],
+   "schedule": [
+    {
+     "date": "2026-12-30",
+     "start": "18:00",
+     "end": "20:00"
+    }
+   ],
+   "date": "Dec 30, 2026",
+   "price": 40,
+   "day": null,
+   "slots": 10
+  },
+  "count": 5
+ },
+ "archiveEvent": [
+  true,
+  "string",
+  "<div class=\"toast\">Event archived.</div>"
+ ],
+ "archiveEvent.ended": [
+  null,
+  "<div class=\"toast\">This event has ended. Edit its dates to reopen it.</div>"
+ ],
+ "eventCard": {
+  "sha256": "168965223a43dab382ad040647db2c075bab03dc209b3bf8fb62bfaf98a7b8a3",
+  "length": 2911
+ },
+ "events.active": {
+  "sha256": "447964df99d0bf0d1fdcd05669a90f5530d324095822d9d9e6882882566ff56f",
+  "length": 2629
+ },
+ "events.archived": {
+  "sha256": "2b27693bd1f6b2c2e3e989f04dcf64d46cc1df7d11596f7493b177ab88e1f651",
+  "length": 2008
+ },
+ "extraPracticeCalendar": {
+  "sha256": "c6a47145109da426076acbe98536180c9940e13b1a12abc7518a0bd9dfa257dd",
+  "length": 5533
+ },
+ "extraPracticeManager": {
+  "sha256": "bddd838cb7e057ed270ceb59bdd9362ab8059bc3f45b2fb69542c2f27d509957",
+  "length": 9359
+ },
+ "extraPractice.dates": {
+  "dates": [
+   "2026-12-04",
+   "2026-11-27"
+  ],
+  "month": "2025-12"
+ },
+ "saveExtraPractice.ok.2": {
+  "list": [
+   {
+    "id": "id-8",
+    "name": "Open mat",
+    "gradeRange": "",
+    "description": "x",
+    "dates": [
+     "2026-11-27",
+     "2026-12-04"
+    ],
+    "start": "18:00",
+    "end": "19:30",
+    "memberCents": 1235,
+    "nonMemberCents": 2000,
+    "enabled": true
+   }
+  ],
+  "saves": 1,
+  "toast": "",
+  "editing": null,
+  "month": "2026-11"
+ },
+ "saveExtraPractice.ok.0": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.hidden.2": {
+  "list": [
+   {
+    "id": "id-9",
+    "name": "Open mat",
+    "gradeRange": "",
+    "description": "",
+    "dates": [
+     "2026-11-27",
+     "2026-12-04"
+    ],
+    "start": "18:00",
+    "end": "19:30",
+    "memberCents": 0,
+    "nonMemberCents": 0,
+    "enabled": false
+   }
+  ],
+  "saves": 1,
+  "toast": "",
+  "editing": null,
+  "month": "2026-11"
+ },
+ "saveExtraPractice.hidden.0": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.backwards.2": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.backwards.0": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.tooMuch.2": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.tooMuch.0": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.negative.2": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.negative.0": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.blank.2": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.blank.0": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.duplicate.2": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">This practice is already offered on one of those dates. Edit the existing practice.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "saveExtraPractice.duplicate.0": {
+  "list": [],
+  "saves": 0,
+  "toast": "<div class=\"toast\">Enter a practice name, select dates, and check the times and prices.</div>",
+  "editing": null,
+  "month": ""
+ },
+ "editExtraPractice": {
+  "dates": [
+   "2026-11-13",
+   "2026-11-20",
+   "2026-12-04"
+  ],
+  "month": "2026-11",
+  "editing": "fnl"
+ },
+ "saveExtraPractice.edit": {
+  "sha256": "e523bce4a27689f680bf4466fa7b8032fa34669a24de8af40e0ec65382ea992f",
+  "length": 376
+ },
+ "formatDollars": [
+  "$0.00",
+  "$1.00",
+  "$1.01",
+  "$10.50",
+  "$1,234.50",
+  "-$3.00",
+  "$7.10",
+  "$0.00",
+  "$1,000,000.00"
+ ],
+ "formatPrice": [
+  "$0.00",
+  "$0.01",
+  "$0.99",
+  "$1.00",
+  "$200.00",
+  "$1,234.56",
+  "$200.00",
+  "$200.00"
+ ],
+ "normalizeMoneyInput": [
+  "",
+  "1.00",
+  "1.50",
+  "1.55",
+  "0.00",
+  "abc",
+  "10000.00"
+ ],
+ "ownerPrograms": {
+  "sha256": "0f9cf970da4b49feabca893d2a34effc2e57925a3fef5b962519cc4bd281f94d",
+  "length": 6394
+ },
+ "ownerPrograms.unpublished": {
+  "sha256": "1ca3365f63b3942c1cfd0cda8e107286079ebd7c8b190a5ae24c1ef9a1f2bc44",
+  "length": 6778
+ },
+ "saveProgram.ok": {
+  "sha256": "6fcb2e7b86ecdcd162a09cbbdc2ad00d169ad3ca9e78562268d1a1ea8613d19b",
+  "length": 425
+ },
+ "saveProgram.noWalkIn": {
+  "sha256": "335c81dbae6d762b1b17645669fe0ea95c9c6f2cbde9d71faf46e2b771a8f7fa",
+  "length": 363
+ },
+ "saveProgram.free": {
+  "sha256": "17ffa3f178e7a6b3c21f5461c14c7b53cb73276b800804dc70bd292b125bc496",
+  "length": 405
+ },
+ "saveProgram.tooMuch": {
+  "sha256": "81375131a02d6f3ba11ecdd8d1d693755be2b9b1cc90e223ad160f1dcd731c3c",
+  "length": 807
+ },
+ "saveProgram.badWalkIn": {
+  "sha256": "6ae846b5cff8fa34a750d69d0b7046356115edb765fcf8ab9fc698afdda74773",
+  "length": 806
+ },
+ "saveProgram.noName": {
+  "sha256": "81375131a02d6f3ba11ecdd8d1d693755be2b9b1cc90e223ad160f1dcd731c3c",
+  "length": 807
+ },
+ "saveProgram.text": {
+  "sha256": "81375131a02d6f3ba11ecdd8d1d693755be2b9b1cc90e223ad160f1dcd731c3c",
+  "length": 807
+ },
+ "teamCodeManager": {
+  "sha256": "5dea131e9cd5e8a4bb5b34dcd9ed54a47f623d4ab5676dd27ddfd8879a87fcee",
+  "length": 1117
+ },
+ "saveTeamCode.ok": {
+  "codes": [
+   {
+    "id": "id-11",
+    "name": "East",
+    "code": "EAST-15",
+    "percent": 15,
+    "programs": [
+     "Elementary",
+     "Advanced"
+    ],
+    "active": true
+   }
+  ],
+  "saves": 1,
+  "error": ""
+ },
+ "saveTeamCode.inactive": {
+  "codes": [
+   {
+    "id": "id-12",
+    "name": "East",
+    "code": "EAST",
+    "percent": 100,
+    "programs": [
+     "Intermediate"
+    ],
+    "active": false
+   }
+  ],
+  "saves": 1,
+  "error": ""
+ },
+ "saveTeamCode.taken": {
+  "codes": [],
+  "saves": 0,
+  "error": "Enter a unique code, team name, 1–100% discount, and at least one eligible program."
+ },
+ "saveTeamCode.shortCode": {
+  "codes": [],
+  "saves": 0,
+  "error": "Enter a unique code, team name, 1–100% discount, and at least one eligible program."
+ },
+ "saveTeamCode.badPercent": {
+  "codes": [],
+  "saves": 0,
+  "error": "Enter a unique code, team name, 1–100% discount, and at least one eligible program."
+ },
+ "saveTeamCode.noPrograms": {
+  "codes": [],
+  "saves": 0,
+  "error": "Enter a unique code, team name, 1–100% discount, and at least one eligible program."
+ },
+ "saveTeamCode.unknownProgram": {
+  "codes": [],
+  "saves": 0,
+  "error": "Enter a unique code, team name, 1–100% discount, and at least one eligible program."
+ },
+ "saveTeamCode.edit": {
+  "codes": [
+   {
+    "id": "tc1",
+    "name": "East",
+    "code": "NORTH10",
+    "percent": 15,
+    "programs": [
+     "Elementary"
+    ],
+    "active": true
+   },
+   {
+    "id": "tc2",
+    "name": "South",
+    "code": "SOUTH-5",
+    "percent": 5,
+    "programs": [
+     "Elementary"
+    ],
+    "active": false
+   }
+  ],
+  "saves": 1
+ },
+ "calendar.2026-11.All programs": {
+  "sha256": "0078cb48e051c43cb103eb4e945cc1588804ff3a96d1ee4ec3d8d674c37131b0",
+  "length": 22572
+ },
+ "mobile.2026-11.All programs": {
+  "sha256": "1e95735cb4878f1920571bd911fa69d0da49cf0f8f778bb0413ac06f9bd0fcc8",
+  "length": 10826
+ },
+ "calendar.2026-11.Advanced": {
+  "sha256": "5edc8b9b3327420dc5068a13de7e5777a9e941d01da7b2f3d48e7837869ccf29",
+  "length": 11351
+ },
+ "mobile.2026-11.Advanced": {
+  "sha256": "77dd7c6480765fd09314b60801240b133e577f73c625d47c09b78b1225cd724f",
+  "length": 4365
+ },
+ "calendar.2026-11.Camps, clinics & events": {
+  "sha256": "2c8f936be69be9a4c86cb8a3e6db862d9ddd804d31074436a5db58e1b08a532e",
+  "length": 6483
+ },
+ "mobile.2026-11.Camps, clinics & events": {
+  "sha256": "e5a873c6d23913470b7799880937a23da79f36863c251b8929f55a2fa7ba4c8b",
+  "length": 1357
+ },
+ "calendar.2026-12.All programs": {
+  "sha256": "ab4495a9e2e308be9e54bf443091b2c583036fae9d0e2d7fecff1b58ec7e0297",
+  "length": 18599
+ },
+ "mobile.2026-12.All programs": {
+  "sha256": "e1cdf6c003720fb3cbd5c8c72fe5118dcf7bec13fc1f748ef7242fdd1b58d5a2",
+  "length": 8762
+ },
+ "calendar.2026-12.Advanced": {
+  "sha256": "9841a7669e4bdd3e715161c11ad14f70e71381f386c76c9ccb09bcd8c9c74488",
+  "length": 10528
+ },
+ "mobile.2026-12.Advanced": {
+  "sha256": "1aaf51cf586eb7ce950e20c74d574844afaf183a999bec16d2c65f8bed5342df",
+  "length": 4016
+ },
+ "calendar.2026-12.Camps, clinics & events": {
+  "sha256": "d5ebbc6676920411459cc33e35fb0cf7c8ab6fbb904acdcf1bc0d100a4f4b57f",
+  "length": 6226
+ },
+ "mobile.2026-12.Camps, clinics & events": {
+  "sha256": "6e4c5f2e190a513307ca55e439a5cf76ecc30dbb8dca9e0e3d43222a11528bed",
+  "length": 1353
+ },
+ "calendar.2027-2.All programs": {
+  "sha256": "5d9dc6b161ab7c7af40146d691d646c9213ae41a24e521b61f5904d5118fc8b5",
+  "length": 14618
+ },
+ "mobile.2027-2.All programs": {
+  "sha256": "a7a270f2164e944da2012bb07e5d1fb05b97de5325853a88b13ef5ee0a183451",
+  "length": 6549
+ },
+ "calendar.2027-2.Advanced": {
+  "sha256": "4d3ec44273eb80581a68b9db1413eeae4ad2e60952c5c067c93eebba9f9a874f",
+  "length": 10410
+ },
+ "mobile.2027-2.Advanced": {
+  "sha256": "5ad3a95d7fb9f114852000c30c0701adedb2506aa7b92034e1ef55d47e74544d",
+  "length": 4025
+ },
+ "calendar.2027-2.Camps, clinics & events": {
+  "sha256": "9cf154ec3ed557d6f7b79a54f4f85d96f509f8e62cbd2dd81b9d57c7385e4995",
+  "length": 4343
+ },
+ "mobile.2027-2.Camps, clinics & events": {
+  "sha256": "5d3f950e3975f4f1f91f214ac2a4cf7bbffa79df950f684d4e2e00bdd0da9768",
+  "length": 378
+ },
+ "calendar.2027-3.All programs": {
+  "sha256": "2d1e21b526e062a2b04b003e1dc51da6d95cfb0ac7cce02cfef9f237dcafc7a6",
+  "length": 13112
+ },
+ "mobile.2027-3.All programs": {
+  "sha256": "d9da3ce339f60feaef183650d2558ff9e2491a39ab32441f1ee13b047ee94a76",
+  "length": 5429
+ },
+ "calendar.2027-3.Advanced": {
+  "sha256": "bdd4d359dd43591e721c0572538a5b5342c187d7d61c91f24386769c4946363a",
+  "length": 10777
+ },
+ "mobile.2027-3.Advanced": {
+  "sha256": "00c213bc9c653460371cab2407ab6c656925dc973fe4a35b82d994f86980929a",
+  "length": 4169
+ },
+ "calendar.2027-3.Camps, clinics & events": {
+  "sha256": "0d87f8e09896617a44640a7b7a2a2250904f039a7aaa6bab1af7ad46faf0ace1",
+  "length": 4232
+ },
+ "mobile.2027-3.Camps, clinics & events": "<div class=\"mobile-calendar\" aria-label=\"Scheduled practices and events this month\"><section class=\"mobile-calendar-day\"><h3>No practices or events scheduled.</h3><p>No practices or events match this month and filter.</p></section></div>",
+ "calendarPlanLabel": [
+  "Plan shared ✓",
+  "Draft plan",
+  "＋ Add plan"
+ ],
+ "holidayPlannerMarkup.2026-11..": {
+  "sha256": "21f6d6ad4e3aeeebd882297bab4a6fea746edba996245ca1cad2aa91e0aeaa13",
+  "length": 7523
+ },
+ "holidayPlannerMarkup.2026-11.2026-11-01.2026-12-31": {
+  "sha256": "63c5125cc1fa80f4be9a3244455aa67bd6d93a2ce1488d0bece5721fa0cc31ab",
+  "length": 7286
+ },
+ "holidayPlannerMarkup.2027-03.2027-03-01.2027-02-01": {
+  "sha256": "6c2454ed373e7509e17e23accf2c739e9b1c797d47a7ce317e6f98cc9f5a9289",
+  "length": 7378
+ },
+ "holidayPlannerMarkup.2026-12.2026-12-10.2027-01-10": {
+  "sha256": "3108edfd8d6a7ebaf1a06a50058acc2d8dfb6863e1c4ef244671fa2af6531902",
+  "length": 7357
+ },
+ "schedules": {
+  "sha256": "973dcaa189b383984cfb75f8fcc46f995228aaca57d4f0f8ca1c5a81e548ba0f",
+  "length": 23371
+ },
+ "dashboard": {
+  "sha256": "c34af2ed0b2c93209b262bdddcce6625c99ca9571b7287813e6a619a214ac952",
+  "length": 3557
+ }
+}
