@@ -4,20 +4,26 @@ import {accountRole} from '../../../lib/access-control';
 import {registrationCatalog} from '../../../lib/registration-catalog';
 import {validPracticePlan,cleanPracticePlan} from '../../../lib/practice-plans';
 import {securityEvent} from '../../../lib/security-events';
+import {publicSchedule,academyToday} from '../../../lib/public-schedule';
+import {practiceMonth} from '../../../lib/practice-calendar';
 export const dynamic='force-dynamic';
 const ids=['Elementary','Intermediate','Advanced'];
 const monthValid=(v:string)=>/^\d{4}-(0[1-9]|1[0-2])$/.test(v)&&Number(v.slice(0,4))>=2020&&Number(v.slice(0,4))<=2100;
-async function catalog(month:string){const row=await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload:string}>();return registrationCatalog(row?JSON.parse(row.payload):{},month,'0000-01-01')}
+async function settings(){const row=await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload:string}>();return row?JSON.parse(row.payload):{}}
+async function catalog(month:string){return registrationCatalog(await settings(),month,'0000-01-01')}
 export async function GET(request:Request){
  const auth=await strongAccount(request),access=await accountRole(auth.user),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!['owner','coach'].includes(access.role)||!auth.strong)return reply({error:'Owner or coach access and authenticator verification required.'},403);
  const summary=new URL(request.url).searchParams.get('summary')==='1';
  const owner=access.role==='owner',month=new URL(request.url).searchParams.get('month')||new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit'}).format(new Date()).slice(0,7);
  if(!monthValid(month))return reply({error:'Choose a valid month.'},400);
- const data=await catalog(month),allowed=owner?ids:access.staff!.programs.filter(p=>ids.includes(p)),practices=data.practices.filter(p=>allowed.includes(p.program));
+ const state=await settings(),data=registrationCatalog(state,month,'0000-01-01'),allowed=owner?ids:access.staff!.programs.filter(p=>ids.includes(p)),practices=data.practices.filter(p=>allowed.includes(p.program));
  const rows=await env.DB!.prepare('SELECT program,date,payload,published,revision,updated_at FROM practice_plans WHERE date LIKE ? ORDER BY date,program').bind(month+'-%').all<{program:string;date:string;payload:string;published:number;revision:number;updated_at:string}>();
  const plans=rows.results.filter(p=>allowed.includes(p.program)&&(owner||p.published===1&&practices.some(s=>s.program===p.program&&s.date===p.date))).map(p=>({program:p.program,date:p.date,data:summary?undefined:JSON.parse(p.payload),title:summary?JSON.parse(p.payload).title:undefined,published:p.published===1,revision:p.revision,updatedAt:p.updated_at,scheduled:practices.some(s=>s.program===p.program&&s.date===p.date)}));
- return reply({owner,month,programs:data.programs.filter((p:{id:string;name:string})=>allowed.includes(p.id)).map((p:{id:string;name:string})=>({id:p.id,name:p.name})),practices,plans});
+ // A coach's month calendar (issue #191): their practices, every extra practice, camp, clinic and event, holidays,
+ // today, and which practices have a shared plan. Past days of the month are included. The owner has the owner calendar.
+ const today=academyToday(),calendar=owner||summary?undefined:practiceMonth(publicSchedule(state,month,'0000-01-01'),month,today,allowed,plans);
+ return reply({owner,month,today,calendar,programs:data.programs.filter((p:{id:string;name:string})=>allowed.includes(p.id)).map((p:{id:string;name:string})=>({id:p.id,name:p.name})),practices,plans});
 }
 export async function POST(request:Request){
  const auth=await strongAccount(request),access=await accountRole(auth.user),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
