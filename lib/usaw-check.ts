@@ -98,11 +98,6 @@ export async function lookupsFor(userId: string): Promise<Map<string, LookupRow>
   return new Map(rows.map(r => [r.wrestler_id, r]));
 }
 
-export async function allLookups(): Promise<Map<string, LookupRow>> {
-  const rows = (await env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,season,status,outcome,card_name,card_state,checked_at FROM usaw_lookups').all<LookupRow & {user_id: string; wrestler_id: string}>()).results;
-  return new Map(rows.map(r => [r.user_id + '/' + r.wrestler_id, r]));
-}
-
 // The family's view of the latest lookup: what happened and when, never the name on someone else's card.
 export const familyLookup = (row: LookupRow | null) => row ? {outcome: row.outcome, checkedAt: row.checked_at} : null;
 

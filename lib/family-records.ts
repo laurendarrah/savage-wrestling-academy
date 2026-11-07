@@ -37,8 +37,6 @@ export function plausiblePhone(raw:string){
  const digits=raw.replace(/\D/g,'');
  return digits.length===10||(digits.length===11&&digits[0]==='1')||(raw.trim().startsWith('+')&&digits.length>=8&&digits.length<=15);
 }
-// A real calendar date, from 1900 up to today (the academy's date, America/New_York).
-export function plausibleBirthDate(value:string,today:string){return cardDate(value)&&value>='1900-01-01'&&value<=today}
 // The first thing a family needs to fix before the profile can be saved, in plain words, or null when all is well.
 export function familyProblem(v:FamilyProfile,today:string):string|null{
  const zip=text(v.homeZip),state=text(v.homeState),phone=text(v.emergencyContactPhone);
