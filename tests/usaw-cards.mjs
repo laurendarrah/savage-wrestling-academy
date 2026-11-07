@@ -158,6 +158,13 @@ assert.equal(entry.name, 'Sam'); assert.equal(entry.card, 'expired'); assert.equ
   sqlite.prepare("INSERT INTO usaw_reviews VALUES ('p1','w1','1234567890',?,'valid','','usaw-lookup','2026-11-06T12:00:00Z')").run(exp);
   assert.equal(usaw.cardStatus({...W, usawNumber: '1234567890', usawExpires: exp}, await usaw.reviewFor('p1', 'w1'), today).state, 'verified');
   notBlocked(await live(), 'verified by lookup');
+  // cardVerification is the one place later rules (for example check-in) read "verified" from.
+  let v = await usaw.cardVerification('p1', {...W, usawNumber: '1234567890', usawExpires: exp}, today);
+  assert.equal(v.verified, true); assert.equal(v.verifiedBy, 'usaw-lookup'); assert.equal(v.verifiedAt, '2026-11-06T12:00:00Z');
+  v = await usaw.cardVerification('p1', {...W, usawNumber: '1234567890', usawExpires: exp}, ny(201));
+  assert.equal(v.verified, false, 'not verified on a date after it expires'); assert.equal(v.state, 'expired');
+  v = await usaw.cardVerification('p1', {...W, usawNumber: '1234567899', usawExpires: exp}, today);
+  assert.equal(v.verified, false, 'a changed number is not verified'); assert.equal(v.verifiedBy, null);
   actor = {owner: true, id: 'owner-id'};
   let c = (await call(cardsApi, 'GET')).body.cards[0]; assert.equal(c.verifiedBy, 'usaw-lookup'); assert.equal(c.verifiedAt, '2026-11-06T12:00:00Z');
   // Changing the number resets it, exactly like an owner review.

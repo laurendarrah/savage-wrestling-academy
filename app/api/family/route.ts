@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
 import { validFamily, cleanFamily, emptyFamily } from '../../../lib/family-records';
-import { cardStatus, reviewFor, reviewSource, seasonOptions } from '../../../lib/usaw';
+import { cardVerification, seasonOptions } from '../../../lib/usaw';
 import { checkChangedCards, familyLookup, lookupView, lookupsFor } from '../../../lib/usaw-check';
 import { exceptionFor } from '../../../lib/exceptions';
 import { dailyReminders, quietly } from '../../../lib/notify';
@@ -16,7 +16,7 @@ export async function GET(request:Request){
  // USA Wrestling card status per wrestler, including the owner's review, so the family sees what blocks booking.
  // The latest automatic check on USA Wrestling (issue #202): what happened and when, never the name on the card.
  const lookups=await lookupsFor(auth.user.id);
- for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]),review=await reviewFor(auth.user.id,w.id),s=cardStatus(w,review,today);cards[w.id]={...s,...reviewSource(review,s),exceptionUntil:x?.endsOn??null,lookup:familyLookup(lookupView(w,lookups.get(w.id)))}}
+ for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]);cards[w.id]={...await cardVerification(auth.user.id,w,today),exceptionUntil:x?.endsOn??null,lookup:familyLookup(lookupView(w,lookups.get(w.id)))}}
  // The card seasons a family can choose today (issue #131); the page offers them in the wrestler editor.
  return accountReply({email:auth.user.email,data,cards,cardSeasons:seasonOptions(today),revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
 }

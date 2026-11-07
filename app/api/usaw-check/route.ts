@@ -4,7 +4,7 @@
 import {env} from 'cloudflare:workers';
 import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyToday} from '../../../lib/public-schedule';
-import {cardStatus, reviewFor, reviewSource} from '../../../lib/usaw';
+import {cardVerification} from '../../../lib/usaw';
 import {checkCard, familyLookup, lookupView, lookupsFor} from '../../../lib/usaw-check';
 import {exceptionFor} from '../../../lib/exceptions';
 export const dynamic = 'force-dynamic';
@@ -26,8 +26,7 @@ export async function POST(request: Request) {
   if (!w) return reply({error: 'Wrestler not found. Save your family profile first.'}, 404);
   const result = await checkCard(request, {userId: auth.user.id, wrestler: w, trigger: 'family', actorId: auth.user.id});
   if ('reason' in result) return reply({error: result.reason}, result.outcome === 'limited' ? 429 : 409);
-  const today = academyToday(), review = await reviewFor(auth.user.id, w.id), s = cardStatus(w, review, today);
-  const x = await exceptionFor(auth.user.id, w.id, 'usaw', [today]);
-  const card = {...s, ...reviewSource(review, s), exceptionUntil: x?.endsOn ?? null, lookup: familyLookup(lookupView(w, (await lookupsFor(auth.user.id)).get(w.id)))};
+  const today = academyToday(), x = await exceptionFor(auth.user.id, w.id, 'usaw', [today]);
+  const card = {...await cardVerification(auth.user.id, w, today), exceptionUntil: x?.endsOn ?? null, lookup: familyLookup(lookupView(w, (await lookupsFor(auth.user.id)).get(w.id)))};
   return reply({outcome: result.outcome, card});
 }

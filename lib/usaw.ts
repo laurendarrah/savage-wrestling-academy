@@ -88,6 +88,15 @@ export async function cardProblem(userId: string, w: CardWrestler, dates: string
   return null;
 }
 
+// One answer to "is this wrestler's card verified on this date, and how" (issue #202), for pages and for later rules
+// such as a check-in rule. verified is true only for the card on file, current on that date, verified by the owner or
+// by the USA Wrestling lookup (verifiedBy 'owner' or 'usaw-lookup'). A missing, expired, rejected or changed card is
+// never verified. For many wrestlers at once, load reviews in one query and use cardStatus(...).state === 'verified'.
+export async function cardVerification(userId: string, w: CardWrestler, onDate: string) {
+  const review = await reviewFor(userId, w.id), status = cardStatus(w, review, onDate);
+  return {...status, verified: status.state === 'verified', ...reviewSource(review, status)};
+}
+
 export async function setReview(userId: string, wrestlerId: string, number: string, expires: string, status: 'valid' | 'invalid', note: string, ownerId: string) {
   const at = new Date().toISOString();
   await env.DB!.batch([
