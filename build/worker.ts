@@ -5,6 +5,7 @@ import { dailyReminders } from "../lib/notify";
 import { cleanupRemovedCoaches } from "../lib/coach-retention";
 import { alertOwner } from "../lib/owner-alerts";
 import { recordStripeFees } from "../lib/stripe-fees";
+import { clearStaleStaging } from "../lib/backup-records";
 import { decorateResponse } from "../lib/page-chrome";
 
 export default {
@@ -28,6 +29,7 @@ export default {
   // to repeat, and a large cleanup carries on the next day).
   // Alongside them, the run reads Stripe's card fees for payments that don't have one yet (issue #42); it only reads from
   // Stripe, and a payment whose fee can't be read yet is tried again the next day.
+  // It also removes restore uploads from the Backups page that were never finished (issue #221).
   // Afterwards the owner is alerted about a failed run, or about errors held back by the hourly alert limit (#47).
   async scheduled(_event: ScheduledController, env: Cloudflare.Env, ctx: ExecutionContext) {
     const db = (env as Cloudflare.Env & { DB?: D1Database }).DB;
@@ -36,6 +38,7 @@ export default {
       dailyReminders().catch(failed("daily-reminders"))
         .then(() => cleanupRemovedCoaches()).catch(failed("coach-retention")),
       recordStripeFees().then((run) => { if (run.error) throw new Error(`${run.failed} card fee(s) not read: ${run.error}`); }).catch(failed("stripe-fees")),
+      clearStaleStaging().catch(failed("restore-staging")),
     ]).then(() => alertOwner(db)));
   },
 };

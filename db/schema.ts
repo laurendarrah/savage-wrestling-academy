@@ -35,6 +35,12 @@ export const coachOpenings=sqliteTable("coach_openings",{id:text("id").primaryKe
 export const securityEvents=sqliteTable("security_events",{id:text("id").primaryKey(),actor:text("actor").notNull(),action:text("action").notNull(),target:text("target").notNull(),createdAt:text("created_at").notNull()});
 export const recoverySnapshots=sqliteTable("recovery_snapshots",{id:text("id").primaryKey(),payload:text("payload").notNull(),createdAt:text("created_at").notNull()});
 export const restoreGuard=sqliteTable("restore_guard",{id:text("id").primaryKey(),valid:integer("valid").notNull()},t=>[check('valid_restore',sql`${t.valid} = 1`)]);
+// A large backup is uploaded for restore in parts before one batch applies it (issue #221). Each row is one checked part
+// (a JSON list of rows for one section, under D1's 2 MB value limit). Rows are removed when the restore finishes or
+// fails, when the owner starts another restore, and by the daily job after a day.
+export const restoreStaging=sqliteTable("restore_staging",{id:text("id").primaryKey(),upload:text("upload").notNull(),userId:text("user_id").notNull(),seq:integer("seq").notNull(),
+ section:text("section").notNull(),grouped:integer("grouped").notNull().default(0),rowCount:integer("row_count").notNull(),bytes:integer("bytes").notNull(),payload:text("payload").notNull(),createdAt:text("created_at").notNull()
+},t=>[index("restore_staging_upload").on(t.upload,t.seq),index("restore_staging_created").on(t.createdAt)]);
 
 export const programApprovals=sqliteTable("program_approvals",{
  id:text("id").primaryKey(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),program:text("program").notNull(),

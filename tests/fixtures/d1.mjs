@@ -46,7 +46,7 @@ export function loader(env, actor = {owner: true, id: 'owner-id'}) {
     if (cache.has(file)) return cache.get(file);
     const module = {exports: {}}; cache.set(file, module.exports);
     vm.runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
-      {module, exports: module.exports, crypto, btoa, atob, TextEncoder, TextDecoder, Uint8Array, Intl, Date, URL, URLSearchParams, Response, Request, Headers, JSON, Math, Number, String, Array, Set, Map, Object, Promise, console, setTimeout,
+      {module, exports: module.exports, crypto, btoa, atob, TextEncoder, TextDecoder, Uint8Array, Intl, Date, URL, URLSearchParams, Response, Request, Headers, ReadableStream, JSON, Math, Number, String, Array, Set, Map, Object, Promise, console, setTimeout,
         fetch: async () => { throw Error('no network in tests'); },
         require(name) {
           if (name === 'cloudflare:workers') return {env};

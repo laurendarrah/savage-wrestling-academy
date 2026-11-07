@@ -5,6 +5,7 @@
 // Usage: see scripts/e2e/run.sh
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
 import {start, sessionCookie, users} from './fake-supabase.mjs';
 import {start as startUsaw} from './fake-usaw.mjs';
 const require = createRequire(import.meta.url);
@@ -953,9 +954,14 @@ await step('owner downloads an encrypted backup and previews and restores it fro
   await owner.fill('#exportPassword', 'correct horse battery staple 2026'); await owner.fill('#exportConfirm', 'correct horse battery staple 2026');
   const [dl] = await Promise.all([owner.waitForEvent('download', {timeout: 15000}), owner.click('#download')]);
   const file = await dl.path(); expect(file, 'no backup file');
+  // The compressed, streamed format (issue #221): one line naming it, then the encrypted data.
+  const first = readFileSync(file).subarray(0, 300).toString('latin1').split('\n')[0];
+  expect(/^\{"format":"savage-encrypted-backup-v2"/.test(first) && !readFileSync(file).toString('latin1').includes('Pat Example'), 'backup file format: ' + first.slice(0, 60));
   await owner.setInputFiles('#file', file); await owner.fill('#importPassword', 'correct horse battery staple 2026'); await owner.click('#preview');
-  await owner.waitForFunction(() => /payments/.test(document.querySelector('#summary')?.textContent || ''), null, {timeout: 15000});
-  await owner.click('#restore'); await owner.waitForFunction(() => /restored|Restore complete|No missing/i.test(document.body.textContent), null, {timeout: 15000});
+  await waitText(owner, '#summary', /payments/, 15000);
+  // Wait for the page's own result: the restore uploads in parts and applies them in one step.
+  await owner.click('#restore'); await waitText(owner, '#status', /^Backup restored\.|^(?!Uploading)(?!Preview ready).+/, 30000);
+  expect(/^Backup restored\./.test(await text(owner, '#status')), 'restore from the file: ' + await text(owner, '#status'));
 });
 
 // ---------- Owner dashboard and backups ----------
@@ -1015,7 +1021,7 @@ await step('each role has a guide linked from its home page; guides are role-onl
 // ---------- Isolation and phone layout ----------
 await step('one family cannot see another family\'s data', async () => {
   const r = await api(family2, '/api/wrestler?id=' + samId); expect(r.status === 404, 'wrestler view of another family');
-  const o = await api(family2, '/api/orders'); expect(!JSON.stringify(o.body).includes('Sam Example'), 'orders leak');
+  const o = await api(family2, '/api/orders'); expect(!JSON.stringify(o.body).includes('Pat Example'), 'orders leak');
   const c = await api(family2, '/api/usaw-cards'); expect(c.status === 403, 'family reached owner cards');
 });
 await step('family pages fit a phone screen', async () => {

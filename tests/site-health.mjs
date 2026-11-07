@@ -58,11 +58,12 @@ const worker = (() => {
         if (name.endsWith('/notify')) return {dailyReminders: async () => { reminders++; if (reminderFails) throw Error('mail provider down'); return 0; }};
         if (name.endsWith('/coach-retention')) return {cleanupRemovedCoaches: async () => { cleanups++; if (cleanupFails) throw Error('D1 busy'); return {}; }};
         if (name.endsWith('/stripe-fees')) return {recordStripeFees: async () => { feeRuns++; return feeRun; }};
+        if (name.endsWith('/backup-records')) return {clearStaleStaging: async () => { stagingRuns++; if (stagingFails) throw Error('staging cleanup failed'); }};
         throw Error('unexpected ' + name);
       }});
   return module.exports.default;
 })();
-let reminders = 0, reminderFails = false, cleanups = 0, cleanupFails = false, feeRuns = 0, feeRun = {mode: 'test', checked: 0, recorded: 0, failed: 0, waiting: 0, error: null, skipped: null};
+let stagingRuns = 0, stagingFails = false, reminders = 0, reminderFails = false, cleanups = 0, cleanupFails = false, feeRuns = 0, feeRun = {mode: 'test', checked: 0, recorded: 0, failed: 0, waiting: 0, error: null, skipped: null};
 const alerts = [];
 const pending = [];
 const ctx = {waitUntil: p => pending.push(p)};
@@ -121,5 +122,11 @@ pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); aw
 const feeError = sqlite.prepare("SELECT * FROM error_log WHERE path='/stripe-fees' ORDER BY at DESC LIMIT 1").get();
 assert.match(feeError.message, /3 card fee\(s\) not read: Stripe would not share/); assert.equal(reminders, 4, 'reminders still sent'); assert.equal(cleanups, 4, 'the cleanup still runs');
 assert.equal(alerts.length, before + 4);
+// Unfinished restore uploads from the Backups page are removed every day (issue #221); a failure is recorded too.
+assert.equal(stagingRuns, 4, 'every scheduled run clears stale restore uploads');
+feeRun = {...feeRun, checked: 0, failed: 0, error: null}; stagingFails = true;
+pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
+assert.match(sqlite.prepare("SELECT * FROM error_log WHERE path='/restore-staging' ORDER BY at DESC LIMIT 1").get().message, /staging cleanup failed/);
+assert.equal(reminders, 5, 'reminders still sent'); assert.equal(alerts.length, before + 5);
 assert.match(readFileSync('vite.config.ts', 'utf8'), /crons: \["41 12 \* \* \*"\]/);
 console.log('Site health tests passed');
