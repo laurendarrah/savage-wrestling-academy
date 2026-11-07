@@ -279,6 +279,24 @@ const maxBefore = everywhere(NEW).sort();
   run('DELETE FROM staff_access WHERE email=?', email); run("DELETE FROM removed_coaches WHERE id='back-tomb'"); run('DELETE FROM coach_profiles WHERE email=?', email);
 }
 
+// ---------- Coaches removed permanently before #212 get their date from the security log ----------
+{
+  const early = 'early.coach@example.test', recent = 'recent.coach@example.test';
+  const earlyAt = addDays(yearsBefore(today, 3), -2) + 'T16:00:00.000Z', recentAt = addDays(today, -30) + 'T16:00:00.000Z';
+  run("INSERT INTO security_events VALUES ('early-ev','owner-uuid','coach_permanently_removed',?,?)", early, earlyAt);
+  run("INSERT INTO security_events VALUES ('recent-ev','owner-uuid','coach_permanently_removed',?,?)", recent, recentAt);
+  run('INSERT INTO coach_time_off(id,user_id,coach_email,coach_name,start_date,end_date,reason,status,requested_at,revision) VALUES (?,?,?,?,?,?,?,?,?,1)', 'early-off', 'early-uuid', early, 'Early Coach', '2023-01-01', '2023-01-02', 'Trip', 'approved', now);
+  const r = await retention.cleanupRemovedCoaches();
+  assert.equal(r.finished, 1, 'the earlier removal past 3 years is cleaned');
+  const t = one('SELECT * FROM removed_coaches WHERE email_hash=?', await retention.emailHash(early));
+  assert.equal(t.removed_on, addDays(yearsBefore(today, 3), -2)); assert.ok(t.cleaned_at); assert.equal(t.email, null);
+  assert.deepEqual(everywhere(early), []);
+  const listed = (await get(staff, '/api/staff', 'owner')).body.removedForGood.find(g => g.email === recent);
+  assert.deepEqual(listed, {email: recent, name: recent, removedOn: addDays(today, -30), keepUntil: retention.keepUntil(addDays(today, -30))}, 'and shows on Coaches with its date');
+  const again = dumpAll(); await retention.cleanupRemovedCoaches(); assert.deepEqual(dumpAll(), again, 'recorded once');
+  run('DELETE FROM removed_coaches WHERE email=?', recent); run("DELETE FROM security_events WHERE id='recent-ev'");
+}
+
 // ---------- Batches: a big cleanup is spread over several runs ----------
 {
   const email = 'busy.coach@example.test', uid = 'busy-uuid';
@@ -298,7 +316,7 @@ const maxBefore = everywhere(NEW).sort();
   assert.ok(runs >= 2 && runs < 10, 'took several runs: ' + runs);
   assert.equal(last.finished, 1); assert.equal(left(), 0);
   assert.equal(count("SELECT count(*) FROM attendance WHERE checked_in_by='former-coach-busy-tomb'"), 40, 'every check-in kept, without the coach');
-  assert.deepEqual({...await retention.cleanupRemovedCoaches({batch: 5, maxStatements: 24})}, {due: 2, finished: 0, inProgress: 0, deleted: 0, anonymized: 0}, 'and then nothing more to do (Rae and this coach are due)');
+  assert.deepEqual({...await retention.cleanupRemovedCoaches({batch: 5, maxStatements: 24})}, {due: 3, finished: 0, inProgress: 0, deleted: 0, anonymized: 0}, 'and then nothing more to do (Rae, the earlier coach and this one are due)');
   assert.ok(one("SELECT cleaned_at FROM removed_coaches WHERE id='busy-tomb'").cleaned_at);
   const logs = sqlite.prepare("SELECT target FROM security_events WHERE action='coach_records_deleted'").all().map(r => r.target);
   assert.ok(logs.some(t => t.startsWith('finished:0 in-progress:1')), 'runs that stop early say there is more to do');

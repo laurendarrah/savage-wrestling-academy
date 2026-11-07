@@ -40,6 +40,7 @@ Decided by Justin (#197, question 18): keep all of a removed coach's records for
 - **Removing permanently** (only after access is removed and no booked lessons are still to come) deletes their profile, unbooked future lesson times and unused invites at once, and records the date. **Coaches** then lists them under "Removed permanently" with **Records kept until** that date plus 3 years.
 - **The day after that date**, the site's daily job deletes or anonymizes the rest. A large cleanup carries on over the following days. Each run that changes anything adds one line to the security log with counts only, never a name or email.
 - **A coach who comes back** (on Coaches again) is never cleaned. Removed permanently again, the 3 years start again from the new date.
+- **Coaches removed permanently before this was built** (#207, November 2026) get their removal date from the security log entry of their removal, at the next daily run.
 
 What the cleanup does with each kind of record. Anything a family or the academy's books also depend on is kept, with the coach replaced by "Former coach", so a family's payment history, the books and the pay totals for past months stay exactly the same:
 

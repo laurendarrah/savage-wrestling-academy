@@ -16,6 +16,7 @@
 // records again. A coach who is on Coaches again (staff_access) is never touched.
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
+import {academyDay} from './datetime';
 
 export const RETENTION_YEARS = 3;
 export const FORMER_COACH = 'Former coach';
@@ -48,6 +49,23 @@ export async function recordRemoval(email: string, removedOn: string) {
     SELECT ?,?,s.email,COALESCE(p.display_name,s.name),?,NULL FROM staff_access s LEFT JOIN coach_profiles p ON p.email=s.email WHERE s.email=? AND s.active=0
     ON CONFLICT(email_hash) DO UPDATE SET email=excluded.email,name=excluded.name,removed_on=excluded.removed_on,cleaned_at=NULL`)
     .bind(crypto.randomUUID(), await emailHash(email), removedOn, email);
+}
+
+// Coaches removed permanently before removal dates were recorded (#207, before #212) get one from their
+// coach_permanently_removed entry in the security log (its target is the email), unless they are on Coaches again.
+export async function recordEarlierRemovals() {
+  const rows = (await db().prepare(`SELECT lower(target) AS email,max(created_at) AS at FROM security_events WHERE action='coach_permanently_removed'
+    AND target LIKE '%@%' AND lower(target) NOT IN (SELECT email FROM staff_access) GROUP BY lower(target)`).all<{email: string; at: string}>()).results;
+  if (!rows.length) return 0;
+  const known = new Set((await db().prepare('SELECT email_hash FROM removed_coaches').all<{email_hash: string}>()).results.map(r => r.email_hash));
+  let added = 0;
+  for (const r of rows) {
+    const hash = await emailHash(r.email);
+    if (known.has(hash)) continue;
+    added += changes(await db().prepare('INSERT OR IGNORE INTO removed_coaches(id,email_hash,email,name,removed_on,cleaned_at) VALUES (?,?,?,NULL,?,NULL)')
+      .bind(crypto.randomUUID(), hash, r.email, academyDay(r.at)).run());
+  }
+  return added;
 }
 
 // Coaches removed for good whose records are still kept, for the owner's Coaches page.
@@ -156,6 +174,7 @@ export async function cleanupRemovedCoaches(opts: {today?: string; batch?: numbe
   const today = opts.today ?? academyToday(), size = opts.batch ?? BATCH;
   let left = Math.max(opts.maxStatements ?? MAX_STATEMENTS, MIN_STATEMENTS);
   const sum: RetentionSummary = {due: 0, finished: 0, inProgress: 0, deleted: 0, anonymized: 0};
+  await recordEarlierRemovals();
   const due = (await db().prepare('SELECT id,email_hash,email,removed_on,cleaned_at FROM removed_coaches ORDER BY removed_on,id').all<Tomb>()).results
     .filter(t => isDue(t.removed_on, today));
   if (!due.length) return sum;
