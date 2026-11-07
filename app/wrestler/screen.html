@@ -12,6 +12,7 @@ function render(v){
  const alerts=[];
  if(['missing','expired','invalid','recheck'].includes(v.card.state))alerts.push('USA Wrestling card '+(v.card.state==='missing'?'missing':v.card.state==='expired'?'expired':v.card.state==='recheck'?'waiting for the academy to check it':'not verified')+'. New sessions cannot be booked until it is fixed. <a href="/family#summary">Update it</a>');
  if(v.waiverNeeded)alerts.push('Waiver not signed. New sessions cannot be booked until it is. <a href="/waiver?wrestler='+encodeURIComponent(v.id)+'">Sign it</a>');
+ if(v.consentNeeded)alerts.push('Parent Consent Form not signed. New sessions cannot be booked until it is. <a href="/consent?wrestler='+encodeURIComponent(v.id)+'">Sign it</a>');
  $('alerts').innerHTML=alerts.map(a=>'<div class="alert">'+a+'</div>').join('');
  const n=v.upcoming[0];
  $('next').innerHTML=n?'<section class="card next"><h2>Next up</h2><div class="big">'+esc(dayName(n.date))+' · '+esc(clock(n.start))+'</div><div>'+esc(n.title)+'</div><span class="muted">'+esc(typeLabel[n.type]||'')+'</span></section>':'';

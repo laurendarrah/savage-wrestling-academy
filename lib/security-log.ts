@@ -11,7 +11,7 @@ export type SecurityNames = {
   approvals: Record<string, string>;   // program approval id -> wrestler name
   waitlist: Record<string, string>;    // waitlist entry id -> wrestler name
   orders: Record<string, {wrestler: string; item: string}>;
-  waivers: Record<string, string>;     // waiver version id -> title
+  waivers: Record<string, string>;     // waiver, consent form and contract version id -> title
   wrestlers: Record<string, string>;   // "accountId/wrestlerId" -> wrestler name
   requests: Record<string, string>;    // data request id -> family
   curricula: Record<string, string>;   // curriculum or curriculum group id -> name
@@ -53,6 +53,12 @@ const TITLES: Record<string, string> = {
   waiver_published: 'Waiver published',
   waiver_retired: 'Waiver no longer required',
   waiver_signed: 'Waiver signed',
+  parent_consent_published: 'Parent Consent Form published',
+  parent_consent_retired: 'Parent Consent Form no longer required',
+  parent_consent_signed: 'Parent Consent Form signed',
+  coach_contract_published: 'Coach contract published',
+  coach_contract_retired: 'Coach contract no longer asked for',
+  coach_contract_signed: 'Coach contract signed',
   membership_transferred: 'Membership moved to another program',
   booking_exception_granted: 'Booking allowed anyway',
   booking_exception_removed: 'Booking exception removed',
@@ -96,8 +102,9 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
       detail = names.approvals[t] ?? ''; break;
     case 'waitlist_offer': detail = names.waitlist[t] ?? ''; break;
     case 'pass_revoked': case 'usaw_card_valid': case 'usaw_card_invalid': case 'usaw_card_review_cleared': case 'usaw_card_lookup_verified': detail = wrestler(t); break;
-    case 'waiver_published': case 'waiver_retired': detail = names.waivers[t] ?? ''; break;
-    case 'waiver_signed': {
+    case 'waiver_published': case 'waiver_retired': case 'parent_consent_published': case 'parent_consent_retired':
+    case 'coach_contract_published': case 'coach_contract_retired': case 'coach_contract_signed': detail = names.waivers[t] ?? ''; break;
+    case 'waiver_signed': case 'parent_consent_signed': {
       const [version, ...w] = t.split('/'); const key = row.actor + '/' + w.join('/');
       detail = [names.waivers[version], names.wrestlers[key]].filter(Boolean).join(' · '); break;
     }
@@ -111,7 +118,7 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     }
     case 'booking_exception_granted': {
       const m = /^(\w+) (\S+) until (\S+)$/.exec(t);
-      detail = m ? `${wrestler(m[2])} may book without a ${m[1] === 'usaw' ? 'current USA Wrestling card' : 'signed waiver'} until ${fullDate(m[3])}` : ''; break;
+      detail = m ? `${wrestler(m[2])} may book without a ${m[1] === 'usaw' ? 'current USA Wrestling card' : m[1] === 'parent_consent' ? 'signed Parent Consent Form' : 'signed waiver'} until ${fullDate(m[3])}` : ''; break;
     }
     case 'announcement_sent': detail = rest[0] ? 'Sent to ' + plural(Number(rest[0]), 'family', 'families') : ''; break;
     case 'emails_resent': detail = t; break;

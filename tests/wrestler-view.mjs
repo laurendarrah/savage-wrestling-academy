@@ -104,12 +104,17 @@ assert.equal((await view('w1')).body.checkInsThisMonth, 1);
 r = await view('w2'); assert.equal(r.body.card.state, 'missing'); assert.equal(r.body.upcoming.length, 0);
 as('owner'); assert.equal((await call(waiversApi, 'POST', {action: 'publish', title: 'Participation waiver', body: 'Wrestling is a contact sport. '.repeat(10)})).status, 200);
 assert.equal((await view('w1')).body.waiverNeeded, true);
+// Issue #195: the Parent Consent Form shows only once it is published.
+assert.equal((await view('w1')).body.consentNeeded, false);
+as('owner'); assert.equal((await call(waiversApi, 'POST', {action: 'publish', kind: 'parent_consent', title: 'Parent Consent Form', body: 'Test form text for the automated check. '.repeat(8)})).status, 200);
+assert.equal((await view('w1')).body.consentNeeded, true);
 
 // Page helpers (inline JavaScript is not typechecked).
 {
   const html = readFileSync('app/wrestler/screen.html', 'utf8'), script = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
   const ctx = {Date, String, Intl, URLSearchParams, document: {}, window: {addEventListener() {}}, location: {search: ''}};
   vm.runInNewContext(script.replace("window.addEventListener('DOMContentLoaded',load);", '') + ';this.clock=clock;this.dayName=dayName;', ctx);
+  assert.match(html, /if\(v\.consentNeeded\)alerts\.push\('Parent Consent Form not signed\..*href="\/consent\?wrestler='/, 'the consent form alert links to /consent');
   assert.equal(ctx.clock('18:00'), '6:00 PM'); assert.equal(ctx.clock(null), 'All day');
   assert.equal(ctx.dayName(today), 'Today'); assert.equal(ctx.dayName(ny(1)), 'Tomorrow'); assert.match(ctx.dayName(ny(5)), /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d+$/);
 }

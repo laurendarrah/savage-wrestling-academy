@@ -1,11 +1,12 @@
 // Owner exceptions to the booking blocks (issue #89). For a specific wrestler and a date range, the owner can let
-// bookings through despite a missing or expired USA Wrestling card ("usaw") or an unsigned waiver ("waiver").
+// bookings through despite a missing or expired USA Wrestling card ("usaw"), an unsigned waiver ("waiver") or an
+// unsigned Parent Consent Form ("parent_consent", issue #195).
 // An exception covers a booking only if every booked date falls inside it. A reason and an end date are required.
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
 
-export type Rule = 'usaw' | 'waiver';
-const RULES: Rule[] = ['usaw', 'waiver'];
+export type Rule = 'usaw' | 'waiver' | 'parent_consent';
+const RULES: Rule[] = ['usaw', 'waiver', 'parent_consent'];
 const validDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').toISOString().slice(0, 10) === d;
 const addDays = (d: string, n: number) => new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 

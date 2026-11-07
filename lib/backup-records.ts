@@ -34,7 +34,8 @@ export const RECORD_TABLES:Record<string,Col[]>={
  financial_entries:[['id','text'],['kind','text'],['entry_date','text'],['amount_cents','int'],['category','text'],['note','text'],['receipt','text'],['revision','int'],['created_at','text'],['created_by','text'],['updated_at','text'],['updated_by','text'],['deleted_at','text',true],['deleted_by','text',true]],
  attendance:[['id','text'],['session_key','text'],['session_date','text'],['user_id','text'],['wrestler_id','text'],['wrestler_name','text'],['source','text'],['checked_in_at','text'],['checked_in_by','text']],
  usaw_reviews:[['user_id','text'],['wrestler_id','text'],['number','text'],['expires','text'],['status','text'],['note','text'],['reviewed_by','text'],['reviewed_at','text']],
- waiver_versions:[['id','text'],['title','text'],['body','text',false,BIG],['sha256','text'],['published_at','text'],['published_by','text'],['retired_at','text',true]],
+ // kind (issue #195): waiver, parent_consent or coach_contract. Files made before it have none; see LATER_COLUMNS.
+ waiver_versions:[['id','text'],['title','text'],['body','text',false,BIG],['sha256','text'],['published_at','text'],['published_by','text'],['retired_at','text',true],['kind','text']],
  waiver_signatures:[['id','text'],['version_id','text'],['user_id','text'],['wrestler_id','text'],['wrestler_name','text'],['signer','text'],['email','text'],['signature_record','text',false,BIG],['signed_at','text']],
  academy_settings:[['id','text'],['payload','text',false,BIG],['updated_at','text'],['updated_by','text']],
  wrestler_passes:[['id','text'],['user_id','text'],['wrestler_id','text'],['token','text'],['created_at','text'],['revoked_at','text',true],['revoked_by','text',true]],
@@ -62,13 +63,19 @@ const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(Stri
 // Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
 // and still restores; a file that has the section is checked like any other.
 const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off'];
+// Columns added to a version 3 table after it first shipped, with the value an older file's rows mean. A row may leave
+// them out and is restored with that value; a row that has one is checked like any other column. Issue #195: every
+// signed-document version in an older file is a waiver.
+const LATER_COLUMNS:Record<string,Record<string,string>>={waiver_versions:{kind:'waiver'}};
 const V2_TABLES=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
 const ARCHIVE_COLS:Col[]=[['id','text'],['actor','text'],['action','text'],['target','text',false,2000],['created_at','text']];
 const ROW_LIMIT=20000,ARCHIVE_LIMIT=20000,EXPORT_LIMIT=12000000;
 const cols=(spec:Col[])=>spec.map(c=>c[0]).join(',');
-function validRow(r:any,spec:Col[]){
- if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).length!==spec.length)return false;
- return spec.every(([name,type,nullable,max])=>{const v=r[name];if(v===null)return !!nullable;if(type==='int')return Number.isSafeInteger(v);return typeof v==='string'&&v.length<=(max??1000)});
+function validRow(r:any,spec:Col[],later:Record<string,string>={}){
+ if(!r||typeof r!=='object'||Array.isArray(r))return false;
+ const absent=Object.keys(later).filter(c=>!Object.prototype.hasOwnProperty.call(r,c));
+ if(Object.keys(r).length!==spec.length-absent.length)return false;
+ return spec.every(([name,type,nullable,max])=>{if(absent.includes(name))return true;const v=r[name];if(v===null)return !!nullable;if(type==='int')return Number.isSafeInteger(v);return typeof v==='string'&&v.length<=(max??1000)});
 }
 export async function metadata(){return await env.DB!.prepare(METADATA_SQL).first<{academy:number;families:string;openings:string}>()}
 export async function fingerprint(value:unknown){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(value))))).map(b=>b.toString(16).padStart(2,'0')).join('')}
@@ -117,7 +124,7 @@ function validExtra(d:any){
  if(!r||typeof r!=='object'||Array.isArray(r))return false;
  const expected=d.version===2?V2_TABLES:Object.keys(RECORD_TABLES).filter(t=>!V3_LATER.includes(t)||Object.prototype.hasOwnProperty.call(r,t));
  if(Object.keys(r).sort().join()!==[...expected].sort().join())return false;
- for(const [t,spec] of Object.entries(RECORD_TABLES)){if(!expected.includes(t))continue;const rows=r[t],key=(x:any)=>JSON.stringify(keysOf(t).map(k=>x?.[k]));if(!Array.isArray(rows)||rows.length>ROW_LIMIT||new Set(rows.map(key)).size!==rows.length||!rows.every((x:any)=>validRow(x,spec)&&(JSON_COLUMNS[t]??[]).every(([c,shape])=>jsonShape(x[c],shape))))return false}
+ for(const [t,spec] of Object.entries(RECORD_TABLES)){if(!expected.includes(t))continue;const rows=r[t],key=(x:any)=>JSON.stringify(keysOf(t).map(k=>x?.[k]));if(!Array.isArray(rows)||rows.length>ROW_LIMIT||new Set(rows.map(key)).size!==rows.length||!rows.every((x:any)=>validRow(x,spec,LATER_COLUMNS[t])&&(JSON_COLUMNS[t]??[]).every(([c,shape])=>jsonShape(x[c],shape))))return false}
  return !!a&&typeof a==='object'&&typeof a.truncated==='boolean'&&Array.isArray(a.security_events)&&a.security_events.length<=ARCHIVE_LIMIT&&a.security_events.every((x:any)=>validRow(x,ARCHIVE_COLS));
 }
 export async function restoreBackup(backup:Backup,expectedFingerprint:string,actor:string){
@@ -134,7 +141,7 @@ export async function restoreBackup(backup:Backup,expectedFingerprint:string,act
   queries.push(env.DB!.prepare(`INSERT INTO coach_openings(id,user_id,date,start,end,coach_email${extra}) SELECT json_extract(value,'$.id'),json_extract(value,'$.user_id'),json_extract(value,'$.date'),json_extract(value,'$.start'),json_extract(value,'$.end'),json_extract(value,'$.coach_email')${vals} FROM json_each(?) WHERE 1 ON CONFLICT(id) DO UPDATE SET user_id=excluded.user_id,date=excluded.date,start=excluded.start,end=excluded.end,coach_email=COALESCE(excluded.coach_email,coach_openings.coach_email)${groups?','+groupFields.map(k=>`${k}=excluded.${k}`).join(','):''}`).bind(JSON.stringify(backup.openings)))}
  const inserted:string[]=[],insertAt:number[]=[];
  if(backup.version!==1)for(const [t,spec] of Object.entries(RECORD_TABLES)){const rows=backup.records![t]??[];if(!rows.length)continue;inserted.push(t);insertAt.push(queries.length);
-  queries.push(env.DB!.prepare(`INSERT OR IGNORE INTO ${t}(${cols(spec)}) SELECT ${spec.map(c=>`json_extract(value,'$.${c[0]}')`).join(',')} FROM json_each(?)`).bind(JSON.stringify(rows)))}
+  queries.push(env.DB!.prepare(`INSERT OR IGNORE INTO ${t}(${cols(spec)}) SELECT ${spec.map(c=>LATER_COLUMNS[t]?.[c[0]]!==undefined?`COALESCE(json_extract(value,'$.${c[0]}'),'${LATER_COLUMNS[t][c[0]]}')`:`json_extract(value,'$.${c[0]}')`).join(',')} FROM json_each(?)`).bind(JSON.stringify(rows)))}
  queries.push(env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),actor,'backup_restored',backup.version!==1?'v'+backup.version+':'+(inserted.join('+')||'core-only'):'v1',now),env.DB!.prepare('DELETE FROM restore_guard WHERE id=?').bind(guard),env.DB!.prepare('DELETE FROM recovery_snapshots WHERE id NOT IN (SELECT id FROM recovery_snapshots ORDER BY created_at DESC LIMIT 10)'));
  const results=await env.DB!.batch(queries);
  // Report rows actually re-created per table. Existing rows, and rows the database rejects, are skipped.

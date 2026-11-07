@@ -47,7 +47,7 @@ const all = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2,
   programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}],
   seasons: [{program: 'Intermediate', start: ny(-30), end: ny(60), weekly: all, excludedDates: []}], events: []}));
-sqlite.prepare("INSERT INTO waiver_versions VALUES ('wv','Waiver','text','h',?, 'o', NULL)").run(new Date().toISOString());
+sqlite.prepare("INSERT INTO waiver_versions(id,title,body,sha256,published_at,published_by,retired_at) VALUES ('wv','Waiver','text','h',?, 'o', NULL)").run(new Date().toISOString());
 const N = 80;
 for (let i = 0; i < N; i++) {
   const u = 'u' + i, w = 'w' + i;

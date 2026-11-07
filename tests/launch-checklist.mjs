@@ -28,6 +28,11 @@ assert.match(i.address.detail, /site address is not set/);
 assert.equal(i.programs.label, 'Programs on the welcome page and calendar'); assert.equal(i.programs.action, 'publish-programs');
 assert.equal(i.programs.section, undefined); assert.match(i.programs.detail, /Families see no programs yet/);
 assert.equal(i.waiver.href, '/waivers');
+// Issue #195 (decision Q15 on #197): the Parent Consent Form is a to-do until the owner publishes it after the attorney's
+// review; the coach contract is for information until published.
+assert.equal(i.consent.status, 'todo'); assert.equal(i.consent.href, '/consent-forms');
+assert.equal(i.consent.detail, 'Publish the Parent Consent Form (after attorney review). Until then families can book without it');
+assert.equal(i.contract.status, 'info'); assert.equal(i.contract.href, '/contracts');
 // Saved programs without any price still need attention, from Programs & pricing; nothing to publish.
 sqlite.prepare("INSERT INTO academy_state(id,payload,revision,updated_at,updated_by) VALUES ('academy',?,1,?,'owner')").run(JSON.stringify({programs: [{id: 'Elementary', priceCents: 0}]}), '2026-11-05T11:00:00Z');
 i = by(await launchChecklist(DB, {}, today, now));
@@ -40,6 +45,9 @@ sqlite.prepare("INSERT INTO academy_state(id,payload,revision,updated_at,updated
   programs: [{id: 'Elementary', priceCents: 20000}, {id: 'Intermediate', priceCents: 0, walkInPriceCents: 0}],
   seasons: [{program: 'Elementary', start: '2026-09-01', end: '2027-06-01', weekly: [{day: 'Monday'}]}, {program: 'Intermediate', start: '2026-01-01', end: '2026-06-01', weekly: [{day: 'Monday'}]}]}), at);
 sqlite.prepare("INSERT INTO waiver_versions(id,title,body,sha256,published_at,published_by) VALUES ('w1','Participation waiver','Body','x',?,'owner')").run(at);
+// A consent form or contract is not a waiver: the waiver item still reads the waiver after they are published.
+sqlite.prepare("INSERT INTO waiver_versions(id,kind,title,body,sha256,published_at,published_by) VALUES ('c1','parent_consent','Parent Consent Form','Body','y',?,'owner')").run('2026-11-05T12:30:00Z');
+sqlite.prepare("INSERT INTO waiver_versions(id,kind,title,body,sha256,published_at,published_by) VALUES ('k1','coach_contract','Coach contract 2026','Body','z',?,'owner')").run('2026-11-05T12:40:00Z');
 sqlite.prepare("INSERT INTO staff_access(email,name,programs,active,updated_at) VALUES ('c@example.test','Coach','[]',1,?)").run(at);
 sqlite.prepare("INSERT INTO academy_settings(id,payload,updated_at,updated_by) VALUES ('lessons',?,?,'owner')").run(JSON.stringify({prices: {'one-on-one': 6000}}), at);
 sqlite.prepare("INSERT INTO integration_secrets(id,encrypted,updated_at,updated_by) VALUES ('stripe-test','{\"secret\":\"sk_test_must_not_leak\"}',?,'owner')").run(at);
@@ -51,17 +59,19 @@ assert.equal(r.ready, r.total, JSON.stringify(r.items.filter(x => x.status === '
 assert.match(i.programs.detail, /^2 programs listed, 1 with prices/); assert.equal(i.programs.action, undefined);
 assert.match(i.schedule.detail, /^1 program schedule published/, 'a season that ended does not count');
 assert.match(i.waiver.detail, /Participation waiver/);
+assert.equal(i.consent.status, 'done'); assert.match(i.consent.detail, /“Parent Consent Form” is published/);
+assert.equal(i.contract.status, 'done'); assert.match(i.contract.detail, /Coach contract 2026/);
 assert.match(i.checkout.detail, /^Open for walk-ins and camps & events$/, 'plain names, not the CHECKOUT_KINDS ids');
 assert.equal(i.email.status, 'waiting');
 assert.ok(!JSON.stringify(r).includes('must_not_leak'), 'a secret value appeared in the checklist');
 
 // Things that fall out of date: an old backup, a retired waiver, server errors.
 sqlite.exec("UPDATE security_events SET created_at='2026-10-01T00:00:00Z'");
-sqlite.exec("UPDATE waiver_versions SET retired_at='2026-11-05T13:00:00Z'");
+sqlite.exec("UPDATE waiver_versions SET retired_at='2026-11-05T13:00:00Z' WHERE kind='waiver'");
 sqlite.prepare("INSERT INTO error_log(id,at,method,path,status,message) VALUES ('x',?,'GET','/a',500,'boom')").run('2026-11-06T14:00:00Z');
 r = await launchChecklist(DB, settings, today, now); i = by(r);
 assert.equal(i.backup.status, 'todo'); assert.match(i.backup.detail, /Download a fresh one/);
-assert.equal(i.waiver.status, 'todo'); assert.equal(i.health.status, 'todo'); assert.match(i.health.detail, /1 server error /);
+assert.equal(i.waiver.status, 'todo'); assert.equal(i.consent.status, 'done', 'retiring the waiver leaves the consent form'); assert.equal(i.health.status, 'todo'); assert.match(i.health.detail, /1 server error /);
 
 // An insecure public address is flagged; a local test address is fine.
 for (const [o, ok] of [['http://register.savagewrestling.example', false], ['http://127.0.0.1:8799', true], ['https://x.workers.dev', true]]) {

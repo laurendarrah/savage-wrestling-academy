@@ -27,7 +27,8 @@ for (const p of pages) assert.equal(out.split(`href="${p}"`).length - 1, 1, p);
 for (const g of ['Schedules', 'Programs & pricing', 'Camps & events']) assert.equal(out.split(`go('${g}')`).length - 1, 1, g);
 // Issue #190 added Coach view (the owner as a coach).
 // Issue #194 added the books (Income & expenses); issue #193 added Coach hours.
-// Issue #196 added the public website editor.
+// Issue #196 added the public website editor, and #195 the Parent Consent Form and Coach contracts.
+for (const p of ['/consent-forms', '/contracts']) assert.equal(out.split(`href="${p}"`).length - 1, 1, p);
 assert.equal(out.split('href="/website"').length - 1, 1, '/website');
-assert.equal((out.match(/href="|onclick="go\(/g) || []).length, 28, 'no tool added or lost');
+assert.equal((out.match(/href="|onclick="go\(/g) || []).length, 30, 'no tool added or lost');
 console.log('owner-tools ok');

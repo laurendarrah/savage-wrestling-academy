@@ -189,7 +189,9 @@ $('pay').onclick=async()=>{if(!review||!$('acceptTerms').checked)return;$('pay')
  catch(e){$('status').textContent=e.message;$('pay').disabled=false;if(/booked|no longer available|full/.test(e.message)){opening='';review=null;await reload()}}};
 $('acceptTerms').onchange=()=>{$('pay').disabled=!$('acceptTerms').checked};
 $('wrestler').onchange=check;$('joinWrestler').onchange=check;$('coach').onchange=()=>{render()};$('spots').onchange=checkRequest;
-if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=$('status').textContent;$('cardHelp').hidden=!/USA Wrestling card/.test(t);$('waiverHelp').hidden=!/needs a signed .* before booking/.test(t)}).observe($('status'),{childList:true,characterData:true,subtree:true});
+// The help link goes to the document named in the message: the Parent Consent Form or the waiver (issue #195).
+function signHelp(p,t){const a=p.querySelector('a'),consent=/Parent Consent Form/.test(t);if(a){a.href=consent?'/consent':'/waiver';a.textContent=consent?'Sign the Parent Consent Form →':'Sign the waiver →'}}
+if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=$('status').textContent;$('cardHelp').hidden=!/USA Wrestling card/.test(t);$('waiverHelp').hidden=!/needs a signed .* before booking/.test(t);signHelp($('waiverHelp'),t)}).observe($('status'),{childList:true,characterData:true,subtree:true});
 (async()=>{
  const q=new URLSearchParams(location.search);joinCode=q.get('join')||'';
  try{

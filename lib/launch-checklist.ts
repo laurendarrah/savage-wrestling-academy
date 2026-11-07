@@ -16,7 +16,8 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
   const academy = json((await first<{payload: string}>("SELECT payload FROM academy_state WHERE id='academy'"))?.payload) ?? {};
   const programs: any[] = Array.isArray(academy.programs) ? academy.programs : [];
   const seasons: any[] = Array.isArray(academy.seasons) ? academy.seasons : [];
-  const waiver = await first<{title: string; retired_at: string | null}>('SELECT title,retired_at FROM waiver_versions ORDER BY published_at DESC, id DESC LIMIT 1');
+  const latest = (kind: string) => first<{title: string; retired_at: string | null}>('SELECT title,retired_at FROM waiver_versions WHERE kind=? ORDER BY published_at DESC, id DESC LIMIT 1', kind);
+  const waiver = await latest('waiver'), consent = await latest('parent_consent'), contract = await latest('coach_contract');
   const coaches = Number((await first<{n: number}>('SELECT COUNT(*) AS n FROM staff_access WHERE active=1'))?.n ?? 0);
   const lessons = json((await first<{payload: string}>("SELECT payload FROM academy_settings WHERE id='lessons'"))?.payload) ?? {};
   const stripeKey = await first<{updated_at: string}>("SELECT updated_at FROM integration_secrets WHERE id='stripe-test'");
@@ -45,8 +46,14 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
       status: current.length ? 'done' : 'todo', detail: current.length ? `${current.length} program schedule${current.length === 1 ? '' : 's'} published` : 'Publish weekly practices so families can see and book them'},
     {key: 'waiver', group: 'Academy', label: 'Waiver', href: '/waivers',
       status: waiver && !waiver.retired_at ? 'done' : 'todo', detail: waiver && !waiver.retired_at ? `“${waiver.title}” is published` : 'Publish the approved waiver. Families cannot book until they sign it'},
+    // Decision Q15 on #197: families also sign the Parent Consent Form, which waits for the attorney's review (issue #195).
+    {key: 'consent', group: 'Academy', label: 'Parent Consent Form', href: '/consent-forms',
+      status: consent && !consent.retired_at ? 'done' : 'todo', detail: consent && !consent.retired_at ? `“${consent.title}” is published` : 'Publish the Parent Consent Form (after attorney review). Until then families can book without it'},
     {key: 'coaches', group: 'Academy', label: 'Coach access', href: '/staff',
       status: coaches ? 'done' : 'todo', detail: coaches ? `${coaches} coach${coaches === 1 ? '' : 'es'} can sign in` : 'Give each coach access to their programs'},
+    // Coach contracts (decision Q17 on #197) are not a launch requirement, so this is counted only once published.
+    {key: 'contract', group: 'Academy', label: 'Coach contract', href: '/contracts', status: contract && !contract.retired_at ? 'done' : 'info',
+      detail: contract && !contract.retired_at ? `“${contract.title}” is published` : 'Publish the coach contract when it is ready. Coaches then see a to-do on coach home until they sign'},
     {key: 'lessons', group: 'Academy', label: 'Private lesson prices', href: '/lesson-settings',
       status: lessonPrices ? 'done' : 'todo', detail: lessonPrices ? `${lessonPrices} lesson type${lessonPrices === 1 ? '' : 's'} priced` : 'Set lesson prices so families can book coach openings'},
     {key: 'address', group: 'Site', label: 'Site address', status: /^https:\/\/|^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin) ? 'done' : 'todo',

@@ -6,6 +6,7 @@ import {sessionsOn, academyState} from './roster';
 import {familyPasses} from './passes';
 import {cardStatus, reviewFor} from './usaw';
 import {currentWaiver, signatureFor} from './waivers';
+import {currentVersion} from './documents';
 import {academyToday} from './public-schedule';
 import {programOn} from './transfers';
 
@@ -52,13 +53,15 @@ export async function wrestlerView(userId: string, wrestlerId: string) {
   if (!w) return null;
   const today = academyToday(), monthStart = today.slice(0, 8) + '01';
   const pass = (await familyPasses(userId)).find(p => p.wrestlerId === wrestlerId) ?? null;
-  const waiver = await currentWaiver();
+  const waiver = await currentWaiver(), consent = await currentVersion('parent_consent');
   const attended = await env.DB!.prepare('SELECT count(*) AS n FROM attendance WHERE user_id=? AND wrestler_id=? AND session_date>=?').bind(userId, wrestlerId, monthStart).first<{n: number}>();
   return {
     id: w.id, name: w.name, grade: w.grade, pass: pass?.code ?? null,
     upcoming: await upcomingFor(userId, wrestlerId, today),
     card: cardStatus(w, await reviewFor(userId, wrestlerId), today),
     waiverNeeded: waiver ? !(await signatureFor(waiver.id, userId, wrestlerId, w.name)) : false,
+    // The Parent Consent Form (issue #195), needed only once the owner publishes it.
+    consentNeeded: consent ? !(await signatureFor(consent.id, userId, wrestlerId, w.name)) : false,
     checkInsThisMonth: attended?.n ?? 0
   };
 }
