@@ -1130,6 +1130,10 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   await owner.goto(BASE + '/site-health'); await waitText(owner, '#now', /Site and database are answering/);
   // Email is not set up locally: the page says so instead of promising alerts (issues #47, #35).
   await waitText(owner, '#emailOff', /Email isn’t set up yet, so families aren’t getting emails/); expect(await owner.isVisible('#emailOff'), 'email-off notice on site health');
+  // Send a test alert (issue #263): with no email locally, the button says so and sends nothing.
+  await owner.click('#testAlert'); await waitText(owner, '#testResult', /Email isn’t set up yet, so no test alert was sent/);
+  expect(await owner.isEnabled('#testAlert'), 'the test alert button is usable again');
+  expect(!sql("SELECT 1 FROM security_events WHERE action='owner_test_alert'").length, 'nothing logged when nothing was sent');
 });
 // ---------- One owner shell (issue #261): the sidebar and header stay, only the middle changes ----------
 // What the shell looks like on a page: one sidebar and header, where they sit, what is marked, and the sidebar's links.

@@ -88,6 +88,28 @@ export async function alertOwner(db: DB, now = new Date()): Promise<'off' | 'non
   }
 }
 
+// A test alert (issue #263), so the owner can check alert emails arrive without waiting for a real problem. It goes to
+// the same owner address through the same email adapter as a real alert, says plainly that nothing needs doing, and
+// links to /site-health. It never reads or writes the "last alerted" marker, so it neither delays nor stands in for a
+// real alert. The caller (app/api/site-health) checks the owner, rate-limits and logs it.
+export const TEST_ALERT_SUBJECT = 'Test alert: no action needed';
+export function testAlertEmail(origin: string | null, now = new Date()) {
+  const text = ['Test alert: no action needed.', '',
+    `This is a test of the Savage Wrestling Academy site's problem alerts, sent from the Site health page at ${when(now, now)} (New York time). Nothing is wrong with the site.`, '',
+    'Real alerts come to this address the same way when new site errors appear or a scheduled job doesn\'t finish, at most once an hour.', '',
+    origin ? `Site health page (owner sign-in needed):\n${origin}/site-health` : 'See the Site health page in the owner dashboard.', '', '—', 'Savage Wrestling Academy site'].join('\n');
+  return {subject: TEST_ALERT_SUBJECT, text};
+}
+export type TestAlertResult = {status: 'off' | 'sent' | 'failed'; to: string; reason: string | null};
+export async function sendTestAlert(now = new Date()): Promise<TestAlertResult> {
+  if (!emailConfigured()) return {status: 'off', to: OWNER_EMAIL, reason: null};
+  let origin: string | null = null;
+  try { origin = appOrigin(); } catch { origin = null; }
+  const [result] = await sendEmailsDetailed([{to: OWNER_EMAIL, ...testAlertEmail(origin, now)}]);
+  if (result.status === 'skipped') return {status: 'off', to: OWNER_EMAIL, reason: null};
+  return result.status === 'sent' ? {status: 'sent', to: OWNER_EMAIL, reason: null} : {status: 'failed', to: OWNER_EMAIL, reason: result.reason ?? 'unreachable'};
+}
+
 // For the Site health page: is alerting on, and how did the last alert go?
 export async function alertStatus(db: D1Database) {
   const {value} = await marker(db);

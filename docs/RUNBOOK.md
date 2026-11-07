@@ -15,7 +15,7 @@ Keep these six things in the password manager. Every fix below depends on at lea
 - Site and updates: [site down](#the-site-is-down-or-shows-an-error-for-everyone) · [a deploy failed](#a-deploy-failed) · [GitHub Actions isn't running](#github-actions-isnt-running) · [roll back a bad update](#an-update-made-something-worse) · [data wrong or missing](#data-looks-wrong-or-is-missing)
 - Payments: [connecting Stripe](#connecting-the-academys-stripe-account) · [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site) · [charged but unpaid](#a-family-was-charged-but-the-payment-shows-unpaid) · [refunds](#refunds) · [card fees missing](#card-fees-are-missing) · [test or live?](#test-or-live) · [offline payments](#offline-payments)
 - Sign-in: [nobody can sign in](#nobody-can-sign-in-or-sign-up) · [email limit reached](#sign-up-or-reset-emails-blocked-by-the-email-limit) · [the authenticator switch](#the-authenticator-switch-staff_mfa) · [lost authenticator](#someone-lost-the-phone-with-their-authenticator) · [owner locked out](#the-owner-is-locked-out)
-- Email: [families never got the email](#families-say-they-never-got-the-email)
+- Email: [families never got the email](#families-say-they-never-got-the-email) · [check alert emails arrive](#check-that-alert-emails-arrive)
 - [Who to call](#who-to-call)
 - Before launch: [the launch test pass](LAUNCH_TEST_PASS.md) (#24) · [the restore drill](RESTORE_DRILL.md) (#25)
 
@@ -25,7 +25,7 @@ Sign in as the owner and open **/site-health**. It shows whether the site and da
 
 Set up a free uptime monitor (for example UptimeRobot) on `<site address>/api/health`, checking every 5 minutes and texting the owner's phone. Then you hear about an outage before families do.
 
-Once email is set up (`EMAIL_API_KEY` and `MAIL_FROM`, #87), the site also emails the owner address when new server errors appear or the morning reminders don't finish, at most once an hour (#47). The email has counts, the page each problem was on and a link to **/site-health**, never family details. Problems that happen within the hour are in the next alert, which goes out with the next problem after the hour or with the next morning's scheduled run. **/site-health → Alerts and email** shows when the last alert went out, or why it didn't. An alert email can't help when the whole site or the email service is down, so keep the uptime monitor too.
+Once email is set up (`EMAIL_API_KEY` and `MAIL_FROM`, #87), the site also emails the owner address when new server errors appear or the morning reminders don't finish, at most once an hour (#47). The email has counts, the page each problem was on and a link to **/site-health**, never family details. Problems that happen within the hour are in the next alert, which goes out with the next problem after the hour or with the next morning's scheduled run. **/site-health → Alerts and email** shows when the last alert went out, or why it didn't. An alert email can't help when the whole site or the email service is down, so keep the uptime monitor too. To check alert emails reach the owner without waiting for a real problem, use **Send a test alert** ([below](#check-that-alert-emails-arrive)).
 
 ## The site is down or shows an error for everyone
 
@@ -272,6 +272,21 @@ Work down this list:
 **Sign-up, confirmation and password emails** don't come from the site: Supabase sends them. If only those are missing, see [the email limit](#sign-up-or-reset-emails-blocked-by-the-email-limit). Also check that the email links point at the site: **Supabase → Authentication → URL Configuration** lists the site address and the two `/auth/confirm` addresses (`docs/GO_LIVE.md`, step 6). The family can use **Didn't get the confirmation email?** on the sign-in page to send it again.
 
 **Who:** Justin (Resend, his own account, and the Worker's email settings). Lauren helps only if asked.
+
+### Check that alert emails arrive
+
+Do this once email is set up (#35), and again whenever `EMAIL_API_KEY`, `MAIL_FROM` or the Resend account changes (#47, #263).
+
+1. Sign in as the owner and open **/site-health**.
+2. Under **Alerts and email**, choose **Send a test alert**. One email goes to the owner address (`savagewrestlingclub@gmail.com`) through the same path as real alerts, with the subject "Test alert: no action needed" and a link back to **/site-health**.
+3. The page answers in plain words:
+   - **"Sent to …"**: the email service accepted it. Check that inbox within a few minutes, and the spam folder. If it's in spam, mark it "not spam" so real alerts land in the inbox.
+   - **"Email isn't set up yet"**: `EMAIL_API_KEY` or `MAIL_FROM` is missing on the Worker. Nothing was sent. Set up email first (see above).
+   - **"The test alert didn't send"** with a reason: the same reasons as above (settings not accepted, refused, busy, unreachable), and the same fixes.
+
+You can send 3 test alerts an hour. Each one is in **Security activity** ("Test alert from Site health", with whether it sent). A test alert never changes when the next real alert can go out, and it isn't counted as one: **Alerts and email** still shows the last real alert.
+
+**Who:** Justin, with the owner's inbox. Lauren helps only if asked.
 
 ## Who to call
 
