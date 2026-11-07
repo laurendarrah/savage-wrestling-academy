@@ -2,17 +2,18 @@
 
 A plain guide for the owner and whoever helps run the site (issues #165 and #47). Find the section that matches what you see and work down it. Most steps need no developer, terminal or Claude. Where one does, the section says who to ask.
 
-Keep these five things in the password manager. Every fix below depends on at least one of them:
+Keep these six things in the password manager. Every fix below depends on at least one of them:
 - The Cloudflare login (owner: Justin, admin: Lauren)
 - The Supabase login (owner: Justin, admin: Lauren)
-- The Stripe login (Justin; Lauren once added)
+- The Stripe login (Justin's own account, #4)
+- The Resend login for email (Justin's own account; Lauren helps only if asked)
 - The GitHub login with access to `laurendarrah/savage-wrestling-academy`
 - `BACKUP_PASSPHRASE`, the passphrase that unlocks the automatic backups
 
 **Contents**
 - [First, check site health](#first-check-site-health)
 - Site and updates: [site down](#the-site-is-down-or-shows-an-error-for-everyone) · [a deploy failed](#a-deploy-failed) · [GitHub Actions isn't running](#github-actions-isnt-running) · [roll back a bad update](#an-update-made-something-worse) · [data wrong or missing](#data-looks-wrong-or-is-missing)
-- Payments: [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site) · [charged but unpaid](#a-family-was-charged-but-the-payment-shows-unpaid) · [refunds](#refunds) · [card fees missing](#card-fees-are-missing) · [test or live?](#test-or-live) · [offline payments](#offline-payments)
+- Payments: [connecting Stripe](#connecting-the-academys-stripe-account) · [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site) · [charged but unpaid](#a-family-was-charged-but-the-payment-shows-unpaid) · [refunds](#refunds) · [card fees missing](#card-fees-are-missing) · [test or live?](#test-or-live) · [offline payments](#offline-payments)
 - Sign-in: [nobody can sign in](#nobody-can-sign-in-or-sign-up) · [email limit reached](#sign-up-or-reset-emails-blocked-by-the-email-limit) · [the authenticator switch](#the-authenticator-switch-staff_mfa) · [lost authenticator](#someone-lost-the-phone-with-their-authenticator) · [owner locked out](#the-owner-is-locked-out)
 - Email: [families never got the email](#families-say-they-never-got-the-email)
 - [Who to call](#who-to-call)
@@ -105,6 +106,20 @@ Don't make more changes until you know what happened.
 
 An online payment counts as paid **only** when Stripe sends the site a signed notice (a "webhook") saying so. A family coming back from Stripe, a receipt, or a screenshot is not proof, and nothing on the site marks a card payment paid by hand. So when Stripe's notices don't arrive, payments look unpaid even though the money moved.
 
+The Stripe account is Justin's: he created it and owns it, its payouts and its keys (#4). Lauren helps only if he asks.
+
+### Connecting the academy's Stripe account
+
+**/payment-setup** shows "Connected to <account name> (acct_…)" once a test key is saved. No account is built into the site: the first test key decides it (issue #255).
+
+- **Connecting for the first time:** create a restricted test key in Stripe (the page lists the steps and permissions), paste it and choose **Verify test key**. The page shows the account the key belongs to. Check the name and id, then choose **Yes, connect this account**. Security activity shows "Stripe account connected".
+- **"This key belongs to a different Stripe account":** the key comes from another Stripe account than the one the site is connected to. Make the key in the connected account (the error names both). If the academy really is moving to another Stripe account, choose **Connect a different Stripe account** and confirm, then paste the new account's key. That removes the saved key and forgets the old account (Security activity shows "Stripe account disconnected"). Online card payments stop until the new key is saved, and the new account needs its own webhook (`docs/GO_LIVE.md`, step 6).
+- **"Save your test key first so the site knows your Stripe account":** a live key was pasted before any test key connected the account. Save and confirm the test key first, from the same Stripe account.
+- **"The Stripe account saved in the site's settings is not a valid account id":** someone set `STRIPE_ACCOUNT_ID` on the Worker to something that isn't an `acct_…` id. Fix or delete it in Cloudflare → the worker → Settings → Variables and secrets. While it is set, it decides the account, and the page can't switch accounts.
+- **Connect a different Stripe account is missing:** the site is in live mode, or `STRIPE_ACCOUNT_ID` is set. Changing accounts while taking real payments is deliberately not possible from the page.
+
+**Who:** Justin (Stripe and `/payment-setup`). Lauren only if asked.
+
 ### Stripe's notices aren't reaching the site
 
 **You see:** families say they paid but **/payments** shows nothing new, or "Not finished". Stripe may email the account about failed webhook deliveries. **/site-health** may list errors on `/api/stripe-webhook`.
@@ -115,7 +130,7 @@ An online payment counts as paid **only** when Stripe sends the site a signed no
 3. **/security-log:** "Stripe message refused" means the site received the notice and deliberately refused it, with the reason.
 
 **What to do, by what Stripe shows:**
-- **Status 400 ("Invalid signature"):** the signing secret on the site doesn't match this endpoint. Copy the endpoint's **Signing secret** from Stripe and ask Lauren to put it in `STRIPE_TEST_WEBHOOK_SECRET` (or `STRIPE_LIVE_WEBHOOK_SECRET` in live mode) on the Worker. These don't show on /site-health.
+- **Status 400 ("Invalid signature"):** the signing secret on the site doesn't match this endpoint. Copy the endpoint's **Signing secret** from Stripe and put it in `STRIPE_TEST_WEBHOOK_SECRET` (or `STRIPE_LIVE_WEBHOOK_SECRET` in live mode) on the Worker: Cloudflare → the worker → Settings → Variables and secrets. Ask Lauren if you want help. These don't show on /site-health.
 - **Status 503 ("Webhook not configured"):** no signing secret is saved on the Worker at all. Same fix.
 - **Status 500, or timeouts:** the site couldn't process it. Stripe tries again by itself, for up to 3 days in live mode and a few times over a few hours in test mode. Check /site-health and send Lauren the time.
 - **Endpoint shows Disabled:** Stripe turns an endpoint off after days of failures. Turn it back on in Stripe once the cause is fixed.
@@ -123,7 +138,7 @@ An online payment counts as paid **only** when Stripe sends the site a signed no
 
 **Once the cause is fixed, resend what failed:** on the endpoint's page, open each failed event and choose **Resend**. Resending is always safe: the site stores each Stripe event once and ignores a repeat, so nothing is counted twice.
 
-**Who:** Justin (Stripe dashboard), Lauren (Worker settings, errors on /site-health).
+**Who:** Justin (Stripe dashboard and the Worker's Stripe settings). Lauren helps if asked, for example with errors on /site-health.
 
 ### A family was charged but the payment shows unpaid
 
@@ -138,7 +153,7 @@ An online payment counts as paid **only** when Stripe sends the site a signed no
 4. **Stripe shows Incomplete, or no payment at all:** the family didn't finish paying, and no money moved. On /payments it shows "Not finished". They can start again.
 5. **Don't record a card payment with "Record an offline payment".** It would count the money twice, and Stripe's real notice would then be refused as a double payment.
 
-**Who:** Justin (Stripe). Lauren if resending doesn't fix it.
+**Who:** Justin (Stripe). Ask Lauren if resending doesn't fix it.
 
 ### Refunds
 
@@ -164,7 +179,7 @@ The site and Stripe each have a test mode and a live mode, and they never mix.
 - **A family's real card is declined with a message about test mode:** the site is still in test mode, and no money moved. Online payment isn't live yet.
 - **A test-card payment (4242 ...) succeeded on the live site:** it can't. In live mode the site only uses the live key, and a notice signed for the wrong mode is refused ("Test and live payments were mixed up" in /security-log).
 - **/financials** counts card payments of the mode the site is in now. Test payments made before going live don't appear there afterwards.
-- Keys start `rk_test_` or `rk_live_`. /payment-setup only accepts the key for the mode the site is in.
+- Keys start `rk_test_` or `rk_live_`. /payment-setup only accepts the key for the mode the site is in, and only from the connected Stripe account.
 
 **Switching to live** is a deliberate, one-time step, and only after the matching decisions are recorded: follow `docs/GO_LIVE.md` → "Opening online payment later" and the live steps on #26. To stop online payment at once in an emergency, the owner can have Lauren delete `CHECKOUT_KINDS` on the Worker: every online checkout closes, and families see how to pay the academy directly. Payments already made are unaffected.
 
@@ -206,7 +221,7 @@ Sign-in, sign-up, confirmation and password emails, and authenticators all run o
 3. Give them the temporary password in person or by phone. They sign in, then change it from **/security → Change password**.
 4. The owner account works this way too: the site recognises the owner by the confirmed owner email address.
 
-**Who:** Justin or Lauren (Supabase), Lauren (Resend).
+**Who:** Justin or Lauren (Supabase), Justin (Resend, his own account; Lauren helps only if asked).
 
 ### The authenticator switch (STAFF_MFA)
 
@@ -249,13 +264,13 @@ Work down this list:
 
 **What to do, by the reason shown:**
 - **"Too many emails went out at once" or "couldn't be reached":** the email service (Resend) was busy or down. Wait a while, then choose **Try again**, or **Try all again** for the whole list.
-- **"didn't accept the academy's email settings":** the sending key or address is wrong or was revoked. Lauren checks `EMAIL_API_KEY` and `MAIL_FROM` on the Worker and that the sending domain is still verified in Resend, then you choose **Try again**.
+- **"didn't accept the academy's email settings":** the sending key or address is wrong or was revoked. Justin checks `EMAIL_API_KEY` and `MAIL_FROM` on the Worker (Cloudflare → the worker → Settings → Variables and secrets) and that the sending domain is still verified in his Resend account, then you choose **Try again**. Lauren helps if asked.
 - **"refused the message":** the address may be mistyped. Check it with the family.
 - **While email is down, the site can't email you about problems either.** Check **/site-health** yourself.
 
 **Sign-up, confirmation and password emails** don't come from the site: Supabase sends them. If only those are missing, see [the email limit](#sign-up-or-reset-emails-blocked-by-the-email-limit). Also check that the email links point at the site: **Supabase → Authentication → URL Configuration** lists the site address and the two `/auth/confirm` addresses (`docs/GO_LIVE.md`, step 6). The family can use **Didn't get the confirmation email?** on the sign-in page to send it again.
 
-**Who:** Lauren (Resend and Worker settings).
+**Who:** Justin (Resend, his own account, and the Worker's email settings). Lauren helps only if asked.
 
 ## Who to call
 
@@ -264,6 +279,6 @@ Work down this list:
 | Site down or a bad update | Cloudflare | Justin (owner), Lauren (admin) |
 | A failed deploy, GitHub Actions, the site's code | GitHub | Lauren |
 | Sign-in, sign-up emails, authenticators | Supabase | Justin (owner), Lauren (admin) |
-| Payments, refunds, webhooks | Stripe | Justin |
-| Emails from the site to families and the owner | Resend, plus Worker settings in Cloudflare | Lauren |
+| Payments, refunds, webhooks, connecting Stripe | Stripe (Justin's own account), plus `/payment-setup` | Justin. Lauren only if asked |
+| Emails from the site to families and the owner | Resend (Justin's own account), plus Worker settings in Cloudflare | Justin. Lauren only if asked |
 | Domain and email for savagewrestling.com | GoDaddy | Justin |
