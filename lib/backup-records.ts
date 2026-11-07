@@ -86,7 +86,7 @@ const ARCHIVE_COLS:Col[]=[['id','text'],['actor','text'],['action','text'],['tar
 //   commitRestore), so the Worker never holds the whole file. Each record table may then have up to LARGE_ROW_LIMIT rows.
 //   Families and openings stay at ROW_LIMIT everywhere, because every restore first saves them in a recovery snapshot.
 // The audit archive keeps the newest ARCHIVE_LIMIT events and says so.
-const ROW_LIMIT=20000,ARCHIVE_LIMIT=20000,EXPORT_LIMIT=12000000,LARGE_ROW_LIMIT=200000;
+const ROW_LIMIT=20000,ARCHIVE_LIMIT=20000,EXPORT_LIMIT=12000000,LARGE_ROW_LIMIT=500000;
 export class BackupTooLarge extends Error{constructor(public what:string){super('Backup is too large for this export tool: '+what)}}
 // Reads a whole table in batches of 1,000 by its key, refusing more than `max` rows.
 async function readAll<T>(select:string,table:string,key:string[],max:number):Promise<T[]>{
@@ -266,7 +266,7 @@ export async function restoreBackup(backup:Backup,expectedFingerprint:string,act
 // whole and that no key repeats across parts, then applies everything with applyRestore in one batch, reading each part
 // from restore_staging inside D1, so the Worker never holds the whole backup and the restore stays all or nothing.
 // Limits keep the commit batch well inside D1's: parts below its 2 MB value limit, at most STAGE_PARTS parts.
-const PART_BYTES=1500000,STAGE_BYTES=300000000,STAGE_PARTS=600,STAGE_TTL=86400000;
+const PART_BYTES=1500000,STAGE_BYTES=400000000,STAGE_PARTS=700,STAGE_TTL=86400000;
 export const STAGE_REQUEST_BYTES=9000000;
 const BEGIN='#begin';
 const limitFor=(s:string)=>s==='families'||s==='openings'?ROW_LIMIT:s==='security_events'?ARCHIVE_LIMIT:LARGE_ROW_LIMIT;
