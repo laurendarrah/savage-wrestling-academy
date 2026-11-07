@@ -1,55 +1,58 @@
-# Feature inventory
+# What the site does today
 
-Statuses describe the current implementation. Implemented plus isolated tests means a code path and assertions exist. It does not mean a production end-to-end transaction was verified. Mocked workspace records can persist to the owner JSON and still remain simulations.
+One line per feature, with where it lives and what still waits. Checked against the code on November 7, 2026 (#267). This page replaces both the November 5 handoff's feature matrix, which described the ChatGPT Sites version and its sample workspace (in [the archive](archive/handoff-2026-11-05/README.md)), and the feature table that used to be in the README.
 
-| Feature | Status | Actual behavior and limit | Source evidence |
+**Built** means the code, tests and the walkthrough cover it. **Waits** names the decision or setting it still needs. Nothing on this page is sample data: the owner workspace has no sample screens (#147).
+
+| Area | Status | Where | Waits on |
 |---|---|---|---|
-| Public calendar and program cards | Implemented; public UI verified | Reads saved semester practices for all programs, dates off, named practices and upcoming events. Uses New York dates and month names. | lib/public-schedule.ts; app/calendar/ |
-| Season scheduling and holiday exclusions | Implemented; isolated tests | Owner edits weekly dates/times, future semesters and exclusions in the revisioned settings blob. U.S. federal holidays (actual and observed) are labels on the owner, coach and public calendars only; they never cancel practice, days off do (#189). | app/portal.html saveSeason; lib/workspace/schedule.ts; lib/registration-catalog.ts; lib/holidays.ts |
-| Named paid practices / Friday Night Live | Implemented review; payment absent | Owner selects exact dates, title, grades, description and member/non-member prices. Each session is a separate purchase. | lib/friday-live.ts; app/api/booking-review/ |
-| Grade-range controls for added practices/events | Implemented display guidance | From/through grade selectors are saved as a range. They do not enforce eligibility at event/practice booking. | app/portal.html offeringGradeFields; lib/workspace/programs.ts; lib/friday-live.ts |
-| Upcoming overview | Implemented; public demo verified | Next six items come from saved schedules, named practices and events. Excludes expired sessions and days off. Other-device changes require reloading saved state. | app/portal.html upcomingItems |
-| Email/password signup and login | Implemented; mocked-service tests | Supabase auth routes and session cookies exist. Existing password login and email callbacks are separate paths. Full live email lifecycle was not exercised. | app/api/auth/; app/auth/confirm/ |
-| Owner/coach MFA and optional family MFA | Implemented; isolated tests | TOTP enrollment, challenge, verified-factor checks and role destinations are server enforced. No owner bypass through ChatGPT identity. | app/api/security/; lib/account-auth.ts |
-| Family profiles | Implemented; isolated tests | Parents save name, phone, wrestler IDs/names/grades, a home address, an emergency contact, and each wrestler's birth date and allergies or medical notes (#188; required on save per #197 Q14, shown to staff on the check-in roster). This schema does not yet hold actual waiver documents or USA Wrestling evidence. | app/api/family/; lib/family-records.ts |
-| Admin family directory | Mocked workspace records | Displays sample families/kids from academy JSON. It is not a directory of the real family_accounts table. | app/portal.html familyDirectory |
-| Wrestler/child portal and invitations | Mocked workspace records | Child-access status, messages and QR passes are simulations; no independent child-account backend exists. | app/portal.html childAccessCard; childQr |
-| Paid membership choices | Implemented review; checkout absent | Walk-in, 12 monthly installments for a 12-month commitment, or one upfront annual payment. Totals are server calculated. | app/register/; app/api/registration/ |
-| Program grade gates and SWA Advance approvals | Implemented; isolated tests | Real registration uses K-6 / 7-12 rules and approval for every SWA Advance wrestler. Identity/grade edits invalidate stale approvals. | lib/program-approval.ts; app/api/owner-approvals/ |
-| Private approval conversation | Implemented; isolated tests | Family/owner-only text thread with role checks, pagination, rate limits and 15-second browser polling. No email/SMS notification. | app/api/approval-chat/; public/approval-chat.js |
-| Team discount codes | Implemented review; isolated tests | Owner codes apply to eligible installment plans only. The backend rejects inactive, wrong-program, upfront and walk-in codes. | lib/academy-validation.ts; app/api/registration/ |
-| Paid-member discounts | Partial / not connected | No paid-subscription source of truth exists. General paid membership eligibility cannot yet be verified for Friday Night Live or camps. | app/api/booking-review/ |
-| Scholarship member discounts | Implemented review; isolated tests | An active real scholarship gives the member practice rate and 10% off Camp reviews. This does not collect money or reserve a place. | lib/scholarships.ts; app/api/booking-review/ |
-| Stripe restricted test-key storage | Implemented boundary; live key state unverified | Owner/MFA-only entry, expected-account check, restricted test-key validation and AES-GCM encrypted storage. No live keys accepted. | app/api/payment-setup/; lib/stripe-test.ts |
-| Checkout and payment processing | Not implemented | No session creation, signed fulfillment, orders, subscriptions, invoices, live charge flow, refunds or payment-failure automation. | app/api/payment-setup/ returns checkoutEnabled false |
-| Membership cards and purchase history | Partial / mixed | Real scholarship cards exist. Paid memberships/history remain empty states plus clearly labeled examples. | app/family/screen.html |
-| Scholarship offer management | Implemented; isolated tests | Owner creates email-bound private invitation, expires/rotates/revokes it, freezes tuition reference value, finalizes terms and ends future assistance. | app/api/scholarships/ |
-| Scholarship acceptance and free entitlement | Implemented; isolated tests | Invited verified parent selects saved named wrestler. Draft/stale terms cannot be accepted; grade/approval checks and one-active-award uniqueness apply. | app/api/scholarship/ |
-| Printed name, drawn signature and date | Implemented; sample UI verified | Explicit electronic consent, bounded signature vectors, exact terms version/hash and server signing time are saved atomically with acceptance. | lib/scholarship-signatures.ts; app/scholarship/ |
-| Signed scholarship copy | Implemented; isolated tests | Owner or signing family can view, download HTML, or print/save PDF. Earlier typed-name acceptances are labeled as legacy. No automatic email copy. | app/scholarship-agreement/ |
-| Scholarship benefit history | Implemented informational calculation | Completed anniversary months since acceptance times frozen tuition reference; partial month excluded; value stops at award end. It is not an invoice. | lib/scholarships.ts benefitSummary |
-| Scholarship repayment / exclusivity enforcement | Draft / not implemented | Proposed cumulative repayment is counsel-review text only. No automatic debt, retrospective invoice, collection or breach adjudication. | lib/scholarships.ts scholarshipDraft |
-| Camps, clinics and event management | Implemented settings; partial registration | Owner events persist and project to public listings; camps can have multiple dates and single-day prices. Each day can have a start and end time (`events[].schedule`), shown on the calendars, welcome page, booking, roster and coach week; days without one show "Time to be announced" (#189). Real booking stops at review. | app/portal.html saveEvent; lib/event-schedule.ts; app/api/booking-review/ |
-| Sample event purchase modal | Confirmed broken path | finishEvent references an undefined annual variable. The isolated reproduction throws ReferenceError, despite the 18-script suite passing. | app/portal.html finishEvent; docs/reproductions/ |
-| Capacity and waitlists | Mocked / partial | UI tracks sample slots and offers; review rejects an event with zero slots. No transactional paid capacity or actual waitlist invitation delivery. | app/portal.html waitOffer; app/api/booking-review/ |
-| Attendance date/name roster | Mocked workspace records | Opens to today in New York and filters sample kids by program/name. Manual attendance persists only in owner JSON. | app/portal.html attendance; renderRoster |
-| Camera / image QR scanner | Functional sample scanner | Camera and uploaded images are decoded locally; sample passes only. Successful sample scan shows a confirmation and tab-local roster badge. | public/attendance-demo.js; app/attendance-demo/ |
-| Check-in review popup | Mocked eligibility | Sample missing registration, waiver or USAW status blocks sample check-in. No operational eligibility engine or official USAW lookup. | app/portal.html checkinIssues |
-| Program transfers | Mocked workspace records | Updates sample kid placement and history from today, preserves earlier roster program, and asks for an Advance approval checkbox. Does not move real enrollment or Stripe records. | app/portal.html transferProgram; rosterProgram |
-| Waivers and USA Wrestling cards | Conceptual / sample fields | Actual family profile schema omits waiver/card evidence. Preview can mark sample waiver/status; no secure upload or external verification. | lib/family-records.ts; app/portal.html reviewCard |
-| Coach accounts and openings | Implemented; isolated tests | Owner grants coach permissions. Coach manages only own non-overlapping, exactly one-hour openings and reads published assigned practice plans. | app/api/staff/; app/api/coach/ |
-| Private lesson inquiry | Implemented review only | Saved wrestler and lesson format are checked; coach, price and time still need confirmation. No reservation or charge. | app/api/booking-review/ lesson branch |
-| Shared lessons / invitation / 70-30 payouts | Mocked workspace records | One-on-one, partner and group simulations, share links, participant counts, split arithmetic and sample coach payout buttons. No transfer of funds. | app/portal.html lessonSplit; shareLesson; simulateCoachPayout |
-| Sample owner availability calendar | Mocked / separate store | Workspace availability UI is independent of real coach_openings and public booking. Its records need reconciliation before operational use. | app/portal.html availabilitySlots; app/api/coach/ |
-| Practice plans | Implemented; isolated tests | Owner drafts/shares a scheduled practice plan, up to 90 minutes. Coaches read only published plans in assigned programs; print/save is available. Coaches see a month calendar of their practices, extra practices, camps, clinics, events and holidays, and open shared plans from it (#191). | app/api/practice-plans/; lib/practice-plans.ts |
-| Program curricula and reusable lessons | Implemented; isolated tests | Owner-only program groups and ordered lessons with unique names, revisions, and explicit copy into daily plan. | app/api/practice-curricula/; app/curricula/ |
-| General announcements and direct messages | Mocked workspace records | Messages save to owner JSON; family/child role views are simulations. Email and SMS providers are absent. | app/portal.html messages; sendDirect; saveFamilyContact |
-| Event/message archives | Implemented settings/UI behavior | Ended events and related announcements appear archived; manual archive/restore preserves history. Evaluation runs on render/focus/timer, not an external scheduled job. | lib/workspace/events.ts isEventArchived; app/portal.html refreshArchiveDay |
-| Encrypted backup / restore | Implemented but incomplete coverage | Owner/MFA checks, browser encryption, revision fingerprint and atomic restore/recovery snapshot. Covers only academy state, family profiles and coach openings. | lib/backup-records.ts; public/security-backup.js |
-| Security log | Implemented basic log | Some sensitive actions append security_events for owner review. Coverage is not comprehensive for every mutation or scholarship lifecycle event. | lib/security-events.ts; app/security-log/ |
-| Payroll, timesheets, full accounting | Conceptual | No complete operating payroll, tax, settlement or timesheet subsystem is present. Sample lesson split arithmetic is not accounting. | Repository/API/schema inventory |
-| Public website / custom domain replacement | Partial | Public calendar/program/booking surfaces exist. Full marketing website migration, custom-domain routing and retirement of the existing website were not verified. | app/calendar/; hosting metadata |
+| **Public** | | | |
+| Welcome page, team page and calendar | Built. The owner edits the welcome and team pages on `/website` (#196); the calendar shows practices, days off, holidays, events and named practices | `/welcome`, `/team`, `/calendar`, `lib/public-schedule.ts`, `lib/website.ts` | Custom domain (#43) |
+| Programs on a new site | No programs are public until the owner publishes them from the launch checklist; the defaults in `hydratePrograms()` are not public until saved | `app/portal.html`, `lib/workspace/` | Owner set-up (#16) |
+| Help pages | Built for families, coaches and the owner (#109) | `/help`, `/help/coach`, `/help/owner` | |
+| **Accounts** | | | |
+| Sign-up, sign-in, password reset | Built on Supabase Auth; email links use `APP_ORIGIN` | `/login`, `/auth/confirm`, `lib/account-auth.ts` | A custom email sender in Supabase before families join (GO_LIVE) |
+| Authenticator (MFA) | Required for the owner and coaches, optional for families. Temporarily off for staff with `STAFF_MFA=off` | `/security`, `lib/mfa-policy.ts` | Switch back on before families join (#27) |
+| Family profiles and wrestlers | Built, with contact, safety and medical details shown to staff on the roster (#188) | `/family`, `lib/family-records.ts` | |
+| Family data requests | Download everything; ask to close the account; owner handles requests (#113) and can delete a test family (#259) | `/family`, `/data-requests`, `/accounts`, `lib/family-deletion.ts` | Data retention policy (draft) |
+| **Programs and booking** | | | |
+| Program rules and SWA Advance approvals | Built. Development K–6, Intermediate 7–12, Advance 7–12 with coach approval for every wrestler, with private chat | `lib/program-approval.ts`, `/approvals` | |
+| Registration and booking review | Built; prices from `lib/quotes.ts`, including team codes, member pricing and scholarships | `/register`, `/booking` | |
+| Online payment | Built: Stripe Checkout, signed webhook, refunds, card fees. Each purchase type stays closed until `CHECKOUT_KINDS` lists it | `lib/checkout.ts`, `lib/stripe-webhook.ts`, `/payment-setup` | Stripe account and webhook (#26), refund policy (#3) |
+| Monthly memberships | Built: 12 monthly payments that stop on their own. A year paid upfront is not offered (#210) | `lib/membership-term.ts`, `subscriptions` | Membership terms (#2, #20) |
+| Pay cash at the academy | Built for walk-ins and extra practices; coaches or the owner tap **Cash received** (#248, #250) | `/booking`, `/roster`, `lib/cash-bookings.ts` | |
+| Offline payments | Owner records cash or check, voids mistakes, exports CSV | `/payments`, `lib/offline-payments.ts` | |
+| Camps and events | Built, with per-day times and seat limits. A full event is full: waitlists were removed (#210) | `app/portal.html`, `lib/capacity.ts` | |
+| Private lessons | One-on-one, partner and small-group, priced per wrestler; coaches post times; families book and invite (#70, #177, #239) | `/lesson`, `/coach-openings`, `lib/lessons.ts` | Lesson refund policy before online payment (#80, #3) |
+| Program transfers | Owner moves a paid membership between programs (#74) | `/transfers` | Settling price differences (#41) |
+| Scholarships | Offers, frozen terms, drawn signatures, signed copies, benefit history | `/scholarships`, `/scholarship`, `lib/scholarships.ts` | Attorney-reviewed agreement (#44) |
+| **At the door** | | | |
+| Roster and check-in | Built from paid orders and cash bookings, by hand or by scanning QR passes (#22, #71) | `/roster`, `lib/roster.ts`, `/pass` | |
+| USA Wrestling cards | Missing or expired cards block booking; only verified cards check in. Automatic lookup on USA Wrestling's verify page; owner reviews the rest and sees renewals 30 days ahead (#68, #131, #202, #210) | `/cards`, `lib/usaw.ts`, `lib/usaw-check.ts` | |
+| Waivers, Parent Consent Form, coach contracts | Owner publishes; families or coaches sign with a drawn signature; unsigned wrestlers can't book once a document is published; the owner can ask for a signature again (#69, #195, #239) | `/waivers`, `/consent-forms`, `/contracts`, `lib/documents.ts` | Attorney review of the wording (#44) |
+| Owner exceptions | Dated exceptions to the card, waiver and consent-form blocks (#89) | `/cards`, `/waivers`, `lib/exceptions.ts` | |
+| Wrestler view | Entry pass, what is coming up, what blocks booking (#76) | `/wrestler` | |
+| **Messages** | | | |
+| Announcements and private messages | Built, in-app; emails that didn't send are listed with the reason, to send again (#72, #35) | `/messages`, `/inbox`, `lib/messages.ts` | Resend set up (#35) |
+| Automatic notices | Card expiring or expired, waiver to sign, approval decision, payment recorded, lesson booked, transfer (#105). Daily reminders run on a schedule | `lib/notify.ts` | Email (#35) |
+| **Coaches** | | | |
+| Coach accounts and profiles | Owner invites by link; coaches set up an authenticator and keep a profile families see (#190) | `/staff`, `/coach-join`, `/coach-profile` | |
+| Coach home and calendar | Tonight first, month calendar of practices and events, published practice plans (#133, #191) | `/coach`, `/practice-plans` | |
+| Practice plans and curricula | Owner writes and publishes plans; reusable curricula | `/practice-plans`, `/curricula` | |
+| Coach hours and time off | Clock in and out, corrections, owner approval, monthly file; time off tells same-program coaches (#193) | `/coach-time`, `/timesheets` | Employee or contractor (#197 Q6) |
+| Coach pay from lessons | Totals per coach at the owner's share, CSV (#75) | `/coach-pay` | |
+| Removed coaches | Records kept 3 years, then deleted or anonymized by the daily job (#212) | `lib/coach-retention.ts` | |
+| **Running the academy** | | | |
+| Owner dashboard and shell | Opens on the launch checklist and today's numbers; every tool page keeps the same sidebar and header (#123, #261) | `/`, `app/portal.html`, `lib/owner-nav.ts` | |
+| Income and expenses | Card, monthly, refund and offline payments appear on their own; owner adds expenses (#194, #42) | `/financials`, `lib/financials.ts` | Checking against Stripe's totals (#42) |
+| Backups and restore | Owner downloads an encrypted backup of every business record and restores from one; Deploy backs up before each publish; restore drill (#25, #221) | `/backups`, `lib/backup-records.ts`, `pnpm restore:drill` | First backup off the platform (#17), restore drill (#25) |
+| Site health and alerts | Server errors, alerts to the owner (at most hourly), emails that didn't send, test alert (#107, #47, #263) | `/site-health`, `lib/owner-alerts.ts` | Uptime monitor on `/api/health` (#47) |
+| Security log | Sensitive actions, 100 a page | `/security-log`, `lib/security-log.ts` | |
 
-## Real family directory exception
+## Not built, on purpose or not yet
 
-The owner-only `/accounts` page lists up to 500 real `family_accounts` profiles with saved parent contact fields and wrestler names/grades, each wrestler's current program with a program filter, and the contact and safety details folded under each family, with a marker for families still missing them (#188). This is implemented backend read access, distinct from the fictional Families directory inside the main workspace. It was verified in source, not opened with a live owner session.
+- **Custom domain and moving the old website** (#43): after launch. Only `APP_ORIGIN` and the Supabase redirect list change.
+- **Paying coaches** stays outside the app; the books are a simple record, not an accounting system.
+- **Photos** of coaches or wrestlers: not offered (#197, question 22).
+- **No-show fees or blocking** for unpaid cash bookings: not decided.
+- **A second owner login**: only one email can manage the academy (`OWNER_EMAIL` in `lib/account-auth.ts`).

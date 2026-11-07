@@ -1,165 +1,37 @@
-# Known issues and technical debt
-
-Priority P0 blocks a production launch. P1 is high business or operational risk. P2 improves maintainability or requires targeted validation. Confirmed findings are separated from architectural limitations and unverified concerns. No remediation was applied during this review.
-
-## SEC-01 Dependency advisories
-
-Priority P0. Evidence status Confirmed package audit.
-
-Eight production-graph advisories, including two critical, affect declared Next.js, Zod and fast-uri versions. Runtime exploitability is unproven because this deployment uses Vinext rather than a standard Next server.
-
-Proposed work. Review evidence/dependency_audit.json, trace built-artifact reachability, upgrade or remove affected packages in a development branch, and regression-test the exact Worker build.
-
-## AUTH-01 Old authentication callback origin
-
-Priority P0. Evidence status Confirmed source/config mismatch.
-
-APP_ORIGIN points at the old wellrose34 Site while current deployment is under justinaccordino546. Signup/resend/reset emails reuse the constant; account-setup displays it too. Live redirect behavior and Supabase allowlist were not tested.
-
-Proposed work. Align configurable allowed origins and actual Supabase settings. Test confirmation, recovery, password changes, logout and MFA recovery with controlled accounts.
-
-## DATA-01 Two wrestler/membership namespaces
-
-Priority P0. Evidence status Confirmed architecture gap.
-
-academy_state.kids drives the admin sample directory, roster and transfers, while family_accounts and scholarship_awards drive real family workflows. No canonical paid enrollment or operational athlete table bridges them.
-
-Proposed work. Design one stable identity/enrollment model, migrate sample-vs-real separation explicitly, and make roster/access derive from real entitlements.
-
-## DATA-02 Incomplete backup coverage
-
-Priority P0. Evidence status Confirmed source limitation.
-
-Manual exports omit scholarships, signed terms and signature records, approvals/chat, plans/curricula and other normalized tables. Recovery snapshots are in the same D1 instance.
-
-Proposed work. Create a complete protected backup/recovery path and retention policy, preserve secret wrapping keys separately, and prove restoration into a separate environment.
-
-## PAY-01 Checkout and signed fulfillment absent
-
-Priority P0. Evidence status Confirmed source and Stripe metadata.
-
-No Checkout creation or webhook handler exists. Stripe endpoint targeting /api/stripe-webhook is disabled, and payment APIs explicitly return disabled state.
-
-Proposed work. Build and test order/checkout lifecycle, authentic signed webhooks, idempotency, paid entitlement and failure/cancellation/refund reconciliation before any live charge.
-
-## DEMO-01 Sample event review throws ReferenceError
-
-Priority P1. Evidence status Reproduced in isolated VM.
-
-finishEvent renders annual?0:base-price without defining annual. It affects the sample camp/event review modal. Existing 18 test scripts and TypeScript/build do not detect the inline-JS failure.
-
-Proposed work. Run the packaged reproduction. Fix the scoped expression and add a regression covering the sample event entry point. Do not confuse the separate working booking-review API with this modal.
-
-## DEMO-02 Sample grade and approval rules drift
-
-Priority P1. Evidence status Confirmed source discrepancy.
-
-bookDrop still uses Development grades 1-5, Intermediate 6-12 and only a junior Advance approval check. Real registration correctly enforces K-6, 7-12 and all Advance grades. editKid also lacks Kindergarten.
-
-Proposed work. Consolidate grade/approval representations across both interfaces and test every normal entry point, or clearly limit/remove stale sample registration paths.
-
-## SEC-02 Compromised-password protection disabled
-
-Priority P1. Evidence status Supabase advisor confirmed.
-
-The connected Supabase project reports auth_leaked_password_protection as WARN.
-
-Proposed work. Review the project plan/configuration and enable the supported protection. Remediation https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
-
-## AUTH-02 Single hard-coded owner and incomplete recovery operations
-
-Priority P1. Evidence status Confirmed design; operations unverified.
-
-Only one verified owner email is recognized. There is no real admin/reviewer role, owner handover UI or verified emergency MFA recovery process.
-
-Proposed work. Define least-privilege collaboration and recovery procedures. Test owner/coach recovery without weakening the existing AAL2 requirement.
-
-## BOOK-01 Capacity and lesson booking are not transactional
-
-Priority P1. Evidence status Confirmed implementation limit.
-
-Real APIs review choices only. Sample slot counts, waitlist offers and lesson participation/payouts are not a live reservation ledger; real coach openings are disconnected from paid booking.
-
-Proposed work. Implement atomic inventory/holds and coach assignment with retry/expiry rules, then payment fulfillment and cancellation release behavior.
-
-## ATT-01 Real QR attendance and participation evidence absent
-
-Priority P1. Evidence status Confirmed implementation limit.
-
-Scanner is sample-only; actual family schema lacks waiver/card evidence and there is no real check-in table.
-
-Proposed work. Build operational entitlement/waiver/card checks, secure pass issuance, revocation and idempotent per-session attendance records before using it at the door.
-
-## MSG-01 General messaging has no delivery service
-
-Priority P1. Evidence status Confirmed implementation limit.
-
-Approval chat works as a protected stored thread, but general direct/announcement/email/SMS flows save sample owner JSON only.
-
-Proposed work. Define consent and delivery requirements, integrate a transactional channel, and add receipts/failure handling and scoped family conversations.
-
-## SCH-01 Scholarship contract and collection remain policy work
-
-Priority P1. Evidence status Confirmed implementation boundary.
-
-Attorney review is represented by an owner checkbox and pasted terms. There is no external legal validation or automatic repayment billing. Benefit totals exclude the current partial month and never backdate earlier unconditional support.
-
-Proposed work. Finalize the agreement and legal review outside the code, clarify benefits/termination/exceptions and records retention, and keep financial collection separate from informational value.
-
-## SCH-02 Signature record is not externally certified
-
-Priority P1. Evidence status Confirmed design limitation.
-
-Record uses authenticated account identity, saved vectors/consent/time and a SHA-256 of terms. It has no trusted timestamp provider, external signing certificate, or independent tamper-evident record store.
-
-Proposed work. Decide required evidentiary assurances with counsel and implement appropriate durable audit/export controls. Preserve legacy acceptance records accurately.
-
-## ARCH-01 Large inline-JS owner workspace
-
-Priority P1. Evidence status Confirmed maintainability gap.
-
-About 155 KB of raw HTML includes many UI and business functions. TypeScript does not analyze those inline scripts. Owner payload validation is broad for some nested sample records.
-
-Proposed work. Extract shared typed domain logic and modules incrementally; preserve callers and existing saved state. Strengthen relevant validation and add missing entry-point tests.
-
-Update (issue #45). The sample screens were removed (#147), and the program, grade, schedule, holiday, event, price and settings-document logic moved into typed modules in `lib/workspace/`. `pnpm typecheck` covers them, `tests/workspace-modules.mjs` checks them against the server's rules, and `tests/workspace-characterization.mjs` checks the page behaves as before. The page's remaining inline script draws the screens and saves the settings document.
-
-## ARCH-02 Whole-document saves and broad list queries
-
-Priority P2. Evidence status Confirmed design; no load test.
-
-Every owner edit rewrites a revisioned JSON blob, capped at one million request characters. Some lists use fixed 500/1000/5000 limits without UI pagination. User counts and peak concurrency were not measured.
-
-Proposed work. Normalize transactional records, paginate bounded endpoints, evaluate query plans and load-test realistic club usage. Retain optimistic conflict protection.
-
-## OPS-01 No verified independent staging, monitoring or full recovery drill
-
-Priority P1. Evidence status Unverified / incomplete source evidence.
-
-Current published URL is live; no isolated staging, alerting, incident runbook, retention schedule or independent production recovery test was verified.
-
-Proposed work. Provision separate test services and credentials, add monitoring, backups, operational ownership and launch acceptance checks.
-
-## DOC-01 Original docs and setup wrappers are stale
-
-Priority P2. Evidence status Confirmed discrepancies.
-
-README retains starter instructions and old pricing notes; SECURITY narrows Advance approval to grades 7-8. install:ci invokes a Linux Bash wrapper despite older portability claims.
-
-Proposed work. Adopt the handoff docs into the main repository only after review, verify a fresh portable install, and align scripts with the documented package manager.
-
-## DEMO-03 Admin-demo form sandbox needs browser review
-
-Priority P2. Evidence status Static-review concern, not reproduced.
-
-The admin-demo CSP enables scripts/modals but omits allow-forms, while several demos use form submit handlers. The signing sample explicitly allows forms and blocks network requests.
-
-Proposed work. Exercise admin-demo form submissions in supported browsers and confirm desired sandbox behavior. Keep real owner APIs inaccessible from the public demo.
-
-## SEC-03 Security validation scope is incomplete
-
-Priority P2. Evidence status Unverified / static risks.
-
-No penetration test, full dependency/dev graph review or production load test was performed. Some handlers enforce body size after reading text, and public/invite endpoint abuse controls need assessment.
-
-Proposed work. Review body limits, rate limiting, CSP, logging/PII retention and abuse scenarios before accepting production data at scale.
+# Known issues: the handoff review's findings and where they went
+
+The November 5, 2026 handoff review listed 21 findings about the ChatGPT Sites version of the site. This page keeps each one with its status as of November 7, 2026 (#267), so nobody re-reports a solved problem or forgets an open one. The review's full wording is in git history (this file's history before #267) and the rest of the package is in [the archive](archive/handoff-2026-11-05/README.md).
+
+**Open work is tracked as GitHub issues, on the [Launch board (#246)](https://github.com/laurendarrah/savage-wrestling-academy/issues/246).** Add new problems there, not here. Priorities: P0 blocks launch, P1 is high business or operational risk, P2 can wait.
+
+| Finding | Was | Status now |
+|---|---|---|
+| **SEC-01** Dependency advisories (8 production advisories, 2 critical) | P0 | **Fixed.** `pnpm audit --prod` is clean and runs on every pull request; dev advisories handled in #48. Details in [DEPENDENCY_ADVISORIES.md](DEPENDENCY_ADVISORIES.md) |
+| **AUTH-01** Email links pointed at an old Sites address | P0 | **Fixed.** `APP_ORIGIN` is required and has no default (#119); sign-in moved to an academy-owned Supabase project (#139). Its redirect list is a [GO_LIVE](GO_LIVE.md) step |
+| **DATA-01** Sample wrestlers and real families were two separate worlds | P0 | **Fixed.** The sample directory and screens are gone (#37, #147); rosters, transfers and messages use real family records and paid orders (#22, #72, #74) |
+| **DATA-02** Backups missed most tables | P0 | **Fixed.** Backups cover every business record and large files (#78, #221). Proving a restore: restore drill, open (#25) |
+| **PAY-01** No checkout or signed webhook | P0 | **Built.** Checkout, signed idempotent webhook, monthly memberships, refunds and live mode (#18, #19, #20, #26). Each purchase type opens with `CHECKOUT_KINDS`; going live is open (#26), waiting on terms (#2) and the refund policy (#3) |
+| **DEMO-01** Sample camp review threw a ReferenceError | P1 | **Gone.** The sample screens were removed (#147) |
+| **DEMO-02** Sample grade rules disagreed with the server | P1 | **Gone** with the sample screens. The workspace's rules are typed modules checked against `lib/program-approval.ts` (#45) |
+| **SEC-02** Leaked-password protection off in Supabase | P1 | **Moved** to the new Supabase project's settings in [GO_LIVE](GO_LIVE.md) §6 (#11 closed as not applicable, #139) |
+| **AUTH-02** One hard-coded owner, no tested recovery | P1 | **Open by design.** Still one owner email. Backup authenticator on the launch checklist (#167) and when the authenticator is switched back on (#27); recovery steps in [RUNBOOK](RUNBOOK.md) ("The owner is locked out") |
+| **BOOK-01** Capacity and lessons were not real bookings | P1 | **Fixed.** Seat limits enforced through checkout and the webhook (#36); lessons booked against real coach openings (#70, #177). Waitlists were later removed (#210) |
+| **ATT-01** No real QR attendance, waiver or card evidence | P1 | **Fixed.** Attendance (#22), QR passes (#71), waivers (#69), USA Wrestling cards (#68, #202) |
+| **MSG-01** Messages had no delivery | P1 | **Built in-app** (#72). Email waits on Resend being set up (#35) |
+| **SCH-01** Scholarship terms and repayment are policy work | P1 | **Open.** Attorney review (#44). Benefit totals stay informational |
+| **SCH-02** Signatures are not externally certified | P1 | **Open, unchanged.** What assurance is needed is a question for the attorney (#44) |
+| **ARCH-01** 155 KB of inline JavaScript in the owner workspace | P1 | **Mostly fixed.** Sample screens removed (#147) and rules moved to typed `lib/workspace/` modules (#45); `app/portal.html` is about 76 KB. Inline page scripts are still not typechecked, so every change needs a test |
+| **ARCH-02** Whole-document saves and unpaged lists | P2 | **Mostly fixed.** Lists are paged and load-checked at 3,000 families (#46, #92, #219, #242). The academy settings are still one revisioned document. Plan limits: [GO_LIVE](GO_LIVE.md) §1 |
+| **OPS-01** No staging, monitoring or recovery drill | P1 | **Mostly fixed.** Runbook (#165), error alerts and health check (#107, #47), test alert (#263), the walkthrough and payment rehearsal on local copies in CI (#103, #111), pre-deploy backups. Open: uptime monitor (#47), restore drill (#25). There is still no separate staging site |
+| **DOC-01** Docs and setup wrappers were stale | P2 | **Fixed.** New README and contributing guide (#30), the Sites install wrappers removed and the docs reorganised (#267) |
+| **DEMO-03** The admin demo's form sandbox | P2 | **Gone.** `/admin-demo` was removed (#147) |
+| **SEC-03** Security validation scope | P2 | **Partly done.** Security review fixes (#97), per-feature rate limits (#114) and security tests in `tests/`. No penetration test |
+
+## Things that look like bugs but are not
+
+These are recorded in CLAUDE.md because they have caught people before:
+
+- Older academy settings documents can hold sample `kids`, `bookings`, `messages`, `offers` and `staff`. Nothing reads them.
+- A new site lists no programs until the owner publishes them from the launch checklist.
+- Online checkout exists, but each purchase type stays closed until `CHECKOUT_KINDS` lists it.
+- `waitlist_entries` and upfront-year (`annual`) orders still exist in old data. They are kept and shown read-only; nothing creates new ones (#210).

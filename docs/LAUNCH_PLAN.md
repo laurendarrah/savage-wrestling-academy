@@ -2,6 +2,8 @@
 
 Prepared November 5, 2026. Goal: Savage Wrestling Academy runs registration, payment, and rosters on this platform before December practices begin on December 1.
 
+The day-by-day sections are the plan as written on November 5, with dated updates. For who is doing what right now, see the [Launch board (#246)](https://github.com/laurendarrah/savage-wrestling-academy/issues/246); for what is built, see [FEATURE_STATUS](FEATURE_STATUS.md).
+
 ## The short version
 
 Going live next week is realistic for a defined first release. Going live with everything the admin demo shows is not, and trying would put real families' payments at risk.
@@ -165,6 +167,31 @@ Drafts based on what the platform does are in [docs/policies](policies/README.md
 - **One owner login.** Only one email can manage the academy, and there is no tested recovery if that login or its authenticator is lost. Set up a second authenticator before launch.
 - **Sample data looks real.** Resolved November 6 (#147): the owner workspace has no sample screens left.
 - **No programs on a new site.** Families see no programs until the owner chooses Publish the programs on the launch checklist. Check the practice days and times under Schedules before launch.
+
+## The handoff review's roadmap
+
+The November 5 handoff package had its own roadmap and task list, written before this plan. They were merged here in #267 so there is one plan; the originals are in [the archive](archive/handoff-2026-11-05/docs/ROADMAP.md). Where each item stands on November 7:
+
+| Roadmap item | Status |
+|---|---|
+| Dependency advisories | Done (#15, #48, [DEPENDENCY_ADVISORIES](DEPENDENCY_ADVISORIES.md)) |
+| Email link origin and the sign-in lifecycle | Done in code (#119, #139). Supabase settings and a custom email sender: [GO_LIVE](GO_LIVE.md) §6 |
+| Isolated staging and least-privilege access | Each person uses their own accounts (#9, #10, #12). No separate staging site: the walkthrough, payment rehearsal and restore drill use local copies |
+| Complete backups and signature retention | Done (#78, #221). Restore drill open (#25) |
+| One identity for athletes, families and memberships | Done: sample directory retired, rosters from paid orders (#22, #37, #147) |
+| Final membership and scholarship agreements | Open (#2, #3, #44) |
+| Test checkout and order records; signed webhook | Done (#18, #19) |
+| 12-installment memberships | Built, closed until terms are approved (#20). The upfront year was dropped (#210) |
+| Real family billing records | Done (#21) |
+| Roster, waiver and card evidence, QR check-in | Done (#22, #68, #69, #71) |
+| Added practices, camps and capacity | Done (#36). Waitlists dropped (#210) |
+| Private lessons on real coach openings | Done (#70, #177, #239) |
+| Scoped messaging and delivery | Done in-app (#72); email waits on Resend (#35) |
+| Sample event error and grade drift | Gone with the sample screens (#147) |
+| Typed rules instead of inline page logic; browser tests | Done for the owner workspace (#45); browser walkthrough in CI (#103, #220, #247) |
+| Monitoring, audit coverage, pagination, CI | Done (#30, #46, #107); uptime monitor open (#47) |
+| Financial reporting and coach settlement | Books and coach pay built (#75, #194); checking against Stripe after launch (#42) |
+| Website and domain move, launch rehearsal | Public website built (#196); test pass (#24); custom domain after launch (#43) |
 
 ## Who does what
 
