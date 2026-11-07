@@ -19,23 +19,23 @@ details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align
 .off{border-top:1px solid #eee;padding:14px 0}.off:first-of-type{border-top:0}.off p{margin:3px 0}.cover{margin:6px 0 0;padding-left:20px}.cover li{margin:2px 0}
 #status{font-weight:bold;min-height:1.5em}[hidden]{display:none!important}@media print{.row,a,button,details{display:none}section{border:0}}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
-<a href="/">← Owner dashboard</a>
+<a class="swa-back" href="/">← Owner dashboard</a>
 <h1>Coach hours</h1>
 <p>Review each coach’s month after they send it, fix anything with a reason, approve it, and download the month’s hours with lesson shares. Practices are paid for the scheduled practice time only, at the rate for the role the coach worked.</p>
 <section><div class="row"><div class="month-nav"><button type="button" id="prev" aria-label="Previous month">←</button><b id="monthLabel">–</b><button type="button" id="next" aria-label="Next month">→</button></div>
 <label>Coach<select id="coach"><option value="">All coaches</option></select></label>
-<a class="button" id="csv" href="#">Download hours (CSV)</a></div>
+<a class="button" id="csv" href="#">Download spreadsheet</a></div>
 <p class="muted" id="rates"></p>
 <p class="muted">The file lists hours and amounts only. It does not work out overtime or tax withholding, because whether coaches are employees or contractors has not been decided yet. Practice lines are approved shifts only; private lesson shares come from the <a href="/coach-pay">coach pay report</a>.</p></section>
 <p id="status" role="status" aria-live="polite">Loading…</p>
 <div class="tiles"><div class="tile"><span class="muted">Paid practice time</span><b id="tMinutes">–</b></div><div class="tile"><span class="muted">Practice amount</span><b id="tPractice">–</b></div><div class="tile"><span class="muted">Lesson shares</span><b id="tLessons">–</b></div><div class="tile"><span class="muted">Waiting for you</span><b id="tWaiting">–</b></div></div>
 <section id="offBox" aria-labelledby="offTitle"><h2 id="offTitle">Time off</h2><p class="muted">When you approve, the other coaches in the same programs get a notice (without the reason), and the coach’s practices and lessons in those dates are listed here for cover. Nothing is cancelled.</p><div id="offPending"></div><h3 id="coverTitle">Needs cover</h3><div id="offApproved"></div></section>
 <div id="coaches"></div></main>
+<script src="/hours-text.js"></script>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1]%12||12)+':'+m[2]+' '+(+m[1]<12?'AM':'PM'):''};
 const money=c=>c===null||c===undefined?'—':'$'+(c/100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-const span=m=>{const h=Math.floor(m/60),r=m%60;return h&&r?h+' h '+r+' min':h?h+' h':r+' min'};
 const dayText=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
 const atText=iso=>new Date(iso).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 const PROGRAMS={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
@@ -44,8 +44,8 @@ const STATE={empty:'No shifts','not-submitted':'Not sent yet',submitted:'Sent, w
 const BADGE={open:'Clocked in',draft:'Not sent',submitted:'Sent',approved:'Approved',voided:'Void'};
 function shiftHtml(s){
  const what=(s.session?esc(s.session.title)+' · '+esc(clock(s.session.start))+'–'+esc(clock(s.session.end)):'No scheduled practice')+' · '+esc(s.dutyLabel);
- const worked=s.outTime?'Clocked '+esc(clock(s.inTime))+' – '+esc(clock(s.outTime))+' ('+esc(span(s.clockedMinutes))+')':'Clocked in at '+esc(clock(s.inTime))+', no clock-out yet';
- const paid=s.status==='voided'?'Void: '+esc(s.voidReason||''):'Paid '+esc(span(s.paidMinutes))+' at '+esc(money(s.rateCents))+' an hour · '+esc(money(s.amountCents))+(s.ownerSet?' · set by you: '+esc(s.ownerSet.note||''):'');
+ const worked=s.outTime?'Clocked '+esc(clock(s.inTime))+' – '+esc(clock(s.outTime))+' ('+esc(hoursText(s.clockedMinutes))+')':'Clocked in at '+esc(clock(s.inTime))+', no clock-out yet';
+ const paid=s.status==='voided'?'Void: '+esc(s.voidReason||''):'Paid '+esc(hoursText(s.paidMinutes))+' at '+esc(money(s.rateCents))+' an hour · '+esc(money(s.amountCents))+(s.ownerSet?' · set by you: '+esc(s.ownerSet.note||''):'');
  const fixable=s.status==='submitted'||s.status==='draft',h=Math.floor(s.paidMinutes/60),m=s.paidMinutes%60;
  const correct=fixable?`<details><summary>Correct</summary><div class="form"><label>Hours<select id="h-${esc(s.id)}">${Array.from({length:13},(_,i)=>`<option${i===h?' selected':''}>${i}</option>`).join('')}</select></label><label>Minutes<select id="m-${esc(s.id)}">${Array.from({length:12},(_,i)=>i*5).concat(m%5?[m]:[]).sort((a,b)=>a-b).map(i=>`<option${i===m?' selected':''}>${i}</option>`).join('')}</select></label><label>Role<select id="d-${esc(s.id)}"><option value="head"${s.duty==='head'?' selected':''}>Head coach</option><option value="assistant"${s.duty==='assistant'?' selected':''}>Assistant coach</option></select></label><label class="wide">Reason<input id="r-${esc(s.id)}" maxlength="300"></label></div><div class="actions"><button type="button" class="primary" data-correct="${esc(s.id)}" data-rev="${s.revision}">Save correction</button></div></details>`:'';
  const voidBox=s.status!=='voided'&&s.status!=='approved'?`<details><summary>Void this shift</summary><div class="form"><label class="wide">Reason<input id="v-${esc(s.id)}" maxlength="300" placeholder="For example: a test punch"></label></div><div class="actions"><button type="button" data-void="${esc(s.id)}" data-rev="${s.revision}">Void shift</button></div></details>`:'';
@@ -58,9 +58,9 @@ function coachHtml(c,month,label){
  const undo=t.approved?`<details><summary>Undo the approval</summary><div class="form"><label class="wide">Reason<input id="u-${esc(c.email)}" maxlength="300"></label></div><div class="actions"><button type="button" data-unapprove="${esc(c.email)}">Undo approval</button></div></details>`:'';
  const waiting=c.state==='not-submitted'?`<p class="warn">${esc(c.name)} has ${t.drafts+t.open} shift${t.drafts+t.open===1?'':'s'} not sent yet${t.open?', one still clocked in':''}. You can approve once the whole month is sent.</p>`:'';
  return `<section class="coach"><div class="head"><h2>${esc(c.name)}${c.active?'':' (removed)'}</h2><span class="badge ${esc(c.state)}">${STATE[c.state]||esc(c.state)}</span></div>
- <p class="muted">${c.programs.map(p=>PROGRAMS[p]||p).map(esc).join(', ')||'No programs'} · ${t.shifts} shift${t.shifts===1?'':'s'} · ${esc(span(t.minutes))} paid · ${esc(money(t.amountCents))}${t.approved?' ('+esc(money(approvedCents))+' approved)':''}${esc(lessons)}${t.flagged?' · '+t.flagged+' flagged':''}</p>
+ <p class="muted">${c.programs.map(p=>PROGRAMS[p]||p).map(esc).join(', ')||'No programs'} · ${t.shifts} shift${t.shifts===1?'':'s'} · ${esc(hoursText(t.minutes))} paid · ${esc(money(t.amountCents))}${t.approved?' ('+esc(money(approvedCents))+' approved)':''}${esc(lessons)}${t.flagged?' · '+t.flagged+' flagged':''}</p>
  ${c.timeOff.length?'<p>Approved time off: '+c.timeOff.map(o=>esc(o.text)).join('; ')+'</p>':''}${waiting}
- ${t.breakdown.length?'<ul class="breakdown">'+t.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)} · ${b.shifts} shift${b.shifts===1?'':'s'}</span><span>${esc(span(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('')+'</ul>':''}
+ ${t.breakdown.length?'<ul class="breakdown">'+t.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)} · ${b.shifts} shift${b.shifts===1?'':'s'}</span><span>${esc(hoursText(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('')+'</ul>':''}
  ${c.shifts.map(shiftHtml).join('')||'<p class="muted">No practice shifts this month.</p>'}<div class="actions">${approve}</div>${undo}</section>`}
 function coverHtml(cover){if(!cover)return '';const p=cover.practices||[],l=cover.lessons||[];if(!p.length&&!l.length)return '<p class="muted">No practices or lessons in these dates.</p>';
  return '<ul class="cover">'+p.map(x=>`<li>${esc(dayText(x.date))} · ${esc(x.time)} · ${esc(x.title)} practice</li>`).join('')+l.map(x=>`<li>${esc(dayText(x.date))} · ${esc(x.time)} · private lesson${x.booked?' · '+x.booked+' wrestler'+(x.booked===1?'':'s')+' booked':' (open time)'}</li>`).join('')+'</ul>'}
@@ -70,7 +70,7 @@ function render(d){data=d;month=d.month;
  $('monthLabel').textContent=d.monthLabel;$('csv').href='/api/timesheets?format=csv&month='+encodeURIComponent(d.month);
  $('rates').textContent='Rates: '+d.rates.map(r=>r.label+' '+money(r.centsPerHour)+' an hour').join(', ')+'.';
  const sel=$('coach'),keep=d.coach||'';sel.innerHTML='<option value="">All coaches</option>'+d.choices.map(c=>`<option value="${esc(c.email)}">${esc(c.name)}${c.active?'':' (removed)'}</option>`).join('');sel.value=keep;
- $('tMinutes').textContent=span(d.overall.minutes);$('tPractice').textContent=money(d.overall.practiceCents);$('tLessons').textContent=money(d.overall.lessonCents);$('tWaiting').textContent=d.overall.waiting+' shift'+(d.overall.waiting===1?'':'s');
+ $('tMinutes').textContent=hoursText(d.overall.minutes);$('tPractice').textContent=money(d.overall.practiceCents);$('tLessons').textContent=money(d.overall.lessonCents);$('tWaiting').textContent=d.overall.waiting+' shift'+(d.overall.waiting===1?'':'s');
  $('offPending').innerHTML=d.timeOff.pending.length?d.timeOff.pending.map(r=>offHtml(r,true)).join(''):'<p class="muted">No time off requests waiting.</p>';
  $('offApproved').innerHTML=d.timeOff.approved.length?d.timeOff.approved.map(r=>offHtml(r,false)).join(''):'<p class="muted">No coach is away now or soon.</p>';
  $('coaches').innerHTML=d.coaches.map(c=>coachHtml(c,d.month,d.monthLabel)).join('')||'<section><p class="muted">No coach hours or lessons in this month.</p></section>';

@@ -113,6 +113,24 @@ export function publicCoaches(order: string[], rows: CoachRow[]): PublicCoach[] 
 // ---------- Rendering (owner text is always escaped) ----------
 const paras = (t: string) => t.split(/\n{2,}/).map(p => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
 const initials = (n: string) => n.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+
+// One coach's card on the team page. The coach's own profile page shows the same card as its "What families see"
+// preview (issue #223): the route adds COACH_CARD_CSS, and the page's teamCard() builds this markup as the coach types
+// (tests/coach-polish.mjs checks the two give the same HTML).
+export function coachCard(c: PublicCoach) {
+  return `<article class="coach card"><div class="coach__top"><span class="mono mono--lg" aria-hidden="true">${esc(initials(c.name))}</span><h3>${esc(c.name)}</h3></div>`
+    + (c.specialties.length ? `<ul class="chips" aria-label="Specialties">${c.specialties.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : '')
+    + (c.bio ? `<div class="coach__bio">${paras(c.bio)}</div>` : '') + '</article>';
+}
+// The card's styles, for the team page and the coach profile page. Initials stand in for a photo.
+export const COACH_CARD_CSS = `.coach{padding:22px;display:flex;flex-direction:column;gap:12px;border-top:3px solid #141416!important}
+.coach__top{display:flex;align-items:center;gap:14px}
+html body .coach h3{margin:0;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.2px;line-height:1.05;overflow-wrap:anywhere}
+.mono{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:#141416;color:#fff;border:2px solid #C4222C;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:22px;letter-spacing:.5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.chips li{background:#EEF0F2;border-radius:999px;padding:3px 11px;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.coach__bio p{margin:0 0 10px;color:#2A2B30;overflow-wrap:anywhere}
+.coach__bio p:last-child{margin:0}`;
 // Fill <!--slot:name--> markers. A function replacement, so "$&" or "$1" in owner text stays literal.
 export function fill(template: string, slots: Record<string, string>) {
   return template.replace(/<!--slot:([a-z]+)-->/g, (m, k: string) => (k in slots ? slots[k] : m));
@@ -176,10 +194,7 @@ export function renderTeam(template: string, site: Website, coaches: PublicCoach
     : `The coaches and wrestlers of ${ACADEMY} in Huntington Station, NY.`;
   const jump = present.length > 1 ? `<nav class="jump" aria-label="On this page">${present.map(p => `<a href="#${p}">${p[0].toUpperCase() + p.slice(1)}</a>`).join('')}</nav>` : '';
 
-  const coachHtml = coaches.length ? `<section class="plain block" id="coaches" aria-labelledby="coachesTitle"><div class="block__head"><p class="eyebrow">On the mat</p><h2 id="coachesTitle">Coaches</h2></div><div class="coaches">${coaches.map(c =>
-    `<article class="coach card"><div class="coach__top"><span class="mono mono--lg" aria-hidden="true">${esc(initials(c.name))}</span><h3>${esc(c.name)}</h3></div>`
-    + (c.specialties.length ? `<ul class="chips" aria-label="Specialties">${c.specialties.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : '')
-    + (c.bio ? `<div class="coach__bio">${paras(c.bio)}</div>` : '') + '</article>').join('')}</div></section>` : '';
+  const coachHtml = coaches.length ? `<section class="plain block" id="coaches" aria-labelledby="coachesTitle"><div class="block__head"><p class="eyebrow">On the mat</p><h2 id="coachesTitle">Coaches</h2></div><div class="coaches">${coaches.map(coachCard).join('')}</div></section>` : '';
 
   const seasons: {season: string; items: Achievement[]}[] = [];
   for (const a of site.achievements) { const g = seasons.find(s => s.season.toLowerCase() === a.season.toLowerCase()); if (g) g.items.push(a); else seasons.push({season: a.season, items: [a]}); }
@@ -189,7 +204,7 @@ export function renderTeam(template: string, site: Website, coaches: PublicCoach
   const alumHtml = site.alumni.length ? `<section class="plain block" id="alumni" aria-labelledby="alumniTitle"><div class="block__head"><p class="eyebrow">Where they went</p><h2 id="alumniTitle">Alumni</h2></div><div class="alumni">${site.alumni.map(a =>
     `<article class="alum card"><h3>${esc(a.name)}</h3>${a.years ? `<p class="alum__years">${esc(a.years)}</p>` : ''}<p class="alum__next">${esc(a.next)}</p></article>`).join('')}</div></section>` : '';
 
-  return fill(template, {head: seoHead(title, description, '/team', origin), lede: esc(lede[0].toUpperCase() + lede.slice(1)), jump,
+  return fill(template, {head: seoHead(title, description, '/team', origin), coachcss: COACH_CARD_CSS, lede: esc(lede[0].toUpperCase() + lede.slice(1)), jump,
     sections: coachHtml + achHtml + alumHtml || '<section class="plain block"><p class="soon">Check back soon. In the meantime, see the programs and the practice calendar.</p></section>',
     visit: visitSection(site)});
 }

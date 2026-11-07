@@ -1,10 +1,12 @@
 // Clock in and out (issue #193), shared by coach home and the coach's hours page (/coach-time). Big buttons for a phone.
+// Needs /hours-text.js on the page first.
 // Any element with data-coach-clock becomes the clock card. After a change it fires a "coachclock" event on document so
 // the page around it can refresh. Pay covers the scheduled practice time only (#197 Q4); the card says so.
 window.CoachClock = (() => {
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
   const clock = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1] % 12 || 12) + ':' + m[2] + ' ' + (+m[1] < 12 ? 'AM' : 'PM') : ''; };
-  const span = m => { m = Math.max(0, Math.floor(m)); const h = Math.floor(m / 60), r = m % 60; return h && r ? h + ' h ' + r + ' min' : h ? h + ' h' : r + ' min'; };
+  // Durations come from the shared formatter (public/hours-text.js, loaded first): "1 h 2 min", never "62 min".
+  const span = m => hoursText(m);
   const ROLES = [['head', 'Head coach'], ['assistant', 'Assistant coach']];
   const CSS = `[data-coach-clock] .cc-role{display:grid;grid-template-columns:1fr 1fr;gap:8px;border:0;padding:0;margin:14px 0 6px;min-width:0}
 [data-coach-clock] .cc-role legend{font-weight:700;margin:0 0 8px;padding:0}

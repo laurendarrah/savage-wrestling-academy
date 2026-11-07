@@ -624,7 +624,7 @@ await step('the new coach writes a profile and posts a weekly opening; families 
   await lee.fill('#displayName', 'Lee Tran'); await lee.fill('#bio', 'Ten years coaching folkstyle. Former state qualifier.');
   await lee.fill('#specialties', 'Takedowns, Mat returns'); await lee.fill('#phone', '(631) 555-0199');
   await lee.click('#saveProfile'); await at(lee, '#status', /Profile saved/);
-  await at(lee, '#preview', /Lee Tran[\s\S]*Ten years[\s\S]*Takedowns/);
+  await at(lee, '#preview', /Lee Tran[\s\S]*Takedowns[\s\S]*Ten years/);
   await shot(lee, 'coach-profile');
   await lee.goto(BASE + '/coach'); await lee.waitForSelector('#opening');
   await lee.fill('#opening [name=date]', ny(9)); await lee.fill('#opening [name=start]', '17:00'); await lee.fill('#opening [name=end]', '18:00');

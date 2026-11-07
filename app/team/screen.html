@@ -14,16 +14,10 @@ main{padding:40px 16px 56px;display:flex;flex-direction:column;gap:48px}
 .block{display:flex;flex-direction:column;gap:18px;scroll-margin-top:76px}
 .block__head .eyebrow{color:#C4222C;margin:0 0 4px}
 html body .block h2{margin:0}
-/* Coaches: a monogram until photos arrive (#192), name, specialties, bio. */
+/* Coaches: initials, name, specialties, bio. The card's own styles come from lib/website.ts (COACH_CARD_CSS), shared
+   with the coach profile page's preview. */
 .coaches{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
-.coach{padding:22px;display:flex;flex-direction:column;gap:12px;border-top:3px solid #141416!important}
-.coach__top{display:flex;align-items:center;gap:14px}
-html body .coach h3{margin:0;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:26px;text-transform:uppercase;letter-spacing:.2px;line-height:1.05;overflow-wrap:anywhere}
-.mono{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:#141416;color:#fff;border:2px solid #C4222C;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:22px;letter-spacing:.5px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
-.chips li{background:#EEF0F2;border-radius:999px;padding:3px 11px;font-size:14px;font-weight:600;overflow-wrap:anywhere}
-.coach__bio p{margin:0 0 10px;color:#2A2B30;overflow-wrap:anywhere}
-.coach__bio p:last-child{margin:0}
+<!--slot:coachcss-->
 /* Achievements, grouped by season */
 .seasons{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;align-items:start}
 .season{padding:0;overflow:hidden}

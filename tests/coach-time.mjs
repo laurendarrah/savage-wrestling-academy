@@ -50,7 +50,7 @@ for (const [k, email] of [['dana', 'dana.coach@example.test'], ['lee', 'lee.coac
   // Far outside the practice: flagged, never paid.
   const long = e({clock_in: '2026-11-02T22:30:00.000Z', clock_out: '2026-11-03T01:10:00.000Z'});
   assert.equal(T.scheduledMinutes(long), 90, 'early and late time is not paid');
-  deq(T.shiftFlags(long), ['Clocked in 30 min before SWA Intermediate started.', 'Clocked out 40 min after SWA Intermediate ended.', 'Clocked 2 h 40 min, 70 min longer than the practice. Only the practice time is paid.']);
+  deq(T.shiftFlags(long), ['Clocked in 30 min before SWA Intermediate started.', 'Clocked out 40 min after SWA Intermediate ended.', 'Clocked 2 h 40 min, 1 h 10 min longer than the practice. Only the practice time is paid.']);
   // Exactly 15 minutes either side is not flagged.
   deq(T.shiftFlags(e({clock_in: '2026-11-02T22:45:00.000Z', clock_out: '2026-11-03T00:45:00.000Z'})), []);
   deq(T.shiftFlags(e({clock_in: '2026-11-02T22:45:00.000Z', clock_out: '2026-11-03T00:46:00.000Z'})), ['Clocked out 16 min after SWA Intermediate ended.', 'Clocked 2 h 1 min, 31 min longer than the practice. Only the practice time is paid.']);
@@ -254,7 +254,8 @@ function page(file, fetch, extra = {}) {
   const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {id, value: '', hidden: false, disabled: false, innerHTML: '', textContent: '', dataset: {}, style: {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => []}); return nodes.get(id); };
   const ctx = vm.createContext({document: {getElementById: el, querySelectorAll: () => [], querySelector: () => null, addEventListener() {}, readyState: 'complete', head: {appendChild() {}}, createElement: () => ({})},
     location: {search: '', hash: ''}, fetch, confirm: () => true, URLSearchParams, Date, JSON, Promise, Error, Object, Array, Number, String, Set, Map, Math, console, window: {}, FormData: class {}, ...extra});
-  for (const [, code] of readFileSync(file, 'utf8').matchAll(/<script>([\s\S]*?)<\/script>/g)) vm.runInContext(code, ctx);
+  // The page's shared scripts (public/*.js) run first, in page order, as in the browser.
+  for (const [, src, code] of readFileSync(file, 'utf8').matchAll(/<script(?: src="\/([\w-]+\.js)")?>([\s\S]*?)<\/script>/g)) vm.runInContext(src ? readFileSync('public/' + src, 'utf8') : code, ctx);
   return {el, ctx};
 }
 const okJson = body => ({ok: true, status: 200, json: async () => body});
@@ -263,7 +264,7 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   const home = readFileSync('app/coach/screen.html', 'utf8');
   assert.match(home, /<section id="clockCard" data-coach-clock aria-labelledby="clockCardTitle">/); assert.match(home, /<script src="\/coach-clock\.js"><\/script>/); assert.match(home, /href="\/coach-time"/);
   const ctx = vm.createContext({window: {}, document: {readyState: 'complete', querySelectorAll: () => [], getElementById: () => null}, Date, JSON, Math, Number, String, Array, Object, Error, Promise, Event: class {}});
-  vm.runInContext(readFileSync('public/coach-clock.js', 'utf8'), ctx);
+  vm.runInContext(readFileSync('public/hours-text.js', 'utf8'), ctx); vm.runInContext(readFileSync('public/coach-clock.js', 'utf8'), ctx);
   const C = ctx.window.CoachClock;
   const closed = {monthLabel: 'November 2026', totals: {shifts: 2, minutes: 150}, open: null, suggested: 'practice:Intermediate:2026-11-02:18:00',
     choices: [{key: 'live:fnl:2026-11-02', title: 'Friday <Night> Live', start: '16:00', end: '17:00'}, {key: 'practice:Intermediate:2026-11-02:18:00', title: 'SWA Intermediate', start: '18:00', end: '19:30'}]};

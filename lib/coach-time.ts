@@ -105,8 +105,10 @@ export function statusOf(e: Entry): 'voided' | 'open' | 'draft' | 'submitted' | 
   if (!e.clock_out) return 'open';
   return e.submitted_at ? 'submitted' : 'draft';
 }
+// Every duration a coach or the owner reads: "3 h 44 min", "2 h", "45 min", never "224 min" (issue #223). The pages
+// use the same rule from public/hours-text.js.
 export function hoursText(minutes: number) {
-  const h = Math.floor(minutes / 60), m = minutes % 60;
+  const total = Math.max(0, Math.floor(Number(minutes) || 0)), h = Math.floor(total / 60), m = total % 60;
   return h && m ? `${h} h ${m} min` : h ? `${h} h` : `${m} min`;
 }
 export const money = (cents: number) => '$' + (cents / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -123,14 +125,14 @@ export function shiftFlags(e: Entry, ctx: {sessions?: Session[]; timeOff?: TimeO
   if (!p) flags.push('No scheduled practice, so no time is paid unless the owner sets it.');
   else {
     const name = e.session_title || 'the practice';
-    if (p.start - w.start > FLAG_MINUTES * MINUTE) flags.push(`Clocked in ${mins(p.start - w.start)} min before ${name} started.`);
-    if (w.start - p.start > FLAG_MINUTES * MINUTE) flags.push(`Clocked in ${mins(w.start - p.start)} min after ${name} started.`);
+    if (p.start - w.start > FLAG_MINUTES * MINUTE) flags.push(`Clocked in ${hoursText(mins(p.start - w.start))} before ${name} started.`);
+    if (w.start - p.start > FLAG_MINUTES * MINUTE) flags.push(`Clocked in ${hoursText(mins(w.start - p.start))} after ${name} started.`);
     if (w.end !== null) {
-      if (p.end - w.end > FLAG_MINUTES * MINUTE) flags.push(`Clocked out ${mins(p.end - w.end)} min before ${name} ended.`);
-      if (w.end - p.end > FLAG_MINUTES * MINUTE) flags.push(`Clocked out ${mins(w.end - p.end)} min after ${name} ended.`);
+      if (p.end - w.end > FLAG_MINUTES * MINUTE) flags.push(`Clocked out ${hoursText(mins(p.end - w.end))} before ${name} ended.`);
+      if (w.end - p.end > FLAG_MINUTES * MINUTE) flags.push(`Clocked out ${hoursText(mins(w.end - p.end))} after ${name} ended.`);
       const extra = mins((w.end - w.start) - (p.end - p.start));
       // Longer than the practice plus both 15-minute windows: time that is clearly not paid.
-      if (extra > 2 * FLAG_MINUTES) flags.push(`Clocked ${hoursText(mins(w.end - w.start))}, ${extra} min longer than the practice. Only the practice time is paid.`);
+      if (extra > 2 * FLAG_MINUTES) flags.push(`Clocked ${hoursText(mins(w.end - w.start))}, ${hoursText(extra)} longer than the practice. Only the practice time is paid.`);
       // Back to back: the shift runs into another practice that starts soon after this one ends.
       const next = (ctx.sessions ?? []).filter(s => s.key !== e.session_key && s.date === e.work_date && validClock(s.start))
         .map(s => ({s, at: academyInstant(s.date, s.start!)})).filter(x => x.at >= p.end && x.at - p.end <= FLAG_MINUTES * MINUTE && w.end! > x.at)
