@@ -55,6 +55,15 @@ const fillDetails = async (page, contact, kids = 1) => {
   for (let i = 0; i < kids; i++) { await page.fill('#birth' + i, '2012-04-18'); await page.check('#none' + i); }
 };
 const shot = async (page, name) => { if (SHOTS) await page.screenshot({path: `${SHOTS}/${name}.png`, fullPage: true}); };
+// Pages that load in the background are used only once they have loaded, never after a fixed wait (issue #220).
+// /family turns its Save button back on when the profile is in; until then, typing is overwritten by the load.
+const familyReady = page => page.waitForSelector('#save:not([disabled])', {state: 'attached'});
+// /payments has loaded when the payments table is filled and Check price is on. Earlier, the page is still loading
+// and clears the status line when it finishes, which could hide "Payment recorded".
+const openPayments = async page => {
+  await page.goto(BASE + '/payments');
+  await page.waitForFunction(() => !/Loading/.test(document.querySelector('#rows')?.textContent ?? 'Loading') && !document.querySelector('#preview')?.disabled);
+};
 
 const owner = await as('owner'), family = await as('family'), family2 = await as('family2'), coach = await as('coach');
 
@@ -121,7 +130,7 @@ await step('camp times, holidays and today show on the public calendar and the c
 // ---------- Family: profile and USA Wrestling cards ----------
 await step('family saves a profile and wrestler without a card, and sees booking blocked', async () => {
   await family.goto(BASE + '/family');
-  await family.waitForSelector('#familyForm');
+  await family.waitForSelector('#familyForm'); await familyReady(family);
   await family.fill('[name=parentName]', 'Pat Example'); await family.fill('[name=phone]', '555-0100');
   await family.click('text=+ Add wrestler'); await family.fill('#name0', 'Sam Example'); await family.selectOption('#grade0', '8');
   // Without the required contact and safety details the form does not save.
@@ -395,7 +404,7 @@ await step('coach adds an opening; owner sets prices; family reviews a lesson; o
   expect(await family.isVisible('#notOpen'), 'lesson payment should say not open yet');
   const body = await family.content(); expect(!body.includes('coach.dana@example.test'), 'coach email leaked to family page');
   await shot(family, 'lesson-review');
-  await owner.goto(BASE + '/payments'); await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
+  await openPayments(owner); await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
   await owner.selectOption('#family', {label: 'Pat Example · family.a@example.test'}); await owner.selectOption('#kind', 'lesson');
   await owner.waitForFunction(() => [...document.querySelectorAll('#opening option')].some(o => o.value));
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record');
@@ -417,7 +426,7 @@ await step('coach removes an opening nobody booked; the booked one stays', async
 // ---------- A full camp is full: no waitlist (#210) ----------
 await step('camp fills; family 2 sees it is full, with no waitlist to join', async () => {
   await family2.goto(BASE + '/family'); await family2.waitForSelector('#familyForm');
-  await family2.fill('[name=parentName]', 'Riley Parent'); await family2.click('text=+ Add wrestler'); await family2.fill('#name0', 'Riley Two'); await family2.selectOption('#grade0', '8');
+  await familyReady(family2); await family2.fill('[name=parentName]', 'Riley Parent'); await family2.click('text=+ Add wrestler'); await family2.fill('#name0', 'Riley Two'); await family2.selectOption('#grade0', '8');
   await fillDetails(family2, 'Casey Emergency');
   await family2.fill('#usaw0', 'CD-5555'); await family2.selectOption('#usawSeason0', await latestSeason(family2)); await family2.click('#save'); await waitText(family2, '#status', /saved/);
   const rid = await wid(family2);
@@ -427,7 +436,7 @@ await step('camp fills; family 2 sees it is full, with no waitlist to join', asy
   await owner.locator('[data-exc-until]').first().fill(ny(30)); await owner.locator('[data-exc-reason]').first().fill('Paper waiver at the door');
   await owner.locator('[data-exc-grant]').first().click(); await waitText(owner, '#status', /Exception saved/);
   // Sam takes the only camp seat.
-  await owner.goto(BASE + '/payments'); await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
+  await openPayments(owner); await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
   await owner.selectOption('#family', {label: 'Pat Example · family.a@example.test'}); await owner.selectOption('#kind', 'event');
   await owner.waitForFunction(() => [...document.querySelectorAll('#event option')].some(o => o.value === 'winter-camp'));
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record'); await waitText(owner, '#status', /recorded/i);
@@ -474,15 +483,15 @@ await step('a wrestler whose card is not verified can\'t be checked in; the rost
 // ---------- Partner and small-group lessons (issue #177) ----------
 // The owner records a lesson payment for a family's wrestler in the lesson whose label matches.
 async function recordLesson(familyLabel, wrestler, lesson) {
-  await owner.goto(BASE + '/payments'); await owner.waitForFunction(l => [...document.querySelectorAll('#family option')].some(o => o.textContent === l), familyLabel);
+  await openPayments(owner); await owner.waitForFunction(l => [...document.querySelectorAll('#family option')].some(o => o.textContent === l), familyLabel);
   await owner.selectOption('#family', {label: familyLabel});
   await owner.selectOption('#wrestler', {label: (await owner.$$eval('#wrestler option', (os, w) => os.map(o => o.textContent).find(t => t.startsWith(w)), wrestler))});
   await owner.selectOption('#kind', 'lesson');
   await owner.waitForFunction(re => [...document.querySelectorAll('#opening option')].some(o => new RegExp(re).test(o.textContent)), lesson.source);
   const value = await owner.$$eval('#opening option', (os, re) => os.find(o => new RegExp(re).test(o.textContent)).value, lesson.source);
   await owner.selectOption('#opening', value);
-  // Choosing a time reloads the lesson types in the background; wait for the type that matches this time, or the
-  // preview can go out with the first time's type (a one-on-one) and be refused.
+  // Choosing a time reloads the lesson types in the background, and Check price stays off until they are in (issue
+  // #220). The type must also match this time, or the preview would go out with the first time's type and be refused.
   await owner.waitForFunction(() => {
     const time = document.querySelector('#opening option:checked')?.textContent || '', type = document.querySelector('#format option');
     return !!type?.value && type.textContent.startsWith((time.match(/Partner lesson|Small-group lesson/) || ['One-on-one lesson'])[0]);
@@ -564,7 +573,8 @@ await step('owner transfers Sam to SWA Advance after approval checks', async () 
 await step('owner announces to SWA Intermediate; family reads it and replies; owner sees the reply', async () => {
   await owner.goto(BASE + '/messages'); await owner.waitForSelector('#audType');
   await owner.waitForSelector('#emailNote:not([hidden])'); expect(!(await owner.isVisible('#failedEmails')), 'no failed-email list when nothing failed');
-  await owner.selectOption('#audType', 'program'); await owner.selectOption('#program', 'Intermediate'); await waitText(owner, '#audCount', /1 family/);
+  // Each choice asks the server for a count; the page shows only the latest choice's (issue #220).
+  await owner.selectOption('#audType', 'program'); await owner.selectOption('#program', 'Intermediate'); await at(owner, '#audCount', /^SWA Intermediate: 1 family$/);
   await owner.fill('#subject', 'Practice moved'); await owner.fill('#body', 'Practice starts at 6:30 tonight.'); await owner.click('#send');
   await waitText(owner, '#status', /Sent to 1 family/);
   await family.goto(BASE + '/family'); await waitText(family, '#inboxLink', /\d+ new/);
@@ -577,7 +587,10 @@ await step('owner announces to SWA Intermediate; family reads it and replies; ow
   await family.waitForSelector('#markAll:not([hidden])'); await family.click('#markAll'); await waitText(family, '#status', /All messages are marked as read/);
   expect(await family.locator('#notices .unread, #announcements .unread').count() === 0 && !(await family.isVisible('#markAll')), 'nothing left unread');
   expect(!((await api(family, '/api/inbox')).body.unread), 'server agrees nothing is unread');
-  await family.goto(BASE + '/family'); await family.waitForSelector('#summary:not([hidden])'); await family.waitForTimeout(500);
+  // The Messages link counts what /api/inbox says is unread: check that answer, not a fixed wait.
+  const inbox = family.waitForResponse(r => new URL(r.url()).pathname === '/api/inbox');
+  await family.goto(BASE + '/family'); await family.waitForSelector('#summary:not([hidden])');
+  expect(!(await (await inbox).json()).unread, 'the family page is told nothing is unread');
   expect(!/new/.test(await text(family, '#inboxLink')), 'Messages link no longer counts new messages');
   await family2.goto(BASE + '/inbox'); await waitText(family2, '#announcements', /No announcements/);
   await owner.goto(BASE + '/messages'); await owner.locator('[data-family]').filter({hasText: 'Pat Example'}).click();
@@ -620,7 +633,9 @@ await step('owner invites a coach; the coach accepts, sets up the authenticator 
   expect(!(await owner.isVisible('#invitesBox')), 'the accepted invite leaves the waiting list');
 });
 await step('the new coach writes a profile and posts a weekly opening; families see the bio beside the times', async () => {
-  await lee.goto(BASE + '/coach'); await lee.click('text=Your profile'); await lee.waitForSelector('#profileForm');
+  // The form stays disabled until the saved profile is in, so nothing typed is overwritten by the load (issue #220).
+  await lee.goto(BASE + '/coach'); await lee.click('text=Your profile'); await lee.waitForSelector('#profileFields:not([disabled])');
+  await at(lee, '#saved', /^Not saved yet$/);
   await lee.fill('#displayName', 'Lee Tran'); await lee.fill('#bio', 'Ten years coaching folkstyle. Former state qualifier.');
   await lee.fill('#specialties', 'Takedowns, Mat returns'); await lee.fill('#phone', '(631) 555-0199');
   await lee.click('#saveProfile'); await at(lee, '#status', /Profile saved/);
@@ -658,7 +673,8 @@ await step('owner edits the public website; a visitor sees the headline, mission
   await visitor.goto(BASE + '/team'); await at(visitor, '.hero', /listed here soon/);
   expect(!(await visitor.isVisible('#coaches')), 'no coach is listed until the owner chooses them');
   await owner.goto(BASE + '/'); await owner.click('a.toollink[href="/website"]'); await owner.waitForURL(/\/website$/);
-  await at(owner, '#achList', /No achievements yet/); await at(owner, '#alumList', /No alumni yet/);
+  // The editor is disabled until the published site is in, so nothing typed is overwritten by the load (issue #220).
+  await owner.waitForSelector('#editor:not([disabled])'); await at(owner, '#achList', /No achievements yet/); await at(owner, '#alumList', /No alumni yet/);
   await owner.fill('#headline', 'Built on the mat'); await owner.fill('#intro', 'Wrestling for kindergarten through 12th grade in Huntington Station.');
   await owner.fill('#mission', 'Build tough, coachable wrestlers and good teammates.');
   // Ticking a coach redraws the list, so click rather than check (which re-reads the old box).
@@ -838,7 +854,7 @@ await step('owner offers a scholarship; family 2 accepts it with a drawn signatu
   await owner.locator('summary:has-text("attorney-reviewed terms")').first().click();
   await owner.locator('[data-finalize] [name=terms]').first().fill('Sample scholarship terms for testing only. '.repeat(8));
   await owner.locator('[data-finalize] [name=reviewed]').first().check(); await owner.locator('[data-finalize] button').first().click();
-  await owner.waitForTimeout(800);
+  await at(owner, '#status', /Final agreement saved/);
   await family2.goto(invite.replace(/^https?:\/\/[^/]+/, BASE)); await family2.waitForSelector('#acceptForm');
   await family2.fill('#signer', 'Riley Parent'); await draw(family2, '#signatureCanvas');
   await family2.check('#accepted'); await family2.check('#electronicConsent'); await family2.click('#accept');
@@ -852,9 +868,7 @@ await step('owner shares a practice plan; the coach sees it', async () => {
   await owner.waitForFunction(() => document.querySelector('#fields') && !document.querySelector('#fields').disabled && document.querySelector('#planForm [name=title]')?.offsetParent, null, {timeout: 15000});
   await owner.fill('#planForm [name=title]', 'Leg attacks and finishes');
   if (!(await owner.locator('#sections input, #sections textarea').count())) await owner.click('#resetOrder');
-  await owner.click('#save'); await owner.waitForTimeout(500);
-  const st = await owner.locator('#status').first().textContent().catch(() => '');
-  expect(/saved|shared|published/i.test(st || ''), 'plan save status: ' + st);
+  await owner.click('#save'); await at(owner, '#status', /saved|shared|published/i);
   await coach.goto(BASE + '/coach'); await coach.click('text=Your month and practice plans');
   await coach.waitForFunction(() => /Leg attacks and finishes/.test(document.body.textContent), null, {timeout: 10000});
 });
@@ -874,13 +888,14 @@ await step('coach month calendar: practices, camp, today and the shared plan; fi
   await phone.close();
 });
 await step('owner adds a curriculum lesson on /curricula', async () => {
-  await owner.goto(BASE + '/curricula'); await owner.waitForSelector('#groupName');
+  // Saving does nothing until the library has loaded, which the status line says.
+  await owner.goto(BASE + '/curricula'); await owner.waitForSelector('#groupName'); await at(owner, '#curriculumStatus', /This program has/);
   await owner.selectOption('#curriculumProgram', 'Intermediate').catch(() => {});
-  await owner.fill('#groupName', 'Foundations'); await owner.click('#saveGroup'); await owner.waitForTimeout(500);
+  await owner.fill('#groupName', 'Foundations'); await owner.click('#saveGroup'); await at(owner, '#curriculumStatus', /Curriculum saved/);
   await owner.fill('#curriculumName', 'Stance and motion'); await owner.fill('#lessonOrder', '1').catch(() => {});
   await owner.fill('#planForm [name=title]', 'Stance and motion');
   if (!(await owner.locator('#sections input, #sections textarea').count())) await owner.click('#resetOrder');
-  await owner.click('#saveCurriculum').catch(async () => owner.click('#save')); await owner.waitForTimeout(600);
+  await owner.click('#saveCurriculum').catch(async () => owner.click('#save')); await at(owner, '#curriculumStatus', /Lesson saved in/);
   const r = await api(owner, '/api/practice-curricula');
   expect(JSON.stringify(r.body).includes('Stance and motion'), 'curriculum lesson not saved: ' + JSON.stringify(r.body).slice(0, 200));
 });

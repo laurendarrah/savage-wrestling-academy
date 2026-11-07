@@ -10,19 +10,20 @@ button{font:inherit;padding:10px 14px;border:1px solid #ccc;border-radius:6px;ba
 .coaches{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-top:14px}#previewNote{margin:12px 0 0}
 <!--slot:coachcss-->
 #status{font-weight:600}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}[hidden]{display:none!important}
+fieldset{border:0;margin:0;padding:0;min-width:0}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <a href="/coach" id="back" class="swa-back">← Coach home</a>
 <h1 id="heading">Your coach profile</h1>
 <p id="intro">Families see your name, bio and specialties next to your private lesson times. Your phone number stays with the academy.</p>
 <section aria-labelledby="aboutTitle"><h2 id="aboutTitle">About you</h2>
 <div class="who"><div class="avatar" id="avatar" aria-hidden="true"></div><div><p><b id="whoName"></b></p><p class="muted" id="whoEmail"></p></div></div>
-<form id="profileForm">
+<form id="profileForm"><fieldset id="profileFields" disabled>
 <label for="displayName">Name families see <span class="count" id="nameCount"></span><input id="displayName" name="displayName" maxlength="60" required autocomplete="name"></label>
 <label for="bio">Short bio <span class="count" id="bioCount"></span><span class="hint">A few sentences: your wrestling background and how you coach.</span><textarea id="bio" name="bio" maxlength="500"></textarea></label>
 <label for="specialties">Specialties<span class="hint">Separate them with commas, for example: Takedowns, Mat returns, Youth fundamentals. Up to 6.</span><input id="specialties" name="specialties" maxlength="300"></label>
 <label for="phone">Phone<span class="hint">Only the academy sees this.</span><input id="phone" name="phone" type="tel" maxlength="20" autocomplete="tel"></label>
 <div class="actions"><button class="primary" id="saveProfile">Save profile</button><span id="saved" class="muted"></span></div>
-</form></section>
+</fieldset></form></section>
 <section class="plain" aria-labelledby="previewTitle"><h2 id="previewTitle">What families see</h2><p class="muted">Your card as the team page shows it when the academy lists you there.</p><div class="coaches" id="preview"></div><p class="muted" id="previewNote" hidden>No bio yet, so families see your name and specialties only.</p></section>
 <p id="status" role="status" aria-live="polite"></p></main>
 <script>
@@ -47,8 +48,10 @@ function preview(){const name=$('displayName').value.trim(),bio=cleanBio($('bio'
 function fill(d){const p=d.profile;$('displayName').value=p.displayName||'';$('bio').value=p.bio||'';$('specialties').value=(p.specialties||[]).join(', ');$('phone').value=p.phone||'';$('whoEmail').textContent=d.email;
  if(d.byOwner){$('heading').textContent='Coach profile';$('intro').textContent='You are editing this coach’s profile. They see your changes on their own profile page.';$('back').href='/staff';$('back').textContent='← Coaches'}
  $('saved').textContent=p.updatedAt?'Last saved '+new Date(p.updatedAt).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}):'Not saved yet';preview()}
-async function load(){try{fill(await call())}catch(e){$('status').textContent=e.message}}
+// The fields stay disabled until the saved profile is in, and while it saves, so nothing typed meanwhile is overwritten
+// (issue #220). If it cannot load, they stay disabled: saving then would replace a profile the coach never saw.
+async function load(){try{fill(await call());$('profileFields').disabled=false}catch(e){$('status').textContent=e.message}}
 ['displayName','bio','specialties'].forEach(id=>$(id).addEventListener('input',preview));
-$('profileForm').onsubmit=async e=>{e.preventDefault();$('saveProfile').disabled=true;try{const d=await call({email:asked||undefined,displayName:$('displayName').value,bio:$('bio').value,specialties:list($('specialties').value),phone:$('phone').value});fill({...d,email:$('whoEmail').textContent,byOwner:!!asked});$('status').textContent='Profile saved.'}catch(err){$('status').textContent=err.message}finally{$('saveProfile').disabled=false}};
+$('profileForm').onsubmit=async e=>{e.preventDefault();$('profileFields').disabled=true;try{const d=await call({email:asked||undefined,displayName:$('displayName').value,bio:$('bio').value,specialties:list($('specialties').value),phone:$('phone').value});fill({...d,email:$('whoEmail').textContent,byOwner:!!asked});$('status').textContent='Profile saved.'}catch(err){$('status').textContent=err.message}finally{$('profileFields').disabled=false}};
 load();
 </script></body></html>

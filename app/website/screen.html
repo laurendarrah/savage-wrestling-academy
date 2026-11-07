@@ -13,6 +13,7 @@ input,textarea{width:100%;padding:10px 12px}textarea{resize:vertical}#mission{mi
 .coach.on{border-color:#141416;background:#fff}.coach label{flex-direction:row;align-items:center;gap:10px;margin:0;flex:1 1 220px;font-size:17px}
 .coach .order{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:22px;color:#C4222C;min-width:22px}
 .coach .note{font-size:14px;color:#55585F;font-weight:400}
+fieldset{border:0;margin:0;padding:0;min-width:0}
 .savebar{position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px;margin:0 -16px;background:rgba(244,245,247,.96);border-top:1px solid #E4E6EA;backdrop-filter:blur(6px)}
 .savebar .saved{font-size:15px;color:#55585F}
 #previewFrame{width:100%;height:min(78vh,900px);border:1px solid #D3D6DC;border-radius:10px;background:#fff;display:block}
@@ -24,6 +25,7 @@ input,textarea{width:100%;padding:10px 12px}textarea{resize:vertical}#mission{mi
 <p>What visitors see on the welcome page and the team page. Saving publishes your changes straight away. Wrestlers are shown by name only, with no photos.</p>
 <nav class="links" aria-label="See the pages"><a href="/welcome" target="_blank" rel="noopener">Open the welcome page</a><a href="/team" target="_blank" rel="noopener">Open the team page</a></nav>
 <p id="status" role="status" aria-live="polite">Loading…</p>
+<fieldset id="editor" disabled>
 <section aria-labelledby="homeTitle"><h2 id="homeTitle">Welcome page</h2><p class="muted">The first thing visitors read, above the programs and the calendar.</p>
 <label for="headline">Headline<input id="headline" maxlength="80" required></label>
 <label for="intro">Introduction<span class="hint">One or two sentences under the headline.</span><textarea id="intro" maxlength="320" required></textarea></label>
@@ -38,6 +40,7 @@ input,textarea{width:100%;padding:10px 12px}textarea{resize:vertical}#mission{mi
 </section>
 <section id="previewBox" aria-labelledby="previewTitle" hidden><h2 id="previewTitle">Preview</h2><p class="muted" id="previewNote">Not published until you save.</p><iframe id="previewFrame" title="Preview of the public website" sandbox="allow-scripts"></iframe></section>
 <div class="savebar"><button type="button" class="primary" id="saveButton" onclick="saveSite()">Save and publish</button><button type="button" onclick="showPreview('home')">Preview welcome page</button><button type="button" onclick="showPreview('team')">Preview team page</button><span class="saved" id="savedAt"></span></div>
+</fieldset>
 </main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let site={headline:'',intro:'',mission:'',coaches:[],achievements:[],alumni:[],address:'',email:''},updatedAt=null,coaches=[];
@@ -77,10 +80,12 @@ function payload(){
 function fill(d){site=JSON.parse(JSON.stringify(d.site));updatedAt=d.updatedAt??null;if(d.coaches)coaches=d.coaches;for(const k of ['headline','intro','mission','address','email'])$(k).value=site[k]||'';
  $('savedAt').textContent=updatedAt?'Last published '+new Date(updatedAt).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Not published yet: visitors see the standard wording';render()}
 async function call(body){const r=await fetch('/api/website',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
-async function load(){try{fill(await call());$('status').textContent=''}catch(e){$('status').textContent=e.message}}
-async function saveSite(){$('saveButton').disabled=true;$('status').textContent='Saving…';
+// The editor stays disabled until the published site is in, and while it saves, so nothing typed or added meanwhile is
+// overwritten (issue #220). If it cannot load, it stays disabled: saving then would replace a site the owner never saw.
+async function load(){try{fill(await call());$('status').textContent='';$('editor').disabled=false}catch(e){$('status').textContent=e.message}}
+async function saveSite(){$('editor').disabled=true;$('status').textContent='Saving…';
  try{const d=await call({action:'save',site:payload(),updatedAt});fill(d);$('status').textContent='Saved and published. Visitors see the changes within a minute.'}
- catch(e){$('status').textContent=e.message}finally{$('saveButton').disabled=false}}
+ catch(e){$('status').textContent=e.message}finally{$('editor').disabled=false}}
 async function showPreview(page){$('status').textContent='';
  try{const d=await call({action:'preview',page,site:payload()});$('previewBox').hidden=false;$('previewNote').textContent=(page==='team'?'Team page':'Welcome page')+' with your changes. Not published until you save.';$('previewFrame').srcdoc=d.html;$('previewBox').scrollIntoView({behavior:'smooth',block:'start'})}
  catch(e){$('status').textContent=e.message}}
