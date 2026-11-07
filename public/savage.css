@@ -16,7 +16,20 @@
   --swa-body:Barlow,'Helvetica Neue',Arial,sans-serif; --swa-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
   --swa-shadow:0 1px 2px rgba(17,17,19,.05),0 10px 28px -12px rgba(17,17,19,.16);
   --swa-texture:radial-gradient(90% 140% at 100% 0%,rgba(196,34,44,.22),transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 1px,transparent 1px 10px),linear-gradient(180deg,#141416,#0D0D0F);
+  /* Program colors, as on the public calendar: Advance black, Intermediate gray, Development white, events red.
+     Each has a text color (-ink) to use on it; Development white also needs its edge (-line) on a white card. */
+  --swa-prog-advance:#000000; --swa-prog-advance-ink:#FFFFFF;
+  --swa-prog-intermediate:#686868; --swa-prog-intermediate-ink:#FFFFFF;
+  --swa-prog-development:#FFFFFF; --swa-prog-development-ink:#18191C; --swa-prog-development-line:#999999;
+  --swa-prog-event:#D72732; --swa-prog-event-ink:#FFFFFF;
+  /* Warnings and "not set up yet" notes: the soft amber box */
+  --swa-warn-bg:#FFF7E6; --swa-warn-line:#F0D49C; --swa-warn-ink:#5C3B00;
+  /* Content widths for a page's main column: wide for lists and dashboards, narrow for reading and forms */
+  --swa-width-wide:1000px; --swa-width-narrow:760px;
 }
+
+/* The page ground. Zero specificity, so a page that sets its own body background (the dark wrestler page) keeps it. */
+:where(body){background:var(--swa-ground)}
 
 /* Premium pass (issue #146): tighter condensed headings, soft cards, athletic buttons, textured black bands. */
 html{overflow-x:clip}
@@ -47,11 +60,18 @@ html body button:active,html body .button:active{transform:translateY(1px)}
 html body button.primary,html body .primary,html body a.button.primary,html body button[type=submit].primary{background:var(--swa-red);border-color:var(--swa-red);color:#FFFFFF;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 8px 18px -8px rgba(196,34,44,.7)}
 html body button.primary:hover,html body .primary:hover,html body a.button.primary:hover{background:var(--swa-red-dark);border-color:var(--swa-red-dark);color:#FFFFFF}
 html body button:disabled,html body button[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
+/* Room inside a button that sets no padding of its own (browsers default to 1px 6px). Zero specificity, so any padding
+   a page gives its buttons, and button.link below, still wins. */
+:where(button,.button){padding:8px 18px}
+:where(a.button){text-decoration:none}
 html body button.link{min-height:44px;border:0;background:none;box-shadow:none;color:var(--swa-red);text-decoration:underline;padding:0;font-family:var(--swa-body);font-size:16px;letter-spacing:0;text-transform:none}
 
 /* Forms: taller fields, soft fill, red focus ring */
 html body input:not([type=checkbox]):not([type=radio]):not([type=file]),html body select,html body textarea{font-family:var(--swa-body);font-size:17px;min-height:50px;border:1px solid #D3D6DC;border-radius:8px;background:#FBFBFC;color:var(--swa-ink);box-shadow:inset 0 1px 2px rgba(17,17,19,.04);transition:border-color .15s,box-shadow .15s,background-color .15s}
-html body input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,html body select:focus,html body textarea:focus{outline:none;border-color:var(--swa-ink);background:#FFFFFF;box-shadow:0 0 0 4px rgba(196,34,44,.16)}
+/* Room inside fields that set no padding of their own (browsers default to 0 to 2px). Zero specificity, as for buttons. */
+:where(input:not([type=checkbox],[type=radio],[type=file],[type=range],[type=color]),select,textarea){padding:10px 14px}
+/* Focus: a solid red edge and a clear halo, so the field being typed in is obvious */
+html body input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,html body select:focus,html body textarea:focus{outline:none;border-color:var(--swa-red);background:#FFFFFF;box-shadow:0 0 0 1px var(--swa-red),0 0 0 5px rgba(196,34,44,.22)}
 html body textarea{min-height:120px}
 html body label{font-weight:600;font-size:15px}
 html body input[type=checkbox],html body input[type=radio]{width:22px;height:22px;accent-color:var(--swa-red)}
@@ -66,7 +86,9 @@ html body .tile{background:var(--swa-white);border:1px solid var(--swa-hair);bor
 html body .tile b{display:block;margin-top:6px;font-family:var(--swa-display);font-weight:800;font-size:34px;line-height:1;letter-spacing:0;text-transform:none;color:var(--swa-ink)}
 
 /* Sign-in and sign-up: the card floats on the textured black, with the logo above it */
-html body[data-swa-page="/login"]{background:var(--swa-texture) fixed}
+/* Every texture layer is fixed to the screen. The "fixed" keyword in the background shorthand only fixed the last
+   layer, so the others repeated down a tall page and left a seam (issue #222). /coach-join uses the same backdrop. */
+html body[data-swa-page="/login"],html body[data-swa-page="/coach-join"]{background:var(--swa-texture);background-attachment:fixed;background-color:#0D0D0F}
 html body[data-swa-page="/login"] main::before{content:"";display:block;width:96px;height:96px;margin:8px auto 18px;background:url(/brand/savage-logo-256.png) center/contain no-repeat}
 html body[data-swa-page="/login"] main>section.card{border:0;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
 html body[data-swa-page="/login"] main>p,html body[data-swa-page="/login"] main>footer,html body[data-swa-page="/login"] main>footer *{color:#B9C4C9}
@@ -91,7 +113,7 @@ html body .swa-head.top{display:flex;align-items:center;justify-content:space-be
 html body .swa-head.top h1{margin:0}
 html body .swa-head .bar a{color:#FFFFFF}
 html body .hero{background:var(--swa-texture)}
-@media (max-width:640px){html body .swa-head{padding:28px 0 26px;margin-bottom:20px}html body .swa-head::after,html body .fam-hero::after{right:-24px;opacity:.07}}
+@media (max-width:640px){html body .swa-head{padding:28px 0 26px;margin-bottom:20px}html body .swa-head::after,html body .fam-hero::after{right:0;opacity:.07}}
 
 /* The top bar on every page */
 .swa-bar{position:sticky;top:0;z-index:50;background:#0D0D0F;border-bottom:1px solid rgba(255,255,255,.06);color:#FFFFFF;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
@@ -118,6 +140,9 @@ html body .tba{color:var(--swa-muted);font-style:italic}
 /* Phones: bigger tap targets for small links that act like buttons */
 @media (max-width:640px){
   html body main>a:first-child,html body nav a,html body .links a{display:inline-flex;align-items:center;min-height:44px}
+  /* Footer links and the calendar's section links ("Practice calendar", "See the full calendar") */
+  html body footer a,html body .swa-head .bar a,html body a.more{display:inline-flex;align-items:center;min-height:44px}
+  html body .swa-head>a:first-child,html body .swa-head>.swa-back{min-height:44px}
   html body{font-size:17px}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
