@@ -155,6 +155,12 @@ export function siteOrigin() { try { return appOrigin(); } catch { return null; 
 const alums = (n: number) => n === 1 ? '1 alum' : `${n} alumni`;
 const joinWords = (xs: string[]) => xs.length < 2 ? xs.join('') : xs.slice(0, -1).join(', ') + ' and ' + xs.at(-1);
 const hasTeam = (site: Website, coaches: PublicCoach[]) => coaches.length + site.achievements.length + site.alumni.length > 0;
+// The welcome page's link to /team names only what the team page shows (issue #231): "Meet our coaches" when there are
+// only coaches, "Meet our wrestlers" when there are only achievements or alumni.
+export function teamLinkText(site: Website, coaches: PublicCoach[]) {
+  const who = [coaches.length ? 'coaches' : '', site.achievements.length + site.alumni.length ? 'wrestlers' : ''].filter(Boolean);
+  return `Meet our ${joinWords(who)} →`;
+}
 
 function visitSection(site: Website) {
   if (!site.address && !site.email) return '';
@@ -177,7 +183,7 @@ export function renderWelcome(template: string, site: Website, coaches: PublicCo
   return fill(template, {
     head: seoHead(title, clip(site.intro), '/welcome', origin),
     headline: esc(site.headline), intro: esc(site.intro), mission,
-    herolink: hasTeam(site, coaches) ? '<a class="herolink" href="/team">Meet our coaches and wrestlers →</a>' : '',
+    herolink: hasTeam(site, coaches) ? `<a class="herolink" href="/team">${esc(teamLinkText(site, coaches))}</a>` : '',
     team, visit: visitSection(site)});
 }
 

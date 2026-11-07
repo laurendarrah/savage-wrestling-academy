@@ -276,7 +276,7 @@ await step('a signed-out visitor lands on the welcome page with programs, steps 
   expect(!/\d{4}-\d{2}-\d{2}|\d{2}:\d{2}(?! [AP]M)/.test(await visitor.locator('#week').innerText()), 'coming up reads like "Mon, Nov 9 · 6:00 PM"');
   expect(await visitor.getAttribute('a:has-text("Join the academy")', 'href') === '/login?mode=signup', 'join link');
   expect(await visitor.getAttribute('main a[href="/login"], .actions a[href="/login"]', 'href') === '/login', 'sign-in link');
-  const over = await visitor.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); expect(over <= 1, `/welcome scrolls sideways by ${over}px`);
+  const over = await visitor.evaluate(() => document.documentElement.scrollWidth - 390); expect(over <= 1, `/welcome scrolls sideways by ${over}px`);
   if (SHOTS) await visitor.screenshot({path: `${SHOTS}/phone-welcome.png`, fullPage: true});
   await visitor.context().close();
 });
@@ -690,7 +690,7 @@ await step('owner edits the public website; a visitor sees the headline, mission
   const body = await visitor.content();
   expect(!/555-0199|@example\.test|savagewrestlingclub@/.test(body), 'no coach phone or email on the team page');
   expect(!(await visitor.locator('main img').count()), 'no photos on the team page');
-  const over = await visitor.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); expect(over <= 1, `/team scrolls sideways by ${over}px`);
+  const over = await visitor.evaluate(() => document.documentElement.scrollWidth - 390); expect(over <= 1, `/team scrolls sideways by ${over}px`);
   if (SHOTS) await visitor.screenshot({path: `${SHOTS}/phone-team.png`, fullPage: true});
   await visitor.context().close();
 });
