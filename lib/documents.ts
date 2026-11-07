@@ -14,6 +14,7 @@ import {cleanSignature, type Point} from './scholarship-signatures';
 import {familyProfile} from './program-approval';
 import {exceptionFor, type Rule} from './exceptions';
 import {academyToday} from './public-schedule';
+import {allFamilies, pageOf, PAGE_SIZE} from './paging';
 
 export type Kind = 'waiver' | 'parent_consent' | 'coach_contract';
 type Spec = {
@@ -168,7 +169,8 @@ export async function ownerDocuments(kind: Kind, exclude = '') {
       return {email: c.email, name: c.display_name || c.name, signed: !!s, signatureId: s?.id ?? null, signer: s?.signer ?? null, signedAt: s?.signed_at ?? null};
     })};
   }
-  const families = (await env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts ORDER BY email LIMIT 2000').all<{user_id: string; email: string; payload: string}>()).results;
+  // Every family, read in batches (issue #46); the owner's page shows them a page at a time (signersPage).
+  const families = (await allFamilies()).sort((a, b) => a.email < b.email ? -1 : a.email > b.email ? 1 : 0);
   const byKey = new Map(sigs.map(s => [s.user_id + '/' + s.wrestler_id + '/' + String(s.wrestler_name).trim().toLowerCase(), s]));
   const wrestlers = families.flatMap(f => {
     const p = JSON.parse(f.payload || '{}');
@@ -178,6 +180,19 @@ export async function ownerDocuments(kind: Kind, exclude = '') {
     });
   });
   return {...head, wrestlers};
+}
+
+// One page of the owner's list of who signed (issue #46): counts over everyone, and the people that match the filter
+// ("missing": not signed, or "all") and the search, a page at a time. Wrestlers are in family email order; coaches
+// (coach contracts) by name.
+type Signer = {signed: boolean; email: string; userId?: string; wrestlerId?: string; wrestler?: string; parentName?: string; name?: string};
+export function signersPage<T extends Signer>(rows: T[], o: {show?: string | null; q?: string | null; cursor?: string | null; limit?: number}) {
+  const text = (o.q ?? '').trim().toLowerCase(), missingOnly = o.show === 'missing';
+  const matching = rows.filter(x => (!missingOnly || !x.signed) && (!text || [x.wrestler, x.parentName, x.name, x.email].filter(Boolean).join(' ').toLowerCase().includes(text)));
+  const key = (x: T) => x.wrestlerId !== undefined ? [String(x.email).toLowerCase(), String(x.userId), String(x.wrestlerId)] : [String(x.name ?? '').toLowerCase(), String(x.email).toLowerCase()];
+  const page = pageOf(matching, key, o.cursor, o.limit ?? PAGE_SIZE);
+  return {rows: page.rows, next: page.next, matched: matching.length,
+    totals: {all: rows.length, signed: rows.filter(x => x.signed).length, missing: rows.filter(x => !x.signed).length}};
 }
 
 // A signed copy for the owner or the person who signed it. The stored text hash must still match the version.

@@ -1,25 +1,31 @@
 // Owner payments (issue #62): every payment with totals and CSV export, plus recording and voiding offline payments.
-import {env} from 'cloudflare:workers';
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
-import {listPayments, paymentsCsv, previewOffline, recordOffline, voidOffline} from '../../../lib/offline-payments';
+import {allPayments, listPayments, paymentsCsv, previewOffline, recordOffline, voidOffline} from '../../../lib/offline-payments';
 import {rateLimited} from '../../../lib/rate-limit';
+import {findFamilies} from '../../../lib/family-search';
+import {pageSize} from '../../../lib/paging';
 export const dynamic = 'force-dynamic';
+const FAMILY_PICKER = 50;
 
 export async function GET(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   const q = new URL(request.url).searchParams;
+  // The family picker searches every family; it lists the first 50 matches and says when there are more (issue #46).
   if (q.get('families') === '1') {
-    const rows = (await env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts ORDER BY email LIMIT 2000').all<{user_id: string; email: string; payload: string}>()).results;
-    return reply({families: rows.map(r => { const p = JSON.parse(r.payload); return {userId: r.user_id, email: r.email, parentName: p.parentName || '', wrestlers: (p.wrestlers || []).map((w: any) => ({id: w.id, name: w.name, grade: w.grade}))}; })});
+    const found = await findFamilies(q.get('q'), FAMILY_PICKER);
+    return reply({more: found.more, families: found.rows.map(r => { const p = JSON.parse(r.payload); return {userId: r.user_id, email: r.email, parentName: p.parentName || '', wrestlers: (p.wrestlers || []).map((w: any) => ({id: w.id, name: w.name, grade: w.grade}))}; })});
   }
-  const data = await listPayments({from: q.get('from') ?? undefined, to: q.get('to') ?? undefined, status: q.get('status') ?? undefined, kind: q.get('kind') ?? undefined, source: q.get('source') ?? undefined});
+  const filters = {from: q.get('from') ?? undefined, to: q.get('to') ?? undefined, status: q.get('status') ?? undefined, kind: q.get('kind') ?? undefined, source: q.get('source') ?? undefined};
+  // The spreadsheet has every matching payment, read in batches.
   if (q.get('format') === 'csv') {
+    const rows = [];
+    for await (const batch of allPayments(filters)) rows.push(...batch);
     auth.headers.set('Content-Type', 'text/csv; charset=utf-8');
     auth.headers.set('Content-Disposition', `attachment; filename="savage-payments-${new Date().toISOString().slice(0, 10)}.csv"`);
-    return new Response(paymentsCsv(data.payments), {headers: auth.headers});
+    return new Response(paymentsCsv(rows), {headers: auth.headers});
   }
-  return reply(data);
+  return reply(await listPayments(filters, {cursor: q.get('cursor'), limit: pageSize(q.get('limit'), 100, 500)}));
 }
 
 export async function POST(request: Request) {

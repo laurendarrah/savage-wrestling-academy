@@ -2,7 +2,7 @@
 <nav class="siblings" aria-label="Signed documents" id="siblings"></nav>
 <section id="currentBox"><h2 id="currentTitle">Waiver in force</h2><div id="current"></div></section>
 <div class="tiles" id="tiles" hidden><div class="tile"><span class="muted" id="tAllLabel">Wrestlers</span><b id="tAll">–</b></div><div class="tile"><span class="muted">Signed</span><b id="tSigned">–</b></div><div class="tile"><span class="muted" id="tMissingLabel">Not signed · blocked</span><b id="tMissing">–</b></div></div>
-<section id="whoBox" hidden><div class="row"><label>Show<select id="show"><option value="missing">Not signed</option><option value="all" id="showAll">Every wrestler</option></select></label><label>Search<input id="q" placeholder="Wrestler, parent or email"></label></div><div class="table"><table><thead><tr><th id="colWho">Wrestler</th><th id="colFamily">Family</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<section id="whoBox" hidden><div class="row"><label>Show<select id="show"><option value="missing">Not signed</option><option value="all" id="showAll">Every wrestler</option></select></label><label>Search<input id="q" placeholder="Wrestler, parent or email"></label></div><div class="table"><table><thead><tr><th id="colWho">Wrestler</th><th id="colFamily">Family</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div><div class="pager" id="pager" hidden><p id="shown" role="status" aria-live="polite"></p><button type="button" id="more">Show more</button></div></section>
 <section><h2 id="publishTitle">Publish waiver text</h2><p class="notice" id="publishNotice">Paste only text the academy's attorney has approved. Once published, families must sign it before booking. Published text cannot be edited; publish a corrected version instead.</p><form id="publishForm"><label>Title<input id="wTitle" maxlength="120" value="Participation waiver and release"></label><label><span id="bodyLabel">Waiver text</span><textarea id="wBody" maxlength="60000" placeholder="Paste the approved waiver text"></textarea></label><button class="primary" id="publish">Publish and require signatures</button></form></section>
 <section><h2>Version history</h2><div class="table"><table><thead><tr><th>Title</th><th>Published</th><th>Retired</th><th>Signatures</th></tr></thead><tbody id="versions"></tbody></table></div></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,7 +19,6 @@ function kindFor(path){return path==='/consent-forms'?'parent_consent':path==='/
 const DOC=DOCS[kindFor(location.pathname)];
 // The people listed against the version in force: every saved wrestler, or every coach.
 function peopleOf(doc,d){return doc.coach?(d.coaches||[]).map(c=>({...c,wrestler:c.name,parentName:'',key:c.email})):(d.wrestlers||[])}
-function matches(x,q){return !q||[x.wrestler,x.parentName,x.email].join(' ').toLowerCase().includes(q)}
 function statusCell(doc,x){return x.signed?'<span class="badge ok">Signed '+esc(when(x.signedAt))+'</span><br><span class="muted">by '+esc(x.signer)+'</span> · <a href="/waiver-copy?id='+encodeURIComponent(x.signatureId)+'" target="_blank" rel="noopener">View copy</a>':'<span class="badge warn">Not signed</span><br><a href="mailto:'+encodeURIComponent(x.email)+'?subject='+encodeURIComponent(doc.coach?'Your coach contract':doc.nav+' for '+x.wrestler)+'">'+(doc.coach?'Email coach':'Email family')+'</a>'+(doc.rule?exceptionControls(x.userId,x.wrestlerId,doc.rule):'')}
 function personCells(doc,x){return doc.coach?'<td><strong>'+esc(x.name)+'</strong></td><td>'+esc(x.email)+'</td>':'<td><strong>'+esc(x.wrestler)+'</strong><br><span class="muted">'+(x.grade==='Adult'?'Adult':'Grade '+esc(x.grade))+'</span></td><td>'+esc(x.parentName||'—')+'<br><span class="muted">'+esc(x.email)+'</span></td>'}
 let data=null;
@@ -45,18 +44,27 @@ function setup(){
  $('wTitle').value=DOC.defaultTitle;if(DOC.button)$('publish').textContent=DOC.button;$('wBody').placeholder='Paste the approved '+DOC.name+' text';
  if(DOC.coach){$('tAllLabel').textContent='Coaches';$('tMissingLabel').textContent='Not signed yet';$('showAll').textContent='Every coach';$('q').placeholder='Coach or email';$('colWho').textContent='Coach';$('colFamily').textContent='Email'}
 }
-async function load(msg){
- try{const r=await fetch('/api/waivers'+(DOC.kind==='waiver'?'':'?kind='+DOC.kind),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load the '+DOC.name+'.');data=d;render();$('status').textContent=msg||''}catch(e){$('status').textContent=e.message}
+// The server filters and pages the list (issue #46): counts cover everyone, the table holds the rows loaded so far and
+// "Show more" adds the next page. more: add the next page. keep: load again after a change, as many rows as shown now.
+const PAGE=50;let loading=0,typing;
+const listKey=()=>DOC.coach?'coaches':'wrestlers';
+function docsUrl(o){const q=new URLSearchParams({show:$('show').value});if(DOC.kind!=='waiver')q.set('kind',DOC.kind);if($('q').value.trim())q.set('q',$('q').value.trim());if(o.cursor)q.set('cursor',o.cursor);if(o.limit>PAGE)q.set('limit',o.limit);return '/api/waivers?'+q}
+async function load(msg,more,keep){
+ const ticket=++loading,k=listKey(),rows=keep&&data?(data[k]||[]).length:0;
+ try{const r=await fetch(docsUrl(more?{cursor:data.next}:{limit:rows}),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load the '+DOC.name+'.');if(ticket!==loading)return;
+  data={...d,[k]:more?(data[k]||[]).concat(d[k]||[]):(d[k]||[])};render();$('status').textContent=msg||''}catch(e){if(ticket===loading)$('status').textContent=e.message}
 }
+const search=()=>{clearTimeout(typing);typing=setTimeout(()=>load(),250)};
 function render(){
  const c=data.current;
  $('current').innerHTML=c?'<p><strong>'+esc(c.title)+'</strong> · published '+esc(when(c.publishedAt))+'</p><div class="terms">'+esc(c.body)+'</div><p><button type="button" id="retire">'+esc(DOC.retire)+'</button> <span class="muted">'+esc(DOC.retireNote)+'</span></p>':'<p>'+esc(DOC.none)+'</p>';
  if(c)$('retire').onclick=retire;
  $('tiles').hidden=$('whoBox').hidden=!c;
  if(c){
-  const w=peopleOf(DOC,data);$('tAll').textContent=w.length;$('tSigned').textContent=w.filter(x=>x.signed).length;$('tMissing').textContent=w.filter(x=>!x.signed).length;
-  const q=$('q').value.trim().toLowerCase(),show=$('show').value;
-  $('rows').innerHTML=w.filter(x=>show==='all'||!x.signed).filter(x=>matches(x,q)).map(x=>'<tr>'+personCells(DOC,x)+'<td>'+statusCell(DOC,x)+'</td></tr>').join('')||'<tr><td colspan="3" class="muted">'+(DOC.coach?(w.length?'No coaches match.':'No coaches yet.'):'No wrestlers match.')+'</td></tr>';
+  const w=peopleOf(DOC,data),t=data.totals||{all:w.length,signed:w.filter(x=>x.signed).length,missing:w.filter(x=>!x.signed).length},matched=data.matched??w.length,noun=DOC.coach?['coach','coaches']:['wrestler','wrestlers'];
+  $('tAll').textContent=t.all;$('tSigned').textContent=t.signed;$('tMissing').textContent=t.missing;
+  $('pager').hidden=!matched;$('shown').textContent='Showing '+w.length.toLocaleString('en-US')+' of '+matched.toLocaleString('en-US')+' '+noun[matched===1?0:1];$('more').hidden=!data.next;$('more').textContent='Show '+Math.min(PAGE,matched-w.length)+' more';
+  $('rows').innerHTML=w.map(x=>'<tr>'+personCells(DOC,x)+'<td>'+statusCell(DOC,x)+'</td></tr>').join('')||'<tr><td colspan="3" class="muted">'+(DOC.coach?(t.all?'No coaches match.':'No coaches yet.'):'No wrestlers match.')+'</td></tr>';
   wireExceptions(render);
  }
  $('versions').innerHTML=data.versions.map(v=>'<tr><td>'+esc(v.title)+'</td><td>'+esc(when(v.published_at))+'</td><td>'+esc(v.retired_at?when(v.retired_at):c&&c.id===v.id?'In force':'Replaced')+'</td><td>'+esc(v.signed)+'</td></tr>').join('')||'<tr><td colspan="4" class="muted">Nothing published yet.</td></tr>';
@@ -66,5 +74,5 @@ $('publishForm').onsubmit=async e=>{e.preventDefault();
  if(!confirm(DOC.publishAsk))return;
  $('publish').disabled=true;try{await post({action:'publish',title:$('wTitle').value,body:$('wBody').value});$('wBody').value='';await load(DOC.published)}catch(e){$('status').textContent=e.message}finally{$('publish').disabled=false}};
 async function retire(){if(!confirm(DOC.retireAsk))return;try{await post({action:'retire'});await load(DOC.retired)}catch(e){$('status').textContent=e.message}}
-setup();$('show').onchange=render;$('q').oninput=render;(DOC.rule?loadExceptions():Promise.resolve()).then(()=>load());
+setup();$('show').onchange=()=>load();$('q').oninput=search;$('more').onclick=()=>load('',true);(DOC.rule?loadExceptions():Promise.resolve()).then(()=>load());
 </script></body></html>

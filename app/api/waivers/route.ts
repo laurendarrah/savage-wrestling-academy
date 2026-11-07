@@ -2,7 +2,8 @@
 // signed. Without a kind it is the waiver; ?kind= (or "kind" when posting) chooses the Parent Consent Form or the coach
 // contract.
 import {ownerIdentity, accountReply, sameOrigin, OWNER_EMAIL} from '../../../lib/account-auth';
-import {DOCUMENTS, isKind, ownerDocuments, publishDocument, retireDocument, type Kind} from '../../../lib/documents';
+import {DOCUMENTS, isKind, ownerDocuments, publishDocument, retireDocument, signersPage, type Kind} from '../../../lib/documents';
+import {pageSize, PAGE_SIZE} from '../../../lib/paging';
 import {dailyReminders, quietly} from '../../../lib/notify';
 export const dynamic = 'force-dynamic';
 const kindOf = (k: unknown): Kind | null => k === undefined || k === null || k === '' ? 'waiver' : isKind(k) ? k : null;
@@ -10,10 +11,13 @@ const kindOf = (k: unknown): Kind | null => k === undefined || k === null || k =
 export async function GET(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
-  const kind = kindOf(new URL(request.url).searchParams.get('kind'));
+  const q = new URL(request.url).searchParams, kind = kindOf(q.get('kind'));
   if (!kind) return accountReply({error: 'Choose a document.'}, 400, auth.headers);
   // The owner may also coach (issue #190) but does not sign a contract with the academy.
-  return accountReply(await ownerDocuments(kind, OWNER_EMAIL ?? ''), 200, auth.headers);
+  const all: any = await ownerDocuments(kind, OWNER_EMAIL ?? '');
+  // Counts cover everyone; the list (wrestlers, or coaches for the contract) comes a page at a time (issue #46).
+  const listKey = all.coaches ? 'coaches' : 'wrestlers', page = signersPage(all[listKey], {show: q.get('show'), q: q.get('q'), cursor: q.get('cursor'), limit: pageSize(q.get('limit'), PAGE_SIZE, 500)});
+  return accountReply({...all, [listKey]: page.rows, next: page.next, matched: page.matched, totals: page.totals}, 200, auth.headers);
 }
 
 export async function POST(request: Request) {

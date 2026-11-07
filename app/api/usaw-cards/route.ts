@@ -3,9 +3,10 @@
 import {env} from 'cloudflare:workers';
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyToday} from '../../../lib/public-schedule';
-import {listCards, setReview, clearReview, cardStatus, cardRenewal, CARD_RENEWAL_DAYS} from '../../../lib/usaw';
+import {listCards, setReview, clearReview, cardStatus, cardRenewal, cardsPage, CARD_RENEWAL_DAYS} from '../../../lib/usaw';
 import {noticeCardRejected, quietly} from '../../../lib/notify';
 import {checkCard} from '../../../lib/usaw-check';
+import {pageSize, PAGE_SIZE} from '../../../lib/paging';
 export const dynamic = 'force-dynamic';
 
 const validDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').toISOString().slice(0, 10) === d;
@@ -16,9 +17,11 @@ export async function GET(request: Request) {
   const q = new URL(request.url).searchParams, today = academyToday(), date = q.get('date') || today;
   if (!validDate(date)) return reply({error: 'Choose a valid date.'}, 400);
   const cards = await listCards(date);
+  // Counts cover every wrestler; the list comes a page at a time, filtered here (issue #46).
   // The season summary is about today, whatever date the owner checks cards on (issue #131). renewalDays is the
   // renewal-list window (issue #210).
-  return reply({today, date, cards, renewal: cardRenewal(cards, today), renewalDays: CARD_RENEWAL_DAYS});
+  return reply({today, date, ...cardsPage(cards, {show: q.get('show'), q: q.get('q'), cursor: q.get('cursor'), onDate: date, limit: pageSize(q.get('limit'), PAGE_SIZE, 500)}),
+    renewal: cardRenewal(cards, today), renewalDays: CARD_RENEWAL_DAYS});
 }
 
 export async function POST(request: Request) {

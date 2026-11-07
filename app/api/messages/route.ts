@@ -1,15 +1,19 @@
 // Owner announcements and family threads (issue #72).
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
-import {ownerMessages, ownerThread, sendAnnouncement, postMessage, resolveAudience} from '../../../lib/messages';
+import {familiesPage, ownerMessages, ownerThread, sendAnnouncement, sentPage, postMessage, resolveAudience} from '../../../lib/messages';
 import {emailConfigured} from '../../../lib/email';
 import {failedEmails, retryFailedEmails} from '../../../lib/email-failures';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
-  const family = new URL(request.url).searchParams.get('family');
-  if (family) return accountReply({thread: await ownerThread(family)}, 200, auth.headers);
-  return accountReply({...(await ownerMessages()), emailOn: emailConfigured(), failedEmails: await failedEmails()}, 200, auth.headers);
+  // Lists come a page at a time (issue #46): a family's conversation (cursor: earlier messages), the families list
+  // (search q, cursor: next page) and sent announcements (cursor: older ones).
+  const q = new URL(request.url).searchParams, family = q.get('family'), cursor = q.get('cursor');
+  if (family) return accountReply(await ownerThread(family, cursor), 200, auth.headers);
+  if (q.get('families') === '1') return accountReply(await familiesPage(q.get('q'), cursor), 200, auth.headers);
+  if (q.get('sent') === '1') return accountReply(await sentPage(cursor), 200, auth.headers);
+  return accountReply({...(await ownerMessages(q.get('q'))), emailOn: emailConfigured(), failedEmails: await failedEmails()}, 200, auth.headers);
 }
 export async function POST(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
   if (input?.action === 'message') {
     if (typeof input.userId !== 'string') return reply({error: 'Choose a family.'}, 400);
     const r = await postMessage(input.userId, 'owner', input.body);
-    return r.status === 200 ? reply({ok: true, thread: await ownerThread(input.userId)}) : reply({error: r.error}, r.status);
+    return r.status === 200 ? reply({ok: true, ...(await ownerThread(input.userId))}) : reply({error: r.error}, r.status);
   }
   // Emails that didn't send (issue #35): try them again.
   if (input?.action === 'retry') {

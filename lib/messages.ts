@@ -7,6 +7,8 @@ import {PROGRAM_ON} from './transfers';
 import {programDetails} from './program-names';
 import {sendEmailsDetailed} from './email';
 import {familyNotices, markNoticeRead} from './notify';
+import {keysetPage, type SortCol} from './paging';
+import {familyMatch} from './family-search';
 
 export type Audience = {type: 'all'} | {type: 'program'; program: string} | {type: 'event'; eventId: string};
 const at = () => new Date().toISOString();
@@ -78,17 +80,39 @@ export async function postMessage(userId: string, senderRole: 'owner' | 'family'
   return {status: 200};
 }
 
+// Paging (issue #46). Lists of messages come newest first, a page at a time; a conversation shows its latest
+// messages, oldest at the top, with earlier ones a tap away. Unread counts are counted in the database, so they cover
+// every message, not just the ones on screen.
+export const INBOX_PAGE = 50, THREAD_PAGE = 100;
+const NEWEST: SortCol[] = [{expr: 'created_at', desc: true}, {expr: 'id', desc: true}];
+
+// A family's (or, for the owner, any family's) private conversation: the latest messages, in time order, and a cursor
+// for the ones before them.
+async function threadPage(userId: string, cursor?: unknown, limit = THREAD_PAGE) {
+  const page = await keysetPage<any>({select: 'id,sender_role,body,created_at,read_at,email_status', from: 'FROM family_messages', where: 'user_id=?', args: [userId],
+    cols: NEWEST, keyOf: m => [m.created_at, m.id], cursor, limit});
+  return {rows: page.rows.reverse(), earlier: page.next};
+}
+export async function announcementsPage(userId: string, cursor?: unknown, limit = INBOX_PAGE) {
+  const page = await keysetPage<any>({select: 'a.id,a.subject,a.body,a.sent_at,r.read_at', from: 'FROM announcement_recipients r JOIN announcements a ON a.id=r.announcement_id', where: 'r.user_id=?',
+    args: [userId], cols: [{expr: 'a.sent_at', desc: true}, {expr: 'a.id', desc: true}], keyOf: a => [a.sent_at, a.id], cursor, limit});
+  return {announcements: page.rows.map(a => ({id: a.id, subject: a.subject, body: a.body, sentAt: a.sent_at, read: !!a.read_at})), announcementsNext: page.next};
+}
+const familyThread = (rows: any[]) => rows.map(m => ({id: m.id, from: m.sender_role === 'owner' ? 'academy' : 'you', body: m.body, at: m.created_at}));
+export async function familyThreadPage(userId: string, cursor?: unknown) {
+  const t = await threadPage(userId, cursor);
+  return {thread: familyThread(t.rows), threadEarlier: t.earlier};
+}
+export async function unreadCount(userId: string) {
+  const r = await env.DB!.prepare(`SELECT (SELECT count(*) FROM notifications WHERE user_id=?1 AND read_at IS NULL)
+      + (SELECT count(*) FROM announcement_recipients WHERE user_id=?1 AND read_at IS NULL)
+      + (SELECT count(*) FROM family_messages WHERE user_id=?1 AND sender_role='owner' AND read_at IS NULL) AS n`).bind(userId).first<{n: number}>();
+  return Number(r?.n ?? 0);
+}
+
 export async function familyInbox(userId: string) {
-  const ann = (await env.DB!.prepare('SELECT a.id,a.subject,a.body,a.sent_at,r.read_at FROM announcement_recipients r JOIN announcements a ON a.id=r.announcement_id WHERE r.user_id=? ORDER BY a.sent_at DESC LIMIT 200')
-    .bind(userId).all<any>()).results;
-  const thread = (await env.DB!.prepare('SELECT id,sender_role,body,created_at,read_at FROM family_messages WHERE user_id=? ORDER BY created_at,id LIMIT 500').bind(userId).all<any>()).results;
-  const notices = await familyNotices(userId);
-  return {
-    notices,
-    announcements: ann.map(a => ({id: a.id, subject: a.subject, body: a.body, sentAt: a.sent_at, read: !!a.read_at})),
-    thread: thread.map(m => ({id: m.id, from: m.sender_role === 'owner' ? 'academy' : 'you', body: m.body, at: m.created_at})),
-    unread: notices.filter(n => !n.read).length + ann.filter(a => !a.read_at).length + thread.filter(m => m.sender_role === 'owner' && !m.read_at).length
-  };
+  const [notices, ann, thread, unread] = await Promise.all([familyNotices(userId), announcementsPage(userId), familyThreadPage(userId), unreadCount(userId)]);
+  return {...notices, ...ann, ...thread, unread};
 }
 
 export async function markRead(userId: string, input: any) {
@@ -105,27 +129,43 @@ export async function markRead(userId: string, input: any) {
   if (input?.thread) await env.DB!.prepare("UPDATE family_messages SET read_at=? WHERE user_id=? AND sender_role='owner' AND read_at IS NULL").bind(at(), userId).run();
 }
 
-export async function ownerMessages() {
-  const sent = (await env.DB!.prepare(`SELECT a.id,a.subject,a.audience_label,a.sent_at,a.recipients,
+export const SENT_PAGE = 25, FAMILY_PAGE = 30;
+// Sent announcements, newest first, a page at a time.
+export async function sentPage(cursor?: unknown, limit = SENT_PAGE) {
+  const page = await keysetPage<any>({select: `a.id,a.subject,a.audience_label,a.sent_at,a.recipients,
       (SELECT count(*) FROM announcement_recipients r WHERE r.announcement_id=a.id AND r.read_at IS NOT NULL) AS opened,
       (SELECT count(*) FROM announcement_recipients r WHERE r.announcement_id=a.id AND r.email_status='sent') AS emailed,
-      (SELECT count(*) FROM announcement_recipients r WHERE r.announcement_id=a.id AND r.email_status='failed') AS failed
-    FROM announcements a ORDER BY a.sent_at DESC LIMIT 100`).all<any>()).results;
-  const families = (await env.DB!.prepare(`SELECT f.user_id,f.email,f.payload,
-      (SELECT count(*) FROM family_messages m WHERE m.user_id=f.user_id AND m.sender_role='family' AND m.read_at IS NULL) AS unread,
-      (SELECT max(created_at) FROM family_messages m WHERE m.user_id=f.user_id) AS last
-    FROM family_accounts f ORDER BY last IS NULL, last DESC, f.email LIMIT 2000`).all<any>()).results;
-  const state = await academyState();
+      (SELECT count(*) FROM announcement_recipients r WHERE r.announcement_id=a.id AND r.email_status='failed') AS failed`,
+    from: 'FROM announcements a', cols: [{expr: 'a.sent_at', desc: true}, {expr: 'a.id', desc: true}], keyOf: a => [a.sent_at, a.id], cursor, limit});
+  return {sent: page.rows, sentNext: page.next};
+}
+// Families for the owner's conversations: latest conversation first, then families with none by email. The search runs
+// over every family in the database; the list comes a page at a time with the number of matches.
+const FAMILY_COLS: SortCol[] = [{expr: '(x.last IS NULL)'}, {expr: "COALESCE(x.last,'')", desc: true}, {expr: 'x.email'}, {expr: 'x.user_id'}];
+export async function familiesPage(q?: unknown, cursor?: unknown, limit = FAMILY_PAGE) {
+  const m = familyMatch(q), where = m ? ' WHERE ' + m.sql : '';
+  const [page, count] = await Promise.all([keysetPage<any>({select: 'x.*', from: `FROM (SELECT f.user_id,f.email,f.payload,
+        (SELECT count(*) FROM family_messages m WHERE m.user_id=f.user_id AND m.sender_role='family' AND m.read_at IS NULL) AS unread,
+        (SELECT max(created_at) FROM family_messages m WHERE m.user_id=f.user_id) AS last
+      FROM family_accounts f${where}) x`, args: m?.args, cols: FAMILY_COLS, keyOf: f => [f.last === null ? 1 : 0, f.last ?? '', f.email, f.user_id], cursor, limit}),
+    env.DB!.prepare(`SELECT count(*) AS n FROM family_accounts f${where}`).bind(...(m?.args ?? [])).first<{n: number}>()]);
+  return {families: page.rows.map(f => { const p = JSON.parse(f.payload || '{}'); return {userId: f.user_id, email: f.email, parentName: p.parentName || '', wrestlers: (p.wrestlers || []).map((w: any) => w.name), unread: f.unread, last: f.last}; }),
+    familiesNext: page.next, familiesMatched: Number(count?.n ?? 0)};
+}
+
+export async function ownerMessages(q?: unknown) {
+  const [sent, families, state] = await Promise.all([sentPage(), familiesPage(q), academyState()]);
   return {
-    sent,
-    families: families.map(f => { const p = JSON.parse(f.payload || '{}'); return {userId: f.user_id, email: f.email, parentName: p.parentName || '', wrestlers: (p.wrestlers || []).map((w: any) => w.name), unread: f.unread, last: f.last}; }),
+    ...sent, ...families,
     events: (state.events ?? []).filter((e: any) => !e.archived).map((e: any) => ({id: e.id, name: e.name})),
     programs: Object.entries(programDetails).map(([id, d]) => ({id, name: d.name}))
   };
 }
 
-export async function ownerThread(userId: string) {
-  await env.DB!.prepare("UPDATE family_messages SET read_at=? WHERE user_id=? AND sender_role='family' AND read_at IS NULL").bind(at(), userId).run();
-  return (await env.DB!.prepare('SELECT id,sender_role,body,created_at,read_at,email_status FROM family_messages WHERE user_id=? ORDER BY created_at,id LIMIT 500').bind(userId).all<any>()).results
-    .map(m => ({id: m.id, from: m.sender_role, body: m.body, at: m.created_at, read: !!m.read_at, emailStatus: m.email_status}));
+// A family's conversation for the owner: the latest messages, with a cursor for earlier ones. Opening it marks the
+// family's messages read.
+export async function ownerThread(userId: string, cursor?: unknown) {
+  if (!cursor) await env.DB!.prepare("UPDATE family_messages SET read_at=? WHERE user_id=? AND sender_role='family' AND read_at IS NULL").bind(at(), userId).run();
+  const t = await threadPage(userId, cursor);
+  return {thread: t.rows.map(m => ({id: m.id, from: m.sender_role, body: m.body, at: m.created_at, read: !!m.read_at, emailStatus: m.email_status})), earlier: t.earlier};
 }
