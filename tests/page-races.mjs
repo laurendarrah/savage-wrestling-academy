@@ -20,7 +20,7 @@ function server(route) {
   return {fetch, held, calls};
 }
 // The page's script with a stub DOM. start: element properties the markup sets (checked against the markup by the caller).
-function page(file, fetch, start = {}, pathname = '/') {
+function page(file, fetch, start = {}, pathname = '/', hash = '') {
   const nodes = new Map();
   const el = id => {
     if (!nodes.has(id)) {
@@ -35,7 +35,7 @@ function page(file, fetch, start = {}, pathname = '/') {
   };
   const asked = [];
   const ctx = vm.createContext({console, setTimeout, clearTimeout, URLSearchParams, structuredClone, fetch,
-    location: {search: '', pathname, hash: '', origin: 'https://swa.test'}, confirm: msg => { asked.push(msg); return false; },
+    location: {search: '', pathname, hash, origin: 'https://swa.test'}, confirm: msg => { asked.push(msg); return false; },
     document: {getElementById: el, querySelectorAll: () => [], querySelector: () => null}});
   vm.runInContext(readFileSync(file, 'utf8').match(/<script>([\s\S]*)<\/script>/)[1], ctx);
   return {el, ctx, asked, run: code => vm.runInContext(code, ctx)};
@@ -219,4 +219,92 @@ const submit = form => form.onsubmit({preventDefault() {}});
   assert.equal(el('rows').getAttribute('aria-busy'), null);
 }
 
-console.log('Page race tests passed: the messages audience count, the coach profile, the public website editor and the payments form ignore late answers and wait for the latest; the waivers and cards lists stay busy until the latest filter is drawn.');
+// ---------- Scholarship acceptance: the form waits for the family's wrestlers and the signature pad (issue #247) ----------
+// The agreement used to show its form as soon as the invitation loaded, while the family's wrestlers were still loading
+// and before the signature pad listened. A signature drawn then was lost, and Sign sent no strokes (or no wrestler).
+{
+  const award = {id: 'a1', wrestler_name: 'Riley Two', program: 'Intermediate', terms_text: 'Final terms.', terms_ready: 1, revision: 3, status: 'offered'};
+  const pad = {width: 800, height: 200, setPointerCapture() {}, getBoundingClientRect: () => ({left: 0, top: 0, width: 400, height: 100}),
+    getContext: () => ({clearRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}})};
+  const net = server(() => HOLD);
+  const {el} = page('app/scholarship/screen.html', net.fetch, {acceptFields: {disabled: true}, signatureCanvas: pad}, '/scholarship', '#token=tok');
+  await settle();
+  assert.deepEqual(net.held[0].body, {action: 'view', token: 'tok'});
+  net.held[0].reply({award}); await settle();
+  const form = el('offer').innerHTML.match(/<form id="acceptForm"><fieldset id="acceptFields" disabled>([\s\S]*?)<\/fieldset><\/form>/);
+  assert.ok(form, 'the acceptance form starts disabled');
+  for (const id of ['wrestler', 'signer', 'signatureCanvas', 'clearSignature', 'accepted', 'electronicConsent', 'accept']) assert.match(form[1], new RegExp(`id="${id}"`), id + ' waits with the form');
+  assert.equal(net.held[1].url, '/api/family', 'the family’s wrestlers load next');
+  assert.equal(el('acceptFields').disabled, true, 'nothing can be signed before the wrestlers load');
+  assert.equal(el('signatureCanvas').onpointerdown, undefined, 'the signature pad is not listening yet');
+  net.held[1].reply({data: {wrestlers: [{id: 'w2', name: 'Riley Two', grade: 8}, {id: 'w3', name: 'Someone Else', grade: 5}]}}); await settle();
+  assert.equal(el('acceptFields').disabled, false, 'ready once the wrestlers are in and the pad listens');
+  assert.equal(typeof el('signatureCanvas').onpointerdown, 'function');
+  assert.match(el('wrestler').innerHTML, /^<option value="w2">Riley Two · Grade 8<\/option>$/);
+  // Signing without drawing says so and sends nothing.
+  el('signer').value = 'Riley Parent'; el('accepted').checked = true; el('electronicConsent').checked = true;
+  submit(el('acceptForm')); await settle();
+  assert.equal(net.held.length, 2, 'nothing is sent without a drawn signature');
+  assert.equal(el('status').textContent, 'Draw your signature in the box before signing.');
+  const canvas = el('signatureCanvas'), at = (clientX, clientY) => ({pointerId: 1, isPrimary: true, clientX, clientY, preventDefault() {}});
+  canvas.onpointerdown(at(10, 20)); canvas.onpointermove(at(60, 40)); canvas.onpointermove(at(120, 30)); canvas.onpointerup(at(120, 30));
+  submit(el('acceptForm')); await settle();
+  assert.equal(el('accept').disabled, true, 'Sign is off while the signature is sent');
+  const sent = net.held[2].body;
+  assert.equal(sent.action, 'accept'); assert.equal(sent.wrestlerId, 'w2'); assert.equal(sent.revision, 3); assert.equal(sent.signer, 'Riley Parent');
+  assert.deepEqual(sent.signature, {method: 'drawn', strokes: [[[0.025, 0.2], [0.15, 0.4], [0.3, 0.3]]]});
+  net.held[2].reply({award: {...award, status: 'active'}, accepted: true}); await settle();
+  net.held[3].reply({award: {...award, status: 'active'}, accepted: true}); await settle();
+  assert.match(el('offer').innerHTML, /Scholarship active/); assert.equal(el('status').textContent, 'Scholarship active. View it in your family account.');
+  // Refreshing twice: the older answer, from before the offer was accepted, arrives last and is ignored.
+  el('retry').onclick(); el('retry').onclick(); await settle();
+  assert.equal(net.held.length, 6);
+  net.held[5].reply({award: {...award, status: 'active'}, accepted: true}); await settle();
+  net.held[4].reply({award}); await settle();
+  assert.match(el('offer').innerHTML, /Scholarship active/, 'an older answer must not bring the form back');
+  assert.equal(el('status').textContent, 'Scholarship active. View it in your family account.');
+  assert.equal(net.held.length, 6, 'and does not load the wrestlers again');
+  // If the wrestlers cannot load, the form stays disabled and says why.
+  const failed = server(() => HOLD), p = page('app/scholarship/screen.html', failed.fetch, {acceptFields: {disabled: true}, signatureCanvas: pad}, '/scholarship', '#token=tok');
+  await settle(); failed.held[0].reply({award}); await settle();
+  failed.held[1].reply({error: 'Sign-in required.'}, 401); await settle();
+  assert.equal(p.el('acceptFields').disabled, true); assert.equal(p.el('status').textContent, 'Sign-in required.');
+}
+
+// ---------- Scholarship offers (owner): Create waits for the offers list, so a late list cannot hide a new offer ----------
+{
+  const html = readFileSync('app/scholarships/screen.html', 'utf8');
+  assert.match(html, /<button class="primary" id="create" disabled>/, 'Create starts disabled');
+  const offer = {id: 's1', wrestler_name: 'Riley Two', recipient_email: 'family.b@example.test', program: 'Intermediate', status: 'offered', terms_ready: 0, terms_text: 'Draft.', revision: 1, expires_at: '2026-12-07T15:00:00Z', inviteExpired: false};
+  const net = server(url => url === '/api/registration' ? {programs: [{id: 'Intermediate', name: 'SWA Intermediate', monthlyCents: 20000}]} : HOLD);
+  const {el, ctx} = page('app/scholarships/screen.html', net.fetch, {create: {disabled: true}});
+  ctx.FormData = class { get(name) { return {email: 'family.b@example.test', wrestlerName: 'Riley Two', program: 'Intermediate'}[name]; } };
+  await settle();
+  assert.equal(net.held[0].url, '/api/scholarships', 'the offers list is loading');
+  assert.equal(el('create').disabled, true, 'Create waits for the offers list');
+  // Pressing Enter in a field before the list is in creates nothing.
+  submit(el('offerForm')); await settle();
+  assert.ok(!net.calls.some(c => c.body?.action === 'create'), 'no offer is created before the list has loaded');
+  net.held[0].reply({awards: []}); await settle();
+  assert.equal(el('create').disabled, false); assert.equal(el('status').textContent, '');
+  assert.match(el('awards').innerHTML, /No scholarship offers yet/);
+  submit(el('offerForm')); await settle();
+  assert.equal(net.held[1].body.action, 'create');
+  net.held[1].reply({inviteUrl: 'https://swa.test/scholarship#token=t'}); await settle();
+  net.held[2].reply({awards: [offer]}); await settle();
+  assert.match(el('awards').innerHTML, /Riley Two/); assert.equal(el('inviteUrl').value, 'https://swa.test/scholarship#token=t');
+  assert.equal(el('status').textContent, 'Offer created with $0 tuition. Agreement is a draft; acceptance is closed.');
+  // If the list cannot load, Create stays off and the reason is shown.
+  const failed = server(url => url === '/api/registration' ? {programs: []} : HOLD), p = page('app/scholarships/screen.html', failed.fetch, {create: {disabled: true}});
+  await settle(); failed.held[0].reply({error: 'Owner access required.'}, 403); await settle();
+  assert.equal(p.el('create').disabled, true); assert.equal(p.el('status').textContent, 'Owner access required.');
+}
+// The walkthrough waits for these loaded states, never for the form merely being on screen.
+{
+  const journey = readFileSync('scripts/e2e/journey.mjs', 'utf8');
+  assert.match(journey, /goto\(BASE \+ '\/scholarships'\); await owner\.waitForSelector\('#create:not\(\[disabled\]\)'\);/);
+  assert.match(journey, /await family2\.waitForSelector\('#acceptFields:not\(\[disabled\]\)'\);/);
+  assert.doesNotMatch(journey, /waitForSelector\('#acceptForm'\)/);
+}
+
+console.log('Page race tests passed: the messages audience count, the coach profile, the public website editor and the payments form ignore late answers and wait for the latest; the waivers and cards lists stay busy until the latest filter is drawn; the scholarship form waits for the wrestlers and the signature pad, and Create waits for the offers list.');

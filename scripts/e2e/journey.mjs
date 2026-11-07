@@ -5,7 +5,7 @@
 // Usage: see scripts/e2e/run.sh
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
-import {readFileSync} from 'node:fs';
+import {mkdirSync, readFileSync, rmSync} from 'node:fs';
 import {start, sessionCookie, users} from './fake-supabase.mjs';
 import {start as startUsaw} from './fake-usaw.mjs';
 const require = createRequire(import.meta.url);
@@ -13,6 +13,9 @@ let playwright;
 for (const p of ['playwright', '/opt/node-tools/node_modules/playwright']) { try { playwright = require(p); break; } catch {} }
 const BASE = process.env.E2E_BASE || 'http://127.0.0.1:8799', AUTH = process.env.E2E_SUPABASE || 'http://127.0.0.1:54321';
 const SHOTS = process.env.E2E_SHOTS || '';
+// When a step fails, every open page is saved here (gitignored), and CI keeps the folder with the walkthrough log (#247).
+const FAILS = process.env.E2E_FAILURES || 'e2e-failures';
+rmSync(FAILS, {recursive: true, force: true});
 // The local database of the running site (run.sh), for records that can no longer be made through the site itself.
 const PERSIST = process.env.E2E_PERSIST || '.wrangler/e2e';
 const sql = q => JSON.parse(execFileSync('node', ['--import', './scripts/local-env.mjs', './node_modules/wrangler/bin/wrangler.js', 'd1', 'execute', 'DB', '--local', '--config', 'dist/server/wrangler.json', '--persist-to', PERSIST, '--json', '--command', q], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}))[0].results;
@@ -25,28 +28,62 @@ const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {ti
 const today = ny(0);
 const problems = [], passed = [];
 let current = '';
+const labels = new WeakMap();
 
 async function as(name, viewport = {width: 1200, height: 900}) {
   const ctx = await browser.newContext({viewport, deviceScaleFactor: SHOTS ? 2 : 1, ...(viewport.width < 500 ? {isMobile: true, hasTouch: true} : {})});
   const c = sessionCookie(name, AUTH);
   await ctx.addCookies([{name: c.name, value: c.value, url: BASE}]);
-  const page = await ctx.newPage();
+  const page = await ctx.newPage(); labels.set(page, name + (viewport.width < 500 ? '-phone' : ''));
   page.on('dialog', d => d.accept().catch(() => {}));
   page.on('pageerror', e => { problems.push(`[${current}] page error on ${page.url()}: ${e.message}`); if (process.env.E2E_SWEEP_LOG) console.log('    ERROR', e.message, (e.stack || '').split('\n')[1]); });
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource: the server responded with a status of 4\d\d/.test(m.text())) problems.push(`[${current}] console error on ${page.url()}: ${m.text().slice(0, 200)}`); });
   page.on('response', r => { if (r.status() >= 500) problems.push(`[${current}] HTTP ${r.status()} ${r.request().method()} ${r.url()}`); });
   return page;
 }
+// A failed step names the walkthrough line it stopped on and saves a screenshot of every open page, so a failure in CI
+// can be read from the log and the artifact without running it again (issue #247).
+let stepNo = 0;
 async function step(name, fn) {
-  current = name;
+  current = name; stepNo++;
   try { await fn(); passed.push(name); console.log('PASS', name); }
-  catch (e) { problems.push(`[${name}] FAILED: ${e.message.split('\n')[0]}`); console.log('FAIL', name, '-', e.message.split('\n')[0]); }
+  catch (e) {
+    const why = e.message.split('\n')[0] + where(e);
+    problems.push(`[${name}] FAILED: ${why}`); console.log('FAIL', name, '-', why);
+    await failureShots(name);
+  }
+}
+// The walkthrough lines a failure came through, innermost first, up to the step itself: " (journey.mjs line 8, called from 19)".
+function where(e) {
+  const lines = [];
+  for (const m of (e.stack || '').matchAll(/at (?:async )?(\S+ )?\(?[^\s()]*journey\.mjs:(\d+)/g)) {
+    const fn = m[1]?.trim();
+    if (fn === 'step') break;
+    if (fn !== 'waitText' && !lines.includes(m[2])) lines.push(m[2]);
+  }
+  return lines.length ? ` (journey.mjs line ${lines[0]}${lines.length > 1 ? ', called from ' + lines.slice(1).join(', ') : ''})` : '';
+}
+async function failureShots(name) {
+  const slug = String(stepNo).padStart(2, '0') + '-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60).replace(/-$/, '');
+  let n = 0;
+  for (const page of browser.contexts().flatMap(c => c.pages())) {
+    const file = `${FAILS}/${slug}-${++n}-${labels.get(page) || 'page'}.png`;
+    try { mkdirSync(FAILS, {recursive: true}); await page.screenshot({path: file, fullPage: true, timeout: 10000}); console.log(`    screenshot ${file} (${page.url()})`); }
+    catch (e) { console.log(`    no screenshot of ${page.url()}: ${e.message.split('\n')[0]}`); }
+  }
 }
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 const text = async (page, sel) => (await page.locator(sel).first().textContent({timeout: 20000})) ?? '';
-// waitText that names what it waited for when it times out.
-const at = (page, sel, re, ms) => waitText(page, sel, re, ms).catch(async e => { throw new Error(`${sel} never matched ${re}: "${((await page.locator(sel).first().textContent().catch(() => '')) || '').slice(0, 160)}"`); });
-const waitText = async (page, sel, re, ms = 20000) => { await page.waitForFunction(([s, r]) => new RegExp(r).test(document.querySelector(s)?.textContent || ''), [sel, re.source], {timeout: ms}); };
+// Waits until the first element matching sel has text matching re. When it does not, the error names what it waited
+// for and what the element said instead.
+const waitText = async (page, sel, re, ms = 20000) => {
+  try { await page.waitForFunction(([s, r]) => new RegExp(r).test(document.querySelector(s)?.textContent || ''), [sel, re.source], {timeout: ms}); }
+  catch (e) {
+    const said = ((await page.locator(sel).first().textContent({timeout: 1000}).catch(() => '')) || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    throw new Error(`${sel} never matched ${re}: "${said}" (${e.message.split('\n')[0]})`);
+  }
+};
+const at = waitText;
 const api = async (page, url, body) => page.evaluate(async ([u, b]) => { const r = await fetch(u, b ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b)} : {cache: 'no-store'}); return {status: r.status, body: await r.json().catch(() => null)}; }, [url, body]);
 // Contact and safety details are required to save a profile (issue #188, #197 question 14). Wrestler i gets a birth
 // date and "No allergies or medical notes".
@@ -913,7 +950,8 @@ await step('family requests SWA Advance approval; owner approves; transfer to SW
   expect(where(later) === 'SWA Advance' && where(before) === 'SWA Intermediate', `roster after transfer: ${where(before)} -> ${where(later)}`);
 });
 await step('owner offers a scholarship; family 2 accepts it with a drawn signature', async () => {
-  await owner.goto(BASE + '/scholarships'); await owner.waitForSelector('#offerForm');
+  // Create stays off until the offers list has loaded, so a late list cannot hide the new offer (issue #247).
+  await owner.goto(BASE + '/scholarships'); await owner.waitForSelector('#create:not([disabled])');
   await owner.fill('#offerForm [name=email]', 'family.b@example.test'); await owner.fill('#offerForm [name=wrestlerName]', 'Riley Two');
   await owner.selectOption('#program', 'Intermediate'); await owner.click('#create');
   await owner.waitForFunction(() => document.querySelector('#inviteUrl')?.value, null, {timeout: 8000});
@@ -923,7 +961,9 @@ await step('owner offers a scholarship; family 2 accepts it with a drawn signatu
   await owner.locator('[data-finalize] [name=terms]').first().fill('Sample scholarship terms for testing only. '.repeat(8));
   await owner.locator('[data-finalize] [name=reviewed]').first().check(); await owner.locator('[data-finalize] button').first().click();
   await at(owner, '#status', /Final agreement saved/);
-  await family2.goto(invite.replace(/^https?:\/\/[^/]+/, BASE)); await family2.waitForSelector('#acceptForm');
+  // The form shows with the agreement but stays disabled until the family's wrestlers are in and the signature pad
+  // listens. A signature drawn before that was lost, so Sign was refused (issue #247).
+  await family2.goto(invite.replace(/^https?:\/\/[^/]+/, BASE)); await family2.waitForSelector('#acceptFields:not([disabled])');
   await family2.fill('#signer', 'Riley Parent'); await draw(family2, '#signatureCanvas');
   await family2.check('#accepted'); await family2.check('#electronicConsent'); await family2.click('#accept');
   await waitText(family2, '#offer', /Scholarship active/);

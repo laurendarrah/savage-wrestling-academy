@@ -2,6 +2,7 @@
 # Builds the site, starts it on a fresh local database with stand-ins for Supabase Auth and USA Wrestling's verify
 # page, and runs the end-to-end walkthrough in Chromium. Local only; it never calls USA Wrestling.
 # Usage: bash scripts/e2e/run.sh [screenshot-folder]. Ports: E2E_PORT, E2E_AUTH_PORT, E2E_USAW_PORT.
+# Screenshots of every open page at each failed step go to e2e-failures/ (E2E_FAILURES).
 set -e
 cd "$(dirname "$0")/../.."
 PORT=${E2E_PORT:-8799}

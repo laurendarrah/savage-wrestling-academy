@@ -25,8 +25,10 @@ next-env.d.ts
 *.log
 !handoff/**/*.log
 
-# Browser walkthrough output (pnpm e2e)
+# Browser walkthrough output (pnpm e2e): screenshots, screenshots of failed steps, and the log CI keeps
 e2e-screenshots/
+e2e-failures/
+e2e-walkthrough.log
 
 # Working copies made by Claude Code helpers; never part of the project.
 .claude/worktrees/
