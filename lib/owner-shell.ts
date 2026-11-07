@@ -7,7 +7,7 @@
 // sidebar and header, so they stay still while the middle cross-fades; Speculation Rules prefetch an owner link when
 // it is hovered. Browsers without either get an ordinary page load with the same shell. public/owner-shell.js runs the
 // phone drawer, the Account menu, sign-out and focus after a move.
-import {OWNER_NAV, currentOwnerHref, ownerNavPlace} from './owner-nav';
+import {OWNER_NAV, OWNER_SHELL_PAGES, currentOwnerHref, ownerNavPlace} from './owner-nav';
 
 export const OWNER_SHELL_HEADER = 'X-SWA-Owner-Shell';
 // Called by an owner route after it has checked the owner, on the headers it answers with.
@@ -64,7 +64,7 @@ export function ownerSidebar(current: string | null) {
     if (g.folded) return `<details class="os-fold"${g.items.some(i => i.href === current) ? ' open' : ''}><summary>${esc(g.label)}</summary>${list}</details>`;
     return `<p class="os-group" id="swa-os-g${n}">${esc(g.label)}</p>${list.replace('<ul class="os-list">', `<ul class="os-list" aria-labelledby="swa-os-g${n}">`)}`;
   }).join('');
-  return '<div class="os-side" id="swa-os-side">'
+  return `<div class="os-side" id="swa-os-side" data-os-pages="${OWNER_SHELL_PAGES.join(' ')}">`
     + '<div class="os-side-top"><a class="os-brand" href="/"><img src="/brand/savage-logo-128.png" alt="" width="56" height="56"><span>SAVAGE<small>WRESTLING ACADEMY</small></span></a>'
     + `<button type="button" class="os-close" id="swa-os-close" aria-label="Close menu">${svg('<path d="M18 6L6 18M6 6l12 12"/>', 22)}</button></div>`
     + '<div class="os-redline"></div>'
@@ -96,8 +96,13 @@ export function ownerTopbar(pathname: string, current: string | null) {
 
 // Runs as soon as the shell is parsed, before it is drawn: on the dashboard, the server could not see the #section, so
 // this marks the section's item and names it in the breadcrumb; then the sidebar goes back to where it was scrolled
-// (public/owner-shell.js saves it when the page is left), keeping the current item in view.
+// (public/owner-shell.js saves it when the page is left), keeping the current item in view. It also looks after the
+// View Transitions: a move to a page outside the owner shell skips the transition (that page has not opted in), and a
+// transition cut short by another click is let go quietly instead of reported as an error.
 export const SHELL_BOOT = `(function(){try{var d=document,n=d.getElementById('swa-os-nav'),s=d.getElementById('swa-os-side'),c=n.querySelector('[aria-current="page"]');`
+  + `var q=function(t){if(t)[t.ready,t.finished,t.updateCallbackDone].forEach(function(p){if(p)p.catch(function(){})})};`
+  + `addEventListener('pagereveal',function(e){q(e.viewTransition)});`
+  + `addEventListener('pageswap',function(e){var t=e.viewTransition;q(t);if(t&&(!e.activation||(s.getAttribute('data-os-pages')||'').split(' ').indexOf(new URL(e.activation.entry.url).pathname)<0))t.skipTransition()});`
   + `if(location.pathname==='/'){var h=location.hash.split('?')[0],a=h.length>1?n.querySelector('a[href="/'+h.replace(/[^\\w#-]/g,'')+'"]'):null;`
   + `if(a&&a!==c){if(c)c.removeAttribute('aria-current');a.setAttribute('aria-current','page');c=a;var g=a.closest('details');if(g)g.open=true;var m=d.getElementById('swa-os-crumb'),l=a.closest('ul').getAttribute('aria-labelledby');`
   + `if(m)m.textContent=(l?d.getElementById(l).textContent+' / ':'')+a.textContent}}`

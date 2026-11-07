@@ -13,6 +13,8 @@ export type OwnerNavItem = {
   also?: string[];
   // The daily tiles' line on the dashboard.
   blurb?: string;
+  // Opens a page outside the owner shell (Coach view is the coach home).
+  leaves?: boolean;
 };
 export type OwnerNavGroup = {label: string; items: OwnerNavItem[]; folded?: boolean};
 
@@ -42,7 +44,7 @@ export const OWNER_NAV: OwnerNavGroup[] = [
   ]},
   {label: 'Coaches & lessons', items: [
     {href: '/staff', label: 'Coaches', also: ['/coach-openings', '/coach-profile']},
-    {href: '/coach', label: 'Coach view'},
+    {href: '/coach', label: 'Coach view', leaves: true},
     {href: '/contracts', label: 'Coach contracts'},
     {href: '/lesson-settings', label: 'Private lesson prices'},
     {href: '/timesheets', label: 'Coach hours'},
@@ -62,6 +64,14 @@ export const OWNER_NAV: OwnerNavGroup[] = [
 ];
 
 export const OWNER_NAV_ITEMS: OwnerNavItem[] = OWNER_NAV.flatMap(g => g.items);
+
+// Every page shown in the owner shell, by path: a move between two of them is a View Transition; a move anywhere else
+// (Coach view, what families see) is an ordinary page load.
+export const OWNER_SHELL_PAGES: string[] = [...new Set([
+  ...OWNER_NAV_ITEMS.filter(i => !i.leaves).map(i => i.href.split('#')[0] || '/'),
+  ...OWNER_NAV_ITEMS.flatMap(i => i.also ?? []),
+  '/security',
+])];
 
 // The item to mark as the current page. The server sees only the path, so on the dashboard it marks Dashboard and
 // the page corrects it from the address's #section before it is drawn (lib/owner-shell.ts). Null for an owner page

@@ -332,6 +332,6 @@ const ok = body => ({ok: true, status: 200, json: async () => body});
 }
 {
   // The owner navigation (the shell's sidebar and the dashboard's tools, issue #261) links Coach view under Coaches & lessons.
-  assert.match(readFileSync('lib/owner-nav.ts', 'utf8'), /label: 'Coaches & lessons', items: \[\n\s*\{href: '\/staff', label: 'Coaches'[^\n]*\n\s*\{href: '\/coach', label: 'Coach view'\}/);
+  assert.match(readFileSync('lib/owner-nav.ts', 'utf8'), /label: 'Coaches & lessons', items: \[\n\s*\{href: '\/staff', label: 'Coaches'[^\n]*\n\s*\{href: '\/coach', label: 'Coach view'/);
 }
 console.log('Passed: coach invites (owner only, 256-bit single-use tokens stored hashed, 7-day expiry, wrong email refused, renew and cancel, access granted on accept, authenticator before coach home, sign-in and confirmation return to the invite), profiles (validation, own only, owner edits, families see name and bio but no phone or email), the owner as a coach (Coach view, openings, pay settings, owner checks unchanged), removal keeps lessons, payments, pay report and audit history, and weekly repeating openings (same format and spots, clashes skipped, 12-week cap).');

@@ -67,12 +67,14 @@ html body .os-top{position:sticky;top:0;z-index:50;display:flex;align-items:cent
 html body .os-menu,html body .os-top-brand{display:none}
 html body .os-crumbs{flex:1 1 auto;min-width:0;margin:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--os-muted);font-size:13px}
 html body .os-crumbs-home{color:var(--os-ink);font-weight:800;font-size:12px;letter-spacing:2px}
-html body .os-family-top{display:flex;align-items:center;flex-wrap:wrap;gap:0 16px}
+html body .os-family-top{display:flex;flex:none;align-items:center;gap:0 16px}
 html body .os-family-label{color:var(--os-muted);font-size:13px}
 html body .os-family-top a{display:inline-flex;align-items:center;min-height:44px;color:var(--os-ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 html body .os-family-top a:hover{color:var(--os-red)}
-html body .os-tools{display:flex;align-items:center;gap:14px;margin-left:auto}
-html body .os-sync{font-size:13px;font-weight:600}
+html body .os-tools{display:flex;flex:0 1 auto;min-width:0;align-items:center;gap:14px;margin-left:auto}
+/* The header is the same height on every owner page, so it keeps still between them: a long save message wraps inside. */
+html body .os-sync{min-width:0;max-width:280px;font-size:13px;font-weight:600;line-height:1.25}
+html body .os-account{flex:none}
 html body .os-account{position:relative;margin:0}
 html body .os-account summary{list-style:none;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 14px;border:1px solid #CDD0D6;border-radius:8px;background:#fff;
   color:var(--os-ink);font:600 15px/1 var(--os-body);cursor:pointer;box-shadow:0 1px 2px rgba(17,17,19,.06)}
@@ -116,7 +118,10 @@ html body .os-panel hr{width:auto;border:0;border-top:1px solid var(--os-line);m
   html body .os-account summary{background:transparent;color:#fff;border-color:rgba(255,255,255,.35);box-shadow:none}
   html body .os-account[open] summary{border-color:#fff}
   html body .os-panel{min-width:min(280px,calc(100vw - 32px))}
-  html body .os-sync{order:5;flex:1 0 100%;margin:0 -16px -8px;padding:6px 16px;background:#fff;border-bottom:1px solid var(--os-line)}
+  /* The dashboard's save status sits in a strip under the header, so the header itself keeps one height everywhere. */
+  html body .os-sync{position:absolute;left:0;right:0;top:100%;max-width:none;margin:0;padding:5px 16px;background:#fff;border-bottom:1px solid var(--os-line);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html body[data-swa-page="/"] .os-work>main{margin-top:28px}
   html body .os-top :focus-visible{outline:3px solid #E25C63;outline-offset:2px}
 }
 @media (max-width:900px) and (prefers-reduced-motion:reduce){html body .os-side,html body.os-open .os-side{transition:none}}

@@ -48,7 +48,7 @@ function load(file) {
 }
 const {decorateResponse} = load('lib/page-chrome.ts');
 const {OWNER_SHELL_HEADER, SHELL_BOOT, OWNER_SHELL_HEAD} = load('lib/owner-shell.ts');
-const {currentOwnerHref, OWNER_NAV_ITEMS} = load('lib/owner-nav.ts');
+const {currentOwnerHref, OWNER_NAV_ITEMS, OWNER_SHELL_PAGES} = load('lib/owner-nav.ts');
 
 async function open(path, who = 'owner') {
   as = who;
@@ -71,7 +71,9 @@ const ownerRoutes = {
   '/data-requests': '/data-requests', '/security-log': '/security-log', '/help/owner': '/help/owner', '/security': null,
 };
 // Every destination in the navigation that is an owner page is covered (Coach view is the coach home, not an owner page).
-for (const i of OWNER_NAV_ITEMS) if (!i.section && i.href !== '/coach') assert.ok(Object.keys(ownerRoutes).some(r => r.split('?')[0] === i.href), i.href + ' is checked');
+for (const i of OWNER_NAV_ITEMS) if (!i.section && !i.leaves) assert.ok(Object.keys(ownerRoutes).some(r => r.split('?')[0] === i.href), i.href + ' is checked');
+// The pages the browser treats as inside the shell (View Transitions) are exactly the routes that draw it.
+assert.deepEqual([...OWNER_SHELL_PAGES].sort(), [...new Set(Object.keys(ownerRoutes).map(r => r.split('?')[0]))].sort());
 for (const [path, current] of Object.entries(ownerRoutes)) {
   const {status, headers, html} = await open(path);
   assert.equal(status, 200, path);
@@ -146,7 +148,7 @@ function fakeShell(hash, pathname = '/') {
     if (attrs.id) els[attrs.id] = e;
     return e;
   };
-  const side = el('div', {id: 'swa-os-side'}), nav = el('nav', {id: 'swa-os-nav'}, side);
+  const side = el('div', {id: 'swa-os-side', 'data-os-pages': OWNER_SHELL_PAGES.join(' ')}), nav = el('nav', {id: 'swa-os-nav'}, side);
   const links = [];
   const list = (label, items) => {
     const ul = el('ul', label ? {'aria-labelledby': 'g-' + label} : {}, nav);
@@ -159,8 +161,10 @@ function fakeShell(hash, pathname = '/') {
   el('span', {id: 'swa-os-crumb', text: 'Dashboard'});
   nav.querySelector = sel => { const m = sel.match(/^a\[href="([^"]+)"\]$/); return m ? links.find(a => a.attrs.href === m[1]) || null : sel === '[aria-current="page"]' ? links.find(a => a.attrs['aria-current']) || null : null; };
   const store = new Map();
-  const ctx = {document: {getElementById: id => els[id] || null}, location: {pathname, hash}, sessionStorage: {getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v)}, Number, Math};
-  return {ctx, els, links, store, side};
+  const on = {};
+  const ctx = {document: {getElementById: id => els[id] || null}, location: {pathname, hash}, sessionStorage: {getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v)}, Number, Math, URL,
+    addEventListener: (t, f) => { on[t] = f; }};
+  return {ctx, els, links, store, side, on};
 }
 {
   const page = fakeShell('#programs');
@@ -190,7 +194,17 @@ for (const hash of ['', '#', '#nothing', '#"]x']) {
   page.store.set('swa-os-scroll', '600'); vm.runInNewContext(SHELL_BOOT, page.ctx); assert.equal(page.side.scrollTop, 100);
   page.links[1].offsetTop = 40; page.store.set('swa-os-scroll', '600'); vm.runInNewContext(SHELL_BOOT, page.ctx); assert.equal(page.side.scrollTop, 0);
 }
-console.log('Owner shell start-up: deep links mark their section and breadcrumb; the sidebar keeps its place');
+{ // View Transitions: kept between owner pages, skipped for a page outside the shell, and an aborted one is let go quietly.
+  const page = fakeShell('', '/payments');
+  vm.runInNewContext(SHELL_BOOT, page.ctx);
+  const transition = () => { const t = {skipped: false, caught: 0, skipTransition() { t.skipped = true; }}; for (const k of ['ready', 'finished', 'updateCallbackDone']) t[k] = {catch: () => { t.caught++; }}; return t; };
+  const swap = url => { const t = transition(); page.on.pageswap({viewTransition: t, activation: {entry: {url: 'https://academy.test' + url}}}); return t; };
+  for (const url of ['/financials', '/', '/#programs', '/accounts?q=Pat', '/coach-openings?email=x', '/security']) { const t = swap(url); assert.equal(t.skipped, false, url); assert.equal(t.caught, 3, url); }
+  for (const url of ['/coach', '/welcome', '/calendar', '/family']) assert.equal(swap(url).skipped, true, url + ' is outside the shell');
+  const t = transition(); page.on.pagereveal({viewTransition: t}); assert.equal(t.caught, 3, 'the new page lets an aborted transition go quietly');
+  page.on.pagereveal({viewTransition: null}); page.on.pageswap({viewTransition: null, activation: null});
+}
+console.log('Owner shell start-up: deep links mark their section and breadcrumb; the sidebar keeps its place; transitions only inside the shell');
 
 // ---------- The dashboard opens the section named in its address ----------
 {

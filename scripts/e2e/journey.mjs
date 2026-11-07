@@ -1146,7 +1146,10 @@ await step('owner moves through the owner shell with the sidebar: dashboard, Pay
   for (const viewport of [{width: 1280, height: 860}, {width: 390, height: 844}]) {
     const page = await as('owner', viewport), phone = viewport.width < 500, tag = phone ? 'phone' : 'desktop';
     // Whether the browser ran a cross-document View Transition into each page.
-    await page.addInitScript(() => addEventListener('pagereveal', e => { window.__swaTransition = !!e.viewTransition; }));
+    await page.addInitScript(() => addEventListener('pagereveal', e => {
+      window.__swaTransition = !!e.viewTransition; window.__swaSettled = !e.viewTransition;
+      e.viewTransition?.finished.catch(() => {}).finally(() => { window.__swaSettled = true; });
+    }));
     await page.goto(BASE + '/'); await waitText(page, 'main h1', /KEEP THE ACADEMY MOVING/);
     const first = await shellState(page);
     expect(first.sides === 1 && first.tops === 1 && first.current === '/', `${tag}: the dashboard has one shell with Dashboard marked: ` + JSON.stringify(first).slice(0, 200));
@@ -1178,6 +1181,8 @@ await step('owner moves through the owner shell with the sidebar: dashboard, Pay
       if (samePage) expect(s.stayed, `${tag} ${href}: the dashboard section opened without loading the page again`);
       else expect(await page.evaluate(() => window.__swaTransition), `${tag} ${href}: the page opened with a View Transition`);
       if (prefetch) expect(await page.evaluate(() => performance.getEntriesByType('navigation')[0].deliveryType) === 'navigational-prefetch', `${tag} ${href}: the hovered page came from the prefetch`);
+      // Screenshots wait for the cross-fade and the drawer's slide to finish.
+      await page.waitForFunction(() => window.__swaSettled !== false && getComputedStyle(document.querySelector('.os-side')).visibility === (innerWidth > 900 ? 'visible' : 'hidden'));
       await shot(page, `shell-${tag}-${href.replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '') || 'dashboard'}`);
     };
     await open('/payments', /\/payments$/, /^Payments$/, 'Every day / Payments');
