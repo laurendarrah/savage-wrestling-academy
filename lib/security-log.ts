@@ -4,6 +4,7 @@ import {env} from 'cloudflare:workers';
 import {programDetails} from './program-names';
 import {dayDate, dayTime, fullDate, when} from './datetime';
 import {allFamilies, keysetPage} from './paging';
+import {failureWords} from './email';
 
 export type SecurityRow = {actor: string; action: string; target: string; created_at: string};
 export type SecurityNames = {
@@ -84,6 +85,7 @@ const TITLES: Record<string, string> = {
   stripe_event_rejected: 'Stripe message refused',
   lesson_double_booked: 'Lesson paid for twice',
   event_over_capacity: 'Event paid over its seat limit',
+  owner_test_alert: 'Test alert from Site health',
 };
 
 const REJECTIONS: Record<string, string> = {
@@ -159,6 +161,8 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     }
     case 'announcement_sent': detail = rest[0] ? 'Sent to ' + plural(Number(rest[0]), 'family', 'families') : ''; break;
     case 'emails_resent': detail = t; break;
+    // Issue #263: "sent" or "failed:<reason>" (lib/email.ts).
+    case 'owner_test_alert': detail = t === 'sent' ? 'Sent to the owner address' : t.startsWith('failed:') ? 'Didn’t send. ' + failureWords(t.slice(7)) : ''; break;
     case 'stripe_account_recorded': case 'stripe_account_reset': detail = /^acct_[A-Za-z0-9]{8,64}$/.test(t) ? 'Stripe account ' + t : ''; break;
     case 'account_closure_requested': detail = names.people[t] ?? ''; break;
     case 'data_request_handled': detail = names.requests[t] ?? ''; break;

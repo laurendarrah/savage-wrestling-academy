@@ -108,7 +108,7 @@ Notes: ____________________________________________________________
 
 - [ ] **Must pass.** **Backups** (`/backups`) → a passphrase twice → **Encrypt & download backup**. *A `savage-backup-<date>.savage` file downloads.* Keep it and its passphrase for the restore drill (`docs/RESTORE_DRILL.md`, #25). It includes the test family; that's fine.
 - [ ] **Must pass.** **Site health** (`/site-health`): **Right now** says the site and database are answering, and **Site errors in the last 7 days** has nothing from today you can't explain.
-- [ ] The owner alert email: **Site health → Alerts and email** shows the last alert, if any. If one went out since email was set up, check it reached `savagewrestlingclub@gmail.com`. There's no button to send a test alert: if none has gone out yet, write "no alert yet" and tick this when the first one arrives (#47).
+- [ ] The owner alert email: **Site health → Alerts and email** → **Send a test alert**. *The page says "Sent to savagewrestlingclub@gmail.com", and an email with the subject "Test alert: no action needed" and a link to Site health arrives in that inbox (check spam).* If the page says "Email isn't set up yet", email isn't set up (#35). Steps and failure reasons: `docs/RUNBOOK.md`, "Check that alert emails arrive" (#47).
 - [ ] **Security activity** (`/security-log`) lists today's steps: the cash received, card reviews, the backup.
 
 Notes: ____________________________________________________________
