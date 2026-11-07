@@ -25,7 +25,7 @@ Downloads are manual. There is no scheduled off-site backup service yet. Store e
 
 - `node tests/security-hardening.mjs`: owner and family MFA enforcement, no ChatGPT bypass, coach assignment/revocation and isolation, backup encryption/tamper checks, recovery snapshot, transactional restore and concurrent-change rollback.
 - `node tests/owner-workspace.mjs`: settings and scheduling validation, durable saving, stale-write rejection and save queues.
-- `pnpm audit --prod --json`: installed production dependency advisories; this is not a penetration test.
+- `pnpm audit --prod --json`: installed production dependency advisories; this is not a penetration test. It does not see vinext, `@vitejs/plugin-rsc` or `react-server-dom-webpack`, which are dev dependencies but partly bundled into the Worker. The full audit, what was fixed and what remains are in `docs/DEPENDENCY_ADVISORIES.md`.
 - `tsc --noEmit` and the Sites production build.
 
 ## Remaining launch work
