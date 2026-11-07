@@ -212,7 +212,7 @@ function holidayNamesOn(date){const year=Number(date.slice(0,4));return [year-1,
 function holidayTags(date){return holidayNamesOn(date).map(name=>`<span class="holiday-tag">${esc(name)}</span>`).join('')}
 function todayTag(date){return date===academyToday()?'<span class="today-tag">Today</span>':''}
 // A time range on a calendar card (issue #232): "6:00 PM–7:30 PM" may wrap after the dash, never inside "7:30 PM".
-function eventTime(label){return `<span class="event-time">${esc(label).replace(/ (AM|PM)/g,' $1')}</span>`}
+function eventTime(label){return `<span class="event-time">${esc(label).replace(/ (AM|PM)/g,'\u00a0$1')}</span>`}
 function calendarEventCards(date,mobile=false){if(filter!=='All programs'&&filter!=='Camps, clinics & events')return '';const extra=(data.extraPractices||[]).filter(p=>p.enabled&&p.dates.includes(date)&&date>=academyToday()).map(p=>`<a class="${mobile?'mobile-practice':'event'} cal-special" href="/booking?type=live&id=${p.id}&date=${date}"><strong>${esc(p.name)}</strong>${eventTime(clockTime(p.start)+'–'+clockTime(p.end))}<span>${formatPrice(p.memberCents)} members / ${formatPrice(p.nonMemberCents)} non-members</span><span>Separate purchase</span></a>`).join('');return extra+savedEvents().map((e,index)=>({e,index})).filter(({e})=>!isEventArchived(e)&&eventDates(e).includes(date)).map(({e,index})=>`<button class="${mobile?'mobile-practice':'event'} cal-special" onclick="calendarEvent(${index})"><strong>${esc(e.name)}</strong>${eventTime(eventTimeLabel(e,date))}<span>${esc(e.type)}</span></button>`).join('')}
 
 function calendarEvent(index){const e=savedEvents()[index];if(e&&!isEventArchived(e))modal(eventCard(e,index))}
