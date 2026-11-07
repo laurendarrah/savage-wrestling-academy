@@ -14,6 +14,7 @@ import {env} from 'cloudflare:workers';
 import {academyDay} from './datetime';
 import {stripeMode} from './checkout-config';
 import {refundSteps, type RefundRow} from './card-refunds';
+import {collectorNameSql} from './collectors';
 
 export const ENTRY_KINDS = ['expense', 'income'] as const;
 export type EntryKind = typeof ENTRY_KINDS[number];
@@ -37,6 +38,8 @@ export type LedgerLine = {
   id: string; date: string; type: 'income' | 'refund' | 'expense'; source: 'online' | 'offline' | 'owner';
   category: string; description: string; method: string; amountCents: number; note: string; receipt: string;
   entryId: string | null; revision: number | null;
+  // Who collected an offline payment (issue #250): a coach's display name, "Owner" or "Former coach". Empty otherwise.
+  collectedBy: string;
 };
 export type Totals = {incomeCents: number; refundsCents: number; expensesCents: number; netCents: number};
 
@@ -66,7 +69,7 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
   const [paid, installments, refunds, history, fees, entries] = await env.DB!.batch([
     // Card payments for the current Stripe mode, and offline payments. A refunded payment still came in; its refund
     // goes out on the day it was refunded. Voided offline payments (status canceled) were never received.
-    env.DB!.prepare(`SELECT o.id,o.paid_at,o.kind,o.item_label,o.wrestler_name,o.amount_cents,o.source,o.pricing,s.payments_total FROM orders o
+    env.DB!.prepare(`SELECT o.id,o.paid_at,o.kind,o.item_label,o.wrestler_name,o.amount_cents,o.source,o.pricing,s.payments_total,${collectorNameSql('o')} AS collected_by FROM orders o
       LEFT JOIN subscriptions s ON s.order_id=o.id
       WHERE o.status IN ('paid','refunded') AND o.paid_at IS NOT NULL AND o.paid_at>=? AND o.paid_at<? AND o.amount_cents>0
         AND (o.source='offline' OR (o.source='stripe' AND o.livemode=?))`).bind(lo, hi, live),
@@ -88,14 +91,15 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
       WHERE deleted_at IS NULL AND entry_date>=? AND entry_date<=?`).bind(from, to),
   ]);
   const lines: LedgerLine[] = [];
-  const base = {note: '', receipt: '', entryId: null, revision: null};
+  const base = {note: '', receipt: '', entryId: null, revision: null, collectedBy: ''};
   for (const r of paid.results as any[]) {
     const date = academyDay(r.paid_at);
     if (!inRange(date)) continue;
     const offline = r.source === 'offline', p = offline ? JSON.parse(r.pricing || '{}') : {};
     const of = r.kind === 'monthly' ? ` (payment 1 of ${r.payments_total || 12})` : '';
     lines.push({...base, id: 'payment:' + r.id, date, type: 'income', source: offline ? 'offline' : 'online', category: KIND_CATEGORY[r.kind] ?? r.kind,
-      description: `${r.item_label}${of} · ${r.wrestler_name}`, method: offline ? METHOD_LABEL[p.method] ?? 'Offline' : 'Card online', amountCents: r.amount_cents});
+      description: `${r.item_label}${of} · ${r.wrestler_name}`, method: offline ? METHOD_LABEL[p.method] ?? 'Offline' : 'Card online', amountCents: r.amount_cents,
+      collectedBy: offline ? r.collected_by ?? '' : ''});
   }
   for (const r of installments.results as any[]) {
     const date = academyDay(r.received_at);
@@ -130,7 +134,7 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
   }
   for (const r of entries.results as any[])
     lines.push({id: 'entry:' + r.id, date: r.entry_date, type: r.kind === 'income' ? 'income' : 'expense', source: 'owner', category: r.category,
-      description: r.note, method: '', amountCents: r.amount_cents, note: r.note, receipt: r.receipt, entryId: r.id, revision: r.revision});
+      description: r.note, method: '', amountCents: r.amount_cents, note: r.note, receipt: r.receipt, entryId: r.id, revision: r.revision, collectedBy: ''});
   return lines.sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
 }
 
@@ -168,8 +172,9 @@ const SOURCE_LABEL = {online: 'Card payment', offline: 'Offline payment', owner:
 const TYPE_LABEL = {income: 'Income', refund: 'Refund', expense: 'Expense'};
 export function ledgerCsv(lines: LedgerLine[]) {
   const money = (c: number) => (c / 100).toFixed(2);
-  const head = ['Date', 'Type', 'From', 'Category', 'Description', 'Paid by', 'Money in', 'Money out', 'Receipt reference'];
+  // Collected by (issue #250) is last, so the money columns stay where spreadsheets already read them.
+  const head = ['Date', 'Type', 'From', 'Category', 'Description', 'Paid by', 'Money in', 'Money out', 'Receipt reference', 'Collected by'];
   const rows = [...lines].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)).map(l => [l.date, TYPE_LABEL[l.type], SOURCE_LABEL[l.source], l.category, l.description, l.method,
-    l.type === 'income' ? money(l.amountCents) : '', l.type === 'income' ? '' : money(l.amountCents), l.receipt].map(csvCell).join(','));
+    l.type === 'income' ? money(l.amountCents) : '', l.type === 'income' ? '' : money(l.amountCents), l.receipt, l.collectedBy].map(csvCell).join(','));
   return [head.join(','), ...rows].join('\r\n') + '\r\n';
 }

@@ -117,9 +117,12 @@ assert.equal(row.wrestler_name, 'Dana Scholar'); assert.equal(row.source, 'Schol
 // --- Coach: assigned programs, today only, no email ---
 actor = {kind: 'coach', id: 'coach-id', programs: ['Advanced']};
 r = await get('');
-assert.equal(JSON.stringify(r.body).includes('Peanut allergy'), false, 'a coach of another program does not see them');
+assert.equal(JSON.stringify(r.body.sessions.filter(s => s.type !== 'live')).includes('Peanut allergy'), false, 'a coach of another program does not see them');
 assert.equal(r.status, 200); assert.equal(r.body.role, 'coach');
-assert.deepEqual(r.body.sessions.map(s => s.key.split(':').slice(0, 2).join(':')), ['practice:Advanced'], 'coach sees only assigned program practices');
+// Since issue #250 every coach also sees the extra practices (Friday Night Live), which belong to no program.
+assert.deepEqual(r.body.sessions.map(s => s.key.split(':').slice(0, 2).join(':')).sort(), ['live:fnl', 'practice:Advanced'], 'coach sees assigned program practices and extra practices');
+assert.deepEqual(names(find(r.body.sessions, 'live:fnl:')), ['Avery Member'], 'any coach sees who is booked for Friday Night Live');
+assert.equal(find(r.body.sessions, 'live:fnl:').entries[0].email, null, 'still no family email for coaches');
 assert.equal((await get('?date=' + tomorrow)).status, 403, 'coach cannot open other dates');
 assert.equal((await post({action: 'checkin', date: today, sessionKey: key, userId: 'p1', wrestlerId: 'w1'})).status, 404, 'coach cannot check in for an unassigned program');
 actor = {kind: 'coach', id: 'coach-id', programs: ['Intermediate']};

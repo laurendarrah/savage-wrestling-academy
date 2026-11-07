@@ -1,4 +1,5 @@
-// Real roster and check-in (issue #22). Owner: any date, every session. Coach: today, assigned program practices only.
+// Real roster and check-in (issue #22). Owner: any date, every session. Coach: today, their own programs' practices and
+// every extra practice (issue #250).
 import {ownerIdentity, strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {accountRole} from '../../../lib/access-control';
 import {academyToday} from '../../../lib/public-schedule';
@@ -6,19 +7,21 @@ import {rosterFor, checkIn, undoCheckIn, validDate, type Scope} from '../../../l
 import {scanCheckIn} from '../../../lib/passes';
 import {dailyReminders, quietly} from '../../../lib/notify';
 import {academyMinutes} from '../../../lib/lessons';
-import {receiveCash, type Collector} from '../../../lib/cash-bookings';
+import {receiveCash} from '../../../lib/cash-bookings';
+import {coachCollector, ownerCollector, type Collector} from '../../../lib/collectors';
 import {voidOffline} from '../../../lib/offline-payments';
 export const dynamic = 'force-dynamic';
 
-// collector: who taps Cash received (issue #248), kept on the payment as who collected it.
-async function staff(request: Request): Promise<{scope: Scope | null; actor: string | null; headers: Headers; mfa: boolean; collector?: Collector}> {
+// collector: who taps Cash received (issue #248), kept on the payment as who collected it. A coach is named by their
+// profile display name, else their name on Coaches, never their email (issue #250). Only an active coach gets here.
+async function staff(request: Request): Promise<{scope: Scope | null; actor: string | null; headers: Headers; mfa: boolean; collector?: () => Promise<Collector>}> {
   const owner = await ownerIdentity(request);
-  if (owner.owner) return {scope: {role: 'owner'}, actor: owner.owner.userId, headers: owner.headers, mfa: false, collector: {id: owner.owner.userId, name: 'Owner', email: null}};
+  if (owner.owner) return {scope: {role: 'owner'}, actor: owner.owner.userId, headers: owner.headers, mfa: false, collector: async () => ownerCollector(owner.owner!.userId)};
   const auth = await strongAccount(request), access = await accountRole(auth.user);
   if (access.role === 'coach' && access.staff) {
     if (!auth.strong) return {scope: null, actor: null, headers: auth.headers, mfa: true};
     return {scope: {role: 'coach', programs: access.staff.programs}, actor: auth.user!.id, headers: auth.headers, mfa: false,
-      collector: {id: auth.user!.id, name: access.staff.name || access.staff.email, email: access.staff.email}};
+      collector: () => coachCollector(auth.user!.id, access.staff!)};
   }
   return {scope: null, actor: null, headers: auth.headers, mfa: !!owner.mfaRequired};
 }
@@ -51,15 +54,17 @@ export async function POST(request: Request) {
     const {status, ...result} = r;
     return reply({ok: true, scan: result, sessions: await rosterFor(input.date, s.scope)});
   }
-  // Cash received for a walk-in or extra practice booked to pay at the academy (issue #248). Coaches: today, their programs.
+  // Cash received for a walk-in or extra practice booked to pay at the academy (issue #248). Coaches: today, their
+  // programs' practices and every extra practice (issue #250).
   if (input?.action === 'cash') {
     if (!validDate(input.date) || typeof input.bookingId !== 'string' || input.bookingId.length > 100) return reply({error: 'Choose a booking.'}, 400);
     if (s.scope.role === 'coach' && input.date !== academyToday()) return reply({error: 'Coaches can record cash for today only.'}, 403);
-    const r = await receiveCash(input.bookingId, s.collector!, s.scope);
+    const r = await receiveCash(input.bookingId, await s.collector!(), s.scope);
     if (r.status !== 200) return reply({error: r.error}, r.status);
     return reply({ok: true, orderId: r.orderId, sessions: await rosterFor(input.date, s.scope)});
   }
-  // Undoing a mistaken Cash received voids that offline payment, exactly as on Payments: owner only.
+  // Undoing a mistaken Cash received voids that offline payment, exactly as on Payments: owner only, also for cash a coach
+  // received (kept simple in issue #250; the coach asks the owner).
   if (input?.action === 'cash-undo') {
     if (s.scope.role !== 'owner') return reply({error: 'Only the owner can undo a recorded payment.'}, 403);
     if (!validDate(input.date) || typeof input.orderId !== 'string' || input.orderId.length > 100) return reply({error: 'Choose a payment.'}, 400);

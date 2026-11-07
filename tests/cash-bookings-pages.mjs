@@ -152,8 +152,10 @@ for (const role of ['coach', 'owner']) {
   assert.match(row('Ana Due'), /<button class="cash" type="button" data-cash="0:0">Cash received<\/button>/);
   assert.match(row('Ana Due'), /Checked in/, 'checked in while the cash is still due');
   assert.match(row('Ana Due'), /class="row done owes"/);
-  assert.match(row('Ben Paid'), /<span class="badge ok">Cash received 5:58 PM · Coach Dana<\/span>/);
+  // Who received it (issue #250): "Received by Coach Dana · 5:58 PM".
+  assert.match(row('Ben Paid'), /<span class="badge ok">Cash \$40\.00<\/span><span class="received">Received by Coach Dana · 5:58 PM<\/span>/);
   assert.equal(/data-cash-undo/.test(row('Ben Paid')), role === 'owner', 'Undo cash is the owner’s');
+  assert.equal(/Only the owner can undo cash/.test(row('Ben Paid')), role === 'coach', 'a coach is told who can undo it');
   assert.doesNotMatch(row('Cal Member'), /data-cash|badge due/);
   assert.match(out, /· 1 to pay at the academy \(\$40\.00 due\)/);
   assert.match(html, /\.actions button\{min-height:44px/, 'full-size buttons at phone width');
@@ -161,7 +163,7 @@ for (const role of ['coach', 'owner']) {
   const sent = calls.at(-1).body;
   assert.equal(sent.action, 'cash'); assert.equal(sent.bookingId, 'cb-a'); assert.equal(sent.date, day); assert.ok(!('amountCents' in sent));
   assert.equal(el('status').textContent, 'Cash received: $40.00 for Ana Due. It now counts as paid.');
-  assert.match(el('sessions').innerHTML, /Cash received 6:01 PM · Coach Dana/);
+  assert.match(el('sessions').innerHTML, /Received by Coach Dana · 6:01 PM/);
   if (role === 'owner') {
     await vm.runInContext('undoCash(data.sessions[0].entries[1])', ctx); await settle();
     const undo = calls.at(-1).body;

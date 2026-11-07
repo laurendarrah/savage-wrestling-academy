@@ -8,7 +8,8 @@ import {withinCapacity} from './capacity';
 import {noticePaymentRecorded, noticeLessonBooked, quietly} from './notify';
 import {BATCH_SIZE, keysetPage, type Page, type SortCol} from './paging';
 import {refundedByOrder, type RefundRow} from './card-refunds';
-import {academyDay} from './datetime';
+import {academyDay, academyDayStart} from './datetime';
+import {collectorKeySql, collectorNameSql} from './collectors';
 
 export const METHODS = ['cash', 'check', 'venmo', 'zelle', 'card-in-person', 'other'] as const;
 // A membership paid upfront for the year is not offered, online or at the academy (decision Q9 in #197, issue #210).
@@ -99,18 +100,25 @@ export async function voidOffline(orderId: string, ownerId: string, reason: stri
   return {status: 200};
 }
 
-export type PaymentFilters = {from?: string; to?: string; status?: string; kind?: string; source?: string};
+// collector (issue #250): who collected an offline payment, by the account that recorded it (lib/collectors.ts), so the
+// owner can reconcile each coach's cash at the end of a night.
+export type PaymentFilters = {from?: string; to?: string; status?: string; kind?: string; source?: string; collector?: string};
 // Payments, newest first. The list comes a page at a time (keyset on paid_at and id, issue #46); the totals and the
 // number of matching payments are worked out in the database over every match, not just the page shown.
 const PAYMENT_COLS: SortCol[] = [{expr: 'o.paid_at', desc: true}, {expr: 'o.id', desc: true}];
-const PAYMENT_FIELDS = 'o.id,o.paid_at,o.updated_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,s.payments_made,f.payload AS family';
+const PAYMENT_FIELDS = 'o.id,o.paid_at,o.updated_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,s.payments_made,f.payload AS family,'
+  + `${collectorKeySql('o')} AS collector_key,${collectorNameSql('o')} AS collector_name`;
+const nextDay = (d: string) => new Date(Date.parse(d + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
+const validCollector = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200;
 function paymentWhere(f: PaymentFilters) {
   const where = ["o.status IN ('paid','refunded','canceled')", "(o.status<>'canceled' OR o.source='offline')", 'o.paid_at IS NOT NULL'], args: unknown[] = [];
-  if (validDate(f.from)) { where.push('substr(o.paid_at,1,10)>=?'); args.push(f.from); }
-  if (validDate(f.to)) { where.push('substr(o.paid_at,1,10)<=?'); args.push(f.to); }
+  // From and to are New York days (issue #250): a payment at 7:30 PM counts on that evening, not the next UTC day.
+  if (validDate(f.from)) { where.push('o.paid_at>=?'); args.push(academyDayStart(f.from)); }
+  if (validDate(f.to)) { where.push('o.paid_at<?'); args.push(academyDayStart(nextDay(f.to))); }
   if (['paid', 'refunded', 'canceled'].includes(String(f.status))) { where.push('o.status=?'); args.push(f.status); }
   if (['annual', 'monthly', 'walkin', 'event', 'live', 'lesson'].includes(String(f.kind))) { where.push('o.kind=?'); args.push(f.kind); }
   if (['stripe', 'offline'].includes(String(f.source))) { where.push('o.source=?'); args.push(f.source); }
+  if (validCollector(f.collector)) { where.push(`${collectorKeySql('o')}=?`); args.push(f.collector); }
   return {where: where.join(' AND '), args};
 }
 // Card refunds (full or partial) and Stripe fees for a page or batch of payments (issue #42).
@@ -134,9 +142,13 @@ function paymentView(r: any, m: CardMoney) {
   // Card payments behind this row: one, or each monthly payment so far. The fee shows once Stripe's fee is in for all of them.
   const cardPayments: number = r.source === 'stripe' ? (r.kind === 'monthly' ? r.payments_made ?? 1 : 1) : 0, fee = m.fees.get(r.id);
   const feeKnown = cardPayments > 0 && !!fee && fee.n >= cardPayments;
-  return {id: r.id as string, paidOn: String(r.paid_at).slice(0, 10), status: r.status === 'canceled' ? 'voided' : r.status as string, source: r.source as string, kind: r.kind as string, program: r.program as string | null,
+  // The New York day it was paid, like the date filter.
+  const paidOn = Number.isFinite(Date.parse(r.paid_at)) ? academyDay(r.paid_at) : String(r.paid_at).slice(0, 10);
+  return {id: r.id as string, paidOn, status: r.status === 'canceled' ? 'voided' : r.status as string, source: r.source as string, kind: r.kind as string, program: r.program as string | null,
     item: r.item_label as string, dates: JSON.parse(r.dates || '[]') as string[], wrestler: r.wrestler_name as string, parent: fam.parentName || '', email: r.email as string, phone: fam.phone || '',
     amountCents: r.amount_cents as number, listCents: r.base_cents as number, discountCents: r.discount_cents as number, method: r.source === 'offline' ? p.method : 'stripe', note: p.note || '', voidReason: p.voidReason || '',
+    // Who collected it (issue #250): a coach's display name, "Owner" or "Former coach"; empty for an online payment.
+    collectedBy: (r.collector_name as string | null) ?? '', collectorKey: (r.collector_key as string | null) ?? '', collectedAt: r.source === 'offline' && typeof p.collectedAt === 'string' ? p.collectedAt : null,
     termStart: r.term_start as string | null, termEnd: r.term_end as string | null,
     refundedCents: back?.cents ?? 0, refundedOn: back && Number.isFinite(Date.parse(back.at)) ? academyDay(back.at) : '', cardPayments,
     feeCents: feeKnown ? fee!.fee : null, netCents: feeKnown ? fee!.net : null};
@@ -150,9 +162,25 @@ const paymentsPage = (f: PaymentFilters, cursor: unknown, limit: number) => {
   const {where, args} = paymentWhere(f);
   return keysetPage<any>({select: PAYMENT_FIELDS, from: 'FROM orders o LEFT JOIN family_accounts f ON f.user_id=o.user_id LEFT JOIN subscriptions s ON s.order_id=o.id', where, args, cols: PAYMENT_COLS, keyOf: r => [r.paid_at, r.id], cursor, limit});
 };
+// Paid offline payments for each person who collected them, over every filter but the collector: a small total per coach
+// for the day or range chosen (issue #250). cashCents is the cash part, the money a coach hands over at the end of a night.
+async function totalsByCollector(f: PaymentFilters) {
+  const {where, args} = paymentWhere({...f, collector: undefined});
+  const rows = (await env.DB!.prepare(`SELECT ${collectorKeySql('o')} AS k,${collectorNameSql('o')} AS name,max(o.paid_at) AS last,count(*) AS n,sum(o.amount_cents) AS cents,
+      COALESCE(sum(CASE WHEN json_extract(o.pricing,'$.method')='cash' THEN o.amount_cents END),0) AS cash
+    FROM orders o WHERE ${where} AND o.source='offline' AND o.status='paid' AND ${collectorKeySql('o')} IS NOT NULL GROUP BY k ORDER BY cents DESC,name`).bind(...args)
+    .all<{k: string; name: string; n: number; cents: number; cash: number}>()).results;
+  return rows.map(r => ({key: r.k, name: r.name, count: Number(r.n), cents: Number(r.cents), cashCents: Number(r.cash)}));
+}
+// Everyone who has collected an offline payment, for the filter: the name from their latest payment.
+export async function paymentCollectors() {
+  const rows = (await env.DB!.prepare(`SELECT ${collectorKeySql('o')} AS k,${collectorNameSql('o')} AS name,max(o.paid_at) AS last FROM orders o
+    WHERE o.source='offline' AND o.paid_at IS NOT NULL AND ${collectorKeySql('o')} IS NOT NULL GROUP BY k`).all<{k: string; name: string}>()).results;
+  return rows.map(r => ({key: r.k, name: r.name})).sort((a, b) => a.name.localeCompare(b.name) || a.key.localeCompare(b.key));
+}
 export async function listPayments(f: PaymentFilters, page: {cursor?: unknown; limit?: number} = {}) {
   const {where, args} = paymentWhere(f);
-  const [rows, t] = await Promise.all([paymentsPage(f, page.cursor, page.limit ?? 100),
+  const [rows, t, byCollector, collectors] = await Promise.all([paymentsPage(f, page.cursor, page.limit ?? 100),
     // Collected leaves out refunds: a refunded payment entirely, and what was refunded so far from one that is still paid
     // (issue #42). Fees are every Stripe fee recorded for the matching payments.
     env.DB!.prepare(`SELECT count(*) AS matched,
@@ -162,8 +190,8 @@ export async function listPayments(f: PaymentFilters, page: {cursor?: unknown; l
         COALESCE(sum(x.back),0) AS refunded, COALESCE(sum(x.fee),0) AS fees,
         COALESCE(sum(x.status='paid'),0) AS paid
       FROM (SELECT o.status,o.source,o.amount_cents,${REFUNDED_SQL} AS back,(SELECT COALESCE(sum(fee_cents),0) FROM stripe_fees WHERE order_id=o.id) AS fee
-        FROM orders o WHERE ${where}) x`).bind(...args).first<Record<string, number>>()]);
-  return {payments: await viewsOf(rows.rows), next: rows.next, matched: Number(t?.matched ?? 0), totals: {
+        FROM orders o WHERE ${where}) x`).bind(...args).first<Record<string, number>>(), totalsByCollector(f), paymentCollectors()]);
+  return {payments: await viewsOf(rows.rows), next: rows.next, matched: Number(t?.matched ?? 0), byCollector, collectors, totals: {
     collectedCents: Number(t?.collected ?? 0), onlineCents: Number(t?.online ?? 0), offlineCents: Number(t?.offline ?? 0), refundedCents: Number(t?.refunded ?? 0),
     feesCents: Number(t?.fees ?? 0), count: Number(t?.paid ?? 0)
   }};
@@ -183,10 +211,11 @@ const csvCell = (v: unknown) => { const s = String(v ?? ''); return /[",\n\r]/.t
 export function paymentsCsv(payments: ReturnType<typeof paymentView>[]) {
   // Refunded, Stripe fee and Net cover every card payment behind the row: one, or each monthly payment so far (Card
   // payments). A blank fee means Stripe's fee isn't recorded yet. Net after Stripe fee is before any refund, as Stripe shows it.
-  const head = ['Paid on', 'Status', 'Paid via', 'Method', 'Type', 'Item', 'Dates', 'Wrestler', 'Parent', 'Email', 'Phone', 'Amount', 'List price', 'Discount', 'Term start', 'Term end', 'Note', 'Void reason',
+  // Collected by (issue #250): the coach's display name, Owner or Former coach for an offline payment; blank online.
+  const head = ['Paid on', 'Status', 'Paid via', 'Method', 'Collected by', 'Type', 'Item', 'Dates', 'Wrestler', 'Parent', 'Email', 'Phone', 'Amount', 'List price', 'Discount', 'Term start', 'Term end', 'Note', 'Void reason',
     'Refunded', 'Refunded on', 'Card payments', 'Stripe fee', 'Net after Stripe fee'];
   const money = (c: number) => (c / 100).toFixed(2), card = (p: typeof payments[number], v: string) => p.source === 'stripe' ? v : '';
-  const lines = payments.map(p => [p.paidOn, p.status, p.source === 'offline' ? 'Offline' : 'Online', p.method, p.kind, p.item, p.dates.join(' '), p.wrestler, p.parent, p.email, p.phone,
+  const lines = payments.map(p => [p.paidOn, p.status, p.source === 'offline' ? 'Offline' : 'Online', p.method, p.collectedBy, p.kind, p.item, p.dates.join(' '), p.wrestler, p.parent, p.email, p.phone,
     money(p.amountCents), money(p.listCents), money(p.discountCents), p.termStart ?? '', p.termEnd ?? '', p.note, p.voidReason,
     p.refundedCents ? money(p.refundedCents) : '', p.refundedOn, card(p, String(p.cardPayments)), card(p, p.feeCents === null ? '' : money(p.feeCents)), card(p, p.netCents === null ? '' : money(p.netCents))].map(csvCell).join(','));
   return [head.join(','), ...lines].join('\r\n') + '\r\n';

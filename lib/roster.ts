@@ -7,10 +7,12 @@ import {currentWaiver} from './waivers';
 import {LIVE_SIGNATURE} from './documents';
 import {PROGRAM_ON} from './transfers';
 import {fullDate} from './datetime';
+import {collectorNameSql} from './collectors';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
 // Pay at the academy (issue #248): a walk-in or extra practice booked to pay cash. 'due' shows "$40.00 due" and a Cash
-// received button; 'paid' shows when it was collected and by whom. An unpaid booking can still be checked in.
+// received button; 'paid' shows when it was collected and by whom ("Received by Coach Dana · 6:05 PM", issue #250: the
+// coach's display name, never an email). An unpaid booking can still be checked in.
 export type CashInfo = {bookingId: string; status: 'due' | 'paid'; cents: number; orderId: string | null; collectedAt: string | null; collectedBy: string | null};
 export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]; checkInBlocked: string | null; cash: CashInfo | null};
 export const PAY_AT_ACADEMY = 'Pay at the academy';
@@ -19,7 +21,7 @@ export function cashKey(session: Session) {
   return session.type === 'practice' ? `walkin|${session.program}:${session.date}:${session.start}` : session.type === 'live' ? `live|${session.key.split(':')[1]}` : null;
 }
 // Allergies or medical notes and the emergency contact (issue #188, decided in #197 question 14). The roster is for staff
-// only, and coaches get only their own programs' practices (canSee).
+// only, and coaches get only their own programs' practices and the extra practices (canSee).
 export type SafetyDetails = {allergies: string | null; emergencyName: string | null; emergencyPhone: string | null};
 export type Scope = {role: 'owner'} | {role: 'coach'; programs: string[]};
 
@@ -72,8 +74,12 @@ export function checkInBlock(e: Pick<Entry, 'name' | 'card' | 'cardExpires' | 'c
     : (check ? 'Ask the owner to verify the card.' : 'Ask the family to update the card, or the owner to allow an exception.'));
 }
 
+// Coaches see their own programs' practices and, since issue #250, every extra practice (Friday Night Live and the like),
+// which belongs to no program: any active coach can check those wrestlers in and take their cash. Camps, clinics and
+// events stay with the owner. receiveCash (lib/cash-bookings.ts) uses this too, so the server allows exactly what the
+// coach's check-in list shows.
 export function canSee(scope: Scope, session: Session) {
-  return scope.role === 'owner' || (session.type === 'practice' && !!session.program && scope.programs.includes(session.program));
+  return scope.role === 'owner' || session.type === 'live' || (session.type === 'practice' && !!session.program && scope.programs.includes(session.program));
 }
 
 type Raw = {userId: string; wrestlerId: string; name: string; source: string};
@@ -119,7 +125,7 @@ export async function rosterFor(date: string, scope: Scope) {
     env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures s WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?)) AND ${LIVE_SIGNATURE}`).bind(waiver?.id ?? '', ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
     env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date),
-    env.DB!.prepare(`SELECT b.id,b.kind,b.item_id,b.user_id,b.wrestler_id,b.amount_cents,b.status,b.order_id,o.paid_at,json_extract(o.pricing,'$.collectedBy') AS collected_by
+    env.DB!.prepare(`SELECT b.id,b.kind,b.item_id,b.user_id,b.wrestler_id,b.amount_cents,b.status,b.order_id,o.paid_at,${collectorNameSql('o')} AS collected_by
       FROM cash_bookings b LEFT JOIN orders o ON o.id=b.order_id AND o.status='paid' WHERE b.session_date=? AND b.status IN ('due','paid')`).bind(date)
   ]);
   const families = new Map<string, any>((fams.results as any[]).map(r => [r.user_id, {email: r.email, ...JSON.parse(r.payload)}]));

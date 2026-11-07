@@ -17,8 +17,10 @@ import {quoteMembership, quoteBooking} from './quotes';
 import {academyToday} from './public-schedule';
 import {academyMinutes} from './lessons';
 import {notify, noticePaymentRecorded, quietly} from './notify';
-import {dayTime} from './datetime';
-import type {Scope} from './roster';
+import {dayTime, academyDayStart} from './datetime';
+import {academyState, sessionsOn, canSee, cashKey, type Scope} from './roster';
+import {collectorNameSql, type Collector} from './collectors';
+export type {Collector} from './collectors';
 
 export const CASH_KINDS = ['walkin', 'live'] as const;
 export type CashKind = typeof CASH_KINDS[number];
@@ -126,17 +128,18 @@ export async function cancelByOwner(ownerId: string, bookingId: unknown, reason:
   return {status: 200};
 }
 
-// Cash received at the door. Coaches: today's practices in their own programs (the same reach as their roster). The
-// owner: any booking. The payment is written from the booking row itself, so its amount is the one the server worked out
-// at booking. The order, the link and the security log entry are one transaction, and the order dedupe key makes a
-// second tap, a second device or an earlier payment for the same session fail instead of counting twice.
-export type Collector = {id: string; name: string; email: string | null};
+// Cash received at the door. Coaches: today's practices in their own programs and today's extra practices (Friday Night
+// Live and the like, issue #250), exactly the sessions their check-in list shows (canSee in lib/roster.ts). The owner: any
+// booking. The payment is written from the booking row itself, so its amount is the one the server worked out at
+// booking. The order, the link and the security log entry are one transaction, and the order dedupe key makes a second
+// tap, a second device or an earlier payment for the same session fail instead of counting twice. Who collected it is
+// kept on the payment (lib/collectors.ts).
 export async function receiveCash(bookingId: unknown, by: Collector, scope: Scope, today = academyToday()): Promise<Result> {
   if (typeof bookingId !== 'string') return {status: 400, error: 'Choose a booking.'};
   const b = await env.DB!.prepare('SELECT * FROM cash_bookings WHERE id=?').bind(bookingId).first<CashRow>();
   if (!b) return {status: 404, error: 'Booking not found.'};
-  if (scope.role === 'coach' && !(b.kind === 'walkin' && b.program && scope.programs.includes(b.program) && b.session_date === today))
-    return {status: 403, error: 'Coaches record cash for today’s practices in their own programs. Ask the owner to record this one.'};
+  if (scope.role === 'coach' && !(b.session_date === today && await coachSees(b, scope, today)))
+    return {status: 403, error: 'Coaches record cash for today’s practices in their own programs and today’s extra practices. Ask the owner to record this one.'};
   if (b.status === 'paid') return {status: 409, error: 'Cash for this booking is already recorded.'};
   if (b.status === 'canceled') return {status: 409, error: 'This booking was canceled, so there is nothing to collect.'};
   const id = crypto.randomUUID(), at = now();
@@ -161,14 +164,30 @@ export async function receiveCash(bookingId: unknown, by: Collector, scope: Scop
   return {status: 200, orderId: id};
 }
 
-// Unpaid bookings for the owner to follow up or cancel: earlier sessions first, then today and later.
-export async function unpaidCashBookings(limit = 500) {
+// A session on the coach's check-in list today (canSee) is the one this booking is for.
+async function coachSees(b: CashRow, scope: Scope, today: string) {
+  return sessionsOn(await academyState(), today).some(s => canSee(scope, s) && cashKey(s) === `${b.kind}|${b.item_id}`);
+}
+
+// Unpaid bookings for the owner to follow up or cancel: earlier sessions first, then today and later. With them, the
+// bookings collected in the last RECENT_DAYS days, newest first, each with who collected it and when (issue #250).
+export const RECENT_DAYS = 14;
+export async function unpaidCashBookings(limit = 500, today = academyToday()) {
   const rows = (await env.DB!.prepare(`SELECT b.*,f.payload AS family FROM cash_bookings b LEFT JOIN family_accounts f ON f.user_id=b.user_id
     WHERE b.status='due' ORDER BY b.session_date,b.start_time,b.id LIMIT ?`).bind(limit + 1).all<CashRow & {family: string | null}>()).results;
-  const today = academyToday(), minutes = academyMinutes();
+  const minutes = academyMinutes();
   const total = await env.DB!.prepare("SELECT count(*) AS n,COALESCE(sum(amount_cents),0) AS cents FROM cash_bookings WHERE status='due'").first<{n: number; cents: number}>();
   return {more: rows.length > limit, count: Number(total?.n ?? 0), dueCents: Number(total?.cents ?? 0), bookings: rows.slice(0, limit).map(b => {
     let f: any = {}; try { f = b.family ? JSON.parse(b.family) : {}; } catch { /* shown without the parent's details */ }
     return {...cashView(b, today, minutes), parent: f.parentName || '', phone: f.phone || '', email: b.email};
-  })};
+  }), collected: await collectedCashBookings(today)};
+}
+
+// Bookings paid at the academy today and the RECENT_DAYS - 1 days before (New York days, by when the cash was received),
+// newest first.
+export async function collectedCashBookings(today = academyToday(), limit = 200) {
+  const since = academyDayStart(new Date(Date.parse(today + 'T12:00:00Z') - (RECENT_DAYS - 1) * 864e5).toISOString().slice(0, 10));
+  const rows = (await env.DB!.prepare(`SELECT b.*,o.paid_at,json_extract(o.pricing,'$.method') AS method,${collectorNameSql('o')} AS collected_by FROM cash_bookings b JOIN orders o ON o.id=b.order_id
+    WHERE b.status='paid' AND o.status='paid' AND o.paid_at>=? ORDER BY o.paid_at DESC,b.id LIMIT ?`).bind(since, limit).all<CashRow & {paid_at: string; method: string | null; collected_by: string | null}>()).results;
+  return rows.map(b => ({...cashView(b, today), method: b.method ?? 'cash', collectedBy: b.collected_by, collectedAt: b.paid_at}));
 }
