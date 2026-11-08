@@ -1,6 +1,6 @@
 # Database schema and migrations
 
-The academy's business data is in Cloudflare D1 (SQLite), bound to the Worker as `DB`. Supabase holds only sign-in accounts and authenticators. Checked against `db/schema.ts` and `drizzle/` on November 8, 2026 (#271): 44 migrations, 47 tables. The November 5 handoff's version of this page (13 migrations, 15 tables, with `schema.sql` and `schema.json` exports) is in [the archive](archive/handoff-2026-11-05/README.md).
+The academy's business data is in Cloudflare D1 (SQLite), bound to the Worker as `DB`. Supabase holds only sign-in accounts and authenticators. Checked against `db/schema.ts` and `drizzle/` on November 8, 2026 (#275, #271): 45 migrations, 48 tables. The November 5 handoff's version of this page (13 migrations, 15 tables, with `schema.sql` and `schema.json` exports) is in [the archive](archive/handoff-2026-11-05/README.md).
 
 ## Where the schema lives
 
