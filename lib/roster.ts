@@ -16,10 +16,18 @@ export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: 
 export type CashInfo = {bookingId: string; status: 'due' | 'paid'; cents: number; orderId: string | null; collectedAt: string | null; collectedBy: string | null};
 export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]; checkInBlocked: string | null; cash: CashInfo | null};
 export const PAY_AT_ACADEMY = 'Pay at the academy';
-// The cash booking key for a session: walk-ins name the practice ("program:date:start"), extra practices their id.
+// The cash booking key for a session: walk-ins name the program and date, extra practices their id. A program has one
+// practice a day, so the start time is left out (issue #272): the owner moving a practice's time keeps its walk-ins and
+// cash bookings on the roster. Stored order and booking item ids still carry the start they were booked with.
 export function cashKey(session: Session) {
-  return session.type === 'practice' ? `walkin|${session.program}:${session.date}:${session.start}` : session.type === 'live' ? `live|${session.key.split(':')[1]}` : null;
+  return session.type === 'practice' ? `walkin|${session.program}:${session.date}` : session.type === 'live' ? `live|${session.key.split(':')[1]}` : null;
 }
+// The same key from a cash booking row, for matching a booking to a session.
+export const cashBookingKey = (b: {kind: string; program: string | null; item_id: string; session_date: string}) =>
+  b.kind === 'walkin' ? `walkin|${b.program}:${b.session_date}` : `${b.kind}|${b.item_id}`;
+// Attendance is keyed by the session key the wrestler was checked in under; for a practice, the start time is ignored
+// when matching, so a check-in stays with its practice when the owner moves the time (issue #272).
+export const sessionBase = (key: string) => key.startsWith('practice:') ? key.replace(/:\d\d:\d\d$/, '') : key;
 // Allergies or medical notes and the emergency contact (issue #188, decided in #197 question 14). The roster is for staff
 // only, and coaches get only their own programs' practices and the extra practices (canSee).
 export type SafetyDetails = {allergies: string | null; emergencyName: string | null; emergencyPhone: string | null};
@@ -90,14 +98,14 @@ async function entitled(session: Session): Promise<Raw[]> {
   const add = (list: {user_id: string; wrestler_id: string; wrestler_name: string}[], source: string) =>
     list.forEach(r => rows.push({userId: r.user_id, wrestlerId: r.wrestler_id, name: r.wrestler_name, source}));
   if (session.type === 'practice') {
-    const practiceId = `${session.program}:${d}:${session.start}`;
     // The program on that date, so a transfer (issue #74) does not rewrite earlier rosters.
     add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind IN ('annual','monthly') AND ${PROGRAM_ON}=? AND term_start<=? AND term_end>=?`)
       .bind(d, session.program, d, d).all<any>()).results, 'Member');
-    add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind='walkin' AND program=? AND item_id=? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)`)
-      .bind(session.program, practiceId, d).all<any>()).results, 'Walk-in paid');
-    add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM cash_bookings WHERE status='due' AND kind='walkin' AND program=? AND item_id=? AND session_date=?`)
-      .bind(session.program, practiceId, d).all<any>()).results, PAY_AT_ACADEMY);
+    // Walk-ins and cash bookings by program and date, not by the start time they were booked with (issue #272).
+    add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind='walkin' AND program=? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)`)
+      .bind(session.program, d).all<any>()).results, 'Walk-in paid');
+    add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM cash_bookings WHERE status='due' AND kind='walkin' AND program=? AND session_date=?`)
+      .bind(session.program, d).all<any>()).results, PAY_AT_ACADEMY);
     add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM scholarship_awards WHERE status='active' AND program=? AND user_id IS NOT NULL AND wrestler_id IS NOT NULL AND accepted_at IS NOT NULL AND substr(accepted_at,1,10)<=?`)
       .bind(session.program, d).all<any>()).results, 'Scholarship');
   } else {
@@ -125,7 +133,7 @@ export async function rosterFor(date: string, scope: Scope) {
     env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures s WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?)) AND ${LIVE_SIGNATURE}`).bind(waiver?.id ?? '', ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
     env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date),
-    env.DB!.prepare(`SELECT b.id,b.kind,b.item_id,b.user_id,b.wrestler_id,b.amount_cents,b.status,b.order_id,o.paid_at,${collectorNameSql('o')} AS collected_by
+    env.DB!.prepare(`SELECT b.id,b.kind,b.program,b.item_id,b.session_date,b.user_id,b.wrestler_id,b.amount_cents,b.status,b.order_id,o.paid_at,${collectorNameSql('o')} AS collected_by
       FROM cash_bookings b LEFT JOIN orders o ON o.id=b.order_id AND o.status='paid' WHERE b.session_date=? AND b.status IN ('due','paid')`).bind(date)
   ]);
   const families = new Map<string, any>((fams.results as any[]).map(r => [r.user_id, {email: r.email, ...JSON.parse(r.payload)}]));
@@ -134,9 +142,9 @@ export async function rosterFor(date: string, scope: Scope) {
   const excepted = new Map<string, string[]>();
   for (const r of exceptions.results as any[]) { const k = `${r.user_id}|${r.wrestler_id}`; if (!excepted.has(k)) excepted.set(k, []); if (!excepted.get(k)!.includes(r.rule)) excepted.get(k)!.push(r.rule); }
   const checked = new Map<string, {checked_in_at: string; checked_in_by: string}>();
-  for (const r of attendance.results as any[]) checked.set(`${r.session_key}|${r.user_id}|${r.wrestler_id}`, r);
+  for (const r of attendance.results as any[]) checked.set(`${sessionBase(r.session_key)}|${r.user_id}|${r.wrestler_id}`, r);
   const cashOf = new Map<string, CashInfo>();
-  for (const r of cashRows.results as any[]) cashOf.set(`${r.kind}|${r.item_id}|${r.user_id}|${r.wrestler_id}`,
+  for (const r of cashRows.results as any[]) cashOf.set(`${cashBookingKey(r)}|${r.user_id}|${r.wrestler_id}`,
     {bookingId: r.id, status: r.status, cents: r.amount_cents, orderId: r.order_id, collectedAt: r.paid_at ?? null, collectedBy: r.collected_by ?? null});
 
   const result: (Session & {entries: Entry[]; checkedIn: number})[] = [];
@@ -146,7 +154,7 @@ export async function rosterFor(date: string, scope: Scope) {
       const k = `${r.userId}|${r.wrestlerId}`;
       if (merged.has(k)) { const e = merged.get(k)!; if (!e.sources.includes(r.source)) e.sources.push(r.source); continue; }
       const f = families.get(r.userId) ?? null, w = f?.wrestlers?.find((x: any) => x.id === r.wrestlerId);
-      const c = checked.get(`${session.key}|${k}`);
+      const c = checked.get(`${sessionBase(session.key)}|${k}`);
       // Card status on the session date (issue #68). Only a verified card, or the owner's exception, allows check-in (#210).
       const card = w ? cardStatus(w, review.get(k) ?? null, date) : {state: 'missing' as const, expires: '', note: ''};
       const entryExceptions = ['usaw', 'waiver'].filter(x => excepted.get(k)?.includes(x));
@@ -179,6 +187,8 @@ export async function checkIn(date: string, sessionKey: string, userId: string, 
   const entry = session.entries.find(e => e.userId === userId && e.wrestlerId === wrestlerId);
   if (!entry) return {status: 409, error: 'This wrestler is not registered or paid for this session.'};
   if (entry.checkInBlocked) return {status: 409, error: entry.checkInBlocked, cardBlocked: true};
+  // Already checked in, possibly under the practice's earlier time: nothing to add.
+  if (entry.checkedInAt) return {status: 200};
   await env.DB!.prepare('INSERT OR IGNORE INTO attendance(id,session_key,session_date,user_id,wrestler_id,wrestler_name,source,checked_in_at,checked_in_by) VALUES (?,?,?,?,?,?,?,?,?)')
     .bind(crypto.randomUUID(), sessionKey, date, userId, wrestlerId, entry.name, entry.sources.join(', '), new Date().toISOString(), actor).run();
   return {status: 200};
@@ -187,6 +197,8 @@ export async function checkIn(date: string, sessionKey: string, userId: string, 
 export async function undoCheckIn(date: string, sessionKey: string, userId: string, wrestlerId: string, scope: Scope) {
   const sessions = await rosterFor(date, scope);
   if (!sessions.some(s => s.key === sessionKey)) return {status: 404, error: 'This session is not on your roster for that date.'};
-  await env.DB!.prepare('DELETE FROM attendance WHERE session_key=? AND user_id=? AND wrestler_id=?').bind(sessionKey, userId, wrestlerId).run();
+  // A practice check-in may have been recorded under an earlier start time (issue #272).
+  const like = sessionKey.startsWith('practice:') ? sessionBase(sessionKey) + ':__:__' : sessionKey;
+  await env.DB!.prepare('DELETE FROM attendance WHERE session_date=? AND user_id=? AND wrestler_id=? AND (session_key=? OR session_key LIKE ?)').bind(date, userId, wrestlerId, sessionKey, like).run();
   return {status: 200};
 }

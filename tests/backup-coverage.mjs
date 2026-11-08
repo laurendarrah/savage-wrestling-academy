@@ -73,6 +73,7 @@ function seed(sqlite){
   // Issue #42: refund totals from Stripe and card fees.
   run("INSERT INTO payment_refunds VALUES (?,?,?,?,?,?,?,?,?)",'evt_refund_1','ord-1','pi_1','ch_1',240000,60000,now,0,now);
   run("INSERT INTO stripe_fees VALUES (?,?,?,?,?,?,?,?,?,?)",'pi_1','ord-1','ch_1','txn_1',240000,6990,233010,now,0,now);
+  run("INSERT INTO payment_disputes VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",'evt_dispute_1','dp_1','ord-1','pi_1','ch_1','created',240000,'fraudulent','needs_response',now,0,now);
   // Issue #239: the owner asked for a signature to be signed again.
   run("INSERT INTO signature_reissues VALUES (?,?,?,?,?)",'ws-1','parent-1','Signed for the wrong wrestler','owner',now);
   // Issue #248: a walk-in booked to pay cash at the academy.
@@ -81,7 +82,7 @@ function seed(sqlite){
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues','cash_bookings'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues','cash_bookings','payment_disputes'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {

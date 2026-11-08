@@ -18,7 +18,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/security` | GET, POST | Signed in | Authenticator setup and challenge |
 | `/api/coach-invite` | POST | Public, then signed in | Check a coach invite, and accept it for the invited email |
 | `/api/health` | GET | Public | Uptime check used by the Deploy workflow and the uptime monitor. Reveals nothing private |
-| `/api/stripe-webhook` | POST | Stripe | The only place an order becomes paid. Verifies the signature for the event's own mode, stores each event id once, handles late and out-of-order events |
+| `/api/stripe-webhook` | POST | Stripe | The only place an order becomes paid. Verifies the signature for the event's own mode, stores each event id once, handles late and out-of-order events; records refunds and card disputes |
 
 ### Families
 
@@ -55,7 +55,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 
 | Route | Methods | What it does |
 |---|---|---|
-| `/api/academy` | GET, PUT | The academy settings document (programs, schedules, events, team codes), with revision checks |
+| `/api/academy` | GET, PUT | The academy settings document (programs, schedules, events, team codes), with revision checks. A save that would drop a session families have paid for or booked is refused (409, `blocked` lists them); every save writes what changed to the security log |
 | `/api/launch-checklist` | GET | What is ready and what is left before launch |
 | `/api/accounts` | POST | Delete a family account (payments stay for the books) |
 | `/api/owner-approvals` | GET, POST | Decide SWA Advance approvals |

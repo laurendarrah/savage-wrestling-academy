@@ -35,12 +35,18 @@ export async function grantException(ownerId: string, input: any) {
   return {status: 200, id};
 }
 
+// The revocation and its security log line are one transaction (issue #272); the log line is written only when this
+// call was the one that revoked the exception, so two clicks log once.
 export async function revokeException(ownerId: string, id: unknown) {
   if (typeof id !== 'string') return {status: 400, error: 'Choose an exception.'};
   const at = new Date().toISOString();
-  const r = await env.DB!.prepare('UPDATE booking_exceptions SET revoked_at=?,revoked_by=? WHERE id=? AND revoked_at IS NULL').bind(at, ownerId, id).run();
+  const [, r] = await env.DB!.batch([
+    // The log line first, while the exception is still in force, so it is written exactly when the update below applies.
+    env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM booking_exceptions WHERE id=? AND revoked_at IS NULL)')
+      .bind(crypto.randomUUID(), ownerId, 'booking_exception_removed', id, at, id),
+    env.DB!.prepare('UPDATE booking_exceptions SET revoked_at=?,revoked_by=? WHERE id=? AND revoked_at IS NULL').bind(at, ownerId, id)
+  ]);
   if (!(r.meta?.changes ?? (r as any).changes)) return {status: 404, error: 'Exception not found.'};
-  await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'booking_exception_removed', id, at).run();
   return {status: 200};
 }
 

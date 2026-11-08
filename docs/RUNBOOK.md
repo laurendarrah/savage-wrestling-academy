@@ -135,7 +135,7 @@ The Stripe account is Justin's: he created it and owns it, its payouts and its k
 - **Status 503 ("Webhook not configured"):** no signing secret is saved on the Worker at all. Same fix.
 - **Status 500, or timeouts:** the site couldn't process it. Stripe tries again by itself, for up to 3 days in live mode and a few times over a few hours in test mode. Check /site-health and send Lauren the time.
 - **Endpoint shows Disabled:** Stripe turns an endpoint off after days of failures. Turn it back on in Stripe once the cause is fixed.
-- **Events missing entirely:** the endpoint must listen for `checkout.session.*`, `charge.refunded`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted` (`docs/GO_LIVE.md`, step 6).
+- **Events missing entirely:** the endpoint must listen for `checkout.session.*`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.funds_withdrawn`, `charge.dispute.funds_reinstated`, `charge.dispute.closed`, `invoice.paid`, `invoice.payment_failed` and `customer.subscription.deleted` (`docs/GO_LIVE.md`, step 6).
 
 **Once the cause is fixed, resend what failed:** on the endpoint's page, open each failed event and choose **Resend**. Resending is always safe: the site stores each Stripe event once and ignores a repeat, so nothing is counted twice.
 
@@ -164,6 +164,21 @@ Refunds happen in Stripe, never on the site: **Stripe → Payments** → the pay
 - **Full refund of a one-time payment:** marked refunded on /payments, and the wrestler comes off that roster.
 - **One month of a monthly membership:** recorded as money out, but the membership continues. To end it, cancel the subscription in Stripe.
 - **A refund doesn't show on the site:** follow [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site) and resend the `charge.refunded` event.
+
+### A family disputed a card payment (chargeback)
+
+**You see:** an alert email "a family disputed a card payment", a line on **/site-health**, "Card payment disputed by the family's bank" on **/security-log**, and the payment marked **Disputed** on **/payments**. Stripe also emails the account.
+
+**What it means:** the family asked their bank to reverse the charge. The bank takes the money from the Stripe balance while the dispute is open, and Stripe charges a dispute fee. The site keeps the payment as paid (the wrestler keeps their place) and **/financials** books the money out on the day the bank took it, under "Disputed payments".
+
+**What to do:**
+1. In **Stripe → Payments → Disputes**, open the dispute and read the reason and the deadline.
+2. Talk to the family: a dispute is often a charge they didn't recognise. If they agree the charge was right, they can ask their bank to withdraw it.
+3. Answer in Stripe before the deadline with evidence (the booking on /payments, the family's account, the signed waiver, check-ins on the roster). A dispute not answered in time is lost.
+4. If Stripe says the academy won, the money comes back; the site books it in under "Disputes won" and the payment says **Dispute won**. If lost, the payment says **Dispute lost**; refund nothing (the bank already took it). Enter Stripe's dispute fee on /financials as an expense.
+5. A dispute of one monthly payment doesn't end the membership on the site. To end it, cancel the subscription in Stripe.
+
+**Who:** Justin (Stripe and the family). Lauren helps if asked.
 
 ### Card fees are missing
 

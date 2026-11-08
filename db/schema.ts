@@ -307,6 +307,17 @@ export const paymentRefunds=sqliteTable("payment_refunds",{
 },t=>[index("payment_refunds_intent").on(t.paymentIntent,t.refundedAt),index("payment_refunds_order").on(t.orderId),
  check("payment_refund_amounts",sql`${t.refundedCents} >= 0 AND ${t.refundedCents} <= ${t.amountCents}`),check("payment_refund_livemode",sql`${t.livemode} IN (0,1)`)]);
 
+// Card disputes, also called chargebacks (issue #272). One row per charge.dispute.* event the verified webhook accepts:
+// 'created' flags the payment on Payments and alerts the owner; 'funds_withdrawn' is money out in the books on the day
+// the bank took it; 'funds_reinstated' is money back in when the academy wins; 'closed' records the final status. id is
+// the Stripe event id, so a replayed event is stored once; dispute_id groups the rows of one dispute.
+export const paymentDisputes=sqliteTable("payment_disputes",{
+ id:text("id").primaryKey(),disputeId:text("dispute_id").notNull(),orderId:text("order_id").notNull(),paymentIntent:text("payment_intent").notNull(),chargeId:text("charge_id"),
+ kind:text("kind").notNull(),amountCents:integer("amount_cents").notNull(),reason:text("reason"),status:text("status"),
+ occurredAt:text("occurred_at").notNull(),livemode:integer("livemode").notNull(),receivedAt:text("received_at").notNull()
+},t=>[index("payment_disputes_order").on(t.orderId),index("payment_disputes_dispute").on(t.disputeId,t.occurredAt),
+ check("payment_dispute_kind",sql`${t.kind} IN ('created','funds_withdrawn','funds_reinstated','closed')`),check("payment_dispute_amount",sql`${t.amountCents} >= 0`),check("payment_dispute_livemode",sql`${t.livemode} IN (0,1)`)]);
+
 // Stripe card processing fees (issue #42). One row per successful card payment, read from its charge's balance
 // transaction by lib/stripe-fees.ts (the daily job, or the owner's button on /financials), never by the webhook, so a
 // fee lookup can never hold up marking an order paid. A payment without a row is one whose fee is not known yet.

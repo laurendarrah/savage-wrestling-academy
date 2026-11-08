@@ -228,7 +228,7 @@ export async function ownerMonth(monthInput: unknown, coachInput: unknown, now =
     const views = mine.map(r => shiftView(r, {sessions, timeOff: myOff})), t = totals(views), l = lessons.get(email);
     return {email, name: s?.name ?? mine[0]?.coach_name ?? l?.coach ?? email, active: s?.active === 1, programs: s ? JSON.parse(s.programs) : [],
       shifts: views, totals: t, state: monthState(t), timeOff: myOff.map(timeOffView),
-      lessons: l ? {lessons: l.lessons, grossCents: l.grossCents, splitPct: l.splitPct, owedCents: l.owedCents} : null};
+      lessons: l ? {lessons: l.lessons, grossCents: l.grossCents, refundedCents: l.refundedCents, splitPct: l.splitPct, owedCents: l.owedCents} : null};
   }).sort((a, b) => a.name.localeCompare(b.name));
   const sum = (f: (c: typeof coaches[number]) => number) => coaches.reduce((n, c) => n + f(c), 0);
   return ok({

@@ -9,9 +9,11 @@
 // - Kept for the books, without the family: every payment (orders, with their refunds, fees, subscriptions and Stripe
 //   event ids, which name only the order). The family's account, email, wrestler and name on them become
 //   "deleted-family-<id>" and "Deleted family", so Payments and Income and expenses add up exactly as before.
-// - Signed waivers and Parent Consent Forms, scholarship agreements, check-ins and SWA Advance approvals: how long the
-//   academy keeps these isn't decided (docs/policies/data-retention-draft.md), so they stay unchanged unless the owner
-//   says this is a test account (`test`), when they are deleted too.
+// - Signed waivers and Parent Consent Forms, scholarship agreements and SWA Advance approvals: how long the academy
+//   keeps these isn't decided (docs/policies/data-retention-draft.md), so they stay unchanged unless the owner says
+//   this is a test account (`test`), when they are deleted too. Check-ins (attendance) stay for the roster's history
+//   but are re-keyed like payments (issue #272), so nothing points at the deleted account.
+// - Check-ins are deleted too for a test account.
 // - The sign-in account (email and password) is with Supabase, which the site cannot delete; the page tells the owner to
 //   delete it there. Once the profile is gone, signing in with it again starts an empty family account.
 //
@@ -85,6 +87,9 @@ function steps(u: string, key: string, email: string, test: boolean, today: stri
     del('notifications', 'user_id=?', [u]),
     del('data_requests', 'user_id=?', [u]),
   ];
+  // The wrestler id stays (two of the family's wrestlers may share a session, and check-ins are unique per wrestler); it
+  // names nothing once the profile is gone.
+  if (!test) list.push(keep('attendance', 'user_id=?,wrestler_name=?', [key, DELETED_FAMILY], 'user_id=?', [u]));
   if (test) list.push(
     del('signature_reissues', 'signature_id IN (SELECT id FROM waiver_signatures WHERE user_id=?)', [u]),
     del('waiver_signatures', 'user_id=?', [u]),

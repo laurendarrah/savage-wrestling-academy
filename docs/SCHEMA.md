@@ -34,6 +34,7 @@ To change the schema, edit `db/schema.ts`, then run `pnpm db:generate` to add a 
 | `subscriptions` | Monthly memberships: one row per monthly order, ending after 12 payments |
 | `stripe_events` | Every Stripe event id, stored once, so a repeated delivery changes nothing |
 | `payment_refunds` | Stripe's cumulative refunded amount per card payment, from `charge.refunded` events |
+| `payment_disputes` | Card disputes (chargebacks), one row per `charge.dispute.*` event: created, funds withdrawn, funds reinstated, closed |
 | `stripe_fees` | Stripe's card fee per payment, read by the daily job |
 | `cash_bookings` | Walk-ins and extra practices booked to pay cash at the academy, linked to the offline order once paid |
 | `membership_transfers` | The program a membership was in before each transfer, so earlier rosters stay right |

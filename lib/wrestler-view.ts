@@ -22,8 +22,8 @@ export async function upcomingFor(userId: string, wrestlerId: string, from: stri
     .bind(userId, wrestlerId).all<{program: string; accepted_at: string}>()).results;
   const transfers = (await env.DB!.prepare('SELECT t.order_id,t.from_program,t.effective_date,t.created_at FROM membership_transfers t JOIN orders o ON o.id=t.order_id WHERE o.user_id=? AND o.wrestler_id=?')
     .bind(userId, wrestlerId).all<any>()).results;
-  const cash = (await env.DB!.prepare("SELECT kind,item_id,session_date,amount_cents FROM cash_bookings WHERE user_id=? AND wrestler_id=? AND status='due' AND session_date>=? AND session_date<=?")
-    .bind(userId, wrestlerId, from, to).all<{kind: string; item_id: string; session_date: string; amount_cents: number}>()).results;
+  const cash = (await env.DB!.prepare("SELECT kind,program,item_id,session_date,amount_cents FROM cash_bookings WHERE user_id=? AND wrestler_id=? AND status='due' AND session_date>=? AND session_date<=?")
+    .bind(userId, wrestlerId, from, to).all<{kind: string; program: string | null; item_id: string; session_date: string; amount_cents: number}>()).results;
   const nothing = !orders.length && !scholarships.length && !cash.length;
   const out: Upcoming[] = [];
   if (!nothing) {
@@ -33,13 +33,14 @@ export async function upcomingFor(userId: string, wrestlerId: string, from: stri
         let why = '';
         if (s.type === 'practice') {
           if (orders.some(o => (o.kind === 'annual' || o.kind === 'monthly') && programOn(o, transfers, d) === s.program && o.term_start <= d && o.term_end >= d)) why = 'Membership';
-          else if (orders.some(o => o.kind === 'walkin' && o.program === s.program && o.item_id === `${s.program}:${d}:${s.start}` && o.dates.includes(d))) why = 'Walk-in';
+          // By program and date, as the roster does (issue #272): a moved practice time keeps the walk-in.
+          else if (orders.some(o => o.kind === 'walkin' && o.program === s.program && o.dates.includes(d))) why = 'Walk-in';
           else if (scholarships.some(a => a.program === s.program && a.accepted_at.slice(0, 10) <= d)) why = 'Scholarship';
         } else {
           const id = s.key.split(':')[1];
           if (orders.some(o => o.kind === s.type && o.item_id === id && o.dates.includes(d))) why = s.type === 'live' ? 'Paid' : 'Registered';
         }
-        const owed = !why && cash.find(c => c.session_date === d && (s.type === 'practice' ? c.kind === 'walkin' && c.item_id === `${s.program}:${d}:${s.start}` : s.type === 'live' && c.kind === 'live' && c.item_id === s.key.split(':')[1]));
+        const owed = !why && cash.find(c => c.session_date === d && (s.type === 'practice' ? c.kind === 'walkin' && c.program === s.program : s.type === 'live' && c.kind === 'live' && c.item_id === s.key.split(':')[1]));
         if (owed) out.push({date: d, start: s.start, end: s.end, title: s.title, type: s.type, why: 'Pay at the academy', dueCents: owed.amount_cents});
         else if (why) out.push({date: d, start: s.start, end: s.end, title: s.title, type: s.type, why});
       }

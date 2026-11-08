@@ -11,14 +11,16 @@ import {portalCode as code, portalHtml as html, workspaceCode} from './fixtures/
 
 const sqlite = new DatabaseSync(':memory:');
 for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
-const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }}; }};
+const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }, async all() { return {results: sqlite.prepare(sql).all(...a)}; }, async run() { return {meta: sqlite.prepare(sql).run(...a)}; },
+  _execute() { const st = sqlite.prepare(sql); return st.columns().length ? {results: st.all(...a)} : {results: [], meta: st.run(...a)}; }}; },
+  async batch(list) { sqlite.exec('BEGIN'); try { const r = list.map(x => x._execute()); sqlite.exec('COMMIT'); return r; } catch (e) { sqlite.exec('ROLLBACK'); throw e; } }};
 const owner = {userId: 'owner-1', displayName: 'savagewrestlingclub@gmail.com'};
 const modules = new Map();
 function load(file) {
   if (modules.has(file)) return modules.get(file);
   const module = {exports: {}}; modules.set(file, module.exports);
   const js = ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText;
-  vm.runInNewContext(js, {module, exports: module.exports, Response, Request, Headers, URL, Intl, Date, JSON, console, require(name) {
+  vm.runInNewContext(js, {module, exports: module.exports, Response, Request, Headers, URL, Intl, Date, JSON, console, crypto, TextEncoder, Uint8Array, require(name) {
     if (name === 'cloudflare:workers') return {env: {DB}};
     if (name.endsWith('/account-auth')) return {ownerIdentity: async () => ({owner, headers: new Headers()})};
     return load(join(dirname(file), name) + '.ts');

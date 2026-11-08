@@ -87,6 +87,10 @@ export async function quoteMembership(userId: string, input: any, opts?: QuoteOp
   const membership = input.plan !== 'walkin';
   if (membership && await paidMembership(userId, w.id, today, p.id))
     return fail(409, 'This wrestler already has an active paid membership in this program. View it in your family account.');
+  // A member is never charged for a practice the membership already covers (issue #272): the same check stops a
+  // walk-in at the academy (lib/offline-payments.ts) and a cash booking (lib/cash-bookings.ts).
+  if (!membership && await paidMembership(userId, w.id, date, p.id))
+    return fail(409, `${w.name}'s membership already covers ${p.name} practices on ${dayDate(date)}, so there is nothing to pay for this walk-in. Just come to practice.`);
   // Decision #67: no booking without a USA Wrestling card valid on the session date (membership: purchase date).
   const card = await cardProblem(userId, w, [input.plan === 'walkin' ? date : today]);
   if (card) return fail(403, card, {usawRequired: true});

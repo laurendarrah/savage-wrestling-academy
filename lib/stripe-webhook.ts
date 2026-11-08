@@ -7,6 +7,7 @@ import {noticeLessonBooked, quietly} from './notify';
 import {membershipTerm, paidThroughAfter} from './membership-term';
 export {membershipTerm, paidThroughAfter};
 import {storedStripeKeyFor, stripeClientFor} from './stripe-test';
+import {alertOwner, DISPUTE_PATH} from './owner-alerts';
 
 const encoder = new TextEncoder();
 export const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -114,7 +115,52 @@ export async function applyStripeEvent(event: any): Promise<Outcome & {duplicate
       .bind(crypto.randomUUID(), 'stripe', 'stripe_event_rejected', `${event.id} ${outcome}`, at).run();
   // A paid lesson tells the coach and the family (issue #105); other notices are not needed for online payments.
   if (outcome.startsWith('paid') && orderId) await quietly(() => noticeLessonBooked(orderId));
+  // A new dispute is a problem for the owner to answer in Stripe within days: it goes through the site's problem alerts
+  // (lib/owner-alerts.ts), which email the owner at most once an hour and show on Site health.
+  if (outcome === 'disputed') await quietly(() => alertOwner(env.DB));
   return {outcome, orderId, duplicate: false};
+}
+
+// The order a card payment belongs to: a one-time payment by its PaymentIntent, or one monthly payment via its fee row
+// or Stripe's invoice (monthlyPaymentOrder).
+async function orderForIntent(intent: string, live: boolean) {
+  return await env.DB!.prepare(`SELECT ${REFUND_ORDER} FROM orders o WHERE o.stripe_payment_intent=? AND o.source='stripe'`).bind(intent).first<RefundOrder>()
+    ?? await monthlyPaymentOrder(intent, live);
+}
+
+// Card disputes, also called chargebacks (issue #272). The family's bank takes the money back while the dispute is open
+// and returns it only if the academy wins. The payment stays as it was paid, flagged on Payments; the money leaves the
+// books when Stripe reports funds_withdrawn and comes back on funds_reinstated (lib/financials.ts). Each event is one
+// row in payment_disputes (id = event id), so a replay changes nothing.
+const DISPUTE_KINDS: Record<string, string> = {'charge.dispute.created': 'created', 'charge.dispute.funds_withdrawn': 'funds_withdrawn',
+  'charge.dispute.funds_reinstated': 'funds_reinstated', 'charge.dispute.closed': 'closed'};
+async function planDispute(event: any, at: string): Promise<{outcome: string; orderId: string | null; writes: D1PreparedStatement[]}> {
+  const obj = event.data?.object ?? {}, kind = DISPUTE_KINDS[event.type];
+  const none = (outcome: string, orderId: string | null = null) => ({outcome, orderId, writes: []});
+  const intent = typeof obj.payment_intent === 'string' ? obj.payment_intent : typeof obj.payment_intent?.id === 'string' ? obj.payment_intent.id : null;
+  if (!intent || typeof obj.id !== 'string') return none('ignored:no-payment-intent');
+  const live = Boolean(event.livemode ?? obj.livemode);
+  const order = await orderForIntent(intent, live);
+  if (!order) return none('ignored:unknown-payment');
+  if (live !== Boolean(order.livemode)) return none('rejected:mode-mismatch', order.id);
+  const amount = obj.amount;
+  if (!Number.isSafeInteger(amount) || amount < 0) return none('rejected:dispute-amount', order.id);
+  const occurredAt = Number.isSafeInteger(event.created) && event.created > 0 ? new Date(event.created * 1000).toISOString() : at;
+  const reason = typeof obj.reason === 'string' ? obj.reason.slice(0, 80) : null, status = typeof obj.status === 'string' ? obj.status.slice(0, 40) : null;
+  const writes = [
+    env.DB!.prepare('INSERT INTO payment_disputes(id,dispute_id,order_id,payment_intent,charge_id,kind,amount_cents,reason,status,occurred_at,livemode,received_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(event.id, obj.id, order.id, intent, typeof obj.charge === 'string' ? obj.charge : null, kind, amount, reason, status, occurredAt, order.livemode, at),
+    env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
+      .bind(crypto.randomUUID(), 'stripe', {created: 'payment_disputed', funds_withdrawn: 'dispute_funds_withdrawn', funds_reinstated: 'dispute_funds_reinstated', closed: 'dispute_closed'}[kind]!,
+        `${order.id} ${amount} ${kind === 'closed' ? status ?? '' : reason ?? ''}`.trim(), at)
+  ];
+  if (kind === 'created') {
+    // The owner's problem alert reads error_log (lib/site-health.ts, lib/owner-alerts.ts): one line, no family details.
+    writes.push(env.DB!.prepare('INSERT INTO error_log(id,at,method,path,status,message) VALUES (?,?,?,?,?,?)')
+      .bind(crypto.randomUUID(), at, 'STRIPE', DISPUTE_PATH, 409, 'A family disputed a card payment with their bank. See Payments, then answer it in Stripe.'));
+    return {outcome: 'disputed', orderId: order.id, writes};
+  }
+  return {outcome: `dispute-${kind.replace('_', '-')}`, orderId: order.id, writes};
 }
 
 async function plan(event: any, at: string): Promise<{outcome: string; orderId: string | null; writes: D1PreparedStatement[]}> {
@@ -221,8 +267,7 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
     const intent = typeof obj.payment_intent === 'string' ? obj.payment_intent : typeof obj.payment_intent?.id === 'string' ? obj.payment_intent.id : null;
     if (!intent) return none('ignored:no-payment-intent');
     const live = Boolean(event.livemode ?? obj.livemode);
-    const order = await env.DB!.prepare(`SELECT ${REFUND_ORDER} FROM orders o WHERE o.stripe_payment_intent=? AND o.source='stripe'`).bind(intent).first<RefundOrder>()
-      ?? await monthlyPaymentOrder(intent, live);
+    const order = await orderForIntent(intent, live);
     if (!order) return none('ignored:unknown-payment');
     if (live !== Boolean(order.livemode)) return none('rejected:mode-mismatch', order.id);
     const total = obj.amount_refunded;
@@ -237,5 +282,6 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
       env.DB!.prepare("UPDATE orders SET status='refunded',updated_at=? WHERE id=? AND status='paid'").bind(at, order.id)
     ]};
   }
+  if (DISPUTE_KINDS[event.type]) return planDispute(event, at);
   return none('ignored:' + event.type);
 }

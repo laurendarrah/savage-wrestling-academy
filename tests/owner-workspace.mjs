@@ -1,4 +1,5 @@
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
+import {dirname,resolve} from 'node:path';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {DatabaseSync} from 'node:sqlite';
@@ -6,10 +7,13 @@ import ts from 'typescript';
 import {portalCode} from './fixtures/portal-script.mjs';
 
 const db=new DatabaseSync(':memory:');
-db.exec(readFileSync('drizzle/0000_jazzy_silvermane.sql','utf8'));
-const DB={prepare(sql){let values=[];return {bind(...args){values=args;return this},async first(){return db.prepare(sql).get(...values)??null}}}};
+for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')&&!f.includes('_starter_')).sort())db.exec(readFileSync('drizzle/'+f,'utf8'));
+const DB={prepare(sql){let values=[];return {bind(...args){values=args;return this},async first(){return db.prepare(sql).get(...values)??null},async all(){return {results:db.prepare(sql).all(...values)}},async run(){return {meta:db.prepare(sql).run(...values)}},
+ _execute(){const st=db.prepare(sql);return st.columns().length?{results:st.all(...values)}:{results:[],meta:st.run(...values)}}}},
+ async batch(list){db.exec('BEGIN');try{const r=list.map(x=>x._execute());db.exec('COMMIT');return r}catch(e){db.exec('ROLLBACK');throw e}}};
 let identity=null;
-function loadTs(path){const module={exports:{}};const source=ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;vm.runInNewContext(source,{module,exports:module.exports,Response,Request,URL,console,require(name){if(name==='../../../lib/account-auth')return {ownerIdentity:async()=>({owner:identity?.email==='savagewrestlingclub@gmail.com'?{userId:identity.id,displayName:identity.email}:null,headers:new Headers({'Cache-Control':'private, no-store'})})};if(name==='cloudflare:workers')return {env:{DB}};if(name==='next/headers')return {headers:async()=>new Headers(identity?{'oai-authenticated-user-id':identity.id,'oai-authenticated-user-email':identity.email}:{})};if(name==='next/navigation')return {redirect(){throw Error('redirect')}};if(name==='../../chatgpt-auth')return loadTs('app/chatgpt-auth.ts');if(name.endsWith('/friday-live'))return loadTs('lib/friday-live.ts');if(name==='./event-schedule')return loadTs('lib/event-schedule.ts');if(name==='../../../lib/program-names')return loadTs('lib/program-names.ts');if(name==='../../../lib/academy-validation')return loadTs('lib/academy-validation.ts');throw Error(name)}});return module.exports}
+const loaded=new Map();
+function loadTs(path){path=resolve(path);if(loaded.has(path))return loaded.get(path);const module={exports:{}};loaded.set(path,module.exports);const source=ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;vm.runInNewContext(source,{module,exports:module.exports,Response,Request,URL,console,crypto,Intl,Date,JSON,Math,Number,String,Array,Set,Map,Object,RegExp,Error,TextEncoder,Uint8Array,require(name){if(name.endsWith('/account-auth'))return {appOrigin:()=>'https://swa.test',OWNER_EMAIL:'owner@example.test',ownerIdentity:async()=>({owner:identity?.email==='savagewrestlingclub@gmail.com'?{userId:identity.id,displayName:identity.email}:null,headers:new Headers({'Cache-Control':'private, no-store'})})};if(name==='cloudflare:workers')return {env:{DB}};if(name==='next/headers')return {headers:async()=>new Headers(identity?{'oai-authenticated-user-id':identity.id,'oai-authenticated-user-email':identity.email}:{})};if(name==='next/navigation')return {redirect(){throw Error('redirect')}};if(name==='../../chatgpt-auth')return loadTs('app/chatgpt-auth.ts');if(name.endsWith('/friday-live'))return loadTs('lib/friday-live.ts');if(name==='./event-schedule')return loadTs('lib/event-schedule.ts');if(name==='../../../lib/program-names')return loadTs('lib/program-names.ts');if(name==='../../../lib/academy-validation')return loadTs('lib/academy-validation.ts');if(name.startsWith('.'))return loadTs(resolve(dirname(path),name+'.ts'));throw Error(name)}});return module.exports}
 const module={exports:loadTs('app/api/academy/route.ts')};
 const {GET,PUT}=module.exports;
 const code=portalCode;
