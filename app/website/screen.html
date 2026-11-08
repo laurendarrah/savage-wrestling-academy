@@ -41,6 +41,9 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 <div class="savebar"><button type="button" class="primary" id="saveButton">Save and publish</button><button type="button" data-preview="home">Preview welcome page</button><button type="button" data-preview="team">Preview team page</button><span class="saved" id="savedAt"></span></div>
 </fieldset>
 </main><script>
+// The preview iframe's document inherits this page's script policy (issue #274), so the preview's own scripts are
+// tagged with the nonce the Worker gave this script before they are shown.
+const NONCE=document.currentScript?.nonce||'',withNonce=h=>NONCE?h.replace(/<(script)\b(?![^>]*\bnonce=)/gi,'<$1 nonce="'+NONCE+'"'):h;
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let site={headline:'',intro:'',mission:'',coaches:[],achievements:[],alumni:[],address:'',email:''},updatedAt=null,coaches=[];
 // Each list: its fields (key, label, length, placeholder) and what to say when it is empty.
@@ -94,7 +97,7 @@ async function saveSite(){$('editor').disabled=true;$('status').textContent='Sav
  try{const d=await call({action:'save',site:payload(),updatedAt});fill(d);$('status').textContent='Saved and published. Visitors see the changes within a minute.'}
  catch(e){$('status').textContent=e.message}finally{$('editor').disabled=false}}
 async function showPreview(page){$('status').textContent='';
- try{const d=await call({action:'preview',page,site:payload()});$('previewBox').hidden=false;$('previewNote').textContent=(page==='team'?'Team page':'Welcome page')+' with your changes. Not published until you save.';$('previewFrame').srcdoc=d.html;$('previewBox').scrollIntoView({behavior:'smooth',block:'start'})}
+ try{const d=await call({action:'preview',page,site:payload()});$('previewBox').hidden=false;$('previewNote').textContent=(page==='team'?'Team page':'Welcome page')+' with your changes. Not published until you save.';$('previewFrame').srcdoc=withNonce(d.html);$('previewBox').scrollIntoView({behavior:'smooth',block:'start'})}
  catch(e){$('status').textContent=e.message}}
 load();
 </script></body></html>

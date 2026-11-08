@@ -117,4 +117,7 @@ for (const path of ['/login', '/coach-join']) {
   const csp = headers.get('Content-Security-Policy') ?? '';
   assert.match(csp, /frame-ancestors 'none'/, path);
 }
+// The website editor shows a preview in a srcdoc iframe, which inherits the page's policy: its scripts get the nonce too.
+const site = readFileSync('app/website/screen.html', 'utf8');
+assert.match(site, /const NONCE=document\.currentScript\?\.nonce\|\|''/); assert.match(site, /srcdoc=withNonce\(d\.html\)/);
 console.log(`CSP nonce: ${withNonce.length} signed-in pages carry script-src 'nonce-…' 'strict-dynamic' with every script nonced; ${PENDING.length} pages pending their inline handlers; Permissions-Policy everywhere`);
