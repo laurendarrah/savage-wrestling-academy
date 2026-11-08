@@ -19,6 +19,7 @@ export type SecurityNames = {
   curricula: Record<string, string>;   // curriculum or curriculum group id -> name
   coaches: Record<string, string>;     // coach email -> name
   cash?: Record<string, {wrestler: string; item: string}>;   // pay-at-the-academy booking id (issue #248)
+  scholarships?: Record<string, string>;   // scholarship id -> wrestler name (issue #272)
 };
 export type SecurityEntry = {title: string; detail: string; who: string; at: string};
 
@@ -86,7 +87,18 @@ const TITLES: Record<string, string> = {
   lesson_double_booked: 'Lesson paid for twice',
   event_over_capacity: 'Event paid over its seat limit',
   owner_test_alert: 'Test alert from Site health',
+  // Issue #272: card disputes from Stripe, and the owner's settings and scholarship changes.
+  payment_disputed: 'Card payment disputed by the family’s bank',
+  dispute_funds_withdrawn: 'Disputed payment taken back by the bank',
+  dispute_funds_reinstated: 'Disputed payment returned to the academy',
+  dispute_closed: 'Card dispute closed',
+  academy_settings_saved: 'Academy settings saved',
+  scholarship_offered: 'Scholarship offered',
+  scholarship_revoked: 'Scholarship offer withdrawn',
+  scholarship_ended: 'Scholarship ended',
 };
+const DISPUTE_REASONS: Record<string, string> = {fraudulent: 'the family says they did not make it', duplicate: 'the family says it was charged twice', product_not_received: 'the family says they did not get what they paid for',
+  subscription_canceled: 'the family says the membership was canceled', unrecognized: 'the family did not recognise the charge', credit_not_processed: 'the family says a refund was promised', general: 'no reason given'};
 
 const REJECTIONS: Record<string, string> = {
   'rejected:malformed': 'The message was not readable.',
@@ -144,6 +156,15 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
       const o = order(first); detail = [o?.wrestler, o?.item, money(rest[1] ?? '')].filter(Boolean).join(' · '); break;
     }
     case 'offline_payment_voided': { const o = order(t); detail = o ? `${o.wrestler} · ${o.item}` : ''; break; }
+    // Issue #272: "orderId cents reason" (created), "orderId cents" (money moved) or "orderId cents status" (closed).
+    case 'payment_disputed': case 'dispute_funds_withdrawn': case 'dispute_funds_reinstated': case 'dispute_closed': {
+      const o = order(first), why = row.action === 'payment_disputed' ? DISPUTE_REASONS[rest[1] ?? ''] ?? rest[1]?.replace(/_/g, ' ') : row.action === 'dispute_closed' ? (rest[1] === 'won' ? 'The academy won' : rest[1] === 'lost' ? 'The academy lost' : rest[1]?.replace(/_/g, ' ')) : '';
+      detail = [o ? `${o.wrestler} · ${o.item}` : '', money(rest[0] ?? ''), why, row.action === 'payment_disputed' ? 'Answer it in Stripe before its deadline.' : ''].filter(Boolean).join(' · '); break;
+    }
+    // Issue #272: the summary of what changed, written by lib/academy-changes.ts, or "scholarshipId program cents".
+    case 'academy_settings_saved': detail = t; break;
+    case 'scholarship_offered': case 'scholarship_revoked': case 'scholarship_ended':
+      detail = [names.scholarships?.[first] ?? '', rest[0] ? program(rest[0]) : '', rest[1] ? money(rest[1]) + ' a month' : ''].filter(Boolean).join(' · '); break;
     case 'cash_booking_canceled': { const c = names.cash?.[t]; detail = c ? `${c.wrestler} · ${c.item}` : ''; break; }
     case 'membership_transferred': {
       const o = order(first), [from = '', to = ''] = (rest[0] ?? '').split('->');
@@ -193,7 +214,7 @@ export async function securityLogPage(ownerIds: string[], cursor?: unknown): Pro
   const page = await keysetPage<SecurityRow & {id: string}>({select: 'id,actor,action,target,created_at', from: 'FROM security_events',
     cols: [{expr: 'created_at', desc: true}, {expr: 'id', desc: true}], keyOf: r => [r.created_at, r.id], cursor, limit: SECURITY_PAGE});
   const rows = page.rows;
-  const names: SecurityNames = {people: {}, you: ownerIds, approvals: {}, waitlist: {}, orders: {}, waivers: {}, wrestlers: {}, requests: {}, curricula: {}, coaches: {}, cash: {}};
+  const names: SecurityNames = {people: {}, you: ownerIds, approvals: {}, waitlist: {}, orders: {}, waivers: {}, wrestlers: {}, requests: {}, curricula: {}, coaches: {}, cash: {}, scholarships: {}};
   const families = await allFamilies();
   for (const f of families) {
     let p: any = {}; try { p = JSON.parse(f.payload); } catch {}
@@ -215,6 +236,8 @@ export async function securityLogPage(ownerIds: string[], cursor?: unknown): Pro
     names.cash![c.id] = {wrestler: c.wrestler_name, item: `${c.item_label}, ${dayDate(c.session_date)}`};
   for (const r of await all<{id: string; user_id: string; email: string}>('SELECT id,user_id,email FROM data_requests')) names.requests[r.id] = names.people[r.user_id] ?? r.email;
   for (const c of await all<{id: string; name: string}>('SELECT id,name FROM practice_curricula UNION ALL SELECT id,name FROM practice_curriculum_groups')) names.curricula[c.id] = c.name;
+  names.scholarships = {};
+  for (const s of await all<{id: string; wrestler_name: string}>('SELECT id,wrestler_name FROM scholarship_awards')) names.scholarships[s.id] = s.wrestler_name;
   return {entries: rows.map(r => describeSecurityEvent(r, names)), next: page.next};
 }
 export async function securityLog(ownerIds: string[]): Promise<SecurityEntry[]> { return (await securityLogPage(ownerIds)).entries; }

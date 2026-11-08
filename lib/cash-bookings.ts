@@ -18,7 +18,7 @@ import {academyToday} from './public-schedule';
 import {academyMinutes} from './lessons';
 import {notify, noticePaymentRecorded, quietly} from './notify';
 import {dayTime, academyDayStart} from './datetime';
-import {academyState, sessionsOn, canSee, cashKey, type Scope} from './roster';
+import {academyState, sessionsOn, canSee, cashKey, cashBookingKey, type Scope} from './roster';
 import {collectorNameSql, type Collector} from './collectors';
 export type {Collector} from './collectors';
 
@@ -166,7 +166,7 @@ export async function receiveCash(bookingId: unknown, by: Collector, scope: Scop
 
 // A session on the coach's check-in list today (canSee) is the one this booking is for.
 async function coachSees(b: CashRow, scope: Scope, today: string) {
-  return sessionsOn(await academyState(), today).some(s => canSee(scope, s) && cashKey(s) === `${b.kind}|${b.item_id}`);
+  return sessionsOn(await academyState(), today).some(s => canSee(scope, s) && cashKey(s) === cashBookingKey(b));
 }
 
 // Unpaid bookings for the owner to follow up or cancel: earlier sessions first, then today and later. With them, the

@@ -193,7 +193,7 @@ export function monthState(t: ReturnType<typeof totals>) {
 // a total per coach. Hours and amounts only: no overtime, no withholding, no employment wording (#197 Q6 is open).
 const csvCell = (v: unknown) => { const s = String(v ?? ''); const lead = /^[\s﻿]*[=+\-@]|^[\t\r]/.test(s); return /[",\n\r]/.test(s) || lead ? '"' + (lead ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
 const dollars = (c: number) => (c / 100).toFixed(2);
-export type PayrollCoach = {email: string; name: string; shifts: ShiftView[]; notApproved: number; lessons: {lessons: number; grossCents: number; splitPct: number | null; owedCents: number | null} | null};
+export type PayrollCoach = {email: string; name: string; shifts: ShiftView[]; notApproved: number; lessons: {lessons: number; grossCents: number; refundedCents?: number; splitPct: number | null; owedCents: number | null} | null};
 export function payrollCsv(month: string, coaches: PayrollCoach[]) {
   const head = ['Coach', 'Coach email', 'Month', 'Line', 'Date', 'Program or lesson', 'Role', 'Hours', 'Rate', 'Amount', 'Note'];
   const lines: unknown[][] = [];
@@ -206,7 +206,8 @@ export function payrollCsv(month: string, coaches: PayrollCoach[]) {
     if (c.lessons && c.lessons.lessons) {
       const owed = c.lessons.owedCents;
       if (owed !== null) total += owed;
-      lines.push([c.name, c.email, month, 'Private lessons', '', `${c.lessons.lessons} lesson${c.lessons.lessons === 1 ? '' : 's'}, ${dollars(c.lessons.grossCents)} paid by families`, '', '',
+      // grossCents is what the academy kept after any card refunds (issue #272, lib/coach-pay.ts); the refunded part is named.
+      lines.push([c.name, c.email, month, 'Private lessons', '', `${c.lessons.lessons} lesson${c.lessons.lessons === 1 ? '' : 's'}, ${dollars(c.lessons.grossCents)} kept from families${c.lessons.refundedCents ? ` (${dollars(c.lessons.refundedCents)} refunded)` : ''}`, '', '',
         c.lessons.splitPct === null ? '' : c.lessons.splitPct + '% share', owed === null ? '' : dollars(owed), owed === null ? 'No lesson share set on lesson settings' : 'From the coach pay report']);
     }
     lines.push([c.name, c.email, month, 'Total', '', '', '', (c.shifts.filter(v => v.status === 'approved').reduce((n, v) => n + v.paidMinutes, 0) / 60).toFixed(2), '', dollars(total),

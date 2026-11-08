@@ -235,7 +235,7 @@ let ids = {};
   assert.equal(lines[0], 'Coach,Coach email,Month,Line,Date,Program or lesson,Role,Hours,Rate,Amount,Note');
   assert.equal(lines.filter(l => l.includes(',Practice,')).length, 5);
   assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11,Practice,2026-11-04,No scheduled practice,Assistant coach,1.75,30.00 per hour,52.50,"Camp setup, agreed"'));
-  assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11,Private lessons,,"1 lesson, 100.00 paid by families",,,65% share,65.00,From the coach pay report'));
+  assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11,Private lessons,,"1 lesson, 100.00 kept from families",,,65% share,65.00,From the coach pay report'));
   assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11,Total,,,,6.75,,302.50,'), 'practice 237.50 plus lessons 65.00');
   assert.doesNotMatch(csv.body, /wage|salary|invoice|overtime|withhold|gross|payroll tax|employee|contractor/i, 'no employment wording');
 

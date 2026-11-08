@@ -225,6 +225,12 @@ assert.equal(campReview.review.cents, 14400, 'paid members get 10% off camps');
 res = await post(registrationRoute, {program: 'Intermediate', plan: 'monthly', wrestlerId: 'w-1'});
 assert.equal(res.status, 409, 'cannot buy a second membership while one is active');
 
+// --- A member is never charged for a practice the membership covers (issue #272) ---
+res = await pay({source: 'membership', program: 'Intermediate', plan: 'walkin', wrestlerId: 'w-1', date: practiceDate, practiceId: `Intermediate:${practiceDate}:18:00`});
+body = await res.json(); assert.equal(res.status, 409); assert.match(body.error, /membership already covers SWA Intermediate practices on/);
+assert.equal(sqlite.prepare("SELECT count(*) AS n FROM orders WHERE kind='walkin'").get().n, 0, 'no walk-in order for a covered practice');
+// With the membership over, the walk-in is sold again.
+sqlite.prepare("UPDATE orders SET term_end=? WHERE id='old-annual'").run(day(-1));
 // --- Walk-in uses the scheduled practice and its date ---
 res = await pay({source: 'membership', program: 'Intermediate', plan: 'walkin', wrestlerId: 'w-1', date: practiceDate, practiceId: `Intermediate:${practiceDate}:18:00`});
 body = await res.json(); assert.equal(res.status, 200); assert.equal(body.amountCents, 4000);
@@ -233,6 +239,7 @@ res = await pay({source: 'membership', program: 'Intermediate', plan: 'walkin', 
 assert.equal(res.status, 409, 'a practice id that is not on the schedule for that date is refused');
 res = await pay({source: 'membership', program: 'Intermediate', plan: 'walkin', wrestlerId: 'w-1', date: day(-3), practiceId: `Intermediate:${day(-3)}:18:00`});
 assert.equal(res.status, 400, 'past practices are refused');
+sqlite.prepare("UPDATE orders SET term_end=? WHERE id='old-annual'").run(membershipTerm(day(0)).end);
 
 // --- Stripe outage: nothing charged, order released, retry works ---
 stripe.failCreate = true;

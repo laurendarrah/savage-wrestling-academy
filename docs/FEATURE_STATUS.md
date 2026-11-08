@@ -18,7 +18,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | **Programs and booking** | | | |
 | Program rules and SWA Advance approvals | Built. Development K–6, Intermediate 7–12, Advance 7–12 with coach approval for every wrestler, with private chat | `lib/program-approval.ts`, `/approvals` | |
 | Registration and booking review | Built; prices from `lib/quotes.ts`, including team codes, member pricing and scholarships | `/register`, `/booking` | |
-| Online payment | Built: Stripe Checkout, signed webhook, refunds, card fees. Each purchase type stays closed until `CHECKOUT_KINDS` lists it | `lib/checkout.ts`, `lib/stripe-webhook.ts`, `/payment-setup` | Stripe account and webhook (#26), refund policy (#3) |
+| Online payment | Built: Stripe Checkout, signed webhook, refunds, card disputes, card fees. Each purchase type stays closed until `CHECKOUT_KINDS` lists it | `lib/checkout.ts`, `lib/stripe-webhook.ts`, `/payment-setup` | Stripe account and webhook (#26), refund policy (#3) |
 | Monthly memberships | Built: 12 monthly payments that stop on their own. A year paid upfront is not offered (#210) | `lib/membership-term.ts`, `subscriptions` | Membership terms (#2, #20) |
 | Pay cash at the academy | Built for walk-ins and extra practices; coaches or the owner tap **Cash received** (#248, #250) | `/booking`, `/roster`, `lib/cash-bookings.ts` | |
 | Offline payments | Owner records cash or check, voids mistakes, exports CSV | `/payments`, `lib/offline-payments.ts` | |

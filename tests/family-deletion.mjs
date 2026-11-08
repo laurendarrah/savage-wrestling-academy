@@ -139,7 +139,11 @@ assert.equal(sqlite.prepare("SELECT sum(amount_cents) s FROM orders WHERE user_i
 assert.equal(sqlite.prepare("SELECT order_id FROM payment_refunds WHERE id='re_tf'").get().order_id, kept.find(o => o.stripe_payment_intent === 'pi_tf').id, 'the refund still belongs to its payment');
 assert.equal(count("orders WHERE user_id='tf'"), 0);
 // Undecided retention: kept as they were.
-for (const t of ['waiver_signatures', 'signature_reissues', 'attendance', 'program_approvals']) assert.equal(count(`${t} WHERE user_id='tf'`), 1, t + ' kept');
+for (const t of ['waiver_signatures', 'signature_reissues', 'program_approvals']) assert.equal(count(`${t} WHERE user_id='tf'`), 1, t + ' kept');
+// Check-ins stay for the roster's history but no longer name the account (issue #272).
+assert.equal(count("attendance WHERE user_id='tf'"), 0, 'no check-in points at the deleted account');
+{ const a = sqlite.prepare("SELECT user_id,wrestler_id,wrestler_name FROM attendance WHERE id='att-tf'").get();
+  assert.equal(a.user_id, kept[0].user_id); assert.equal(a.wrestler_name, 'Deleted family'); assert.equal(a.wrestler_id, 'w-tf', 'the wrestler id stays, so two wrestlers in one session stay distinct'); }
 assert.equal(count("scholarship_awards WHERE id IN ('sch-tf','offer-tf')"), 2); assert.equal(count("approval_messages WHERE approval_id='ap-tf'"), 1);
 // Private groups: the open one to come is released; the others stay without the family.
 assert.deepEqual({...sqlite.prepare("SELECT closed,format,organizer_id,invite_code FROM coach_openings WHERE id='g-open-tf'").get()}, {closed: 0, format: null, organizer_id: null, invite_code: null});

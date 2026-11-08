@@ -3,7 +3,10 @@
 // One source of truth for every dollar:
 // - Card payments, monthly installments and refunds are read from orders, stripe_events and payment_refunds, which only
 //   the verified Stripe webhook (lib/stripe-webhook.ts) writes. A refund, full or partial, goes out on the day Stripe
-//   reported it (lib/card-refunds.ts); the payment itself still came in on the day it was paid.
+//   reported it (lib/card-refunds.ts); the payment itself still came in on the day it was paid. (Payments, by contrast,
+//   subtracts a refund from the payment it belongs to, so a month's two totals can differ when a refund crosses months.)
+// - A card dispute (issue #272, payment_disputes) goes out on the day the bank took the money and comes back in if the
+//   academy wins. Stripe's dispute fee is not read; enter it as an expense if it is charged.
 // - Stripe's card processing fees are read from stripe_fees (lib/stripe-fees.ts) and go out as an expense on the day of
 //   the payment. Stripe keeps its fee when a payment is refunded, so the fee stays.
 // - Offline payments are read from orders too (lib/offline-payments.ts records them; a voided one drops out).
@@ -66,7 +69,7 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
   // Payments are stored as UTC instants; read a day either side, then keep those whose New York date is in range.
   const lo = shift(from, -1), hi = shift(to, 2), live = stripeMode() === 'live' ? 1 : 0;
   const inRange = (d: string) => d >= from && d <= to;
-  const [paid, installments, refunds, history, fees, entries] = await env.DB!.batch([
+  const [paid, installments, refunds, history, fees, entries, disputes] = await env.DB!.batch([
     // Card payments for the current Stripe mode, and offline payments. A refunded payment still came in; its refund
     // goes out on the day it was refunded. Voided offline payments (status canceled) were never received.
     env.DB!.prepare(`SELECT o.id,o.paid_at,o.kind,o.item_label,o.wrestler_name,o.amount_cents,o.source,o.pricing,s.payments_total,${collectorNameSql('o')} AS collected_by FROM orders o
@@ -89,6 +92,9 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
       WHERE f.livemode=? AND o.source='stripe' AND o.livemode=? AND f.fee_cents>0 AND f.charged_at>=? AND f.charged_at<?`).bind(live, live, lo, hi),
     env.DB!.prepare(`SELECT id,kind,entry_date,amount_cents,category,note,receipt,revision FROM financial_entries
       WHERE deleted_at IS NULL AND entry_date>=? AND entry_date<=?`).bind(from, to),
+    // Card disputes (issue #272): the bank takes the money on funds_withdrawn and gives it back on funds_reinstated.
+    env.DB!.prepare(`SELECT d.id,d.kind,d.amount_cents,d.occurred_at,o.item_label,o.wrestler_name FROM payment_disputes d JOIN orders o ON o.id=d.order_id
+      WHERE d.kind IN ('funds_withdrawn','funds_reinstated') AND d.livemode=? AND o.source='stripe' AND o.livemode=? AND d.amount_cents>0 AND d.occurred_at>=? AND d.occurred_at<?`).bind(live, live, lo, hi),
   ]);
   const lines: LedgerLine[] = [];
   const base = {note: '', receipt: '', entryId: null, revision: null, collectedBy: ''};
@@ -125,6 +131,14 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
     const kind = s.refunded_cents < s.amount_cents ? `Partial refund (${money(s.refunded_cents)} of ${money(s.amount_cents)} refunded so far)` : s.previousCents ? `Refund of the rest (${money(s.amount_cents)} refunded in all)` : 'Refund';
     lines.push({...base, id: 'refund:' + s.id, date, type: 'refund', source: 'online', category: 'Refunds',
       description: `${kind}: ${what}`, method: 'Card online', amountCents: s.changeCents});
+  }
+  for (const r of disputes.results as any[]) {
+    const date = academyDay(r.occurred_at);
+    if (!inRange(date)) continue;
+    const what = `${r.item_label} · ${r.wrestler_name}`;
+    lines.push(r.kind === 'funds_withdrawn'
+      ? {...base, id: 'dispute:' + r.id, date, type: 'refund', source: 'online', category: 'Disputed payments', description: `Disputed payment taken back by the bank: ${what}`, method: 'Card online', amountCents: r.amount_cents}
+      : {...base, id: 'dispute:' + r.id, date, type: 'income', source: 'online', category: 'Disputes won', description: `Disputed payment returned: ${what}`, method: 'Card online', amountCents: r.amount_cents});
   }
   for (const r of fees.results as any[]) {
     const date = academyDay(r.charged_at);

@@ -2,6 +2,7 @@ import {env} from 'cloudflare:workers';
 import {ownerIdentity,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {registrationCatalog} from '../../../lib/registration-catalog';
 import {scholarshipDraft,scholarshipView,newInviteToken,inviteHash,type Scholarship} from '../../../lib/scholarships';
+import {securityEvent} from '../../../lib/security-events';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await ownerIdentity(request);
@@ -26,6 +27,8 @@ export async function POST(request:Request){
   const token=newInviteToken(),id=crypto.randomUUID(),expires=new Date(now.getTime()+30*86400000).toISOString();
   const award=await env.DB!.prepare("INSERT INTO scholarship_awards(id,token_hash,recipient_email,wrestler_name,program,reference_cents,terms_text,expires_at,created_at,created_by) VALUES (?,?,?,?,?,?,?,?,?,?) RETURNING *")
    .bind(id,await inviteHash(token),email,input.wrestlerName.trim(),p.id,p.monthlyCents,scholarshipDraft,expires,at,auth.owner.userId).first<Scholarship>();
+  // Issue #272: offers and revocations are in the security log (the id, program and monthly value; never the email).
+  await securityEvent(auth.owner.userId,'scholarship_offered',`${id} ${p.id} ${p.monthlyCents}`);
   return reply({award:scholarshipView(award!),inviteUrl:new URL('/scholarship#token='+token,request.url).href});
  }
  if(!input||typeof input.id!=='string'||!Number.isInteger(input.revision))return reply({error:'Refresh the scholarship list before editing.'},400);
@@ -38,6 +41,7 @@ export async function POST(request:Request){
   updated=await env.DB!.prepare("UPDATE scholarship_awards SET terms_text=?,terms_ready=1,revision=revision+1 WHERE id=? AND revision=? AND status='offered' RETURNING *").bind(input.terms.trim(),award.id,input.revision).first<Scholarship>();
  }else if(input.action==='revoke'){
   updated=await env.DB!.prepare("UPDATE scholarship_awards SET status=CASE WHEN status='active' THEN 'ended' ELSE 'revoked' END,ended_at=?,revision=revision+1 WHERE id=? AND revision=? AND status IN ('offered','active') RETURNING *").bind(at,award.id,input.revision).first<Scholarship>();
+  if(updated)await securityEvent(auth.owner.userId,updated.status==='ended'?'scholarship_ended':'scholarship_revoked',`${award.id} ${award.program} ${award.reference_cents}`);
  }else if(input.action==='link'){
   if(award.status!=='offered')return reply({error:'Only an unaccepted offer can have a new invitation link.'},409);
   const token=newInviteToken();

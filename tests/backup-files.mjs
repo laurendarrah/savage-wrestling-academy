@@ -68,6 +68,8 @@ source.sqlite.prepare("INSERT INTO signature_reissues(signature_id,user_id,reaso
 // Issue #248: a walk-in booked to pay cash at the academy (the old file predates the table).
 source.sqlite.prepare(`INSERT INTO cash_bookings(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,session_date,start_time,end_time,base_cents,discount_cents,amount_cents,pricing,dedupe_key,status,order_id,created_at,updated_at,canceled_at,canceled_by,cancel_reason)
   VALUES ('cash-1','parent-1','pat@example.test','w-1','Sam Example','live',NULL,'fnl','Friday Night Live on Fri, Nov 20','2026-11-20','17:00','18:00',2000,1000,1000,'{"member":true}','parent-1|w-1|live|fnl|2026-11-20','due',NULL,'2026-11-07T12:00:00.000Z','2026-11-07T12:00:00.000Z',NULL,NULL,NULL)`).run();
+// Issue #272: a card dispute (the old file predates the table).
+source.sqlite.prepare("INSERT INTO payment_disputes VALUES ('evt_dp_1','dp_1','ord-1','pi_1','ch_1','created',240000,'fraudulent','needs_response','2026-11-07T12:00:00.000Z',0,'2026-11-07T12:00:00.000Z')").run();
 const exported = await source.route.GET(new Request('https://swa.test/api/backups?mode=lines'));
 assert.equal(exported.status, 200); assert.match(exported.headers.get('content-type'), /application\/x-ndjson/); assert.equal(exported.headers.get('cache-control'), 'private, no-store');
 const made = await encryptLines(readLines(exported.body), NEW_PASS);

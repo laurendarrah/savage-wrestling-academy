@@ -57,27 +57,35 @@ export async function recordOffline(input: OfflineInput, ownerId: string) {
   const user = await env.DB!.prepare('SELECT email FROM family_accounts WHERE user_id=?').bind(input.userId).first<{email: string}>();
   const id = crypto.randomUUID(), at = new Date().toISOString();
   const pricing = {...charge.pricing, method: input.method, note, recordedBy: ownerId, listedCents: charge.amountCents};
+  // One transaction (issue #272, as receiveCash in lib/cash-bookings.ts): the payment, the link to a walk-in or extra
+  // practice the family booked to pay at the academy (issue #248, so it stops showing as due and can't be collected
+  // twice), and the security log line. The two later statements only apply when the order was inserted, and a duplicate
+  // payment for the same item fails the whole batch, so a paid order can never sit beside a booking still due.
   try {
-    await env.DB!.prepare(
-      `INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'usd',?,?,'paid',?,0,?,?,?,?,?,'offline')`
-    ).bind(id, input.userId, user!.email, quote.wrestler.id, quote.wrestler.name, charge.kind, charge.program, charge.itemId, charge.itemLabel,
-      JSON.stringify(charge.dates), charge.baseCents, charge.baseCents - amount, amount, JSON.stringify(pricing), JSON.stringify({offline: true, recordedBy: ownerId, at}),
-      charge.dedupeKey, at, at, paidOn + 'T12:00:00.000Z', null, null).run();
+    await env.DB!.batch([
+      env.DB!.prepare(
+        `INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'usd',?,?,'paid',?,0,?,?,?,?,?,'offline')`
+      ).bind(id, input.userId, user!.email, quote.wrestler.id, quote.wrestler.name, charge.kind, charge.program, charge.itemId, charge.itemLabel,
+        JSON.stringify(charge.dates), charge.baseCents, charge.baseCents - amount, amount, JSON.stringify(pricing), JSON.stringify({offline: true, recordedBy: ownerId, at}),
+        charge.dedupeKey, at, at, paidOn + 'T12:00:00.000Z', null, null),
+      env.DB!.prepare("UPDATE cash_bookings SET status='paid',order_id=?,updated_at=? WHERE dedupe_key=? AND status='due' AND EXISTS (SELECT 1 FROM orders WHERE id=?)").bind(id, at, charge.dedupeKey, id),
+      env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM orders WHERE id=?)')
+        .bind(crypto.randomUUID(), ownerId, 'offline_payment_recorded', `${id} ${charge.kind} ${amount}`, at, id)
+    ]);
   } catch {
     return {status: 409, error: 'This wrestler already has a payment recorded for this item.'};
   }
+  // Seats are counted with this payment in place, so two owners recording the last seat at once both see it. Camps,
+  // events and lessons are never booked to pay at the academy, so there is no cash booking to put back.
   const slots = charge.kind === 'event' || charge.kind === 'lesson' ? charge.pricing.slots : null;
   if (typeof slots === 'number' && slots > 0 && !(await withinCapacity(id, charge.itemId, charge.dates, slots, charge.kind as 'event' | 'lesson'))) {
-    await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=?").bind(at, id).run();
+    await env.DB!.batch([
+      env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=?").bind(at, id),
+      env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'offline_payment_voided', id, at)
+    ]);
     return {status: 409, error: charge.kind === 'lesson' ? 'This lesson just filled up. The payment was not recorded.' : 'This event just filled up. The payment was not recorded.'};
   }
-  // A walk-in or extra practice the family booked to pay at the academy (issue #248) is now paid: link it, so it stops
-  // showing as due and can't be collected a second time.
-  if (charge.kind === 'walkin' || charge.kind === 'live')
-    await env.DB!.prepare("UPDATE cash_bookings SET status='paid',order_id=?,updated_at=? WHERE dedupe_key=? AND status='due'").bind(id, at, charge.dedupeKey).run();
-  await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
-    .bind(crypto.randomUUID(), ownerId, 'offline_payment_recorded', `${id} ${charge.kind} ${amount}`, at).run();
   await quietly(() => noticePaymentRecorded(id));
   if (charge.kind === 'lesson') await quietly(() => noticeLessonBooked(id));
   return {status: 200, orderId: id};
@@ -121,18 +129,35 @@ function paymentWhere(f: PaymentFilters) {
   if (validCollector(f.collector)) { where.push(`${collectorKeySql('o')}=?`); args.push(f.collector); }
   return {where: where.join(' AND '), args};
 }
-// Card refunds (full or partial) and Stripe fees for a page or batch of payments (issue #42).
-type CardMoney = {refunded: Map<string, {cents: number; at: string}>; fees: Map<string, {n: number; fee: number; net: number}>; oldRefundAt: Map<string, string>};
+// Card refunds (full or partial), Stripe fees and card disputes for a page or batch of payments (issues #42, #272).
+export type DisputeInfo = {status: 'open' | 'won' | 'lost'; amountCents: number; at: string};
+type CardMoney = {refunded: Map<string, {cents: number; at: string}>; fees: Map<string, {n: number; fee: number; net: number}>; oldRefundAt: Map<string, string>; disputes: Map<string, DisputeInfo>};
+// The state of an order's dispute from its rows in event order: open until Stripe closes it (won or lost); the bank
+// giving the money back also means won, in case the closed event is late.
+export function disputeStates(rows: {order_id: string; kind: string; amount_cents: number; status: string | null; occurred_at: string; id: string}[]) {
+  const out = new Map<string, DisputeInfo>();
+  for (const r of [...rows].sort((a, b) => a.occurred_at.localeCompare(b.occurred_at) || a.id.localeCompare(b.id))) {
+    const d = out.get(r.order_id) ?? {status: 'open' as const, amountCents: r.amount_cents, at: r.occurred_at};
+    d.at = r.occurred_at; if (r.amount_cents) d.amountCents = r.amount_cents;
+    if (r.kind === 'created') d.status = 'open';
+    else if (r.kind === 'funds_reinstated') d.status = 'won';
+    else if (r.kind === 'closed') d.status = r.status === 'won' ? 'won' : r.status === 'lost' ? 'lost' : d.status;
+    out.set(r.order_id, d);
+  }
+  return out;
+}
 async function cardMoney(rows: any[]): Promise<CardMoney> {
   const ids = JSON.stringify(rows.filter(r => r.source === 'stripe').map(r => r.id)), inIds = 'order_id IN (SELECT value FROM json_each(?))';
-  if (ids === '[]') return {refunded: new Map(), fees: new Map(), oldRefundAt: new Map()};
-  const [refundRows, feeRows, oldRefunds] = await env.DB!.batch([
+  if (ids === '[]') return {refunded: new Map(), fees: new Map(), oldRefundAt: new Map(), disputes: new Map()};
+  const [refundRows, feeRows, oldRefunds, disputeRows] = await env.DB!.batch([
     env.DB!.prepare(`SELECT id,order_id,payment_intent,amount_cents,refunded_cents,refunded_at FROM payment_refunds WHERE ${inIds}`).bind(ids),
     env.DB!.prepare(`SELECT order_id,count(*) AS n,sum(fee_cents) AS fee,sum(net_cents) AS net FROM stripe_fees WHERE ${inIds} GROUP BY order_id`).bind(ids),
-    env.DB!.prepare(`SELECT order_id,min(received_at) AS at FROM stripe_events WHERE outcome='refunded' AND ${inIds} GROUP BY order_id`).bind(ids)]);
+    env.DB!.prepare(`SELECT order_id,min(received_at) AS at FROM stripe_events WHERE outcome='refunded' AND ${inIds} GROUP BY order_id`).bind(ids),
+    env.DB!.prepare(`SELECT id,order_id,kind,amount_cents,status,occurred_at FROM payment_disputes WHERE ${inIds}`).bind(ids)]);
   return {refunded: refundedByOrder(refundRows.results as RefundRow[]),
     fees: new Map((feeRows.results as {order_id: string; n: number; fee: number; net: number}[]).map(f => [f.order_id, f])),
-    oldRefundAt: new Map((oldRefunds.results as {order_id: string; at: string}[]).map(e => [e.order_id, e.at]))};
+    oldRefundAt: new Map((oldRefunds.results as {order_id: string; at: string}[]).map(e => [e.order_id, e.at])),
+    disputes: disputeStates(disputeRows.results as any[])};
 }
 const viewsOf = async (rows: any[]) => { const m = await cardMoney(rows); return rows.map(r => paymentView(r, m)); };
 function paymentView(r: any, m: CardMoney) {
@@ -151,7 +176,9 @@ function paymentView(r: any, m: CardMoney) {
     collectedBy: (r.collector_name as string | null) ?? '', collectorKey: (r.collector_key as string | null) ?? '', collectedAt: r.source === 'offline' && typeof p.collectedAt === 'string' ? p.collectedAt : null,
     termStart: r.term_start as string | null, termEnd: r.term_end as string | null,
     refundedCents: back?.cents ?? 0, refundedOn: back && Number.isFinite(Date.parse(back.at)) ? academyDay(back.at) : '', cardPayments,
-    feeCents: feeKnown ? fee!.fee : null, netCents: feeKnown ? fee!.net : null};
+    feeCents: feeKnown ? fee!.fee : null, netCents: feeKnown ? fee!.net : null,
+    // A card dispute (issue #272): open, won or lost. The payment itself stays as paid; the books move the money.
+    dispute: m.disputes.get(r.id) ?? null};
 }
 // Refunded so far for one order, in SQL: the latest Stripe total of each of its card payments, or the whole amount for a
 // full refund recorded before refund amounts were stored. Matches paymentView, so the totals match the rows.
@@ -212,11 +239,13 @@ export function paymentsCsv(payments: ReturnType<typeof paymentView>[]) {
   // Refunded, Stripe fee and Net cover every card payment behind the row: one, or each monthly payment so far (Card
   // payments). A blank fee means Stripe's fee isn't recorded yet. Net after Stripe fee is before any refund, as Stripe shows it.
   // Collected by (issue #250): the coach's display name, Owner or Former coach for an offline payment; blank online.
+  // Dispute (issue #272): "Open", "Won" or "Lost" when the family's bank disputed the card payment; blank otherwise.
   const head = ['Paid on', 'Status', 'Paid via', 'Method', 'Collected by', 'Type', 'Item', 'Dates', 'Wrestler', 'Parent', 'Email', 'Phone', 'Amount', 'List price', 'Discount', 'Term start', 'Term end', 'Note', 'Void reason',
-    'Refunded', 'Refunded on', 'Card payments', 'Stripe fee', 'Net after Stripe fee'];
+    'Dispute', 'Refunded', 'Refunded on', 'Card payments', 'Stripe fee', 'Net after Stripe fee'];
   const money = (c: number) => (c / 100).toFixed(2), card = (p: typeof payments[number], v: string) => p.source === 'stripe' ? v : '';
   const lines = payments.map(p => [p.paidOn, p.status, p.source === 'offline' ? 'Offline' : 'Online', p.method, p.collectedBy, p.kind, p.item, p.dates.join(' '), p.wrestler, p.parent, p.email, p.phone,
     money(p.amountCents), money(p.listCents), money(p.discountCents), p.termStart ?? '', p.termEnd ?? '', p.note, p.voidReason,
+    p.dispute ? {open: 'Open', won: 'Won', lost: 'Lost'}[p.dispute.status] : '',
     p.refundedCents ? money(p.refundedCents) : '', p.refundedOn, card(p, String(p.cardPayments)), card(p, p.feeCents === null ? '' : money(p.feeCents)), card(p, p.netCents === null ? '' : money(p.netCents))].map(csvCell).join(','));
   return [head.join(','), ...lines].join('\r\n') + '\r\n';
 }

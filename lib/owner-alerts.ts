@@ -19,6 +19,10 @@ const LOOKBACK_MS = 86400000;
 export const SCHEDULED_JOBS: Record<string, string> = {'/daily-reminders': 'The morning reminders (card and waiver reminders to families)',
   '/coach-retention': 'The daily cleanup of records of coaches removed more than 3 years ago',
   '/stripe-fees': 'Reading card fees from Stripe for the books (Income and expenses)'};
+// Things that are not site errors but need the owner soon, recorded under these paths by the code that notices them
+// (issue #272: lib/stripe-webhook.ts writes a line when a family disputes a card payment with their bank).
+export const DISPUTE_PATH = '/stripe-dispute';
+export const NOTICES: Record<string, string> = {[DISPUTE_PATH]: 'A family disputed a card payment with their bank. Open Payments (the payment says Disputed), then answer the dispute in Stripe before its deadline'};
 
 type Marker = {sentAt?: string; coveredUntil?: string; count?: number; status?: string; reason?: string | null};
 type ErrorRow = {at: string; path: string; status: number};
@@ -33,17 +37,20 @@ const kind = (status: number) => status === 502 || status === 503 || status === 
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
 export function alertEmail(rows: ErrorRow[], origin: string | null, now = new Date()) {
-  const jobs = new Map<string, number>(), pages = new Map<string, number>();
+  const jobs = new Map<string, number>(), pages = new Map<string, number>(), notices = new Map<string, number>();
   for (const r of rows) {
     if (SCHEDULED_JOBS[r.path]) jobs.set(r.path, (jobs.get(r.path) ?? 0) + 1);
+    else if (NOTICES[r.path]) notices.set(r.path, (notices.get(r.path) ?? 0) + 1);
     else { const key = `${area(r.path)}: ${kind(Number(r.status))}`; pages.set(key, (pages.get(key) ?? 0) + 1); }
   }
   const lines: string[] = [];
+  if (notices.size) lines.push('Needs your attention:', ...[...notices].map(([p, n]) => `- ${NOTICES[p]}${n > 1 ? ` (${plural(n, 'time')})` : ''}`), '');
   if (jobs.size) lines.push('Scheduled jobs that didn\'t finish:', ...[...jobs].map(([p, n]) => `- ${SCHEDULED_JOBS[p]}: ${plural(n, 'time')}`), '');
   if (pages.size) lines.push('Server errors, by page:', ...[...pages].sort((a, b) => b[1] - a[1]).map(([k, n]) => `- ${k} (${n})`), '');
   const first = rows[0]?.at, last = rows.at(-1)?.at;
   const span = first && last && first !== last ? `between ${when(first, now)} and ${when(last, now)}` : `at ${when(first ?? now, now)}`;
-  const subject = jobs.size && !pages.size ? 'Site alert: a scheduled job didn\'t finish' : `Site alert: ${plural(rows.length, 'new problem')} on the academy site`;
+  const subject = notices.has(DISPUTE_PATH) && !jobs.size && !pages.size ? 'Site alert: a family disputed a card payment'
+    : jobs.size && !pages.size && !notices.size ? 'Site alert: a scheduled job didn\'t finish' : `Site alert: ${plural(rows.length, 'new problem')} on the academy site`;
   const text = [`The Savage Wrestling Academy site recorded ${plural(rows.length, 'new problem')} ${span} (New York time).`, '', ...lines,
     origin ? `See what happened on the Site health page (owner sign-in needed):\n${origin}/site-health` : 'See what happened on the Site health page in the owner dashboard.', '',
     'One or two errors right after an update can be normal. A steady stream means something needs fixing, so share the Site health page with whoever maintains the site.', '',

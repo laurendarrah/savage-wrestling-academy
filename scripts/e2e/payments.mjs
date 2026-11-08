@@ -105,6 +105,24 @@ await step('Stripe reports the payment: the walk-in is paid and on the roster', 
   // A forged or replayed message changes nothing.
   const bad = await fetch(BASE + '/api/stripe-webhook', {method: 'POST', headers: {'content-type': 'application/json', 'stripe-signature': 't=1,v1=00'}, body: '{}'}); expect(bad.status === 400, 'unsigned webhook accepted: ' + bad.status);
 });
+// Issue #272: rosters are built from the saved schedule, so a save that would drop a paid session is refused, while a
+// time change keeps the walk-in (walk-ins are keyed by program and date). Every save is in the security log.
+await step('a day off on the paid walk-in\'s date is refused; moving the practice time keeps Sam on the roster (#272)', async () => {
+  const got = await api(owner, '/api/academy');
+  const dayOff = {...got.body.data, seasons: got.body.data.seasons.map(s => ({...s, excludedDates: [ny(1)]}))};
+  let r = await api(owner, '/api/academy', {revision: got.body.revision, data: dayOff}, 'PUT');
+  expect(r.status === 409 && /SWA Intermediate on .* has 1 paid walk-in\. Move or refund/.test(r.body.error) && r.body.blocked.length === 1, 'day off refused: ' + JSON.stringify(r.body));
+  expect((await api(owner, '/api/academy')).body.revision === got.body.revision, 'nothing was saved');
+  const moved = {...got.body.data, seasons: got.body.data.seasons.map(s => ({...s, weekly: s.weekly.map(w => ({...w, start: '18:30'}))}))};
+  r = await api(owner, '/api/academy', {revision: got.body.revision, data: moved}, 'PUT');
+  expect(r.status === 200, 'time change saved: ' + JSON.stringify(r.body));
+  const roster = await api(owner, '/api/roster?date=' + ny(1));
+  const s = roster.body.sessions.find(x => x.type === 'practice' && x.program === 'Intermediate');
+  expect(s && s.start === '18:30' && s.entries.some(e => e.name === 'Sam Example' && e.sources.includes('Walk-in paid')), 'walk-in kept after the time change: ' + JSON.stringify(roster.body.sessions.map(x => [x.key, x.entries.map(e => e.name)])));
+  const log = sql("SELECT target FROM security_events WHERE action='academy_settings_saved' ORDER BY rowid DESC LIMIT 1")[0];
+  expect(log && /^schedule changed: SWA Intermediate/.test(log.target), 'the save is in the security log: ' + JSON.stringify(log));
+  await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /Academy settings saved[\s\S]*schedule changed: SWA Intermediate/);
+});
 await step('the payment shows on /payments as online', async () => {
   await owner.goto(BASE + '/payments'); await waitText(owner, '#rows', /Sam Example[\s\S]*\$40\.00/);
 });
@@ -180,10 +198,57 @@ await step('a late Stripe event for an upfront order started before #210 still r
   await family.goto(BASE + '/family'); await waitText(family, '#purchaseList', /paid upfront/);
 });
 
+// Issue #272: coach pay is the coach's share of what the academy kept after a partial refund, and a card dispute is
+// recorded, flagged on Payments, logged and booked.
+let lessonOrder = '';
+await step('a partly refunded lesson pays the coach their share of what the academy kept (#272)', async () => {
+  sql(`INSERT INTO staff_access VALUES ('coach.dana@example.test','Coach Dana','["Intermediate"]',1,'2026-11-01T12:00:00.000Z')`);
+  sql(`INSERT INTO coach_openings(id,user_id,date,start,end,coach_email) VALUES ('op-rehearsal','e2e-coach','${ny(4)}','16:00','17:00','coach.dana@example.test')`);
+  let r = await api(owner, '/api/lesson-settings', {prices: {'one-on-one': 8000}});
+  expect(r.status === 200, 'lesson price ' + JSON.stringify(r.body));
+  r = await api(family, '/api/checkout', {source: 'booking', type: 'lesson', wrestlerId: 'w-sam', openingId: 'op-rehearsal', acceptTerms: true});
+  expect(r.status === 200 && r.body.amountCents === 8000, 'lesson checkout ' + JSON.stringify(r.body));
+  lessonOrder = r.body.orderId;
+  const o = sql(`SELECT stripe_session_id FROM orders WHERE id='${lessonOrder}'`)[0];
+  r = await webhook('checkout.session.completed', {id: o.stripe_session_id, object: 'checkout.session', client_reference_id: lessonOrder, metadata: {order_id: lessonOrder}, payment_status: 'paid', amount_total: 8000, currency: 'usd', livemode: false, payment_intent: 'pi_rehearsal_lesson', mode: 'payment'});
+  expect(r.status === 200 && r.body.outcome === 'paid', 'lesson paid ' + JSON.stringify(r.body));
+  r = await webhook('charge.refunded', {id: 'ch_rehearsal_lesson', object: 'charge', payment_intent: 'pi_rehearsal_lesson', amount: 8000, refunded: false, amount_refunded: 3000, livemode: false});
+  expect(r.body.outcome === 'partial-refund', 'partial refund ' + JSON.stringify(r.body));
+  const pay = await api(owner, `/api/coach-pay?from=${ny(0)}&to=${ny(10)}`);
+  const dana = pay.body.coaches.find(c => c.coachEmail === 'coach.dana@example.test');
+  expect(dana && dana.grossCents === 5000 && dana.refundedCents === 3000 && dana.owedCents === 3250 && dana.lines[0].refundedCents === 3000, 'coach pay nets the refund: ' + JSON.stringify(pay.body.coaches));
+  const csv = await owner.evaluate(async q => (await fetch('/api/coach-pay?format=csv&' + q, {cache: 'no-store'})).text(), `from=${ny(0)}&to=${ny(10)}`);
+  expect(/,80\.00,30\.00,50\.00,65,32\.50,17\.50\r\n/.test(csv), 'the coach pay spreadsheet shows paid, refunded and kept: ' + csv);
+  if (ny(4).slice(0, 7) === ny(0).slice(0, 7)) { await owner.goto(BASE + '/coach-pay'); await waitText(owner, '#coaches', /Coach Dana[\s\S]*\$50\.00 kept \(\$30\.00 refunded\)[\s\S]*Owed \$32\.50/); }
+});
+await step('the family disputes the lesson payment with their bank: Payments says Disputed, the log and the alert path record it, the books move the money (#272)', async () => {
+  const dispute = {id: 'dp_rehearsal_1', object: 'dispute', charge: 'ch_rehearsal_lesson', payment_intent: 'pi_rehearsal_lesson', amount: 5000, currency: 'usd', reason: 'fraudulent', status: 'needs_response', livemode: false};
+  let r = await webhook('charge.dispute.created', dispute);
+  expect(r.status === 200 && r.body.outcome === 'disputed', 'dispute webhook ' + JSON.stringify(r.body));
+  expect(sql(`SELECT kind,amount_cents FROM payment_disputes WHERE order_id='${lessonOrder}'`).some(d => d.kind === 'created' && d.amount_cents === 5000), 'the dispute is recorded');
+  expect(sql(`SELECT status FROM orders WHERE id='${lessonOrder}'`)[0].status === 'paid', 'the payment stays paid');
+  expect(sql("SELECT path FROM error_log WHERE path='/stripe-dispute'").length === 1, 'the owner alert path has the dispute');
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#rows', /Sam Example[\s\S]*Disputed[\s\S]*Answer it in Stripe before its deadline/);
+  await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /Card payment disputed by the family’s bank[\s\S]*Sam Example/);
+  r = await webhook('charge.dispute.funds_withdrawn', {...dispute, status: 'under_review'});
+  expect(r.body.outcome === 'dispute-funds-withdrawn', 'funds withdrawn ' + JSON.stringify(r.body));
+  const books = await api(owner, '/api/financials');
+  expect(books.body.lines.some(l => l.type === 'refund' && l.category === 'Disputed payments' && l.amountCents === 5000), 'the dispute is money out in the books: ' + JSON.stringify(books.body.lines.map(l => [l.type, l.category, l.amountCents])));
+});
+
 await step('card fees for a monthly membership ask Stripe for its invoices; a run with nothing new is not an error (#42)', async () => {
   // stripe-mock's invoices are not for the membership's amount, so no fee is recorded, but the calls must be valid.
   const r = await api(owner, '/api/financials', {action: 'fees'});
   expect(r.status === 200 && !r.body.error && r.body.failed === 0 && r.body.checked >= 0, 'fee run ' + JSON.stringify(r.body));
+});
+// Issue #272: Sam's monthly membership covers SWA Intermediate practices, so a walk-in review is refused in plain words.
+await step('a member reviewing a walk-in their membership covers is told there is nothing to pay (#272)', async () => {
+  await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${ny(3)}`);
+  await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family.click('#reviewButton'); await waitText(family, '#status', /membership already covers SWA Intermediate practices on .*, so there is nothing to pay for this walk-in/);
+  expect(!sql("SELECT id FROM orders WHERE kind='walkin' AND status='pending'").length, 'no walk-in order was started');
+  // The rest of the rehearsal buys walk-ins, so the membership is ended here.
+  sql(`UPDATE orders SET term_end='${ny(-1)}' WHERE kind='monthly'`);
 });
 // Pay cash at the academy (issue #248): offered beside online payment, and the two never overlap.
 await step('with online payment open, a family can still book a walk-in to pay cash; checkout then refuses it; the owner records the cash', async () => {
