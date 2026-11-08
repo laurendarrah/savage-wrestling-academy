@@ -8,6 +8,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdirSync, readFileSync, rmSync} from 'node:fs';
 import {start, sessionCookie, users} from './fake-supabase.mjs';
 import {start as startUsaw} from './fake-usaw.mjs';
+import {plan, nyMinutes, nyDay, hhmm, MARGIN, FNL} from './clock.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 for (const p of ['playwright', '/opt/node-tools/node_modules/playwright']) { try { playwright = require(p); break; } catch {} }
@@ -24,12 +25,22 @@ const auth = await start(+new URL(AUTH).port);
 const USAW = process.env.E2E_USAW || 'http://127.0.0.1:54331';
 const usaw = await startUsaw(+new URL(USAW).port);
 const browser = await playwright.chromium.launch();
-const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
+// ---------- The clock (issue #287) ----------
+// Everything below that depends on the time of day comes from scripts/e2e/clock.mjs, decided once here. Today's practice
+// starts at least 40 minutes from now and ends by 11:59 PM, so the family can still book it to pay cash (#273: a practice
+// is not offered once it has started) and the coach can still take the cash on today's roster (coaches see today only).
+// In the last 42 minutes of the New York day no such practice fits, and a run that started then would cross midnight and
+// lose "today" halfway through, so the walkthrough waits for the new day first.
+let day = plan(nyMinutes());
+if (day.wait) {
+  console.log(`    note: ${hhmm(nyMinutes())} in New York: no practice can start ${MARGIN} minutes from now and end by 11:59 PM, so waiting ${day.wait} minutes for the new day`);
+  await new Promise(r => setTimeout(r, day.wait * 60000));
+  day = plan(nyMinutes());
+}
+const ny = k => nyDay(new Date(), k);
 const today = ny(0);
-// The weekly practice is 6:00–7:30 PM, or late in the evening when the walkthrough runs after 5 PM New York time, so
-// today's practice is still ahead: Register stops offering a practice once it has started (#273).
-const nyMinutes = (() => { const [h, m] = new Intl.DateTimeFormat('en-GB', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}).format(new Date()).split(':').map(Number); return h * 60 + m; })();
-const PRACTICE = nyMinutes >= 17 * 60 ? {start: '23:30', end: '23:59', label: '11:30 PM–11:59 PM'} : {start: '18:00', end: '19:30', label: '6:00 PM–7:30 PM'};
+const PRACTICE = day.practice;
+console.log(`    clock: ${hhmm(nyMinutes())} in New York on ${today}; today's practice is ${PRACTICE.label}, Friday Night Live ${FNL.label}`);
 const problems = [], passed = [];
 let current = '';
 const labels = new WeakMap();
@@ -174,7 +185,7 @@ await step('owner saves the academy schedule, programs, camp and Friday Night Li
     seasons: ['Elementary', 'Intermediate', 'Advanced'].map(program => ({program, start: ny(-30), end: ny(120), weekly, excludedDates: []})),
     events: [{id: 'winter-camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], schedule: [{date: ny(10), start: '09:00', end: '12:00'}], price: 160, day: 90, slots: 1, gradeRange: '', description: ''},
       {id: 'spring-clinic', name: 'Spring clinic', type: 'Clinic', dates: [ny(12)], schedule: [{date: ny(12), start: '10:00', end: '12:00'}], price: 60, day: null, slots: 2, gradeRange: '', description: ''}],
-    extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [ny(2)], enabled: true, start: '16:00', end: '17:00', memberCents: 1000, nonMemberCents: 2000}]};
+    extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [ny(2)], enabled: true, start: FNL.start, end: FNL.end, memberCents: 1000, nonMemberCents: 2000}]};
   const got = await api(owner, '/api/academy');
   const r = await owner.evaluate(async ([s, rev]) => { const x = await fetch('/api/academy', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision: rev, data: s})}); return {status: x.status, body: await x.json()}; }, [state, got.body.revision]);
   expect(r.status === 200, 'save failed: ' + JSON.stringify(r.body));
@@ -683,7 +694,8 @@ await step('family books a clinic to pay cash; the seat is held; the owner sees 
   await family.goto(BASE + '/inbox'); await at(family, 'main', /Booked: Spring clinic/);
   // The owner's Cash due list has it; Cash received turns it into a paid order and the seat stays taken.
   await openPayments(owner); await at(owner, '#cashRows', /Sam Example[\s\S]*Spring clinic[\s\S]*\$60\.00 due/);
-  await owner.locator('#cashRows [data-cash-paid]').first().click();
+  // The clinic's own row: Cash due can list other unpaid bookings first (#287).
+  await owner.locator('#cashRows tr', {hasText: 'Spring clinic'}).locator('[data-cash-paid]').click();
   await at(owner, '#status', /Cash received for Sam Example/);
   await at(owner, '#rows', /Sam Example[\s\S]*Spring clinic[\s\S]*Cash[\s\S]*\$60\.00/);
   const after = await api(family2, '/api/booking-review', {type: 'event', id: 'spring-clinic', wrestlerId: await wid(family2)});
@@ -982,6 +994,8 @@ await step('a coach clocks in and out of today\'s practice from coach home on a 
   const phone = await as('coach', {width: 390, height: 844});
   await phone.goto(BASE + '/coach'); await phone.waitForSelector('#clockCard [data-duty="head"]');
   await at(phone, '#clockCard', new RegExp('SWA Intermediate · ' + PRACTICE.label));
+  // Friday Night Live is on today too (the cash step above leaves it there, #272), which is why the practice is tapped by name below.
+  await at(phone, '#clockCard', new RegExp('Friday Night Live · ' + FNL.label));
   const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(over <= 1, `coach home scrolls sideways by ${over}px on a phone`);
   await phone.click('#clockCard [data-cc="in"]'); await at(phone, '#clockCard .cc-status', /Choose Head coach or Assistant coach first/);
