@@ -77,14 +77,14 @@ html body .teaser a.button:hover{border-color:#fff;color:#fff}
 @media (max-width:760px){html body main>section.mission{grid-template-columns:1fr}.teaser__in{grid-template-columns:1fr}html body .teaser a.button{width:100%}}
 @media (max-width:640px){.hero{padding:var(--swa-s-32) 16px}main{gap:var(--swa-s-32)}html body .actions a.button.primary{flex:1 1 auto;justify-content:center}}
 </style></head><body>
-<div class="hero"><div class="in"><div class="hero__text">
+<section class="hero" aria-labelledby="welcomeHeading"><div class="in"><div class="hero__text">
 <p class="eyebrow">Huntington Station, NY</p>
-<h1><!--slot:headline--></h1>
+<h1 id="welcomeHeading"><!--slot:headline--></h1>
 <p class="lede"><!--slot:intro--></p>
 <div class="actions"><a class="button primary" href="/login?mode=signup">Join the academy</a><a class="button quiet" href="/login">Sign in</a></div>
 <!--slot:herolink-->
 <p class="hero__next" id="week"><span class="lbl">Coming up</span><span class="what">Loading the schedule…</span></p>
-</div><div class="hero__media" aria-hidden="true"></div></div></div>
+</div><div class="hero__media" aria-hidden="true"></div></div></section>
 <main>
 <!--slot:mission-->
 <section class="plain" aria-labelledby="programsTitle"><h2 id="programsTitle">Programs</h2><div class="swa-seg compare-switch" id="programSwitch" role="group" aria-label="Program" hidden></div><div class="compare card" id="programs"><p class="muted">Loading the programs…</p></div><p class="compare-cta"><a class="button primary" href="/login?mode=signup">Start registration</a><span>Create your account, add your wrestler, choose a program.</span></p></section>

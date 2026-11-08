@@ -1327,7 +1327,8 @@ await step('family downloads their data and asks to close the account; owner rec
   const why = await dl.failure(); expect(!why, 'download failed: ' + why + ' ' + dl.url());
   const data = JSON.parse((await import('node:fs')).readFileSync(await dl.path(), 'utf8'));
   expect(data.profile.parentName === 'Pat Example' && data.payments.length >= 3 && !JSON.stringify(data).includes('Riley'), 'export contents');
-  await family.click('#accountMenu summary'); await family.click('#accountMenu button:has-text("Ask to close my account")'); await family.waitForSelector('#yourData:not([hidden])'); await family.fill('#closeNote', 'Moving away');
+  if (!await family.$eval('#accountMenu', d => d.open)) await family.click('#accountMenu summary');
+  await family.click('#accountMenu button:has-text("Ask to close my account")'); await family.waitForSelector('#yourData:not([hidden])'); await family.fill('#closeNote', 'Moving away');
   await family.click('#closeForm button'); await waitText(family, '#requestStatus', /The academy will contact you/);
   await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Data requests/);
   await owner.goto(BASE + '/data-requests'); await waitText(owner, '#list', /Pat Example[\s\S]*Moving away/);

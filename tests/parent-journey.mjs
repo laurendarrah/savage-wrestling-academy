@@ -126,11 +126,14 @@ const wrestlers = [{id: 'w1', name: 'Sam Example', grade: '8'}, {id: 'w2', name:
   assert.equal(p.el('notice').textContent, 'Online payment isn’t open yet. You can book now and pay cash at the academy.');
   assert.equal(p.el('wrestlerStatus').textContent, 'Riley Example is not registered yet.');
   assert.equal(p.el('cashBox').hidden, false);
-  // The other chip: already registered, and the receipt is re-read for them.
+  // The other chip is already registered: the status line says so and there is no receipt or Confirm to review.
   p.click('wrestler', 'w1'); await settle();
-  assert.equal(reviews.length, 2); assert.equal(reviews[1].wrestlerId, 'w1');
+  assert.equal(reviews.length, 1, 'nothing to review for a registered wrestler');
   assert.equal(p.el('wrestlerStatus').textContent, 'Sam Example is already registered. You don’t need to book again.');
-  assert.match(p.el('details').innerHTML, /<span class="v">Sam Example<\/span>/);
+  assert.equal(p.el('review').hidden, true);
+  // Back to Riley: the receipt is read again for them.
+  p.click('wrestler', 'w2'); await settle();
+  assert.equal(reviews.length, 2); assert.equal(reviews[1].wrestlerId, 'w2'); assert.equal(p.el('review').hidden, false);
 }
 
 // ---------- Lessons: the receipt, and the list/month toggle as the shared segment ----------
