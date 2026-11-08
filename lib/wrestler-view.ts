@@ -55,7 +55,7 @@ export async function upcomingFor(userId: string, wrestlerId: string, from: stri
 
 export async function wrestlerView(userId: string, wrestlerId: string) {
   const row = await env.DB!.prepare('SELECT payload FROM family_accounts WHERE user_id=?').bind(userId).first<{payload: string}>();
-  const w = row ? (JSON.parse(row.payload).wrestlers || []).find((x: any) => x.id === wrestlerId) : null;
+  const kids = row ? JSON.parse(row.payload).wrestlers || [] : [], w = kids.find((x: any) => x.id === wrestlerId);
   if (!w) return null;
   const today = academyToday(), monthStart = today.slice(0, 8) + '01';
   const pass = (await familyPasses(userId)).find(p => p.wrestlerId === wrestlerId) ?? null;
@@ -65,9 +65,9 @@ export async function wrestlerView(userId: string, wrestlerId: string) {
     id: w.id, name: w.name, grade: w.grade, pass: pass?.code ?? null,
     upcoming: await upcomingFor(userId, wrestlerId, today),
     card: cardStatus(w, await reviewFor(userId, wrestlerId), today),
-    waiverNeeded: waiver ? !(await signatureFor(waiver.id, userId, wrestlerId, w.name)) : false,
+    waiverNeeded: waiver ? !(await signatureFor(waiver.id, userId, wrestlerId, w.name, kids)) : false,
     // The Parent Consent Form (issue #195), needed only once the owner publishes it.
-    consentNeeded: consent ? !(await signatureFor(consent.id, userId, wrestlerId, w.name)) : false,
+    consentNeeded: consent ? !(await signatureFor(consent.id, userId, wrestlerId, w.name, kids)) : false,
     checkInsThisMonth: attended?.n ?? 0
   };
 }

@@ -151,6 +151,15 @@ export const subscriptions=sqliteTable("subscriptions",{
  cancelAt:text("cancel_at").notNull(),updatedAt:text("updated_at").notNull()
 },t=>[uniqueIndex("subscriptions_stripe").on(t.stripeSubscriptionId),check("subscriptions_status",sql`${t.status} IN ('active','past_due','canceled','completed')`),check("subscriptions_payments",sql`${t.paymentsMade} >= 0 AND ${t.paymentsMade} <= ${t.paymentsTotal}`)]);
 
+// Monthly payments 2 to 12 as Stripe reported them (issue #271). One row per counted invoice.paid event: the payment's
+// number, what Stripe actually collected (amount_cents) and the membership's price at the time (expected_cents). A
+// coupon or a price edit in Stripe makes the two differ; the payment still counts, the books read amount_cents, and
+// the difference is flagged for the owner. id is the Stripe event id, so a replay stores nothing twice.
+export const installmentPayments=sqliteTable("installment_payments",{
+ id:text("id").primaryKey(),orderId:text("order_id").notNull(),invoiceId:text("invoice_id"),paymentNumber:integer("payment_number").notNull(),
+ amountCents:integer("amount_cents").notNull(),expectedCents:integer("expected_cents").notNull(),livemode:integer("livemode").notNull(),receivedAt:text("received_at").notNull()
+},t=>[index("installment_payments_order").on(t.orderId,t.paymentNumber),check("installment_payment_amounts",sql`${t.amountCents} >= 0 AND ${t.expectedCents} >= 0`),check("installment_payment_livemode",sql`${t.livemode} IN (0,1)`)]);
+
 // Owner review of a wrestler's USA Wrestling card (issue #68). Applies only while the number and expiration on
 // the family profile still match what was reviewed, so a family edit clears an earlier review.
 export const usawReviews=sqliteTable("usaw_reviews",{
@@ -191,6 +200,14 @@ export const waiverSignatures=sqliteTable("waiver_signatures",{
 export const signatureReissues=sqliteTable("signature_reissues",{
  signatureId:text("signature_id").primaryKey(),userId:text("user_id").notNull(),reason:text("reason").notNull(),reissuedBy:text("reissued_by").notNull(),reissuedAt:text("reissued_at").notNull()
 },t=>[index("signature_reissues_user").on(t.userId)]);
+// The owner carried a signature over to a wrestler's new name (issue #271). A signature counts for the same wrestler id
+// after a name edit on its own, unless another wrestler in the family now has the old name (the renamed-entry case,
+// issue #97). This row is the owner's fallback for that case: the signature then counts for wrestler_name, with the
+// reason logged. One row per signature; the signature itself is never changed.
+export const signatureCarryovers=sqliteTable("signature_carryovers",{
+ signatureId:text("signature_id").primaryKey(),userId:text("user_id").notNull(),wrestlerId:text("wrestler_id").notNull(),wrestlerName:text("wrestler_name").notNull(),
+ reason:text("reason").notNull(),carriedBy:text("carried_by").notNull(),carriedAt:text("carried_at").notNull()
+},t=>[index("signature_carryovers_user").on(t.userId,t.wrestlerId)]);
 // Owner settings that are not part of the published academy state, as one JSON document per key (issue #70: lesson
 // prices and coach pay splits).
 export const academySettings=sqliteTable("academy_settings",{

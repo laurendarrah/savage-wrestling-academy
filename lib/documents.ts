@@ -59,11 +59,31 @@ export async function currentVersion(kind: Kind) {
 // "has this been signed" adds this condition for the signature row aliased s.
 export const LIVE_SIGNATURE = 'NOT EXISTS (SELECT 1 FROM signature_reissues r WHERE r.signature_id=s.id)';
 
-// A family signature belongs to the wrestler it was signed for, by name as well as id (issue #97): renaming a signed
-// entry to another child does not carry the signature over. A coach's own signature has an empty wrestler id and name.
-export async function signatureFor(versionId: string, userId: string, wrestlerId: string, name: string) {
-  return await env.DB!.prepare(`SELECT s.id,s.signer,s.signed_at FROM waiver_signatures s WHERE s.version_id=? AND s.user_id=? AND s.wrestler_id=? AND lower(trim(s.wrestler_name))=lower(trim(?)) AND ${LIVE_SIGNATURE}`)
-    .bind(versionId, userId, wrestlerId, name).first<{id: string; signer: string; signed_at: string}>();
+// A family signature belongs to the wrestler it was signed for: the same wrestler id, and the name it was signed under
+// (issue #97) or, since issue #271, the entry's new name after a typo fix. The one case where a name edit does not carry
+// the signature over is a renamed entry: the old name now belongs to another wrestler in the family, so the entry was
+// probably reused for a different child. For that case the owner can carry the signature over by hand, with a reason
+// (signature_carryovers, `carried_name`). A coach's own signature has an empty wrestler id and name.
+// Every place that asks "has this wrestler signed" decides with this one function, from the family's saved wrestlers.
+export type SignatureLike = {wrestler_id: string; wrestler_name: string; carried_name?: string | null};
+export type NamedWrestler = {id: string; name: string};
+export function signatureCounts(sig: SignatureLike, w: NamedWrestler, family: NamedWrestler[]) {
+  if (sig.wrestler_id !== w.id) return false;
+  if (sameName(sig.wrestler_name, w.name)) return true;
+  if (sig.carried_name && sameName(sig.carried_name, w.name)) return true;
+  return !family.some(x => x.id !== w.id && sameName(x.name, sig.wrestler_name));
+}
+// The signatures that still count, with the name the owner carried each over to. `s` is the signature row's alias.
+export const SIGNATURE_JOIN = 'LEFT JOIN signature_carryovers c ON c.signature_id=s.id';
+export const CARRIED_NAME = 'c.wrestler_name AS carried_name';
+// `family` is the family's saved wrestlers; left out, they are read from the profile.
+export async function signatureFor(versionId: string, userId: string, wrestlerId: string, name: string, family?: NamedWrestler[]) {
+  const rows = (await env.DB!.prepare(`SELECT s.id,s.signer,s.signed_at,s.wrestler_id,s.wrestler_name,${CARRIED_NAME} FROM waiver_signatures s ${SIGNATURE_JOIN} WHERE s.version_id=? AND s.user_id=? AND s.wrestler_id=? AND ${LIVE_SIGNATURE} ORDER BY s.signed_at DESC`)
+    .bind(versionId, userId, wrestlerId).all<{id: string; signer: string; signed_at: string; wrestler_id: string; wrestler_name: string; carried_name: string | null}>()).results;
+  if (!rows.length) return null;
+  const wrestlers = family ?? (await familyProfile(userId))?.wrestlers ?? [];
+  const hit = rows.find(s => signatureCounts(s, {id: wrestlerId, name}, wrestlers));
+  return hit ? {id: hit.id, signer: hit.signer, signed_at: hit.signed_at} : null;
 }
 // Earlier signatures of this version for the same person, each replaced at the owner's request. The next signature is
 // the next round, so the unique index still allows one signature per round.
@@ -134,15 +154,43 @@ export async function reissueSignature(kind: Kind, signatureId: unknown, reason:
   return {status: 200, signature: s, version: current, reason: why};
 }
 
+// The owner carries a signature over to the wrestler's new name (issue #271): the fallback for a renamed entry whose old
+// name another wrestler in the family now has (signatureCounts). Only a signature of the version in force that still
+// counts for nobody, for a wrestler who is still in the family under another name. The signature is not changed; the
+// carry-over row makes it count for the new name, with the owner's reason, and the security log records it.
+export async function carrySignature(kind: Kind, signatureId: unknown, reason: unknown, ownerId: string) {
+  const spec = DOCUMENTS[kind], current = await currentVersion(kind);
+  if (spec.signer !== 'parent') return {status: 400, error: 'Only a family document can be carried over to a new name.'};
+  const why = typeof reason === 'string' ? reason.replace(/\s+/g, ' ').trim() : '';
+  if (why.length < REISSUE_REASON.min || why.length > REISSUE_REASON.max) return {status: 400, error: `Say why the signature belongs to the renamed wrestler, in ${REISSUE_REASON.min} to ${REISSUE_REASON.max} characters, for example "same child, surname corrected".`};
+  const s = typeof signatureId === 'string' && signatureId.length <= 80 ? await env.DB!.prepare(`SELECT s.id,s.version_id,s.user_id,s.wrestler_id,s.wrestler_name,${CARRIED_NAME} FROM waiver_signatures s ${SIGNATURE_JOIN} WHERE s.id=? AND ${LIVE_SIGNATURE}`)
+    .bind(signatureId).first<{id: string; version_id: string; user_id: string; wrestler_id: string; wrestler_name: string; carried_name: string | null}>() : null;
+  if (!s || !current || s.version_id !== current.id) return {status: 404, error: `That signed ${spec.name} is not one that counts now. Reload the page.`};
+  const family = (await familyProfile(s.user_id))?.wrestlers ?? [], w = family.find(x => x.id === s.wrestler_id);
+  if (!w) return {status: 409, error: 'That wrestler is no longer in the family account.'};
+  if (signatureCounts(s, w, family)) return {status: 409, error: `${w.name}'s ${spec.name} already counts. Nothing to carry over.`};
+  const at = new Date().toISOString();
+  try {
+    await env.DB!.batch([
+      env.DB!.prepare('INSERT INTO signature_carryovers(signature_id,user_id,wrestler_id,wrestler_name,reason,carried_by,carried_at) VALUES (?,?,?,?,?,?,?)').bind(s.id, s.user_id, s.wrestler_id, w.name, why, ownerId, at),
+      env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, kind + '_carried_over', `${current.id}/${s.user_id}/${s.wrestler_id}`, at)
+    ]);
+  } catch {
+    return {status: 409, error: `This ${spec.name} was already carried over once. Ask the family to sign it again instead.`};
+  }
+  return {status: 200, wrestler: w.name, from: s.wrestler_name};
+}
+
 // Signs the version in force. A family document is signed for one of the family's saved wrestlers by a parent or
 // guardian; a coach contract is signed by the coach for themselves (the route checks they are a coach).
 export async function signDocument(kind: Kind, user: {id: string; email: string}, input: any) {
   const spec = DOCUMENTS[kind], current = await currentVersion(kind);
   if (!current) return {status: 409, error: `No ${spec.name} needs signing right now.`};
   if (!input || input.versionId !== current.id) return {status: 409, error: `The ${spec.name} was updated. Reload the page and read the current version before signing.`};
-  let who = {id: '', name: ''};
+  let who = {id: '', name: ''}, family: NamedWrestler[] = [];
   if (spec.signer === 'parent') {
-    const w = (await familyProfile(user.id))?.wrestlers.find(x => x.id === input.wrestlerId);
+    family = (await familyProfile(user.id))?.wrestlers ?? [];
+    const w = family.find(x => x.id === input.wrestlerId);
     if (!w) return {status: 404, error: 'Choose a saved wrestler from your family account.'};
     who = {id: w.id, name: w.name};
   }
@@ -154,7 +202,7 @@ export async function signDocument(kind: Kind, user: {id: string; email: string}
   const signature = cleanSignature(input.signature);
   if (!signature || signature.method !== 'drawn') return {status: 400, error: 'Draw your signature in the box.'};
   const already = spec.signer === 'parent' ? `${who.name}'s ${spec.name} is already signed.` : `Your ${spec.name} is already signed.`;
-  if (await signatureFor(current.id, user.id, who.id, who.name)) return {status: 409, error: already};
+  if (await signatureFor(current.id, user.id, who.id, who.name, family)) return {status: 409, error: already};
   const at = new Date().toISOString(), id = crypto.randomUUID(), round = await nextRound(current.id, user.id, who.id, who.name);
   const record: SignatureRecord = {version: 1, method: 'drawn', strokes: signature.strokes, waiverId: current.id, waiverSha256: current.sha256, signedAt: at, signer, accountEmail: user.email, consent: spec.consent, kind, signerRole: spec.signer};
   try {
@@ -170,12 +218,12 @@ export async function signDocument(kind: Kind, user: {id: string; email: string}
 }
 
 // What one person sees: the version in force and every copy they have signed of this kind. `current` marks a
-// signature that still counts (this version, and for a wrestler the same name).
+// signature that still counts (this version, and for a wrestler the same entry: signatureCounts).
 export async function myDocuments(kind: Kind, userId: string) {
   const current = await currentVersion(kind), parent = DOCUMENTS[kind].signer === 'parent';
-  const names = parent ? new Map(((await familyProfile(userId))?.wrestlers ?? []).map(w => [w.id, w.name.trim().toLowerCase()])) : new Map([['', '']]);
-  const signed = (await env.DB!.prepare(`SELECT s.id,s.version_id,s.wrestler_id,s.wrestler_name,s.signer,s.signed_at,v.title,r.reason AS replaced_reason,r.reissued_at AS replaced_at
-    FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id LEFT JOIN signature_reissues r ON r.signature_id=s.id
+  const family: NamedWrestler[] = parent ? (await familyProfile(userId))?.wrestlers ?? [] : [{id: '', name: ''}];
+  const signed = (await env.DB!.prepare(`SELECT s.id,s.version_id,s.wrestler_id,s.wrestler_name,s.signer,s.signed_at,v.title,r.reason AS replaced_reason,r.reissued_at AS replaced_at,${CARRIED_NAME}
+    FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id LEFT JOIN signature_reissues r ON r.signature_id=s.id ${SIGNATURE_JOIN}
     WHERE s.user_id=? AND v.kind=? ORDER BY s.signed_at DESC`).bind(userId, kind).all<any>()).results;
   const rule = DOCUMENTS[kind].rule, today = academyToday();
   return {
@@ -188,7 +236,7 @@ export async function myDocuments(kind: Kind, userId: string) {
     // replaced: the academy asked for this one to be signed again (issue #239), with its reason. It never counts again.
     signatures: signed.map(s => ({id: s.id, versionId: s.version_id, wrestlerId: s.wrestler_id, wrestler: s.wrestler_name, signer: s.signer, signedAt: s.signed_at, title: s.title,
       replaced: s.replaced_at ? {reason: s.replaced_reason, at: s.replaced_at} : null,
-      current: !s.replaced_at && s.version_id === current?.id && names.get(s.wrestler_id) === String(s.wrestler_name).trim().toLowerCase()}))
+      current: !s.replaced_at && s.version_id === current?.id && family.some(w => signatureCounts(s, w, family))}))
   };
 }
 
@@ -198,8 +246,8 @@ export async function myDocuments(kind: Kind, userId: string) {
 export async function ownerDocuments(kind: Kind, exclude = '') {
   const versions = (await env.DB!.prepare(`SELECT v.id,v.title,v.published_at,v.retired_at,(SELECT COUNT(*) FROM waiver_signatures s WHERE s.version_id=v.id AND ${LIVE_SIGNATURE}) AS signed FROM waiver_versions v WHERE v.kind=? ORDER BY v.published_at DESC`).bind(kind).all<any>()).results;
   const current = await currentVersion(kind);
-  const all = current ? (await env.DB!.prepare(`SELECT s.id,s.user_id,s.email,s.wrestler_id,s.wrestler_name,s.signer,s.signed_at,r.reason,r.reissued_at FROM waiver_signatures s
-    LEFT JOIN signature_reissues r ON r.signature_id=s.id WHERE s.version_id=? ORDER BY s.signed_at`).bind(current.id).all<any>()).results : [];
+  const all = current ? (await env.DB!.prepare(`SELECT s.id,s.user_id,s.email,s.wrestler_id,s.wrestler_name,s.signer,s.signed_at,r.reason,r.reissued_at,${CARRIED_NAME} FROM waiver_signatures s
+    LEFT JOIN signature_reissues r ON r.signature_id=s.id ${SIGNATURE_JOIN} WHERE s.version_id=? ORDER BY s.signed_at`).bind(current.id).all<any>()).results : [];
   const sigs = all.filter(s => !s.reissued_at), replaced = all.filter(s => s.reissued_at);
   // Someone the owner asked to sign again (issue #239) and who has not yet: the latest replaced signature and its reason.
   const asked = (s: any) => s ? {signatureId: s.id, reason: s.reason, at: s.reissued_at} : null;
@@ -216,14 +264,19 @@ export async function ownerDocuments(kind: Kind, exclude = '') {
   }
   // Every family, read in batches (issue #46); the owner's page shows them a page at a time (signersPage).
   const families = (await allFamilies()).sort((a, b) => a.email < b.email ? -1 : a.email > b.email ? 1 : 0);
-  const keyOf = (s: any) => s.user_id + '/' + s.wrestler_id + '/' + String(s.wrestler_name).trim().toLowerCase();
-  const byKey = new Map(sigs.map(s => [keyOf(s), s])), askedOf = new Map(replaced.map(s => [keyOf(s), s]));
+  const group = (list: any[]) => { const m = new Map<string, any[]>(); for (const s of list) { const k = s.user_id + '/' + s.wrestler_id; if (!m.has(k)) m.set(k, []); m.get(k)!.push(s); } return m; };
+  const byWrestler = group(sigs), askedOf = group(replaced);
   const wrestlers = families.flatMap(f => {
-    const p = JSON.parse(f.payload || '{}');
-    return (p.wrestlers || []).map((w: any) => {
-      const k = f.user_id + '/' + w.id + '/' + String(w.name).trim().toLowerCase(), s = byKey.get(k);
+    const p = JSON.parse(f.payload || '{}'), kids: NamedWrestler[] = p.wrestlers || [];
+    return kids.map((w: any) => {
+      const mine = byWrestler.get(f.user_id + '/' + w.id) ?? [], s = mine.find(x => signatureCounts(x, w, kids));
+      // A signature under another name that does not carry over on its own (issue #271): the owner can carry it over.
+      const other = s ? null : mine.find(x => !sameName(x.wrestler_name, w.name));
+      const askedList = askedOf.get(f.user_id + '/' + w.id) ?? [], askedRow = askedList.find(x => sameName(x.wrestler_name, w.name)) ?? askedList[0];
       return {userId: f.user_id, email: f.email, parentName: p.parentName || '', wrestlerId: w.id, wrestler: w.name, grade: w.grade, signed: !!s, signatureId: s?.id ?? null, signer: s?.signer ?? null, signedAt: s?.signed_at ?? null,
-        reissued: s ? null : asked(askedOf.get(k))};
+        carriedFrom: s && !sameName(s.wrestler_name, w.name) ? s.wrestler_name : null,
+        carryable: other ? {signatureId: other.id, name: other.wrestler_name, signer: other.signer, signedAt: other.signed_at} : null,
+        reissued: s ? null : asked(askedRow)};
     });
   });
   return {...head, wrestlers};

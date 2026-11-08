@@ -60,10 +60,10 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/accounts` | POST | Delete a family account (payments stay for the books) |
 | `/api/owner-approvals` | GET, POST | Decide SWA Advance approvals |
 | `/api/scholarships` | GET, POST | Create, revise, rotate, revoke and end scholarship offers |
-| `/api/waivers` | GET, POST | Publish and retire the waiver, the Parent Consent Form (`?kind=parent_consent`) or the coach contract (`?kind=coach_contract`); see who signed; ask for a signature again |
+| `/api/waivers` | GET, POST | Publish and retire the waiver, the Parent Consent Form (`?kind=parent_consent`) or the coach contract (`?kind=coach_contract`); see who signed; ask for a signature again; carry a signature over to a renamed wrestler |
 | `/api/exceptions` | GET, POST | Dated exceptions to the card, waiver and consent-form booking blocks |
 | `/api/usaw-cards` | GET, POST | Review every wrestler's card; mark verified or not valid |
-| `/api/payments` | GET, POST | Every payment with totals and CSV; record and void offline payments; unpaid cash bookings |
+| `/api/payments` | GET, POST | Every payment with totals and CSV; record and void offline payments; unpaid cash bookings; `?attention=1` memberships whose monthly payment failed and `?attempts=1` every online checkout with Stripe's last word (#271) |
 | `/api/payment-setup` | GET, POST | Connect the academy's Stripe account with a restricted key, test or live |
 | `/api/transfers` | GET, POST | Move a paid membership to another program |
 | `/api/messages` | GET, POST | Announcements and family threads; retry emails that didn't send |

@@ -82,18 +82,20 @@ export async function recordStripeFees(budget = FEE_CALL_BUDGET): Promise<FeeRun
 
   for (const o of singles) { if (stop || calls >= budget) break; await feeFor(o.id, o.intent); }
 
-  // A monthly membership's payments are its subscription's paid invoices. Only invoices for the membership's monthly
-  // amount count, as in the webhook, so a fee is never recorded for a payment the books do not count.
+  // A monthly membership's payments are its subscription's paid invoices. Only payments the books count get a fee:
+  // invoices for the membership's monthly amount, and any other invoice the webhook counted (installment_payments,
+  // issue #271: a coupon or a price edit in Stripe), so a fee is never recorded for a payment the books do not count.
   for (const s of subs) {
     if (stop || calls >= budget) break;
     try {
       calls++;
       const invoices = (await stripe.invoices.list({subscription: s.sub, status: 'paid', limit: 24, expand: ['data.payments']})).data ?? [];
       const known = new Set(((await env.DB!.prepare('SELECT payment_intent FROM stripe_fees WHERE order_id=?').bind(s.order_id).all<{payment_intent: string}>()).results).map(r => r.payment_intent));
+      const counted = new Set(((await env.DB!.prepare('SELECT invoice_id FROM installment_payments WHERE order_id=? AND invoice_id IS NOT NULL').bind(s.order_id).all<{invoice_id: string}>()).results).map(r => r.invoice_id));
       for (const inv of invoices) {
         if (stop || calls >= budget) break;
         if (Boolean(inv.livemode) !== Boolean(live)) throw Error('Stripe returned an invoice from the other mode.');
-        if (inv.amount_paid !== s.amount_cents) continue;
+        if (inv.amount_paid !== s.amount_cents && !counted.has(inv.id)) continue;
         let payments = inv.payments?.data;
         if (!Array.isArray(payments)) { calls++; payments = (await stripe.invoicePayments.list({invoice: inv.id, limit: 10})).data ?? []; }
         for (const p of payments) {

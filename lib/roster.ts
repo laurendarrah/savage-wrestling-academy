@@ -4,7 +4,7 @@ import {env} from 'cloudflare:workers';
 import {publicSchedule} from './public-schedule';
 import {cardStatus, type CardStatus} from './usaw';
 import {currentWaiver} from './waivers';
-import {LIVE_SIGNATURE} from './documents';
+import {CARRIED_NAME, LIVE_SIGNATURE, SIGNATURE_JOIN, signatureCounts} from './documents';
 import {PROGRAM_ON} from './transfers';
 import {fullDate} from './datetime';
 import {collectorNameSql} from './collectors';
@@ -130,7 +130,7 @@ export async function rosterFor(date: string, scope: Scope) {
   const [fams, reviews, signed, exceptions, attendance, cashRows] = await env.DB!.batch([
     env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
-    env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM waiver_signatures s WHERE version_id=? AND user_id IN (SELECT value FROM json_each(?)) AND ${LIVE_SIGNATURE}`).bind(waiver?.id ?? '', ids),
+    env.DB!.prepare(`SELECT s.user_id,s.wrestler_id,s.wrestler_name,${CARRIED_NAME} FROM waiver_signatures s ${SIGNATURE_JOIN} WHERE s.version_id=? AND s.user_id IN (SELECT value FROM json_each(?)) AND ${LIVE_SIGNATURE}`).bind(waiver?.id ?? '', ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
     env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date),
     env.DB!.prepare(`SELECT b.id,b.kind,b.program,b.item_id,b.session_date,b.user_id,b.wrestler_id,b.amount_cents,b.status,b.order_id,o.paid_at,${collectorNameSql('o')} AS collected_by
@@ -138,7 +138,10 @@ export async function rosterFor(date: string, scope: Scope) {
   ]);
   const families = new Map<string, any>((fams.results as any[]).map(r => [r.user_id, {email: r.email, ...JSON.parse(r.payload)}]));
   const review = new Map<string, any>((reviews.results as any[]).map(r => [`${r.user_id}|${r.wrestler_id}`, r]));
-  const signedSet = new Set((signed.results as any[]).map(r => `${r.user_id}|${r.wrestler_id}|${String(r.wrestler_name).trim().toLowerCase()}`));
+  // Signed for this wrestler (issue #271): the same entry, by the family's saved names (lib/documents.ts signatureCounts).
+  const signedBy = new Map<string, any[]>();
+  for (const r of signed.results as any[]) { const k = `${r.user_id}|${r.wrestler_id}`; if (!signedBy.has(k)) signedBy.set(k, []); signedBy.get(k)!.push(r); }
+  const hasSigned = (k: string, w: any, kids: any[]) => (signedBy.get(k) ?? []).some(s => signatureCounts(s, w, kids));
   const excepted = new Map<string, string[]>();
   for (const r of exceptions.results as any[]) { const k = `${r.user_id}|${r.wrestler_id}`; if (!excepted.has(k)) excepted.set(k, []); if (!excepted.get(k)!.includes(r.rule)) excepted.get(k)!.push(r.rule); }
   const checked = new Map<string, {checked_in_at: string; checked_in_by: string}>();
@@ -165,7 +168,7 @@ export async function rosterFor(date: string, scope: Scope) {
         allergies: w?.allergies || null, emergencyName: f?.emergencyContactName || null, emergencyPhone: f?.emergencyContactPhone || null,
         sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null,
         card: card.state, cardExpires: card.expires || null, cardNote: card.note,
-        waiverSigned: waiver ? signedSet.has(`${k}|${String(w?.name ?? r.name).trim().toLowerCase()}`) : null,
+        waiverSigned: waiver ? hasSigned(k, {id: r.wrestlerId, name}, f?.wrestlers ?? []) : null,
         exceptions: entryExceptions,
         checkInBlocked: checkInBlock({name, card: card.state, cardExpires: card.expires || null, cardNote: card.note, exceptions: entryExceptions}, scope),
         cash: ck ? cashOf.get(`${ck}|${k}`) ?? null : null

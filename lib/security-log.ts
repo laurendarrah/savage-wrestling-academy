@@ -5,6 +5,7 @@ import {programDetails} from './program-names';
 import {dayDate, dayTime, fullDate, when} from './datetime';
 import {allFamilies, keysetPage} from './paging';
 import {failureWords} from './email';
+import {REJECTIONS} from './stripe-outcomes';
 
 export type SecurityRow = {actor: string; action: string; target: string; created_at: string};
 export type SecurityNames = {
@@ -84,6 +85,9 @@ const TITLES: Record<string, string> = {
   data_request_handled: 'Data request handled',
   family_account_deleted: 'Family account deleted',
   stripe_event_rejected: 'Stripe message refused',
+  installment_amount_mismatch: 'Monthly payment for a different amount',
+  waiver_carried_over: 'Waiver signature carried over to a new name',
+  parent_consent_carried_over: 'Parent Consent Form signature carried over to a new name',
   lesson_double_booked: 'Lesson paid for twice',
   event_over_capacity: 'Event paid over its seat limit',
   owner_test_alert: 'Test alert from Site health',
@@ -100,16 +104,6 @@ const TITLES: Record<string, string> = {
 const DISPUTE_REASONS: Record<string, string> = {fraudulent: 'the family says they did not make it', duplicate: 'the family says it was charged twice', product_not_received: 'the family says they did not get what they paid for',
   subscription_canceled: 'the family says the membership was canceled', unrecognized: 'the family did not recognise the charge', credit_not_processed: 'the family says a refund was promised', general: 'no reason given'};
 
-const REJECTIONS: Record<string, string> = {
-  'rejected:malformed': 'The message was not readable.',
-  'rejected:unknown-order': 'It named an order the site does not have.',
-  'rejected:session-mismatch': 'It did not match the order’s checkout.',
-  'rejected:mode-mismatch': 'Test and live payments were mixed up.',
-  'rejected:amount-mismatch': 'The amount paid did not match the price.',
-  'rejected:duplicate-payment-refund-needed': 'The same purchase was paid twice. Refund one payment in Stripe.',
-  'rejected:no-subscription': 'The monthly plan was missing from Stripe.',
-  'rejected:payment-beyond-term-refund-needed': 'A payment came after all 12 were made. Refund it in Stripe.',
-};
 
 const program = (id: string) => programDetails[id]?.name ?? id;
 const money = (cents: string) => Number.isFinite(Number(cents)) ? '$' + (Number(cents) / 100).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '';
@@ -195,6 +189,16 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     }
     case 'program_curriculum_saved': case 'curriculum_lesson_created': case 'curriculum_lesson_updated': detail = names.curricula[t] ?? ''; break;
     case 'stripe_event_rejected': detail = REJECTIONS[rest[0] ?? ''] ?? 'Stripe sent a payment message the site could not match.'; break;
+    // Issue #271: "orderId paymentNumber paidCents expectedCents". The payment counted; the owner checks it was meant.
+    case 'installment_amount_mismatch': {
+      const o = order(first);
+      detail = [o ? `${o.wrestler} · ${o.item}` : '', rest[0] ? `payment ${rest[0]}` : '', rest[1] && rest[2] ? `Stripe collected ${money(rest[1])}, the price is ${money(rest[2])}. The payment counted; check the subscription in Stripe` : ''].filter(Boolean).join(' · '); break;
+    }
+    // Issue #271: "version/account/wrestler" like a reissue; the reason is kept with the carry-over itself.
+    case 'waiver_carried_over': case 'parent_consent_carried_over': {
+      const [version, ...w] = t.split('/');
+      detail = [names.waivers[version], wrestler(w.join('/'))].filter(Boolean).join(' · '); break;
+    }
     case 'lesson_double_booked': case 'event_over_capacity': {
       const o = order(first), m = /^(\d{4}-\d{2}-\d{2}): (\d+) paid for (\d+) seats?$/.exec(rest.join(' '));
       detail = [o ? `${o.wrestler} · ${o.item}` : '', m ? `${fullDate(m[1])}: ${m[2]} paid for ${plural(Number(m[3]), 'seat', 'seats')}. Refund one or move it.` : ''].filter(Boolean).join(' · '); break;

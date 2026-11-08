@@ -76,9 +76,11 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
       LEFT JOIN subscriptions s ON s.order_id=o.id
       WHERE o.status IN ('paid','refunded') AND o.paid_at IS NOT NULL AND o.paid_at>=? AND o.paid_at<? AND o.amount_cents>0
         AND (o.source='offline' OR (o.source='stripe' AND o.livemode=?))`).bind(lo, hi, live),
-    // Monthly payments 2 to 12. The webhook counts each once (stripe_events) after checking the amount.
-    env.DB!.prepare(`SELECT e.id,e.received_at,e.outcome,o.kind,o.item_label,o.wrestler_name,o.amount_cents FROM stripe_events e JOIN orders o ON o.id=e.order_id
-      WHERE e.outcome GLOB 'installment-[0-9]*-of-[0-9]*' AND o.source='stripe' AND o.livemode=? AND o.amount_cents>0 AND e.received_at>=? AND e.received_at<?`).bind(live, lo, hi),
+    // Monthly payments 2 to 12. The webhook counts each once (stripe_events), for the amount Stripe collected
+    // (installment_payments, issue #271); a payment counted before amounts were stored was for the membership's price.
+    env.DB!.prepare(`SELECT e.id,e.received_at,e.outcome,o.kind,o.item_label,o.wrestler_name,COALESCE(p.amount_cents,o.amount_cents) AS amount_cents FROM stripe_events e JOIN orders o ON o.id=e.order_id
+      LEFT JOIN installment_payments p ON p.id=e.id
+      WHERE e.outcome GLOB 'installment-[0-9]*-of-[0-9]*' AND o.source='stripe' AND o.livemode=? AND COALESCE(p.amount_cents,o.amount_cents)>0 AND e.received_at>=? AND e.received_at<?`).bind(live, lo, hi),
     // Full refunds recorded before refund amounts were stored (issue #42), dated when Stripe reported them.
     env.DB!.prepare(`SELECT * FROM (SELECT o.id,o.kind,o.item_label,o.wrestler_name,o.amount_cents,
         COALESCE((SELECT min(received_at) FROM stripe_events WHERE order_id=o.id AND outcome='refunded'),o.updated_at) AS refunded_at

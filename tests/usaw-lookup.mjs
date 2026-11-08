@@ -346,8 +346,12 @@ r = await call(checkApi, 'POST', {wrestlerId: 'k1'}, 'https://evil.test'); asser
   assert.equal(r.body.outcome, 'inactive');
   let c = (await call(cardsApi, 'GET')).body.cards.find(c => c.userId === 'p6');
   assert.equal(c.state, 'current'); assert.equal(c.lookup.outcome, 'inactive');
+  // Issue #271: against what USA Wrestling showed, the owner says why; the note is kept with the review and shown on the page.
   r = await call(cardsApi, 'POST', {userId: 'p6', wrestlerId: 's1', status: 'valid', number: '2222222222', expires: SEASON});
-  assert.equal(r.status, 200, 'the owner can verify it anyway');
+  assert.equal(r.status, 400, 'a note is needed to verify against the lookup'); assert.match(r.body.error, /USA Wrestling showed that the card is not active/); assert.equal(r.body.lookupOutcome, 'inactive');
+  r = await call(cardsApi, 'POST', {userId: 'p6', wrestlerId: 's1', status: 'valid', number: '2222222222', expires: SEASON, note: 'Checked the card in person'});
+  assert.equal(r.status, 200, 'the owner can verify it anyway, with a note');
+  assert.equal((await call(cardsApi, 'GET')).body.cards.find(c => c.userId === 'p6').note, 'Checked the card in person');
   sqlite.prepare("UPDATE usaw_lookups SET checked_at='2000-01-01T00:00:00Z'").run();
   r = await call(cardsApi, 'POST', {userId: 'p6', wrestlerId: 's1', status: 'lookup', number: '2222222222', expires: SEASON});
   c = (await call(cardsApi, 'GET')).body.cards.find(c => c.userId === 'p6');
@@ -447,12 +451,14 @@ function page(file, {fetch, hidden = []}) {
   for (const n of ['Sam Example', 'Lee', 'Kai', 'Ash', 'Bo']) assert.match(of(n), /onclick="checkUsaw\(\d+\)">Check with USA Wrestling<\/button>/, n);
   assert.doesNotMatch(of('Cy'), /Check with USA Wrestling/, 'not for an expired card');
   assert.match(of('Kai'), /Look up on USA Wrestling/, 'the manual lookup stays');
-  // Flagged cards show under "Blocked or expiring soon" so the owner sees them. The server filters (issue #46): the
-  // page asks for the chosen filter, and the filter keeps Kai and Ash but not Bo.
+  // Flagged cards show on the default list so the owner sees them. The server filters (issue #46): the page asks for the
+  // chosen filter. Since issue #271 the default list also holds every card waiting to be verified (Bo's, which USA
+  // Wrestling could not check), because such a card books but does not check in.
   el('show').value = 'problems'; el('show').onchange(); await settle();
   assert.match(asked.at(-1), /^\/api\/usaw-cards\?date=[\d-]+&show=problems$/);
   const problems = JSON.parse(JSON.stringify(load(path.resolve('lib/usaw.ts')).cardsPage(list, {show: 'problems', onDate: today}).cards)).map(c => c.wrestler);
-  assert.deepEqual(problems, ['Cy', 'Ash', 'Kai'], 'blocked first, then by expiry and name');
+  assert.deepEqual(problems, ['Cy', 'Ash', 'Bo', 'Kai'], 'blocked first, then by expiry and name');
+  assert.deepEqual(JSON.parse(JSON.stringify(load(path.resolve('lib/usaw.ts')).cardsPage(list, {show: 'waiting', onDate: today}).cards)).map(c => c.wrestler), ['Ash', 'Bo', 'Kai'], 'waiting for the owner: on file, not verified');
   await vm.runInContext('checkUsaw(3)', ctx); await settle();
   assert.deepEqual(posted, [{userId: 'p1', wrestlerId: 'w4', number: '1234567890', expires: SEASON, status: 'lookup'}]);
   assert.equal(el('status').textContent, 'Ash: the card is not active (checked earlier today).');

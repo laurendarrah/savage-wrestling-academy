@@ -58,5 +58,18 @@ img,video,svg{max-width:100%}
 .program-color .primary:hover{background:#b91f29;border-color:#b91f29}
 .program-color .primary:focus-visible{outline:3px solid #1769aa;outline-offset:3px}
 
+/* Owner tables on phones (issue #271). A table marked .stack turns each row into a card under 600px: every cell on its
+   own line with the column name above it (from data-label), so Status and the action buttons are never off-screen. */
+@media screen and (max-width:600px){
+ .stack table,.stack tbody,.stack tr,.stack td{display:block;width:100%}
+ .stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ .stack tr{background:var(--swa-white,#fff);border:1px solid var(--swa-line,#E4E6EA);border-radius:12px;padding:12px 14px;margin:0 0 12px;box-shadow:var(--swa-shadow,none)}
+ .stack td{border:0;padding:6px 0;text-align:left!important;white-space:normal}
+ .stack td:empty{display:none}
+ .stack td[data-label]::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--swa-muted,#55585F);margin-bottom:2px}
+ .stack td .row,.stack td .cash-actions{justify-content:flex-start}
+ .stack td input{width:100%}
+}
+
 /* Align lesson actions across cards with different description lengths. */
 .card.lesson{display:flex;flex-direction:column;align-self:stretch}.card.lesson>button{margin-top:auto}

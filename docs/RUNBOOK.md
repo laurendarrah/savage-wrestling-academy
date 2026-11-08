@@ -13,7 +13,7 @@ Keep these six things in the password manager. Every fix below depends on at lea
 **Contents**
 - [First, check site health](#first-check-site-health)
 - Site and updates: [site down](#the-site-is-down-or-shows-an-error-for-everyone) · [a deploy failed](#a-deploy-failed) · [GitHub Actions isn't running](#github-actions-isnt-running) · [roll back a bad update](#an-update-made-something-worse) · [data wrong or missing](#data-looks-wrong-or-is-missing)
-- Payments: [connecting Stripe](#connecting-the-academys-stripe-account) · [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site) · [charged but unpaid](#a-family-was-charged-but-the-payment-shows-unpaid) · [refunds](#refunds) · [card fees missing](#card-fees-are-missing) · [test or live?](#test-or-live) · [offline payments](#offline-payments)
+- Payments: [connecting Stripe](#connecting-the-academys-stripe-account) · [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site) · ["my payment didn't go through"](#a-family-says-their-payment-didnt-go-through) · [charged but unpaid](#a-family-was-charged-but-the-payment-shows-unpaid) · [a monthly payment failed](#a-monthly-payment-failed) · [refunds](#refunds) · [card fees missing](#card-fees-are-missing) · [test or live?](#test-or-live) · [offline payments](#offline-payments)
 - Sign-in: [nobody can sign in](#nobody-can-sign-in-or-sign-up) · [email limit reached](#sign-up-or-reset-emails-blocked-by-the-email-limit) · [the authenticator switch](#the-authenticator-switch-staff_mfa) · [lost authenticator](#someone-lost-the-phone-with-their-authenticator) · [owner locked out](#the-owner-is-locked-out)
 - Email: [families never got the email](#families-say-they-never-got-the-email) · [check alert emails arrive](#check-that-alert-emails-arrive)
 - [Who to call](#who-to-call)
@@ -141,6 +141,33 @@ The Stripe account is Justin's: he created it and owns it, its payouts and its k
 
 **Who:** Justin (Stripe dashboard and the Worker's Stripe settings). Lauren helps if asked, for example with errors on /site-health.
 
+### A family says their payment didn't go through
+
+**Where to look:** **/payments → Payment attempts**, at the bottom of the page (#271). It lists every online checkout a family started in the last 90 days, newest first, with the last thing Stripe said about it in plain words. Type the family's name or email in **Find a family**.
+
+**What each line means:**
+- **Not finished:** the family opened checkout and Stripe has said nothing yet. If it is more than an hour old, they closed the Stripe page without paying. Nothing was charged; they can try again from their family account.
+- **Closed:** the checkout expired or was replaced by a newer one. Nothing was charged.
+- **Failed:** Stripe could not take the payment (a declined card, for example). Nothing was charged; they can try again.
+- **Paid / Refunded:** what it says. If the family thinks they paid but the line says otherwise, check Stripe (search the session id shown on the line) and follow [charged but unpaid](#a-family-was-charged-but-the-payment-shows-unpaid).
+- **Refused:** Stripe sent a message the site would not apply, with the reason (the same reason is on /security-log as "Stripe message refused"). Do what the reason says: "The same purchase was paid twice" or "A payment came after all 12 were made" means refund that one payment in Stripe; "Test and live payments were mixed up" means a test payment reached the live site, or the reverse; "It named an order the site does not have" means a Stripe payment that did not start on this site.
+
+Every refused message also goes to the owner in the hourly alert email, once email is set up (#47), under "Payment messages from Stripe the site refused".
+
+**Who:** Justin (Stripe). Ask Lauren if a line says "Refused" and the reason isn't one of the above.
+
+### A monthly payment failed
+
+A 12-month membership is 12 monthly card payments at Stripe (#20). When one fails (#271):
+- The family gets a notice ("Payment needs attention") and the owner an email. Stripe retries the card by itself over the next days, and each retry that fails sends another notice.
+- **/payments → Payment needs attention** (and the dashboard tile of the same name) lists every membership in this state, with the paid-through day and the day the wrestler comes off the roster.
+- **The grace:** the wrestler stays on the roster for **7 days after the paid-through day** while Stripe retries, never past the membership's own end. A payment covers through the next billing day itself, so a member is never off the roster on billing-day morning. Once a retry goes through, access runs to the next billing day as usual.
+- **If Stripe gives up** and cancels the subscription, the membership ends on the paid-through day (the grace stops), and the family and the owner are told. To keep training they sign up again.
+- **To settle it by hand:** take the payment in Stripe (Customers → the subscription → pay the open invoice, or update the card), or talk to the family. Don't record a card payment as an offline payment; Stripe's own notice counts it.
+- **A payment for a different amount** (a coupon or a price you changed in Stripe) still counts, for the amount Stripe collected: the books show that amount, /security-log says "Monthly payment for a different amount", and the owner gets an email to check it was meant.
+
+**Who:** Justin (Stripe and the family). Lauren only if asked.
+
 ### A family was charged but the payment shows unpaid
 
 **You see:** a family has a charge on their card or a Stripe receipt, but **/payments** doesn't show it as paid.
@@ -151,7 +178,7 @@ The Stripe account is Justin's: he created it and owns it, its payouts and its k
 1. **Stripe shows it Succeeded:** its notice didn't reach the site. In **Stripe → Developers → Webhooks** → the site's endpoint, find the failed `checkout.session.completed` delivery from around that time and choose **Resend**. It then shows as paid on /payments, the family's page and the roster. If it's still unpaid, follow [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site).
 2. **/security-log shows "Stripe message refused":** do what the reason says. "The same purchase was paid twice" or "A payment came after all 12 were made" means refund that one payment in Stripe. "Test and live payments were mixed up" means a test payment reached the live site, or the reverse.
 3. **/security-log shows "Event paid over its seat limit":** the payment counted, but the event is now over its seats. Refund one family in Stripe or make room.
-4. **Stripe shows Incomplete, or no payment at all:** the family didn't finish paying, and no money moved. On /payments it shows "Not finished". They can start again.
+4. **Stripe shows Incomplete, or no payment at all:** the family didn't finish paying, and no money moved. Under **Payment attempts** on /payments it shows "Not finished" or "Closed". They can start again.
 5. **Don't record a card payment with "Record an offline payment".** It would count the money twice, and Stripe's real notice would then be refused as a double payment.
 
 **Who:** Justin (Stripe). Ask Lauren if resending doesn't fix it.
@@ -162,7 +189,7 @@ Refunds happen in Stripe, never on the site: **Stripe → Payments** → the pay
 
 - **Partial refund:** the payment stays paid (the wrestler keeps their place). **/payments** shows "refunded so far", and **/financials** counts it as money out on the day of the refund.
 - **Full refund of a one-time payment:** marked refunded on /payments, and the wrestler comes off that roster.
-- **One month of a monthly membership:** recorded as money out, but the membership continues. To end it, cancel the subscription in Stripe.
+- **One month of a monthly membership:** recorded as money out, but the membership continues. To end it, cancel the subscription in Stripe; the membership then ends on its paid-through day and the family is told (see [a monthly payment failed](#a-monthly-payment-failed)).
 - **A refund doesn't show on the site:** follow [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site) and resend the `charge.refunded` event.
 
 ### A family disputed a card payment (chargeback)

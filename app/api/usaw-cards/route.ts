@@ -3,20 +3,29 @@
 import {env} from 'cloudflare:workers';
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyToday} from '../../../lib/public-schedule';
-import {listCards, setReview, clearReview, cardStatus, cardRenewal, cardsPage, CARD_RENEWAL_DAYS} from '../../../lib/usaw';
+import {listCards, setReview, clearReview, cardStatus, cardRenewal, cardsPage, lookupDisagreement, CARD_RENEWAL_DAYS, type CardRow} from '../../../lib/usaw';
 import {noticeCardRejected, quietly} from '../../../lib/notify';
 import {checkCard} from '../../../lib/usaw-check';
+import {rosterFor} from '../../../lib/roster';
 import {pageSize, PAGE_SIZE} from '../../../lib/paging';
 export const dynamic = 'force-dynamic';
 
 const validDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').toISOString().slice(0, 10) === d;
+
+// The wrestlers on today's roster whose card stops their check-in (issue #271), as "family/wrestler" keys.
+async function blockedToday(today: string) {
+  const keys = new Set<string>();
+  try { for (const s of await rosterFor(today, {role: 'owner'})) for (const e of s.entries) if (e.checkInBlocked) keys.add(`${e.userId}/${e.wrestlerId}`); } catch {}
+  return keys;
+}
 
 export async function GET(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   const q = new URL(request.url).searchParams, today = academyToday(), date = q.get('date') || today;
   if (!validDate(date)) return reply({error: 'Choose a valid date.'}, 400);
-  const cards = await listCards(date);
+  const cards: CardRow[] = await listCards(date), stuck = await blockedToday(today);
+  for (const c of cards) c.blocksToday = stuck.has(`${c.userId}/${c.wrestlerId}`);
   // Counts cover every wrestler; the list comes a page at a time, filtered here (issue #46).
   // The season summary is about today, whatever date the owner checks cards on (issue #131). renewalDays is the
   // renewal-list window (issue #210).
@@ -51,6 +60,11 @@ export async function POST(request: Request) {
     const result = await checkCard(request, {userId: input.userId, wrestler: w, trigger: 'owner', actorId: auth.owner.userId});
     if ('reason' in result) return reply({error: result.reason}, result.outcome === 'limited' ? 429 : 409);
     return reply({ok: true, outcome: result.outcome, cached: result.cached, checkedAt: result.checkedAt});
+  }
+  // Marking a card verified against what USA Wrestling showed (issue #271) needs a note saying why, kept with the review.
+  if (input.status === 'valid') {
+    const d = await lookupDisagreement(input.userId, input.wrestlerId, s.number, s.expires);
+    if (d && !note) return reply({error: `USA Wrestling showed that ${d.words}. To mark this card verified anyway, add a note saying why, for example "checked the card in person".`, lookupOutcome: d.outcome}, 400);
   }
   await setReview(input.userId, input.wrestlerId, s.number, s.expires, input.status, note, auth.owner.userId);
   if (input.status === 'invalid') await quietly(() => noticeCardRejected(input.userId, input.wrestlerId, note));

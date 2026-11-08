@@ -8,7 +8,8 @@ const html = readFileSync('app/portal.html', 'utf8');
 const nodes = new Map(), node = s => { if (!nodes.has(s)) nodes.set(s, {value: '', style: {}, textContent: '', innerHTML: '', focus() {}, classList: {remove() {}, toggle() {}}, setAttribute() {}}); return nodes.get(s); };
 const responses = {
   '/api/roster': {sessions: [{entries: [{}, {}, {}], checkedIn: 2}, {entries: [{}], checkedIn: 0}]},
-  '/api/usaw-cards': {cards: [{state: 'current'}, {state: 'expired'}, {state: 'missing'}, {state: 'verified'}]},
+  '/api/usaw-cards': {cards: [{state: 'current', blocksToday: true}, {state: 'expired', blocksToday: true}, {state: 'missing'}, {state: 'verified'}], totals: {all: 4, blocked: 2, blockedToday: 2}},
+  '/api/payments?attention=1': {graceDays: 7, attention: [{orderId: 'm1'}]},
   '/api/waivers': {current: {id: 'v'}, wrestlers: [{signed: true}, {signed: false}]},
   '/api/messages': {families: [{unread: 2}, {unread: 1}, {unread: 0}]},
 };
@@ -16,7 +17,7 @@ let fetched = [];
 const location = {hash: '', href: ''};
 const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date, JSON, Set, FormData, Promise, location,
   document: {querySelector: node, getElementById: id => node('#' + id), addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {}, confirm: () => true,
-  fetch: async url => { fetched.push(url); const key = Object.keys(responses).find(k => url === k); if (url.startsWith('/api/payments')) return {ok: true, json: async () => ({totals: {collectedCents: 123450, count: 7}})}; return key ? {ok: true, json: async () => responses[key]} : {ok: false, json: async () => ({})}; }});
+  fetch: async url => { fetched.push(url); const key = Object.keys(responses).find(k => url === k); if (!key && url.startsWith('/api/payments')) return {ok: true, json: async () => ({totals: {collectedCents: 123450, count: 7}})}; return key ? {ok: true, json: async () => responses[key]} : {ok: false, json: async () => ({})}; }});
 vm.runInContext(code, ctx);
 
 // Live dashboard: real tiles, every real tool, none of the sample counts.
@@ -25,7 +26,9 @@ assert.match(page, /id="todayTiles"/); assert.match(page, /href="\/cards"/); ass
 await vm.runInContext('loadToday()', ctx);
 const tiles = node('#todayTiles').innerHTML;
 assert.match(tiles, /Sessions today<\/span><b[^>]*>2<\/b>.*2 of 4 wrestlers checked in/s);
-assert.match(tiles, /Blocked by USA Wrestling card<\/span><b[^>]*color:#b12c38[^>]*>2<\/b>/s);
+// Issue #271: the tile counts cards that stop a check-in today, unverified ones included, and failed monthly payments.
+assert.match(tiles, /href="\/cards\?show=waiting"><span class="muted">Can’t check in today<\/span><b[^>]*color:#b12c38[^>]*>2<\/b>/s);
+assert.match(tiles, /href="\/payments#attention"><span class="muted">Payment needs attention<\/span><b[^>]*color:#b12c38[^>]*>1<\/b>/s);
 assert.match(tiles, /Waiver not signed<\/span><b[^>]*>1</s);
 assert.match(tiles, /Unread family messages<\/span><b[^>]*>3</s);
 assert.ok(!tiles.includes('waitlist') && !fetched.includes('/api/waitlists'), 'no waitlist tile (#210)');
