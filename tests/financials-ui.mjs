@@ -9,9 +9,11 @@ const html = readFileSync('app/financials/screen.html', 'utf8');
 const nodes = new Map();
 const el = id => {
   if (!nodes.has(id)) nodes.set(id, {id, value: '', hidden: false, disabled: false, innerHTML: '', textContent: '', href: '', max: '', style: {}, dataset: {},
-    reset() { for (const f of ['date', 'amount', 'category', 'note', 'receipt']) el(f).value = ''; }, focus() {}, scrollIntoView() {}, querySelectorAll: () => [], replaceChildren() {}, append() {}});
+    reset() { for (const f of ['date', 'amount', 'category', 'note', 'receipt']) el(f).value = ''; }, focus() { nodes.focused = id; }, scrollIntoView() {}, querySelectorAll: () => [], replaceChildren() {}, append() {}});
   return nodes.get(id);
 };
+// The entry sheet starts hidden, as in the markup.
+el('entrySection').hidden = true;
 const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'}), month = today.slice(0, 7);
 const zero = m => ({month: m, incomeCents: 0, refundsCents: 0, expensesCents: 0, netCents: 0});
 const report = (m = month) => {
@@ -90,14 +92,24 @@ assert.equal(run('niceStep(309000)'), 100000); assert.equal(run('niceStep(18000)
 assert.equal(run('axisMoney(1500000)'), '$15K'); assert.equal(run('axisMoney(500000)'), '$5,000');
 assert.doesNotMatch(run(`chartSvg(Array.from({length:12},(_, i)=>({month:'2026-'+String(i+1).padStart(2,'0'),incomeCents:0,refundsCents:0,expensesCents:0,netCents:0})),'2026-01',720)`), /NaN|Infinity/, 'an empty year draws');
 
-// Adding an expense sends whole cents and trimmed text, then shows the entry's month.
+// The entry sheet (issue #283) opens on the amount field the moment it opens, with no timer in between (issue #292): a
+// focus that arrived later took the typing from the note field in the walkthrough.
+assert.equal(el('entrySection').hidden, true, 'the sheet starts closed');
+nodes.focused = ''; run('openEntry()');
+assert.equal(el('entrySection').hidden, false, 'Add an expense opens the sheet');
+assert.equal(nodes.focused, 'amount', 'focus is on the amount as soon as the sheet opens');
+run('closeEntry()'); assert.equal(el('entrySection').hidden, true, 'Close closes it');
+
+// Adding an expense sends whole cents and trimmed text, then shows the entry's month, and the sheet closes.
+run('openEntry()');
 el('date').value = month + '-05'; el('amount').value = '1,234.56'; el('category').value = '  Insurance '; el('note').value = ' Liability policy '; el('receipt').value = 'INV-77';
 calls.length = 0;
 await run(`submitEntry({preventDefault(){}})`); await settle();
 assert.deepEqual(calls[0].body, {action: 'add', kind: 'expense', date: month + '-05', amountCents: 123456, category: 'Insurance', note: 'Liability policy', receipt: 'INV-77'});
 assert.equal(calls[1].url, '/api/financials?month=' + month);
-assert.equal(el('status').textContent, 'Entry added.');
+assert.equal(el('status').textContent, 'Entry added.', 'the status is written once, after the list has the entry');
 assert.equal(el('amount').value, '', 'the form clears');
+assert.equal(el('entrySection').hidden, true, 'the sheet closes once the entry is in');
 
 // Problems are explained before anything is sent.
 calls.length = 0;
@@ -116,8 +128,9 @@ assert.match(run('suggestionOptions()'), /Sponsorship/);
 kind = 'expense';
 
 // Editing fills the form from the entry and sends the revision the owner saw.
-calls.length = 0;
+calls.length = 0; nodes.focused = '';
 run(`startEdit('e1')`);
+assert.equal(el('entrySection').hidden, false, 'Edit opens the sheet'); assert.equal(nodes.focused, 'amount', 'on the amount, at once');
 assert.equal(el('amount').value, '1850.00'); assert.equal(el('category').value, 'Rent'); assert.equal(el('receipt').value, 'Check 1042'); assert.equal(el('date').value, month + '-01');
 assert.equal(el('saveEntry').textContent, 'Save changes'); assert.equal(el('stopEditing').hidden, false); assert.equal(el('formHeading').textContent, 'Edit entry');
 el('amount').value = '1900';

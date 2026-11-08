@@ -155,9 +155,11 @@ function suggestionOptions(){return ((report&&report.suggestions[kindValue()])||
 function kindValue(){const c=document.querySelector('input[name="kind"]:checked');return c?c.value:'expense'}
 function setKind(k){document.querySelectorAll('input[name="kind"]').forEach(r=>{r.checked=r.value===k})}
 function entryOf(id){return report&&report.lines.find(l=>l.entryId===id)}
-// The entry sheet (issue #283): Add an expense in the title row, /financials#add, or Edit on a line opens it.
+// The entry sheet (issue #283): Add an expense in the title row, /financials#add, or Edit on a line opens it. Focus
+// moves to the amount as the sheet opens, not in a timer: a focus that arrived later took the typing from the note
+// field (issue #292).
 let openedFrom=null;
-function openEntry(){const sheet=$('entrySection');if(!sheet)return;if(sheet.hidden){openedFrom=document.activeElement;sheet.hidden=false}setTimeout(()=>{const f=$('amount');if(f&&f.focus)f.focus()},20)}
+function openEntry(){const sheet=$('entrySection');if(!sheet)return;if(sheet.hidden){openedFrom=document.activeElement;sheet.hidden=false}const f=$('amount');if(f&&f.focus)f.focus()}
 function closeEntry(){const sheet=$('entrySection');if(!sheet||sheet.hidden)return;sheet.hidden=true;if(openedFrom&&openedFrom.focus)openedFrom.focus();openedFrom=null;if(typeof location!=='undefined'&&location.hash==='#add')try{history.replaceState(null,'',location.pathname+location.search)}catch{}}
 function startEdit(id){const l=entryOf(id);if(!l)return;editing={id,revision:l.revision};setKind(l.type==='income'?'income':'expense');$('date').value=l.date;$('amount').value=centsText(l.amountCents);$('category').value=l.category;$('note').value=l.note;$('receipt').value=l.receipt;
  $('formHeading').textContent='Edit entry';$('saveEntry').textContent='Save changes';$('stopEditing').hidden=false;$('formError').textContent='';openEntry()}
@@ -168,7 +170,7 @@ function formEntry(){const amountCents=toCents($('amount').value),date=$('date')
  return {kind:kindValue(),date,amountCents,category,note:$('note').value.trim(),receipt:$('receipt').value.trim()}}
 async function submitEntry(e){e.preventDefault();if(busy)return;const entry=formEntry();if(entry.error){$('formError').textContent=entry.error;return}
  busy=true;$('saveEntry').disabled=true;$('formError').textContent='';
- try{await call('/api/financials',editing?{action:'edit',id:editing.id,revision:editing.revision,...entry}:{action:'add',...entry});const was=!!editing;endEdit();say(was?'Entry saved.':'Entry added.');await load(entry.date.slice(0,7));$('status').textContent=was?'Entry saved.':'Entry added.'}
+ try{await call('/api/financials',editing?{action:'edit',id:editing.id,revision:editing.revision,...entry}:{action:'add',...entry});const was=!!editing;endEdit();await load(entry.date.slice(0,7));say(was?'Entry saved.':'Entry added.')}
  catch(err){$('formError').textContent=err.message}finally{busy=false;$('saveEntry').disabled=false}}
 async function removeEntry(id){const l=entryOf(id);if(!l||busy)return;if(!confirm('Delete this '+(l.type==='income'?'income':'expense')+' of '+money(l.amountCents)+' ('+l.category+') from '+longDate(l.date)+'?'))return;
  busy=true;try{await call('/api/financials',{action:'delete',id,revision:l.revision});if(editing&&editing.id===id)endEdit();await load(report.month);say('Entry deleted.')}catch(err){say(err.message,'bad')}finally{busy=false}}

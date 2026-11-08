@@ -250,7 +250,9 @@ function setCalView(v){calView=v;openDay=null;render()}
 // What a day holds: each shown program's practice with its plan state, then extra practices and events.
 function dayPractices(date){return programs.filter(p=>calShown(p.id)&&practiceSlot(p,date)).map(p=>({program:p.id,name:p.name,color:calendarProgramColor(p.id),slot:practiceSlot(p,date),plan:calendarPlan(p.id,date)}))}
 function dayEvents(date){if(!calShown('events'))return [];const extra=(data.extraPractices||[]).filter(p=>p.enabled&&p.dates.includes(date)).map(p=>({kind:'live',id:p.id,name:p.name,time:clockTime(p.start)+'–'+clockTime(p.end),sub:formatPrice(p.memberCents)+' members / '+formatPrice(p.nonMemberCents)+' non-members'}));return extra.concat(savedEvents().map((e,index)=>({e,index})).filter(({e})=>!isEventArchived(e)&&eventDates(e).includes(date)).map(({e,index})=>({kind:'event',index,name:e.name,time:eventTimeLabel(e,date),sub:e.type==='Event'?'Event / fundraiser':e.type})))}
-function openCalendarDay(date){openDay=openDay===date?null:date;render();if(openDay)setTimeout(()=>document.querySelector?.('.day-panel h2')?.focus?.(),0)}
+// Focus moves to the panel's heading as it is drawn, not in a timer: whoever reads document.activeElement once the panel
+// is in the page (a screen reader, the walkthrough) must find it there already (issue #292).
+function openCalendarDay(date){openDay=openDay===date?null:date;render();if(openDay)document.querySelector?.('.day-panel h2')?.focus?.()}
 function closeCalendarDay(){openDay=null;render()}
 // The rows of a day, in the panel and in the week list: a program bar, the name, time and plan state, and one action.
 function dayRows(date){const pr=dayPractices(date),ev=dayEvents(date);
