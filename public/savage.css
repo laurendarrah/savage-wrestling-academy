@@ -246,6 +246,12 @@ html body .swa-title__text>p.eyebrow{margin:0 0 var(--swa-s-8);color:var(--swa-m
 html body .swa-title__text>a,html body .swa-title__text>.swa-back{display:inline-flex;align-items:center;min-height:44px;margin:0 0 var(--swa-s-4);color:var(--swa-muted);font-size:var(--swa-t-15);font-weight:600;text-decoration:none}
 html body .swa-title__text>a:hover{color:var(--swa-red)}
 html body .swa-title__actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--swa-s-8);flex:none;max-width:100%}
+/* A link that opened the page (Family accounts' "SWA Advance approvals →") reads as a quiet action beside the title. */
+html body .swa-title__actions>a:not(.button){display:inline-flex;align-items:center;min-height:44px;font-size:var(--swa-t-15);font-weight:600;color:var(--swa-ink);text-decoration-color:var(--swa-line)}
+html body .swa-title__actions>a:not(.button):hover{color:var(--swa-red);text-decoration-color:var(--swa-red)}
+/* An actions slot whose only button is hidden (Inbox before there is anything to mark) takes no room. */
+html body .swa-title__actions:not(:has(:not([hidden]))){display:none}
+html body .swa-title:has(+.how) .swa-title__text>h1:last-child{margin-bottom:0}
 html body .swa-title+.how{margin-top:calc(-1 * var(--swa-s-16))}
 html body .how{margin:0 0 var(--swa-s-24)}
 html body .how>summary{display:inline-flex;min-height:44px;color:var(--swa-muted);font-size:var(--swa-t-15);font-weight:600}

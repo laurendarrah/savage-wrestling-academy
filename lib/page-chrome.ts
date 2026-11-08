@@ -34,8 +34,15 @@ export function bandPage(pathname: string) { return BAND_PAGES.has(pathname) || 
 
 // A page's opening: optional back links, an optional eyebrow line, the heading and an optional intro paragraph.
 // Status lines and notices stay outside; pages with their own header are left alone.
-const OPENING = /^(\s*(?:<a\b[^>]*>[^<]*<\/a>\s*)*(?:<p class="eyebrow"[^>]*>[^<]*<\/p>\s*)?<h1\b[^>]*>[\s\S]*?<\/h1>(?:\s*<p\b(?![^>]*(?:id="status"|role="status"|class="notice"))[^>]*>[\s\S]*?<\/p>)?)/;
+// After the heading: paragraphs that hold only a link (Family accounts' "SWA Advance approvals →"), which become the
+// title row's actions, then at most one intro paragraph. Status lines and notices never come along.
+const LINK_LINE = /\s*<p>\s*<a\b[^>]*>[^<]*<\/a>\s*<\/p>/;
+const INTRO_P = /\s*<p\b(?![^>]*(?:id="status"|role="status"|class="notice"))[^>]*>[\s\S]*?<\/p>/;
+const OPENING = new RegExp(`^(\\s*(?:<a\\b[^>]*>[^<]*<\\/a>\\s*)*(?:<p class="eyebrow"[^>]*>[^<]*<\\/p>\\s*)?<h1\\b[^>]*>[\\s\\S]*?<\\/h1>(?:${LINK_LINE.source})*(?:${INTRO_P.source})?)`);
 const HAND_WRITTEN_HEAD = /<div class="swa-head">([\s\S]*?)<\/div>/;
+// The visible intro is one short sentence. A first sentence longer than this (the roster's 44-word opener) would be a
+// paragraph again, so the whole intro goes behind the disclosure and the page opens with its controls.
+export const INTRO_MAX = 140;
 
 export function pageHead(html: string, pathname = '', opts: {band?: boolean} = {}) {
   const band = opts.band ?? bandPage(pathname);
@@ -63,26 +70,32 @@ export function pageHead(html: string, pathname = '', opts: {band?: boolean} = {
   return html.slice(0, at) + (band ? '<div class="swa-head">' + open[1] + '</div>' : titleRow(open[1], html)) + html.slice(at + open[1].length);
 }
 
-// The title row: the heading and what came before it on the left with the intro's first sentence under it, and any
-// buttons or links that shared the opening block on the right. An intro longer than one sentence keeps its first
-// sentence in the row and puts the rest, word for word, behind "How this works". An intro a page's script fills in
-// (its id appears in the page again) is left whole, since the script replaces it anyway, and so is the intro of a
-// page that already folds its explanation into its own details.howto (USA Wrestling cards).
+// The title row: the heading and what came before it on the left with the intro's first sentence under it, and on the
+// right any buttons, links or link-only paragraphs that shared the opening block. An intro longer than one sentence
+// keeps its first sentence in the row and puts the rest, word for word, behind "How this works"; a first sentence
+// longer than INTRO_MAX goes behind it too, whole. An intro a page's script fills in (its id appears in the page
+// again) is left whole, since the script replaces it anyway, and so is the intro of a page that already folds its
+// explanation into its own details.howto (USA Wrestling cards).
 export function titleRow(opening: string, page = '') {
   const m = opening.match(/^([\s\S]*?<\/h1>)([\s\S]*)$/);
   if (!m) return '<div class="swa-title"><div class="swa-title__text">' + opening + '</div></div>';
   const head = m[1];
   let tail = m[2], intro = '', how = '';
+  const links: string[] = [];
+  for (let l = tail.match(new RegExp('^' + LINK_LINE.source)); l; l = tail.match(new RegExp('^' + LINK_LINE.source))) { links.push(l[0].trim().replace(/^<p>\s*|\s*<\/p>$/g, '')); tail = tail.slice(l[0].length); }
   const p = tail.match(/^\s*(<p\b(?![^>]*(?:id="status"|role="status"|class="notice"))[^>]*>)([\s\S]*?)<\/p>/);
   if (p) {
     tail = tail.slice(p[0].length);
     const id = p[1].match(/\bid="([^"]+)"/)?.[1];
     const whole = (id ? page.split(id).length > 2 : false) || /class="howto"/.test(page);
-    const [first, rest] = whole ? [p[2], ''] : splitSentence(p[2]);
-    intro = p[1] + first + '</p>';
+    let [first, rest] = whole ? [p[2], ''] : splitSentence(p[2]);
+    const hidden = !whole && first.replace(/<[^>]*>/g, '').length > INTRO_MAX;
+    if (hidden) [first, rest] = ['', p[2]];
+    // The paragraph stays even when empty: a page's script may fill it (coach home's "You coach SWA Intermediate.").
+    if (!hidden) intro = p[1] + first + '</p>';
     if (rest) how = `<details class="how"><summary>How this works</summary><p>${rest}</p></details>`;
   }
-  const actions = tail.trim();
+  const actions = [...links, tail.trim()].filter(Boolean).join('');
   return `<div class="swa-title"><div class="swa-title__text">${head}${intro}</div>${actions ? `<div class="swa-title__actions">${actions}</div>` : ''}</div>${how}`;
 }
 

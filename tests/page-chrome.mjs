@@ -91,6 +91,19 @@ console.log('page head ok');
   // An intro the page's script fills in (its id is used again in the page) is never split: the script replaces it.
   const dyn = pageHead('<html><body><main><h1>Coach home</h1><p id="intro" class="muted">One. Two. Three.</p></main><script>$(\'intro\').textContent=x</script></body></html>', '/coach');
   assert.match(dyn, /<p id="intro" class="muted">One\. Two\. Three\.<\/p><\/div><\/div><\/main><script>/); assert.doesNotMatch(dyn, /class="how"/);
+  // A first sentence too long for a line or two (the roster's 44-word opener) goes behind the disclosure whole, so
+  // the page opens with its controls; the row shows the heading alone.
+  const {INTRO_MAX} = module.exports;
+  const long = 'Wrestlers listed here have a paid membership, a paid walk-in or registration, or an active scholarship for the session, or booked a walk-in or extra practice to pay cash at the academy (shown with the amount due: tap Cash received when they pay).';
+  assert.ok(long.length > INTRO_MAX && 'Every payment, online and offline.'.length < INTRO_MAX);
+  const roster = wrap(`<a id="home" class="swa-back" href="/">← Back</a><h1>Roster &amp; check-in</h1><p class="muted">${long} A wrestler can be checked in only with a verified card. Times are New York time.</p><div class="toolbar">x</div>`);
+  assert.match(roster, new RegExp(`<div class="swa-title"><div class="swa-title__text"><a id="home" class="swa-back" href="/">← Back</a><h1>Roster &amp; check-in</h1></div></div><details class="how"><summary>How this works</summary><p>${long.replace(/[()]/g, '\\$&')} A wrestler can be checked in only with a verified card\\. Times are New York time\\.</p></details><div class="toolbar">`), 'nothing of the long intro is shown, nothing of it is lost');
+  // Paragraphs that hold only a link (Family accounts) are actions, and the paragraph after them is the intro.
+  const accounts = wrap('<h1>Family accounts</h1><p><a href="/approvals">SWA Advance approvals →</a></p><p><a href="/account-setup">Account setup &amp; email links</a></p><p>Every family that has created an account, newest changes first. Passwords are never shown.</p><form>x</form>', '/accounts');
+  assert.match(accounts, /<div class="swa-title"><div class="swa-title__text"><h1>Family accounts<\/h1><p>Every family that has created an account, newest changes first\.<\/p><\/div><div class="swa-title__actions"><a href="\/approvals">SWA Advance approvals →<\/a><a href="\/account-setup">Account setup &amp; email links<\/a><\/div><\/div><details class="how"><summary>How this works<\/summary><p>Passwords are never shown\.<\/p><\/details><form>/);
+  // An empty paragraph a script fills later (coach home's #programs) stays in the row, so the script finds it.
+  assert.match(pageHead('<html><body><main><h1 id="heading">Coach home</h1><p id="programs" class="muted"></p><nav>x</nav></main><script>$(\'programs\').textContent=y</script></body></html>', '/coach'),
+    /<div class="swa-title__text"><h1 id="heading">Coach home<\/h1><p id="programs" class="muted"><\/p><\/div><\/div><nav>/);
   // A page that already folds its explanation (USA Wrestling cards' "How checking works") keeps its intro whole.
   const folded = pageHead('<html><body><main><h1>Cards</h1><p class="muted">One. Two.</p><details class="howto"><summary>How checking works</summary><p>x</p></details></main></body></html>', '/cards');
   assert.match(folded, /<p class="muted">One\. Two\.<\/p><\/div><\/div><details class="howto">/); assert.doesNotMatch(folded, /class="how"/);
