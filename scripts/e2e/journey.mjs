@@ -1321,7 +1321,9 @@ await step('family downloads their data and asks to close the account; owner rec
   // The download and the close-account request live in the Account menu (issue #282).
   await family.goto(BASE + '/family'); await family.waitForSelector('#summary:not([hidden])'); await family.click('#accountMenu summary');
   expect(await family.$eval('#accountMenu', d => d.open), 'the Account menu opens');
-  const [dl] = await Promise.all([family.waitForEvent('download'), family.click('#accountMenu a:has-text("Download my family\'s data")')]);
+  const dlLink = family.locator('#accountMenu a[download]'); await dlLink.waitFor({state: 'visible'});
+  expect(/Download my family's data/.test(await dlLink.textContent()), 'the menu offers the data download');
+  const [dl] = await Promise.all([family.waitForEvent('download'), dlLink.evaluate(a => a.click())]);
   const why = await dl.failure(); expect(!why, 'download failed: ' + why + ' ' + dl.url());
   const data = JSON.parse((await import('node:fs')).readFileSync(await dl.path(), 'utf8'));
   expect(data.profile.parentName === 'Pat Example' && data.payments.length >= 3 && !JSON.stringify(data).includes('Riley'), 'export contents');
