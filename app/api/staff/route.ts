@@ -10,6 +10,7 @@ import {emailConfigured} from '../../../lib/email';
 import {academyToday} from '../../../lib/public-schedule';
 import {HOLD_MINUTES} from '../../../lib/capacity';
 import {recordRemoval,removedCoaches,RETENTION_YEARS} from '../../../lib/coach-retention';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 type Staff={email:string;name:string;programs:string;active:number;updated_at:string;display_name:string|null;bio:string|null;specialties:string|null;phone:string|null};
 const validPrograms=(p:unknown):p is string[]=>Array.isArray(p)&&p.length<=3&&p.every(x=>PROGRAM_IDS.includes(x as string));
@@ -20,7 +21,7 @@ async function upcomingBooked(){
   AND (x.status='paid' OR (x.status='pending' AND x.created_at>=?)) WHERE o.date>=? AND o.coach_email IS NOT NULL GROUP BY o.coach_email`).bind(since,academyToday()).all<{email:string;n:number}>()).results;
  return new Map(rows.map(r=>[r.email,r.n]));
 }
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in and authenticator verification required.'},403,auth.headers);
  const rows=(await env.DB!.prepare('SELECT s.email,s.name,s.programs,s.active,s.updated_at,p.display_name,p.bio,p.specialties,p.phone FROM staff_access s LEFT JOIN coach_profiles p ON p.email=s.email ORDER BY COALESCE(p.display_name,s.name)').all<Staff>()).results;
  const upcoming=await upcomingBooked();
@@ -33,7 +34,7 @@ export async function GET(request:Request){
  return accountReply({staff:rows.filter(s=>s.email!==OWNER_EMAIL).map(view),self:own?view(own):null,invites,emailOn:emailConfigured(),inviteDays:INVITE_DAYS,
   removedForGood:await removedCoaches(),retentionYears:RETENTION_YEARS},200,auth.headers);
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);

@@ -6,12 +6,13 @@ import {validPracticePlan,cleanPracticePlan} from '../../../lib/practice-plans';
 import {securityEvent} from '../../../lib/security-events';
 import {publicSchedule,academyToday} from '../../../lib/public-schedule';
 import {practiceMonth} from '../../../lib/practice-calendar';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 const ids=['Elementary','Intermediate','Advanced'];
 const monthValid=(v:string)=>/^\d{4}-(0[1-9]|1[0-2])$/.test(v)&&Number(v.slice(0,4))>=2020&&Number(v.slice(0,4))<=2100;
 async function settings(){const row=await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload:string}>();return row?JSON.parse(row.payload):{}}
 async function catalog(month:string){return registrationCatalog(await settings(),month,'0000-01-01')}
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await strongAccount(request),access=await accountRole(auth.user),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!['owner','coach'].includes(access.role)||!auth.strong)return reply({error:'Owner or coach access and authenticator verification required.'},403);
  const summary=new URL(request.url).searchParams.get('summary')==='1';
@@ -25,7 +26,7 @@ export async function GET(request:Request){
  const today=academyToday(),calendar=owner||summary?undefined:practiceMonth(publicSchedule(state,month,'0000-01-01'),month,today,allowed,plans);
  return reply({owner,month,today,calendar,programs:data.programs.filter((p:{id:string;name:string})=>allowed.includes(p.id)).map((p:{id:string;name:string})=>({id:p.id,name:p.name})),practices,plans});
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await strongAccount(request),access=await accountRole(auth.user),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(access.role!=='owner'||!auth.strong)return reply({error:'Only the owner can edit or share practice plans.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);

@@ -5,9 +5,10 @@
 import {verifiedAccount, strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {findInvite, acceptInvite, inviteStatus, validToken} from '../../../lib/coach-invites';
 import {rateLimited} from '../../../lib/rate-limit';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   if (!sameOrigin(request)) return accountReply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return accountReply({error: 'JSON required.'}, 415);
   const raw = await request.text();

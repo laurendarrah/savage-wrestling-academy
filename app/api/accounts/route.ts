@@ -1,8 +1,9 @@
 // The owner deletes a family account from Family accounts (issue #259). The rules are in lib/family-deletion.ts.
 import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {deleteFamily} from '../../../lib/family-deletion';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

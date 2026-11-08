@@ -3,8 +3,9 @@ import {strongAccount,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {quoteMembership} from '../../../lib/quotes';
 import {checkoutKinds} from '../../../lib/checkout-config';
 import {registrationCatalog} from '../../../lib/registration-catalog';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await strongAccount(request);
  if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return accountReply({error:'Authenticator verification required.'},403,auth.headers);
@@ -17,7 +18,7 @@ export async function GET(request:Request){
 
 // Registration review is authorized on the server. A browser flag cannot grant approval.
 // Pricing and eligibility live in lib/quotes.ts so the review and Stripe checkout always agree.
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await strongAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!auth.user?.email_confirmed_at)return reply({error:'Sign-in required.'},401);
  if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return reply({error:'Authenticator verification required.'},403);

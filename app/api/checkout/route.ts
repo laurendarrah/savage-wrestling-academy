@@ -4,9 +4,10 @@ import {quoteMembership, quoteBooking} from '../../../lib/quotes';
 import {checkoutKinds, startCheckout, CheckoutError} from '../../../lib/checkout';
 import {rateLimited} from '../../../lib/rate-limit';
 import {cashBookingDue} from '../../../lib/cash-bookings';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await strongAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.user?.email_confirmed_at || !auth.user.email) return reply({error: 'Sign-in required.'}, 401);
   if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return reply({error: 'Authenticator verification required.'}, 403);

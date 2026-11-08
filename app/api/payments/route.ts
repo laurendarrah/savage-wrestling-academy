@@ -8,10 +8,11 @@ import {pageSize} from '../../../lib/paging';
 import {unpaidCashBookings, receiveCash, cancelByOwner} from '../../../lib/cash-bookings';
 import {ownerCollector} from '../../../lib/collectors';
 import {paymentAttempts, paymentAttention} from '../../../lib/payment-attempts';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 const FAMILY_PICKER = 50;
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   const q = new URL(request.url).searchParams;
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
   return reply(await listPayments(filters, {cursor: q.get('cursor'), limit: pageSize(q.get('limit'), 100, 500)}));
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

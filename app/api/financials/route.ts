@@ -5,11 +5,12 @@ import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth
 import {academyToday, cleanEntry, ledgerCsv, ledgerLines, ledgerReport, periodBounds, validMonth} from '../../../lib/financials';
 import {rateLimited} from '../../../lib/rate-limit';
 import {feesWaiting, recordStripeFees} from '../../../lib/stripe-fees';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 const OWNER_ONLY = 'Owner sign-in and authenticator verification required.';
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: OWNER_ONLY}, 403);
   const q = new URL(request.url).searchParams;
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
   return reply({...await ledgerReport(month), feesWaiting: await feesWaiting()});
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: OWNER_ONLY}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

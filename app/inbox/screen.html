@@ -24,7 +24,7 @@ label{display:flex;flex-direction:column;gap:4px}
 <section aria-labelledby="threadHeading"><h2 id="threadHeading">Your conversation with the academy</h2><p id="threadMore" hidden><button type="button" class="link" data-more="thread">Show earlier messages</button></p><div id="thread"></div><form id="reply"><label>Message the academy<textarea id="body" maxlength="5000" required></textarea></label><button class="primary">Send</button></form></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
-async function call(body){const r=await fetch('/api/inbox',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login';throw Error('Sign in again.')}const d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
+async function call(body){const r=await fetch('/api/inbox',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login';throw Error('Sign in again.')}const d=await r.json();if(!r.ok)throw Error((d.error||'Something went wrong.')+(d.requestId?' (reference '+String(d.requestId).slice(0,8)+')':''));return d}
 // One message in a list: subject and time, opened to read the body. One item opens by itself (issue #132).
 function item(attr,subject,at,read,body,open){return `<details ${attr}${open?' open':''}><summary class="${read?'':'unread'}">${read?'':'<span class="dot" aria-label="Unread"></span>'}${esc(subject)}<span class="muted when">${esc(when(at))}</span></summary><div class="body">${esc(body)}</div></details>`}
 // Announcements come first, above the academy's automatic notices (issue #231). The item that opens by itself is the
@@ -39,7 +39,7 @@ function showMarkAll(d){$('markAll').hidden=!(d&&d.unread>0)}
 // on request. `box` holds everything loaded so far.
 let box={};
 const MORE={notices:['notices','noticesNext'],announcements:['announcements','announcementsNext'],thread:['thread','threadEarlier']};
-async function more(kind){const [list,next]=MORE[kind];try{const r=await fetch('/api/inbox?more='+kind+'&cursor='+encodeURIComponent(box[next]),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');
+async function more(kind){const [list,next]=MORE[kind];try{const r=await fetch('/api/inbox?more='+kind+'&cursor='+encodeURIComponent(box[next]),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error((d.error||'Something went wrong.')+(d.requestId?' (reference '+String(d.requestId).slice(0,8)+')':''));
  box={...box,[list]:kind==='thread'?d[list].concat(box[list]):box[list].concat(d[list]),[next]:d[next]};render(box)}catch(e){$('status').textContent=e.message}}
 function render(d){
  box=d;

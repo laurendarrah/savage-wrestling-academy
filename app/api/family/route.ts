@@ -5,8 +5,9 @@ import { cardStatus, reviewSource, seasonOptions, CARD_RENEWAL_DAYS, type Review
 import { checkChangedCards, familyLookup, lookupView, type LookupRow } from '../../../lib/usaw-check';
 import { noticeApprovalProfileChanged, quietly } from '../../../lib/notify';
 import { academyToday } from '../../../lib/public-schedule';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return accountReply({error:'Authenticator verification required.'},403,auth.headers);
  const today=academyToday(),cards:Record<string,unknown>={};
@@ -29,7 +30,7 @@ export async function GET(request:Request){
  // The card seasons a family can choose today (issue #131); the page offers them in the wrestler editor.
  return accountReply({email:auth.user.email,data,cards,cardSeasons:seasonOptions(today),cardRenewalDays:CARD_RENEWAL_DAYS,revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
 }
-export async function PUT(request:Request){
+export const PUT = withApi(PUT_); async function PUT_(request:Request){
  const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  const reply=(body:unknown,status=200)=>accountReply(body,status,auth.headers);
  if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return reply({error:'Authenticator verification required.'},403);

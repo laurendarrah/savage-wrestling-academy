@@ -3,9 +3,10 @@
 import {ownerIdentity, sameOrigin, accountReply} from '../../../lib/account-auth';
 import {ownerMonth, ownerCorrect, ownerVoid, approveMonth, unapproveMonth, monthCsv} from '../../../lib/coach-timesheets';
 import {ownerTimeOff, decideTimeOff} from '../../../lib/coach-time-off';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   const q = new URL(request.url).searchParams;
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   return reply({...r, status: undefined, timeOff: await ownerTimeOff()});
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

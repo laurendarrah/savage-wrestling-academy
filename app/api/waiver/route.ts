@@ -3,6 +3,7 @@ import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth
 import {rateLimited} from '../../../lib/rate-limit';
 import {familyWaivers} from '../../../lib/waivers';
 import {DOCUMENTS, isKind, myDocuments, signDocument, type Kind} from '../../../lib/documents';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
@@ -14,7 +15,7 @@ async function family(request: Request) {
 // Only documents families sign. Without a kind it is the waiver, as before issue #195.
 const familyKind = (k: unknown): Kind | null => k === undefined || k === null || k === '' ? 'waiver' : isKind(k) && DOCUMENTS[k].signer === 'parent' ? k : null;
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const {auth, error} = await family(request);
   if (error) return error;
   const kind = familyKind(new URL(request.url).searchParams.get('kind'));
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
   return accountReply(kind === 'waiver' ? await familyWaivers(auth.user!.id) : await myDocuments(kind, auth.user!.id), 200, auth.headers);
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const {auth, error} = await family(request);
   if (error) return error;
   const reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);

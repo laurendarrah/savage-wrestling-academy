@@ -3,6 +3,7 @@ import {env} from 'cloudflare:workers';
 import {strongAccount, accountReply} from '../../../lib/account-auth';
 import {checkoutKinds} from '../../../lib/checkout-config';
 import {familyCashBookings} from '../../../lib/cash-bookings';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 // paid_in_cash: paid in cash at the academy (issue #250). The family sees that it was paid in cash, never which coach took it.
@@ -11,7 +12,7 @@ const FIELDS = 'o.id,o.kind,o.program,o.item_id,o.item_label,o.wrestler_id,o.wre
   + 's.payments_made,s.payments_total,s.status AS subscription_status,s.term_end AS membership_end,s.paid_through';
 const FROM = 'FROM orders o LEFT JOIN subscriptions s ON s.order_id=o.id';
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await strongAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.user?.email_confirmed_at) return reply({error: 'Sign-in required.'}, 401);
   if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return reply({error: 'Authenticator verification required.'}, 403);

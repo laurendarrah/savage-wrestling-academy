@@ -43,9 +43,10 @@ export function withApi(handler: Handler): (request: Request) => Promise<Respons
     try {
       return await handler(request);
     } catch (error) {
-      const requestId = crypto.randomUUID(), unavailable = isSignInUnavailable(error), status = unavailable ? 503 : 500;
+      // (The typeof checks keep the wrapper working in tests that stand in for lib/account-auth.ts.)
+      const requestId = crypto.randomUUID(), unavailable = typeof isSignInUnavailable === 'function' && isSignInUnavailable(error), status = unavailable ? 503 : 500;
       const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      const role = await roleFor(request).catch(() => 'anon');
+      const role = typeof roleFor === 'function' ? await roleFor(request).catch(() => 'anon') : 'anon';
       await recordApiError((env as Cloudflare.Env & {DB?: D1Database}).DB, request, status, message, requestId, role);
       return Response.json({error: unavailable ? SIGN_IN_UNAVAILABLE : GENERIC_ERROR, requestId},
         {status, headers: {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', [REQUEST_ID_HEADER]: requestId, [RECORDED_HEADER]: '1'}});

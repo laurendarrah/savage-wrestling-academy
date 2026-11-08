@@ -5,6 +5,7 @@ import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth
 import {coachAccess} from '../../../lib/access-control';
 import {rateLimited} from '../../../lib/rate-limit';
 import {myDocuments, signDocument} from '../../../lib/documents';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function coach(request: Request) {
@@ -12,14 +13,14 @@ async function coach(request: Request) {
   return {auth, staff: await coachAccess(auth.user, auth.strong)};
 }
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const {auth, staff} = await coach(request);
   if (!staff) return accountReply({error: 'Coach access and authenticator verification required.'}, 403, auth.headers);
   if (staff.owner) return accountReply({kind: 'coach_contract', owner: true, document: null, consent: '', exceptions: {}, signatures: []}, 200, auth.headers);
   return accountReply(await myDocuments('coach_contract', auth.user!.id), 200, auth.headers);
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const {auth, staff} = await coach(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!staff) return reply({error: 'Coach access and authenticator verification required.'}, 403);
   if (staff.owner) return reply({error: 'The owner does not sign a coach contract.'}, 403);

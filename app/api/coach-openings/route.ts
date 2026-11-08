@@ -10,6 +10,7 @@ import {coachSchedule, addOpenings, updateOpening, removeOpening, coachAccount, 
 import {academyToday} from '../../../lib/public-schedule';
 import {notify, quietly} from '../../../lib/notify';
 import {dayDate, dayTime, clockTime} from '../../../lib/datetime';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 type Staff = {email: string; name: string; programs: string; display_name: string | null};
@@ -24,7 +25,7 @@ async function refOf(s: Staff, ownerAccount: string): Promise<CoachRef> {
   return {email: s.email, name: s.display_name || s.name, userId: s.email === OWNER_EMAIL ? ownerAccount : await coachAccount(s.email)};
 }
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
   const s = await activeCoach(new URL(request.url).searchParams.get('email'));
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
     openings: await coachSchedule(coach, today, true)}, 200, auth.headers);
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

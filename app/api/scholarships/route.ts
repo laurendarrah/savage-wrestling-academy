@@ -3,15 +3,16 @@ import {ownerIdentity,accountReply,sameOrigin,appOrigin} from '../../../lib/acco
 import {registrationCatalog} from '../../../lib/registration-catalog';
 import {scholarshipDraft,scholarshipView,newInviteToken,inviteHash,type Scholarship} from '../../../lib/scholarships';
 import {securityEvent} from '../../../lib/security-events';
+import {withApi} from '../../../lib/api';
 // Invite links are built from appOrigin() (issue #274), like every other emailed link, never from the request's host.
 export const dynamic='force-dynamic';
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await ownerIdentity(request);
  if(!auth.owner)return accountReply({error:'Owner sign-in and authenticator verification required.'},403,auth.headers);
  const rows=await env.DB!.prepare('SELECT * FROM scholarship_awards ORDER BY created_at DESC, id DESC').all<Scholarship>();
  return accountReply({awards:rows.results.map(a=>scholarshipView(a))},200,auth.headers);
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);

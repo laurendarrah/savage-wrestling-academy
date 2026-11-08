@@ -4,6 +4,7 @@ import { rateLimited } from '../../../lib/rate-limit';
 import { accountRole,roleDestination } from '../../../lib/access-control';
 import { accountClient, accountReply, sameOrigin, appOrigin, sessionClaims, verifiedAccount } from '../../../lib/account-auth';
 import { hasOpenInvite } from '../../../lib/coach-invites';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 // Sign-in attempts per email: 10 a minute, and 30 an hour as the back-off for anyone who keeps trying (issue #274).
 // The shared address counter is higher, so a gym full of families on one network can all sign in.
@@ -11,11 +12,11 @@ export const LOGIN_PER_MINUTE=10,LOGIN_PER_HOUR=30,LOGIN_PER_ADDRESS=30,SESSION_
 // One answer for a wrong password and an unconfirmed email (issue #274), so the sign-in page never says which
 // addresses have an account waiting for confirmation.
 export const LOGIN_FAILED='Email or password is incorrect. If you just signed up, confirm your email first.';
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await verifiedAccount(request),user=auth.user;
  return accountReply({user:user?{email:user.email,role:(await accountRole(user)).role}:null},200,auth.headers);
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  if(!sameOrigin(request))return accountReply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return accountReply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>8192)return accountReply({error:'Request too large.'},413);

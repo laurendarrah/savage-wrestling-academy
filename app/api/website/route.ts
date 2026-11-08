@@ -6,10 +6,11 @@ import teamHtml from '../../team/screen.html?raw';
 import {ownerIdentity, sameOrigin, accountReply} from '../../../lib/account-auth';
 import {cleanWebsite, coachRows, loadWebsite, saveWebsite, publicCoaches, renderTeam, renderWelcome, siteOrigin, LIMITS} from '../../../lib/website';
 import {decoratePage} from '../../../lib/page-chrome';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 const DENIED = 'Owner sign-in and authenticator verification required.';
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: DENIED}, 403, auth.headers);
   const {site, updatedAt} = await loadWebsite();
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   return accountReply({site, updatedAt, coaches, limits: LIMITS}, 200, auth.headers);
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: DENIED}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

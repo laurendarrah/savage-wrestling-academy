@@ -5,14 +5,15 @@ import { ownerIdentity } from "../../../lib/account-auth";
 import { validState } from "../../../lib/academy-validation";
 import {blockedChanges, blockedMessage, changeSummary} from '../../../lib/academy-changes';
 import {academyToday} from '../../../lib/public-schedule';
+import {withApi} from '../../../lib/api';
 export const dynamic = "force-dynamic";
 
-export async function GET(request:Request) {
+export const GET = withApi(GET_); async function GET_(request:Request) {
  const auth=await ownerIdentity(request),user=auth.owner; const reply=(body:unknown,status=200)=>Response.json(body,{status,headers:auth.headers}); if (!user) return reply({error:"Owner sign-in required."},403);
  const row = await env.DB!.prepare("SELECT payload, revision, updated_at FROM academy_state WHERE id = ?").bind("academy").first<{payload:string;revision:number;updated_at:string}>();
  return reply({data:row ? withFridayLive(upgradeProgramNames(JSON.parse(row.payload))) : null,revision:row?.revision ?? 0,updatedAt:row?.updated_at ?? null,owner:user.displayName});
 }
-export async function PUT(request: Request) {
+export const PUT = withApi(PUT_); async function PUT_(request: Request) {
  const auth=await ownerIdentity(request),user=auth.owner; const reply=(body:unknown,status=200)=>Response.json(body,{status,headers:auth.headers}); if (!user) return reply({error:"Owner sign-in required."},403);
  if (request.headers.get("origin") !== new URL(request.url).origin) return reply({error:"Invalid request origin."},403);
  if (!request.headers.get("content-type")?.includes("application/json")) return reply({error:"JSON required."},415);

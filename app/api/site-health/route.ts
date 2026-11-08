@@ -9,11 +9,12 @@ import {rateLimited} from '../../../lib/rate-limit';
 import {securityEvent} from '../../../lib/security-events';
 import {lastReminderRun, REMINDER_DEADLINE_HOUR} from '../../../lib/reminder-watch';
 import {buildId} from '../health/route';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 const OWNER_ONLY = 'Owner sign-in and authenticator verification required.';
 const EMAIL_OFF = 'Email isn’t set up yet, so no test alert was sent. Try again once email is set up.';
 const TEST_ALERTS_PER_HOUR = 3;
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: OWNER_ONLY}, 403, auth.headers);
   // The morning reminders' last run and whether the sign-in service answers (issue #274), beside the errors and alerts.
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
 // Send a test alert (issue #263): one email to the owner address through the owner-alert path, so the owner can check
 // alerts arrive. Owner only, 3 an hour, and each send is in the security log. It does not touch the real alerts'
 // once-an-hour marker. With email not set up nothing is sent, counted or logged.
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: OWNER_ONLY}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);
