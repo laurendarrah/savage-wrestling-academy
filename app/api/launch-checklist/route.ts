@@ -3,8 +3,9 @@ import {env} from 'cloudflare:workers';
 import {ownerIdentity, accountReply} from '../../../lib/account-auth';
 import {launchChecklist} from '../../../lib/launch-checklist';
 import {academyToday} from '../../../lib/public-schedule';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
   const authenticators = (auth.user?.factors ?? []).filter(f => f.status === 'verified').length;

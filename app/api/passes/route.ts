@@ -2,6 +2,7 @@
 import {strongAccount, ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {familyPasses, revokePass} from '../../../lib/passes';
 import {familyProfile} from '../../../lib/program-approval';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
@@ -11,13 +12,13 @@ async function family(request: Request) {
   return {auth, error: null};
 }
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const {auth, error} = await family(request);
   if (error) return error;
   return accountReply({passes: await familyPasses(auth.user!.id)}, 200, auth.headers);
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const owner = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, owner.headers);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return reply({error: 'JSON required.'}, 415);

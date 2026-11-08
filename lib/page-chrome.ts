@@ -56,6 +56,22 @@ export function decoratePage(html: string, pathname: string, ownerShell = false)
   return pageHead(out);
 }
 
+// Scripts a page may run (issue #274). A signed-in page's policy (lib/account-auth.ts) gains a script-src that allows
+// only scripts carrying this response's nonce (and what they load: 'strict-dynamic'), so injected markup can never run
+// code even if a page forgot to escape something. The nonce is fresh per response and is never cached: only pages
+// sent with no-store get one. A page that still uses inline event handlers (onclick="...") cannot have the policy yet,
+// because a nonce policy blocks those; tests/csp-nonce.mjs lists those pages, and the list may only shrink.
+export const INLINE_HANDLER = /\son[a-z]+\s*=\s*\\?["']/i;
+export function hasInlineHandlers(html: string) { return INLINE_HANDLER.test(html) || /\bhref\s*=\s*["']\s*javascript:/i.test(html); }
+export function newNonce() { return Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join(''); }
+// Every <script> in the page, inline or external, carries the nonce: 'strict-dynamic' trusts only scripts those load.
+export function applyScriptNonce(html: string, nonce: string) { return html.replace(/<script\b(?![^>]*\bnonce=)/gi, `<script nonce="${nonce}"`); }
+export function scriptPolicy(csp: string, nonce: string) { return `${csp}; script-src 'nonce-${nonce}' 'strict-dynamic' 'self'`; }
+export function nonceApplies(headers: Headers, html: string) {
+  const csp = headers.get('Content-Security-Policy') ?? '';
+  return !!csp && !/script-src/.test(csp) && /no-store/.test(headers.get('Cache-Control') ?? '') && !hasInlineHandlers(html);
+}
+
 export async function decorateResponse(request: Request, response: Response) {
   const url = new URL(request.url);
   // A route marks an owner page only after its own owner check (lib/owner-shell.ts). The mark never leaves the Worker.
@@ -69,5 +85,11 @@ export async function decorateResponse(request: Request, response: Response) {
   const headers = new Headers(response.headers);
   headers.delete('Content-Length');
   headers.delete(OWNER_SHELL_HEADER);
-  return new Response(decoratePage(await response.text(), url.pathname, ownerShell), {status: response.status, statusText: response.statusText, headers});
+  let html = decoratePage(await response.text(), url.pathname, ownerShell);
+  if (nonceApplies(headers, html)) {
+    const nonce = newNonce();
+    html = applyScriptNonce(html, nonce);
+    headers.set('Content-Security-Policy', scriptPolicy(headers.get('Content-Security-Policy')!, nonce));
+  }
+  return new Response(html, {status: response.status, statusText: response.statusText, headers});
 }

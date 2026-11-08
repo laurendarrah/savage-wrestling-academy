@@ -72,7 +72,9 @@ const notices = (u, kind) => sqlite.prepare('SELECT * FROM notifications WHERE u
 const box = async u => { as(u); return (await call(inbox, 'GET')).body; };
 
 // --- Daily reminders: card expiring soon and expired, once per day and once per card ---
-let b = await box('p1');   // the first visit of the day runs the reminders
+// Since issue #274 a page visit never runs the reminders inline (the Worker's cron and its watched fallback do).
+assert.equal(await notify.dailyReminders(), 2, 'the scheduled run sends the day\'s reminders');
+let b = await box('p1');
 assert.equal(notices('p1', 'card_expiring').length, 1, 'Sam: expires in 20 days');
 assert.match(notices('p1', 'card_expiring')[0].subject, /Sam's USA Wrestling card expires/);
 assert.equal(notices('p1', 'card_expired').length, 1, 'Kid: expired');

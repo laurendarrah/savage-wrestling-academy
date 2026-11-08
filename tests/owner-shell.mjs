@@ -46,7 +46,7 @@ function load(file) {
     }});
   return module.exports;
 }
-const {decorateResponse} = load('lib/page-chrome.ts');
+const {decorateResponse, applyScriptNonce} = load('lib/page-chrome.ts');
 const {OWNER_SHELL_HEADER, SHELL_BOOT, OWNER_SHELL_HEAD} = load('lib/owner-shell.ts');
 const {currentOwnerHref, OWNER_NAV_ITEMS, OWNER_SHELL_PAGES} = load('lib/owner-nav.ts');
 
@@ -82,7 +82,9 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
   assert.equal(count(html, '<header class="os-top"'), 1, path + ': one header');
   assert.equal(count(html, 'class="swa-bar"'), 0, path + ': no top bar of its own');
   assert.match(html, /<body [^>]*data-swa-shell="owner"/, path);
-  assert.ok(html.includes(OWNER_SHELL_HEAD), path + ': the shell stylesheet, script and prefetch rules');
+  // Pages with a nonce script policy (issue #274) carry the response's nonce on the shell's scripts and prefetch rules.
+  const nonce = headers.get('Content-Security-Policy')?.match(/'nonce-([0-9a-f]+)'/)?.[1] ?? null;
+  assert.ok(html.includes(nonce ? applyScriptNonce(OWNER_SHELL_HEAD, nonce) : OWNER_SHELL_HEAD), path + ': the shell stylesheet, script and prefetch rules');
   assert.equal(count(html, '<main'), 1, path + ': one main area');
   const mainId = html.match(/<main\b[^>]*\bid="([^"]+)"/)[1];
   assert.match(html, new RegExp(`<a class="os-skip" href="#${mainId}">Skip to main content</a>`), path + ': the skip link reaches the main area');
@@ -96,7 +98,7 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
   const sync = count(html, 'id="syncStatus"');
   assert.equal(sync, path === '/' ? 1 : 0, path + ': the save status only on the dashboard');
   assert.ok(html.indexOf('<nav class="os-nav"') < html.indexOf('<header class="os-top"') && html.indexOf('<header class="os-top"') < html.indexOf('<main'), path + ': sidebar, header, then the page');
-  assert.equal(count(html, `<script>${SHELL_BOOT}</script>`), 1, path + ': the start-up script runs before the page is drawn');
+  assert.equal(count(html, `<script${nonce ? ` nonce="${nonce}"` : ''}>${SHELL_BOOT}</script>`), 1, path + ': the start-up script runs before the page is drawn');
 }
 // The dashboard keeps its own styles: the shell, but not savage.css, and none of its old sidebar markup.
 {
@@ -350,7 +352,8 @@ assert.match(css, /@media \(max-width:900px\)\{/, 'the drawer from 900px down');
 const rules = JSON.parse(OWNER_SHELL_HEAD.match(/<script type="speculationrules">(.*?)<\/script>/)[1]);
 assert.deepEqual(rules.prefetch.map(r => [r.eagerness, r.where.selector_matches]), [['moderate', '.os-nav a, .os-top a, .os-family a']], 'prefetch on hover, shell links only');
 assert.ok(!('prerender' in rules), 'prefetch only: nothing runs before the click');
-// Owner pages set no script-src, so the inline start-up script and prefetch rules are allowed; nothing else changed.
+// The base policy from lib/account-auth.ts is unchanged; the Worker adds a nonce script-src per response (issue #274,
+// tests/csp-nonce.mjs), and the start-up script and prefetch rules carry that nonce.
 const csp = readFileSync('lib/account-auth.ts', 'utf8').match(/'Content-Security-Policy':"([^"]+)"/)[1];
 assert.equal(csp, "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'");
 console.log('Seamless moves: View Transitions with named sidebar and header, reduced motion respected, hover prefetch allowed by the CSP');

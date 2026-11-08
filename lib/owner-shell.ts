@@ -109,7 +109,8 @@ export const SHELL_BOOT = `(function(){try{var d=document,n=d.getElementById('sw
   + `var y=Number(sessionStorage.getItem('swa-os-scroll'));if(y)s.scrollTop=y;if(c&&(c.offsetTop<s.scrollTop||c.offsetTop+c.offsetHeight>s.scrollTop+s.clientHeight))s.scrollTop=Math.max(0,c.offsetTop-s.clientHeight/2)}catch(e){}})();`;
 
 // Prefetch an owner destination when the owner hovers it (or presses on it), so the next page is often ready before
-// the click lands. Owner pages set no script-src in their Content Security Policy, so the inline rules are allowed.
+// the click lands. On pages with a nonce script policy (issue #274, lib/page-chrome.ts) the Worker gives this block,
+// the start-up script below and the page's own scripts the response's nonce, so the policy allows them.
 const SPECULATION = '{"prefetch":[{"source":"document","where":{"selector_matches":".os-nav a, .os-top a, .os-family a"},"eagerness":"moderate"}]}';
 export const OWNER_SHELL_HEAD = '<link rel="stylesheet" href="/owner-shell.css"><script src="/owner-shell.js" defer></script>'
   + `<script type="speculationrules">${SPECULATION}</script>`;

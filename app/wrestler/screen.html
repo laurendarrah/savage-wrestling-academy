@@ -22,7 +22,7 @@ function render(v){
 }
 async function load(){
  const id=new URLSearchParams(location.search).get('id')||'';
- try{const r=await fetch('/api/wrestler?id='+encodeURIComponent(id),{cache:'no-store'});if(r.status===401){location.href='/login';return}const d=await r.json();if(!r.ok)throw Error(d.error||'Could not load this wrestler.');render(d)}
+ try{const r=await fetch('/api/wrestler?id='+encodeURIComponent(id),{cache:'no-store'});if(r.status===401){location.href='/login';return}const d=await r.json();if(!r.ok)throw Error((d.error||'Could not load this wrestler.')+(d.requestId?' (reference '+String(d.requestId).slice(0,8)+')':''));render(d)}
  catch(e){$('name').textContent='Wrestler';$('status').textContent=e.message}
 }
 window.addEventListener('DOMContentLoaded',load);

@@ -3,8 +3,9 @@ import {ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth
 import {familiesPage, ownerMessages, ownerThread, sendAnnouncement, sentPage, postMessage, resolveAudience} from '../../../lib/messages';
 import {emailConfigured} from '../../../lib/email';
 import {failedEmailCount, failedEmails, retryFailedEmails} from '../../../lib/email-failures';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
   // Lists come a page at a time (issue #46): a family's conversation (cursor: earlier messages), the families list
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   if (q.get('sent') === '1') return accountReply(await sentPage(cursor), 200, auth.headers);
   return accountReply({...(await ownerMessages(q.get('q'))), emailOn: emailConfigured(), failedEmails: await failedEmails(), failedTotal: await failedEmailCount()}, 200, auth.headers);
 }
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

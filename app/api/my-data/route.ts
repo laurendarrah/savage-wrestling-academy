@@ -2,6 +2,7 @@
 import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {familyExport, familyRequests, requestClosure} from '../../../lib/data-requests';
 import {rateLimited} from '../../../lib/rate-limit';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 async function family(request: Request) {
   const auth = await strongAccount(request);
@@ -9,7 +10,7 @@ async function family(request: Request) {
   if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return {auth, error: accountReply({error: 'Authenticator verification required.'}, 403, auth.headers)};
   return {auth, error: null};
 }
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const {auth, error} = await family(request);
   if (error) return error;
   if (new URL(request.url).searchParams.get('format') !== 'download') return accountReply({requests: await familyRequests(auth.user!.id)}, 200, auth.headers);
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
   auth.headers.set('Content-Disposition', `attachment; filename="savage-family-data-${new Date().toISOString().slice(0, 10)}.json"`);
   return new Response(JSON.stringify(data, null, 2), {headers: auth.headers});
 }
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const {auth, error} = await family(request);
   if (error) return error;
   const reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);

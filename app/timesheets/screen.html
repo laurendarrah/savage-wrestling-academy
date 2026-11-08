@@ -39,7 +39,7 @@ const money=c=>c===null||c===undefined?'—':'$'+(c/100).toFixed(2).replace(/\B(
 const dayText=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
 const atText=iso=>new Date(iso).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 const PROGRAMS={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
-async function call(body,query=''){const r=await fetch('/api/timesheets'+query,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
+async function call(body,query=''){const r=await fetch('/api/timesheets'+query,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error((d.error||'Something went wrong. Please try again.')+(d.requestId?' (reference '+String(d.requestId).slice(0,8)+')':''));return d}
 const STATE={empty:'No shifts','not-submitted':'Not sent yet',submitted:'Sent, waiting for you',approved:'Approved'};
 const BADGE={open:'Clocked in',draft:'Not sent',submitted:'Sent',approved:'Approved',voided:'Void'};
 function shiftHtml(s){

@@ -5,18 +5,19 @@ import {kindList} from '../../../lib/purchase-kinds';
 import {validTestKey,stripeTestClient,sealStripeKey,testKeyConfigured,validKeyFor,stripeClientFor,sealStripeKeyFor,keyConfiguredFor,expectedStripeAccount,recordedStripeAccount,settingStripeAccount,sealStripeAccount,stripeAccountName,ACCOUNT_ID,type StripeAccountInfo} from '../../../lib/stripe-test';
 import {rateLimited} from '../../../lib/rate-limit';
 import {securityEvent} from '../../../lib/security-events';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 type Reply=(b:unknown,s?:number)=>Response;
 const SETTING_INVALID='The Stripe account saved in the site’s settings is not a valid account id, so no key can be checked against it. Ask whoever maintains the site to correct it.';
 const named=(a:StripeAccountInfo)=>a.name?`${a.name} (${a.id})`:a.id;
 const upsert=(id:string,encrypted:string,ownerId:string,now:string)=>env.DB!.prepare('INSERT INTO integration_secrets (id,encrypted,updated_by,updated_at) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET encrypted=excluded.encrypted,updated_by=excluded.updated_by,updated_at=excluded.updated_at').bind(id,encrypted,ownerId,now);
 
-export async function GET(request:Request){const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Sign in as the owner and enter your authenticator code to continue.'},403,auth.headers);const config=await testKeyConfigured(),mode=stripeMode(),live=await keyConfiguredFor('live');
+export const GET = withApi(GET_); async function GET_(request:Request){const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Sign in as the owner and enter your authenticator code to continue.'},403,auth.headers);const config=await testKeyConfigured(),mode=stripeMode(),live=await keyConfiguredFor('live');
  // The academy's Stripe account (issue #255): from the site's setting, or the account the first confirmed test key recorded.
  let account=null,accountSettingInvalid=false;try{const e=await expectedStripeAccount();if(e==='invalid')accountSettingInvalid=true;else account=e}catch{account=null}
  return accountReply({...config,account,accountSettingInvalid,canChangeAccount:mode==='test'&&settingStripeAccount()===null,mode,liveConfigured:live.configured,liveUpdatedAt:live.updatedAt,webhookConfigured:!!webhookSecret(mode),checkoutEnabled:checkoutKinds().size>0,checkoutKinds:[...checkoutKinds()],checkoutNames:kindList(checkoutKinds()),message:checkoutKinds().size?'Test checkout is open for '+kindList(checkoutKinds())+'.':'Online payment is off. Each purchase type opens only after its terms and refund policy are decided and whoever maintains the site turns it on.'},200,auth.headers)}
 
-export async function POST(request:Request){const auth=await ownerIdentity(request),reply:Reply=(b,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Sign in as the owner and enter your authenticator code to continue.'},403);if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);const raw=await request.text();if(raw.length>4096)return reply({error:'Request too large.'},413);let data;try{data=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}
+export const POST = withApi(POST_); async function POST_(request:Request){const auth=await ownerIdentity(request),reply:Reply=(b,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Sign in as the owner and enter your authenticator code to continue.'},403);if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);const raw=await request.text();if(raw.length>4096)return reply({error:'Request too large.'},413);let data;try{data=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}
  if(data&&typeof data==='object'&&'resetAccount' in data)return resetAccount(request,auth.owner.userId,data.resetAccount,reply);
  if(data&&typeof data==='object'&&'liveKey' in data)return saveLiveKey(request,auth.owner.userId,data.liveKey,reply);
  return saveTestKey(request,auth.owner.userId,data,reply)}

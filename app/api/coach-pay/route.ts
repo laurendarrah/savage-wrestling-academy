@@ -1,8 +1,9 @@
 // Owner coach pay report (issue #75), as JSON or CSV.
 import {ownerIdentity, accountReply} from '../../../lib/account-auth';
 import {coachPayReport, coachPayCsv} from '../../../lib/coach-pay';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
   const q = new URL(request.url).searchParams, report = await coachPayReport(q.get('from'), q.get('to'));

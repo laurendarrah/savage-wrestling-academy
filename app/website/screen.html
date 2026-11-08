@@ -31,16 +31,19 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 <label for="mission">Mission<span class="hint">Optional. Shown under “Our mission”. Leave a blank line between paragraphs. Leave it empty to hide the section.</span><textarea id="mission" maxlength="1500"></textarea></label>
 </section>
 <section aria-labelledby="coachesTitle"><h2 id="coachesTitle">Coaches</h2><p class="muted">Choose who appears on the team page, and in what order. Each coach’s name, bio and specialties come from their coach profile. Their email and phone are never shown.</p><div id="coachList"></div></section>
-<section aria-labelledby="achTitle"><h2 id="achTitle">Wrestler achievements</h2><p class="muted">The wrestler’s name, what they achieved and the season or year. The team page groups them by season, in this order.</p><div class="rows" id="achList"></div><button type="button" onclick="addRow('achievements')">Add an achievement</button></section>
-<section aria-labelledby="alumTitle"><h2 id="alumTitle">Alumni</h2><p class="muted">Former wrestlers: their name, their years with the academy and where they went or what they did next.</p><div class="rows" id="alumList"></div><button type="button" onclick="addRow('alumni')">Add an alumni entry</button></section>
+<section aria-labelledby="achTitle"><h2 id="achTitle">Wrestler achievements</h2><p class="muted">The wrestler’s name, what they achieved and the season or year. The team page groups them by season, in this order.</p><div class="rows" id="achList"></div><button type="button" data-add="achievements">Add an achievement</button></section>
+<section aria-labelledby="alumTitle"><h2 id="alumTitle">Alumni</h2><p class="muted">Former wrestlers: their name, their years with the academy and where they went or what they did next.</p><div class="rows" id="alumList"></div><button type="button" data-add="alumni">Add an alumni entry</button></section>
 <section aria-labelledby="visitTitle"><h2 id="visitTitle">Visit details</h2><p class="muted">Optional. Shown at the bottom of both pages. Leave both empty to hide them.</p>
 <label for="address">Address<input id="address" maxlength="160" autocomplete="off" placeholder="Street, town, state and ZIP"></label>
 <label for="email">Contact email<input id="email" type="email" maxlength="120" autocomplete="off"></label>
 </section>
 <section id="previewBox" aria-labelledby="previewTitle" hidden><h2 id="previewTitle">Preview</h2><p class="muted" id="previewNote">Not published until you save.</p><iframe id="previewFrame" title="Preview of the public website" sandbox="allow-scripts"></iframe></section>
-<div class="savebar"><button type="button" class="primary" id="saveButton" onclick="saveSite()">Save and publish</button><button type="button" onclick="showPreview('home')">Preview welcome page</button><button type="button" onclick="showPreview('team')">Preview team page</button><span class="saved" id="savedAt"></span></div>
+<div class="savebar"><button type="button" class="primary" id="saveButton">Save and publish</button><button type="button" data-preview="home">Preview welcome page</button><button type="button" data-preview="team">Preview team page</button><span class="saved" id="savedAt"></span></div>
 </fieldset>
 </main><script>
+// The preview iframe's document inherits this page's script policy (issue #274), so the preview's own scripts are
+// tagged with the nonce the Worker gave this script before they are shown.
+const NONCE=document.currentScript?.nonce||'',withNonce=h=>NONCE?h.replace(/<(script)\b(?![^>]*\bnonce=)/gi,'<$1 nonce="'+NONCE+'"'):h;
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let site={headline:'',intro:'',mission:'',coaches:[],achievements:[],alumni:[],address:'',email:''},updatedAt=null,coaches=[];
 // Each list: its fields (key, label, length, placeholder) and what to say when it is empty.
@@ -54,16 +57,16 @@ function moveItem(list,i,d){const j=i+d;if(j<0||j>=list.length)return list;const
 function rowsHtml(kind){
  const L=LISTS[kind],list=site[kind];
  if(!list.length)return '<p class="empty">'+L.empty+'</p>';
- return list.map((item,i)=>'<div class="row"><span class="n" aria-hidden="true">'+(i+1)+'</span>'+L.fields.map(([key,label,max,ph])=>'<label>'+label+'<input maxlength="'+max+'" value="'+esc(item[key])+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+' aria-label="'+esc(label+', '+L.one+' '+(i+1))+'" oninput="setField(\''+kind+'\','+i+',\''+key+'\',this.value)"></label>').join('')
-  +'<div class="tools"><button type="button" aria-label="Move '+L.one+' '+(i+1)+' up"'+(i?'':' disabled')+' onclick="moveRow(\''+kind+'\','+i+',-1)">↑ Up</button><button type="button" aria-label="Move '+L.one+' '+(i+1)+' down"'+(i<list.length-1?'':' disabled')+' onclick="moveRow(\''+kind+'\','+i+',1)">↓ Down</button><button type="button" aria-label="Remove '+L.one+' '+(i+1)+'" onclick="dropRow(\''+kind+'\','+i+')">Remove</button></div></div>').join('')}
+ return list.map((item,i)=>'<div class="row" data-kind="'+kind+'" data-index="'+i+'"><span class="n" aria-hidden="true">'+(i+1)+'</span>'+L.fields.map(([key,label,max,ph])=>'<label>'+label+'<input maxlength="'+max+'" value="'+esc(item[key])+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+' aria-label="'+esc(label+', '+L.one+' '+(i+1))+'" data-field="'+key+'"></label>').join('')
+  +'<div class="tools"><button type="button" aria-label="Move '+L.one+' '+(i+1)+' up"'+(i?'':' disabled')+' data-move="-1">↑ Up</button><button type="button" aria-label="Move '+L.one+' '+(i+1)+' down"'+(i<list.length-1?'':' disabled')+' data-move="1">↓ Down</button><button type="button" aria-label="Remove '+L.one+' '+(i+1)+'" data-drop>Remove</button></div></div>').join('')}
 // Chosen coaches first, in their order, then the rest. Removed coaches cannot be chosen.
 function coachListHtml(){
  if(!coaches.length)return '<p class="empty">No coaches yet. Add them on <a href="/staff">Coaches</a>, then choose who to show here.</p>';
  const chosen=site.coaches.map(e=>coaches.find(c=>c.email===e)).filter(Boolean),rest=coaches.filter(c=>!site.coaches.includes(c.email)&&c.active);
  const note=c=>!c.active?'Removed from Coaches: not shown':!c.profileSaved?'No profile yet: only the name is shown':!c.hasBio?'No bio yet: name and specialties are shown':'';
  const row=c=>{const i=coaches.indexOf(c),at=site.coaches.indexOf(c.email),on=at>=0;
-  return '<div class="coach'+(on?' on':'')+'">'+(on?'<span class="order" aria-hidden="true">'+(at+1)+'</span>':'')+'<label><input type="checkbox"'+(on?' checked':'')+' onchange="toggleCoach('+i+',this.checked)"><span>'+esc(c.name)+(note(c)?' <span class="note">· '+note(c)+'</span>':'')+'</span></label>'
-  +(on?'<button type="button" aria-label="Move '+esc(c.name)+' up"'+(at?'':' disabled')+' onclick="moveCoach('+at+',-1)">↑ Up</button><button type="button" aria-label="Move '+esc(c.name)+' down"'+(at<site.coaches.length-1?'':' disabled')+' onclick="moveCoach('+at+',1)">↓ Down</button>':'')+'</div>'};
+  return '<div class="coach'+(on?' on':'')+'" data-coach="'+i+'" data-at="'+at+'">'+(on?'<span class="order" aria-hidden="true">'+(at+1)+'</span>':'')+'<label><input type="checkbox"'+(on?' checked':'')+' data-coach-toggle><span>'+esc(c.name)+(note(c)?' <span class="note">· '+note(c)+'</span>':'')+'</span></label>'
+  +(on?'<button type="button" aria-label="Move '+esc(c.name)+' up"'+(at?'':' disabled')+' data-coach-move="-1">↑ Up</button><button type="button" aria-label="Move '+esc(c.name)+' down"'+(at<site.coaches.length-1?'':' disabled')+' data-coach-move="1">↓ Down</button>':'')+'</div>'};
  return (chosen.length?'':'<p class="empty" style="margin-bottom:12px">No coaches chosen, so the team page leaves this section out. Choose the coaches to show.</p>')+chosen.concat(rest).map(row).join('')}
 function render(){$('coachList').innerHTML=coachListHtml();for(const kind in LISTS)$(LISTS[kind].box).innerHTML=rowsHtml(kind)}
 function setField(kind,i,key,value){if(site[kind][i])site[kind][i][key]=value}
@@ -72,6 +75,14 @@ function moveRow(kind,i,d){moveItem(site[kind],i,d);render()}
 function dropRow(kind,i){site[kind].splice(i,1);render()}
 function toggleCoach(i,on){const e=coaches[i]?.email;if(!e)return;site.coaches=site.coaches.filter(x=>x!==e);if(on)site.coaches.push(e);render()}
 function moveCoach(at,d){moveItem(site.coaches,at,d);render()}
+// One listener each for clicks, typing and checkboxes (issue #274): the page has no inline handlers, so the Content
+// Security Policy allows only its own scripts.
+$('editor').onclick=e=>{const t=e.target.closest?.('button');if(!t)return;
+ if(t.id==='saveButton')return saveSite();if(t.dataset.preview)return showPreview(t.dataset.preview);if(t.dataset.add)return addRow(t.dataset.add);
+ const row=t.closest('.row[data-kind]');if(row&&t.dataset.move)return moveRow(row.dataset.kind,+row.dataset.index,+t.dataset.move);if(row&&'drop' in t.dataset)return dropRow(row.dataset.kind,+row.dataset.index);
+ const coach=t.closest('.coach[data-coach]');if(coach&&t.dataset.coachMove)return moveCoach(+coach.dataset.at,+t.dataset.coachMove)};
+$('editor').oninput=e=>{const f=e.target.closest?.('input[data-field]'),row=f?.closest('.row[data-kind]');if(row)setField(row.dataset.kind,+row.dataset.index,f.dataset.field,f.value)};
+$('editor').onchange=e=>{const c=e.target.closest?.('input[data-coach-toggle]'),coach=c?.closest('.coach[data-coach]');if(coach)toggleCoach(+coach.dataset.coach,c.checked)};
 // What is sent: the text fields from the form, the lists from the page's state. Rows left completely empty are skipped.
 function payload(){
  const filled=kind=>site[kind].filter(r=>Object.values(r).some(v=>String(v).trim()));
@@ -86,7 +97,7 @@ async function saveSite(){$('editor').disabled=true;$('status').textContent='Sav
  try{const d=await call({action:'save',site:payload(),updatedAt});fill(d);$('status').textContent='Saved and published. Visitors see the changes within a minute.'}
  catch(e){$('status').textContent=e.message}finally{$('editor').disabled=false}}
 async function showPreview(page){$('status').textContent='';
- try{const d=await call({action:'preview',page,site:payload()});$('previewBox').hidden=false;$('previewNote').textContent=(page==='team'?'Team page':'Welcome page')+' with your changes. Not published until you save.';$('previewFrame').srcdoc=d.html;$('previewBox').scrollIntoView({behavior:'smooth',block:'start'})}
+ try{const d=await call({action:'preview',page,site:payload()});$('previewBox').hidden=false;$('previewNote').textContent=(page==='team'?'Team page':'Welcome page')+' with your changes. Not published until you save.';$('previewFrame').srcdoc=withNonce(d.html);$('previewBox').scrollIntoView({behavior:'smooth',block:'start'})}
  catch(e){$('status').textContent=e.message}}
 load();
 </script></body></html>

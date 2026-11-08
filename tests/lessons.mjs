@@ -149,6 +149,8 @@ r = await call(coachApi, 'GET');
 const o1 = r.body.openings.find(o => o.id === 'o1');
 assert.equal(o1.roster[0].wrestler, 'Wrestler p1'); assert.equal(o1.formatName, 'One-on-one lesson'); assert.equal(o1.roster[0].parent, 'Parent p1'); assert.equal(o1.roster[0].phone, '555-011');
 assert.equal(o1.roster[0].status, 'paid'); assert.equal(o1.spotsLeft, 0);
+assert.equal(o1.roster[0].email, '', 'a coach never gets the family\'s sign-in email on a lesson roster (issue #274)');
+assert.ok(!JSON.stringify(r.body).includes('p1@example.test'), 'no family email anywhere in the coach\'s view');
 assert.deepEqual(r.body.openings.find(o => o.id === 'o5').roster, []);
 assert.equal((await call(coachApi, 'POST', {action: 'remove', id: 'o1'})).status, 409);
 // Reading the page links openings saved before coach emails were stored.

@@ -3,8 +3,9 @@ import {strongAccount,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {familyProfile,requiresApproval,approvalApplies} from '../../../lib/program-approval';
 import {securityEvent} from '../../../lib/security-events';
 import {rateLimited} from '../../../lib/rate-limit';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return accountReply({error:'Authenticator verification required.'},403,auth.headers);
  const profile=await familyProfile(auth.user.id);
@@ -15,7 +16,7 @@ export async function GET(request:Request){
  for(const r of rows.results){const w=profile?.wrestlers.find(w=>w.id===r.wrestler_id);if(w&&approvalApplies(r,w))list.push({id:r.id,wrestlerId:r.wrestler_id,status:r.status,grade:r.grade,currentGrade:w.grade,gradeChanged:w.grade!==r.grade})}
  return accountReply({approvals:list},200,auth.headers);
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await strongAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!auth.user?.email_confirmed_at)return reply({error:'Sign-in required.'},401);
  if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return reply({error:'Authenticator verification required.'},403);

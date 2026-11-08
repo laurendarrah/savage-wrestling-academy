@@ -2,9 +2,10 @@ import {env} from 'cloudflare:workers';
 import {ownerIdentity,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {validPracticePlan,cleanPracticePlan} from '../../../lib/practice-plans';
 import {securityEvent} from '../../../lib/security-events';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 const identifier=(v:unknown):v is string=>typeof v==='string'&&/^[A-Za-z0-9-]{1,80}$/.test(v);
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
  const id=new URL(request.url).searchParams.get('id');
  if(id!==null){if(!identifier(id))return reply({error:'Choose a saved lesson.'},400);const row=await env.DB!.prepare('SELECT id,curriculum_id,lesson_order,name,payload,revision,updated_at FROM practice_curricula WHERE id=?').bind(id).first<{id:string;curriculum_id:string|null;lesson_order:number;name:string;payload:string;revision:number;updated_at:string}>();if(!row)return reply({error:'Lesson not found. Refresh the library.'},404);return reply({curriculum:{id:row.id,curriculumId:row.curriculum_id,lessonOrder:row.lesson_order,name:row.name,data:JSON.parse(row.payload),revision:row.revision,updatedAt:row.updated_at}})}
@@ -12,7 +13,7 @@ export async function GET(request:Request){
  const lessons=await env.DB!.prepare('SELECT id,curriculum_id,lesson_order,name,revision,updated_at FROM practice_curricula ORDER BY curriculum_id,lesson_order,name_key').all();
  return reply({groups:groups.results,curricula:lessons.results});
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Only the owner can edit program curricula.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);

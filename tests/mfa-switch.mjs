@@ -16,8 +16,10 @@ assert.equal(fullySignedIn({...base, mfaOff: true, hasVerifiedFactor: true, aal2
 assert.equal(fullySignedIn({...base, hasVerifiedFactor: true, aal2: true}), true);
 // Every sign-in check goes through strongAccount, which uses the policy.
 const auth = readFileSync('lib/account-auth.ts', 'utf8');
-assert.match(auth, /strong=fullySignedIn\(\{emailConfirmed:true,aal2:!error&&data\?\.currentLevel==='aal2',hasVerifiedFactor,mfaOff:mfaSwitchedOff\(\(env as \{STAFF_MFA\?:string\}\)\.STAFF_MFA\)\}\)/);
-assert.equal((auth.match(/currentLevel/g) || []).length, 1, 'no second authenticator check elsewhere in account-auth');
+assert.match(auth, /strong=fullySignedIn\(\{emailConfirmed:true,aal2:id\.aal2,hasVerifiedFactor,mfaOff:mfaSwitchedOff\(\(env as \{STAFF_MFA\?:string\}\)\.STAFF_MFA\)\}\)/);
+// Issue #274: the authenticator level is read once per request from the session token; there is no second check.
+assert.equal((auth.match(/getAuthenticatorAssuranceLevel|currentLevel/g) || []).length, 0, 'no second authenticator check in account-auth');
+assert.equal((auth.match(/fullySignedIn\(/g) || []).length, 1, 'the policy is applied in one place');
 // The launch checklist shows it in red while it's off.
 const cl = readFileSync('lib/launch-checklist.ts', 'utf8');
 assert.match(cl, /key: 'mfa-off', group: 'Safety', label: 'Authenticator sign-in is turned off', status: 'todo'/);

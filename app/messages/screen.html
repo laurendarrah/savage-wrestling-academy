@@ -11,7 +11,7 @@ const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,
 const when=d=>{if(!d)return '';const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[\u202f\u00a0]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
 let data=null,current=null,fams=[],famNext=null,famMatched=0,famTicket=0,typing,sentRows=[],sentNext=null,thread=[],threadEarlier=null;
 const count=(n,one,many)=>n.toLocaleString('en-US')+' '+(n===1?one:many);
-async function call(q,body){const r=await fetch('/api/messages'+(q||''),body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
+async function call(q,body){const r=await fetch('/api/messages'+(q||''),body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error((d.error||'Something went wrong.')+(d.requestId?' (reference '+String(d.requestId).slice(0,8)+')':''));return d}
 function audience(){const t=$('audType').value;return t==='program'?{type:'program',program:$('program').value}:t==='event'?{type:'event',eventId:$('event').value}:{type:'all'}}
 // The count for the chosen audience (issue #220). Answers can come back out of order when the owner changes the audience
 // quickly, so only the latest choice's answer is shown, and sending waits for it.

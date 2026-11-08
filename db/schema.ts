@@ -7,7 +7,7 @@ export const academyState = sqliteTable("academy_state", {
 
 export const familyAccounts=sqliteTable("family_accounts",{
  userId:text("user_id").primaryKey(),email:text("email").notNull(),payload:text("payload").notNull(),revision:integer("revision").notNull(),updatedAt:text("updated_at").notNull()
-});
+},t=>[index("family_accounts_updated").on(t.updatedAt,t.userId)]);   // the Family accounts list's keyset order (issue #274)
 export const authAttempts=sqliteTable("auth_attempts",{id:text("id").primaryKey(),count:integer("count").notNull(),bucket:integer("bucket").notNull()});
 
 export const staffAccess=sqliteTable("staff_access",{email:text("email").primaryKey(),name:text("name").notNull(),programs:text("programs").notNull(),active:integer("active").notNull(),updatedAt:text("updated_at").notNull()});
@@ -32,7 +32,8 @@ export const coachProfiles=sqliteTable("coach_profiles",{
 export const coachOpenings=sqliteTable("coach_openings",{id:text("id").primaryKey(),userId:text("user_id").notNull(),date:text("date").notNull(),start:text("start").notNull(),end:text("end").notNull(),coachEmail:text("coach_email"),
  format:text("format"),capacity:integer("capacity"),closed:integer("closed").notNull().default(0),inviteCode:text("invite_code"),organizerId:text("organizer_id"),organizerWrestlers:text("organizer_wrestlers")
 },t=>[uniqueIndex("coach_openings_invite").on(t.inviteCode)]);
-export const securityEvents=sqliteTable("security_events",{id:text("id").primaryKey(),actor:text("actor").notNull(),action:text("action").notNull(),target:text("target").notNull(),createdAt:text("created_at").notNull()});
+export const securityEvents=sqliteTable("security_events",{id:text("id").primaryKey(),actor:text("actor").notNull(),action:text("action").notNull(),target:text("target").notNull(),createdAt:text("created_at").notNull()},
+ t=>[index("security_events_created").on(t.createdAt,t.id)]);   // the Security activity page's keyset order (issue #274)
 export const recoverySnapshots=sqliteTable("recovery_snapshots",{id:text("id").primaryKey(),payload:text("payload").notNull(),createdAt:text("created_at").notNull()});
 export const restoreGuard=sqliteTable("restore_guard",{id:text("id").primaryKey(),valid:integer("valid").notNull()},t=>[check('valid_restore',sql`${t.valid} = 1`)]);
 // A large backup is uploaded for restore in parts before one batch applies it (issue #221). Each row is one checked part
@@ -99,6 +100,11 @@ export const orders=sqliteTable("orders",{
  index("orders_wrestler_status").on(t.userId,t.wrestlerId,t.status),
  uniqueIndex("orders_stripe_session").on(t.stripeSessionId),
  uniqueIndex("orders_open_dedupe").on(t.dedupeKey).where(sql`${t.status} IN ('pending','paid')`),
+ // Rosters, payments and the books read orders by status (issue #274): members of a program on a date, who paid for
+ // one session, and payments by date.
+ index("orders_status_program").on(t.status,t.kind,t.program,t.termStart),
+ index("orders_status_item").on(t.status,t.kind,t.itemId),
+ index("orders_status_paid").on(t.status,t.paidAt),
  check("orders_kind",sql`${t.kind} IN ('walkin','annual','monthly','event','live','lesson')`),
  check("orders_status",sql`${t.status} IN ('pending','paid','expired','canceled','refunded')`),
  check("orders_amounts",sql`${t.amountCents} >= 0 AND ${t.baseCents} >= 0 AND ${t.discountCents} >= 0 AND ${t.amountCents} = ${t.baseCents} - ${t.discountCents}`),
@@ -131,7 +137,7 @@ export const cashBookings=sqliteTable("cash_bookings",{
 // Every Stripe event id is recorded once, so a repeated delivery cannot be applied twice.
 export const stripeEvents=sqliteTable("stripe_events",{
  id:text("id").primaryKey(),type:text("type").notNull(),orderId:text("order_id"),outcome:text("outcome").notNull(),receivedAt:text("received_at").notNull()
-});
+},t=>[index("stripe_events_order").on(t.orderId,t.outcome)]);   // refund dates and installments per order (issue #274)
 
 // Real attendance (issue #22). One row per wrestler per session; the unique index makes check-in idempotent.
 // session_key: practice:<program>:<date>:<start>, live:<id>:<date> or event:<id>:<date>.
@@ -260,8 +266,10 @@ export const notifications=sqliteTable("notifications",{
  dedupeKey:text("dedupe_key").notNull(),createdAt:text("created_at").notNull(),readAt:text("read_at"),emailStatus:text("email_status").notNull(),emailError:text("email_error")
 },t=>[uniqueIndex("notifications_once").on(t.dedupeKey),index("notifications_user").on(t.userId,t.createdAt)]);
 // Server errors for the owner's site health page (issue #107). Transient: not backed up, last 500 kept.
+// request_id and role (issue #274): the id the page showed the person, and owner/coach/family/anon, from lib/api.ts.
 export const errorLog=sqliteTable("error_log",{
- id:text("id").primaryKey(),at:text("at").notNull(),method:text("method").notNull(),path:text("path").notNull(),status:integer("status").notNull(),message:text("message").notNull()
+ id:text("id").primaryKey(),at:text("at").notNull(),method:text("method").notNull(),path:text("path").notNull(),status:integer("status").notNull(),message:text("message").notNull(),
+ requestId:text("request_id"),role:text("role")
 },t=>[index("error_log_at").on(t.at)]);
 // Family data requests (issue #113): closure requests the owner handles and records.
 export const dataRequests=sqliteTable("data_requests",{

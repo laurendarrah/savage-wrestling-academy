@@ -220,7 +220,7 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   assert.match(el('alumList').innerHTML, /No alumni yet, so the team page leaves this section out/);
   // Coaches: chosen first with their number, then the rest; removed coaches only if chosen; names escaped.
   let list = el('coachList').innerHTML;
-  assert.match(list, /class="coach on"><span class="order" aria-hidden="true">1<\/span><label><input type="checkbox" checked onchange="toggleCoach\(2,this\.checked\)"><span>Lee &quot;The Hammer&quot; Tran/);
+  assert.match(list, /class="coach on" data-coach="2" data-at="0"><span class="order" aria-hidden="true">1<\/span><label><input type="checkbox" checked data-coach-toggle><span>Lee &quot;The Hammer&quot; Tran/);
   assert.match(list, /Dana Ruiz <span class="note">· No profile yet: only the name is shown/);
   assert.doesNotMatch(list, /Gone Coach/, 'removed coaches are not offered');
   assert.match(list, /aria-label="Move Lee &quot;The Hammer&quot; Tran up" disabled/);
@@ -238,7 +238,15 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   assert.equal(run('site.achievements[0].name'), 'Sam "Slam" <b>', 'typing updates the list without redrawing the fields');
   run('render()'); assert.match(el('achList').innerHTML, /value="Sam &quot;Slam&quot; &lt;b&gt;"/);
   assert.match(el('achList').innerHTML, /aria-label="Move achievement 1 up" disabled/);
-  assert.match(el('achList').innerHTML, /onclick="dropRow\('achievements',1\)"/);
+  assert.match(el('achList').innerHTML, /<div class="row" data-kind="achievements" data-index="1">[\s\S]*?<button type="button" aria-label="Remove achievement 2" data-drop>Remove<\/button>/, 'buttons carry data attributes for the page\'s one click listener (issue #274), never inline handlers');
+  assert.doesNotMatch(src, /\son[a-z]+=\\?"/, 'no inline event handlers anywhere on the page');
+  // The delegated listeners reach the same functions.
+  const click = t => el('editor').onclick({target: {closest: s => s === 'button' ? t : null}});
+  const inRow = (kind, index, ds) => ({dataset: ds, closest: s => s === '.row[data-kind]' ? {dataset: {kind, index: String(index)}} : null});
+  click(inRow('achievements', 1, {move: '-1'})); assert.equal(run('site.achievements[0].name'), 'Jo', 'Move up through the click listener');
+  el('editor').oninput({target: {closest: s => s === 'input[data-field]' ? {dataset: {field: 'season'}, value: '2023–24', closest: () => ({dataset: {kind: 'achievements', index: '0'}})} : null}});
+  assert.equal(run('site.achievements[0].season'), '2023–24', 'typing through the input listener');
+  click(inRow('achievements', 0, {move: '1'}));   // back to [Sam, Jo] for the checks below
   run("moveRow('achievements',0,1)"); assert.equal(run('site.achievements[0].name'), 'Jo');
   run("moveRow('achievements',1,1)"); assert.equal(run('site.achievements[1].name'), 'Sam "Slam" <b>', 'moving past the end does nothing');
   assert.deepEqual(JSON.parse(JSON.stringify(run('payload()').alumni)), [], 'blank rows are not sent');

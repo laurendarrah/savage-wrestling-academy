@@ -21,11 +21,13 @@ Keep these six things in the password manager. Every fix below depends on at lea
 
 ## First, check site health
 
-Sign in as the owner and open **/site-health**. It shows whether the site and database are answering, and every server error from the last 7 days with the page it happened on. If it loads, the site is up and the problem is narrower. Skip to the matching section below.
+Sign in as the owner and open **/site-health**. It shows whether the site and database are answering, whether the sign-in service (Supabase) answers, when the morning reminders last ran, the build the site is running, and every server error from the last 7 days with the page it happened on, who was signed in (owner, coach, family or nobody) and a reference. If it loads, the site is up and the problem is narrower. Skip to the matching section below.
+
+**References.** Since #274, when a page cannot finish a request it shows "Something went wrong. Try again. (reference 3f2a1b4c)". The reference is the last column of the error list on **/site-health**, so a family or coach only has to read it to you and you can find the exact error. The message itself never includes what they typed or their email.
 
 Set up a free uptime monitor (for example UptimeRobot) on `<site address>/api/health`, checking every 5 minutes and texting the owner's phone. Then you hear about an outage before families do.
 
-Once email is set up (`EMAIL_API_KEY` and `MAIL_FROM`, #87), the site also emails the owner address when new server errors appear or the morning reminders don't finish, at most once an hour (#47). The email has counts, the page each problem was on and a link to **/site-health**, never family details. Problems that happen within the hour are in the next alert, which goes out with the next problem after the hour or with the next morning's scheduled run. **/site-health → Alerts and email** shows when the last alert went out, or why it didn't. An alert email can't help when the whole site or the email service is down, so keep the uptime monitor too. To check alert emails reach the owner without waiting for a real problem, use **Send a test alert** ([below](#check-that-alert-emails-arrive)).
+Once email is set up (`EMAIL_API_KEY` and `MAIL_FROM`, #87), the site also emails the owner address when new server errors appear, the morning reminders don't finish, or a morning's reminders had not run by 10 AM New York (the site then runs them from the next page visit, #274), at most once an hour (#47). The email has counts, the page each problem was on and a link to **/site-health**, never family details. Problems that happen within the hour are in the next alert, which goes out with the next problem after the hour or with the next morning's scheduled run. **/site-health → Alerts and email** shows when the last alert went out, or why it didn't. An alert email can't help when the whole site or the email service is down, so keep the uptime monitor too. To check alert emails reach the owner without waiting for a real problem, use **Send a test alert** ([below](#check-that-alert-emails-arrive)).
 
 ## The site is down or shows an error for everyone
 
@@ -33,7 +35,7 @@ Once email is set up (`EMAIL_API_KEY` and `MAIL_FROM`, #87), the site also email
 2. If it doesn't answer, check **Cloudflare → Workers & Pages → savage-wrestling-academy**. A banner there means a Cloudflare outage; also check cloudflarestatus.com. Nothing to do but wait.
 3. If it broke right after an update, **roll back** ([below](#an-update-made-something-worse)).
 
-`/api/health` checks the site and its database only. Sign-in (Supabase), payments (Stripe) and email can be down while it says `"ok":true`; they have their own sections.
+`/api/health` checks the site and its database, and says which build is running, when the scheduled run last ran and whether email, sign-in and the Stripe webhook are set up (yes or no, never the values). Sign-in (Supabase), payments (Stripe) and email can still be down while it says `"ok":true`; they have their own sections. **/site-health** does check that the sign-in service answers.
 
 ## A deploy failed
 
@@ -244,8 +246,8 @@ Sign-in, sign-up, confirmation and password emails, and authenticators all run o
 3. **/site-health** for errors on `/api/auth` or `/login`.
 
 **What to do:**
-- **A Supabase outage:** nothing to do but wait. Tell families on your usual channel that sign-in is down and that nothing is lost. Staff can't sign in either, so if it runs into a practice, take attendance on paper.
-- **One person sees "Too many sign-in attempts":** they wait a minute and try again.
+- **A Supabase outage:** nothing to do but wait. Signed-in pages say "Sign-in is temporarily unavailable" (#274): nobody is signed out, and **/site-health** counts these outages and shows whether Supabase answers right now. Tell families on your usual channel that sign-in is down and that nothing is lost. Staff can't sign in either, so if it runs into a practice, take attendance on paper.
+- **One person sees "Too many attempts":** they wait a minute and try again. Each email address gets 10 sign-in tries a minute and 30 an hour; a shared network (the academy WiFi) gets 30 a minute across everyone (#274). Password resets, sign-ups and confirmation emails have their own limits, so sign-in attempts never use them up.
 - **Everything looks fine in Supabase but nobody can sign in:** send Lauren the time and what the page said.
 
 **Who:** Justin or Lauren (Supabase). Supabase support from the dashboard if the project won't restore.

@@ -9,6 +9,7 @@ import {checkoutKinds} from '../../../lib/checkout-config';
 import {rateLimited} from '../../../lib/rate-limit';
 import {publicProfiles} from '../../../lib/coach-profile';
 import {holidaysInMonth} from '../../../lib/holidays';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
@@ -18,7 +19,7 @@ async function family(request: Request) {
   return {auth, error: null};
 }
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const owner = await ownerIdentity(request);
   let headers = owner.headers, userId: string | null = null;
   if (!owner.owner) {
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
 }
 
 // A family asks for a private partner or small group at an open time, or calls off one they asked for.
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const f = await family(request);
   if (f.error) return f.error;
   const reply = (b: unknown, s = 200) => accountReply(b, s, f.auth.headers), userId = f.auth.user!.id;

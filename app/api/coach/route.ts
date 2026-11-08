@@ -3,19 +3,20 @@ import {coachAccess} from '../../../lib/access-control';
 import {securityEvent} from '../../../lib/security-events';
 import {coachSchedule, updateOpening, addOpenings, removeOpening, claimOpenings, MAX_WEEKS, type CoachRef} from '../../../lib/lessons';
 import {profileView} from '../../../lib/coach-profile';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 // Coaches, and the owner once they have added themselves as a coach (issue #190). Same authenticator rule for both.
 // Adding, changing and removing openings are shared with the owner's tool for any coach (lib/lessons.ts, issue #239).
 async function coach(request:Request){const auth=await strongAccount(request),staff=await coachAccess(auth.user,auth.strong);
  return {auth,staff,me:staff?{email:staff.email,name:staff.name,userId:auth.user!.id} as CoachRef:null}}
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const {auth,staff,me}=await coach(request);if(!staff||!me)return accountReply({error:'Coach access and authenticator verification required.'},403,auth.headers);
  // Openings made before issue #70 have no coach email, and ones the owner added may not have this account yet: link both.
  await claimOpenings(me);
  const profile=await profileView(staff.email,staff.name);
- return accountReply({name:profile.displayName||staff.name,programs:staff.programs,owner:staff.owner,profileSaved:profile.saved,maxWeeks:MAX_WEEKS,openings:await coachSchedule(me)},200,auth.headers);
+ return accountReply({name:profile.displayName||staff.name,programs:staff.programs,owner:staff.owner,profileSaved:profile.saved,maxWeeks:MAX_WEEKS,openings:await coachSchedule(me,'',staff.owner)},200,auth.headers);
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const {auth,staff,me}=await coach(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!staff||!me)return reply({error:'Coach access and authenticator verification required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);

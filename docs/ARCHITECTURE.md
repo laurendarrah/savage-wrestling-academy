@@ -30,13 +30,13 @@ Exact versions are in `package.json`.
 1. The Worker (`build/worker.ts`) hands the request to Vinext, which dispatches it to the matching `app/**/route.ts`.
 2. The route checks who is asking on the server (below), reads or writes D1, and returns HTML or JSON. Pages fetch their data from `/api/*` routes with same-origin JSON requests.
 3. On the way out, `lib/page-chrome.ts` adds the shared look to every HTML page: `public/savage.css`, the brand icons and the top bar (#129). Owner pages a route has marked with `markOwnerShell()` also get the owner shell: the same sidebar and header everywhere (`lib/owner-shell.ts`, `lib/owner-nav.ts`, `public/owner-shell.css`, `public/owner-shell.js`, #261). Printable documents (signed agreements and waivers) stay undecorated.
-4. Any response of 500 or more is recorded in `error_log` for **Site health** and emailed to the owner at most once an hour (`lib/site-health.ts`, `lib/owner-alerts.ts`).
+4. Every API route is wrapped in `withApi()` (`lib/api.ts`): a failure answers `{error, requestId}` and is recorded in `error_log` with the request id, the path and the role (redacted); a Supabase outage is a 503, not a sign-out. Any other response of 500 or more is recorded by the Worker. Site health shows them, and the owner is emailed at most once an hour (`lib/site-health.ts`, `lib/owner-alerts.ts`). On the way out, signed-in pages without inline handlers get a per-response `script-src` nonce on every script (`lib/page-chrome.ts`).
 
-A daily Cron Trigger (12:41 UTC, set in `vite.config.ts`) sends card and waiver reminders, cleans up coaches removed more than 3 years ago, reads Stripe card fees, and clears abandoned restore uploads (`build/worker.ts`).
+A daily Cron Trigger (12:41 UTC, set in `vite.config.ts`) sends card and waiver reminders, cleans up coaches removed more than 3 years ago, reads Stripe card fees, clears abandoned restore uploads and purges stale USA Wrestling lookups (`build/worker.ts`). No page load runs the reminders; after 10 AM New York the Worker checks once per isolate per day, in the background, that the run happened, and otherwise records the miss and runs them (`lib/reminder-watch.ts`, #274).
 
 ## Who can do what
 
-`lib/account-auth.ts` builds the Supabase server client and checks the session with `getUser()` on every request. `lib/access-control.ts` turns the signed-in user into a role:
+`lib/account-auth.ts` builds the Supabase server client and checks the session with one `getUser()` per request (memoised; the authenticator level comes from the session token, #274). `lib/access-control.ts` turns the signed-in user into a role:
 
 | Role | Who | How |
 |---|---|---|

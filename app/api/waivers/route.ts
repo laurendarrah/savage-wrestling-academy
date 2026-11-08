@@ -5,10 +5,11 @@ import {ownerIdentity, accountReply, sameOrigin, OWNER_EMAIL} from '../../../lib
 import {DOCUMENTS, isKind, ownerDocuments, publishDocument, retireDocument, reissueSignature, carrySignature, signersPage, type Kind} from '../../../lib/documents';
 import {pageSize, PAGE_SIZE} from '../../../lib/paging';
 import {dailyReminders, noticeReissue, quietly} from '../../../lib/notify';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 const kindOf = (k: unknown): Kind | null => k === undefined || k === null || k === '' ? 'waiver' : isKind(k) ? k : null;
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
   const q = new URL(request.url).searchParams, kind = kindOf(q.get('kind'));
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
   return accountReply({...all, [listKey]: page.rows, next: page.next, matched: page.matched, totals: page.totals}, 200, auth.headers);
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

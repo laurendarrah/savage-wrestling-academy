@@ -3,15 +3,16 @@ import {ownerIdentity,sameOrigin,accountReply} from '../../../lib/account-auth';
 import {securityEvent} from '../../../lib/security-events';
 import {noticeApproval, quietly} from '../../../lib/notify';
 import {approvalAppliesSql} from '../../../lib/program-approval';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in and authenticator verification required.'},403,auth.headers);
  // `applies` (issue #271): the request still belongs to this wrestler (same name, grades 7–12), so it can be decided even
  // though the grade may have changed since; the page shows the grade it was requested in and the grade now.
  const rows=await env.DB!.prepare(`SELECT a.id,a.wrestler_name,a.grade,a.status,a.created_at,a.updated_at,f.email,json_extract(f.payload,'$.parentName') AS parent_name,json_extract(f.payload,'$.phone') AS phone,json_extract(w.value,'$.name') AS current_name,json_extract(w.value,'$.grade') AS current_grade,CASE WHEN ${approvalAppliesSql('a')} THEN 1 ELSE 0 END AS applies FROM program_approvals a JOIN family_accounts f ON f.user_id=a.user_id JOIN json_each(f.payload,'$.wrestlers') w ON json_extract(w.value,'$.id')=a.wrestler_id ORDER BY CASE a.status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END,a.created_at DESC`).all();
  return accountReply({requests:rows.results},200,auth.headers);
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);

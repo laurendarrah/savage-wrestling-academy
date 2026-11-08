@@ -8,6 +8,7 @@ import {noticeCardRejected, quietly} from '../../../lib/notify';
 import {checkCard} from '../../../lib/usaw-check';
 import {rosterFor} from '../../../lib/roster';
 import {pageSize, PAGE_SIZE} from '../../../lib/paging';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 const validDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').toISOString().slice(0, 10) === d;
@@ -19,7 +20,7 @@ async function blockedToday(today: string) {
   return keys;
 }
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   const q = new URL(request.url).searchParams, today = academyToday(), date = q.get('date') || today;
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
     renewal: cardRenewal(cards, today), renewalDays: CARD_RENEWAL_DAYS});
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

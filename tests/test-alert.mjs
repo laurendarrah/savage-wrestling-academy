@@ -89,7 +89,7 @@ assert.deepEqual(logged(), [{actor: 'supabase:owner-1', action: 'owner_test_aler
 
 // --- The real alert throttle is untouched: no marker is written, and a real alert still goes out right after ---
 assert.equal(marker(), null, 'a test alert writes no "last alerted" marker');
-sqlite.prepare('INSERT INTO error_log VALUES (?,?,?,?,?,?)').run('e1', new Date(clock - 60000).toISOString(), 'GET', '/register', 500, 'boom');
+sqlite.prepare('INSERT INTO error_log(id,at,method,path,status,message) VALUES (?,?,?,?,?,?)').run('e1', new Date(clock - 60000).toISOString(), 'GET', '/register', 500, 'boom');
 assert.equal(await alerts.alertOwner(DB, new Date(clock)), 'sent', 'the test did not start the hour');
 const real = marker(); assert.equal(sent.length, 2); assert.match(sent[1].body[0].subject, /^Site alert/);
 // Inside the real alert's hour, a test alert still sends and leaves the marker exactly as it was.
@@ -97,7 +97,7 @@ clock += 5 * 60000;
 r = await post(); assert.equal(r.status, 200); assert.equal(sent.length, 3);
 assert.deepEqual(marker(), real, 'the test neither resets nor extends the real hour');
 const status = await alerts.alertStatus(DB); assert.equal(status.last.count, 1, 'Alerts and email still shows the last real alert');
-sqlite.prepare('INSERT INTO error_log VALUES (?,?,?,?,?,?)').run('e2', new Date(clock - 1000).toISOString(), 'GET', '/family', 500, 'boom');
+sqlite.prepare('INSERT INTO error_log(id,at,method,path,status,message) VALUES (?,?,?,?,?,?)').run('e2', new Date(clock - 1000).toISOString(), 'GET', '/family', 500, 'boom');
 assert.equal(await alerts.alertOwner(DB, new Date(clock)), 'waiting', 'the real throttle still holds');
 
 // --- Rate limit: 3 an hour per owner, then a plain refusal; the next hour works again ---

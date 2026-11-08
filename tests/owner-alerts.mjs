@@ -31,6 +31,8 @@ function load(file) {
         if (name === 'vinext/server/fetch-handler') return {default: {fetch: async () => handlerResult}};
         if (name.endsWith('/stripe-fees') && file.endsWith('worker.ts')) return {recordStripeFees: async () => ({mode: 'test', checked: 0, recorded: 0, failed: 0, waiting: 0, error: null, skipped: null})};
         if (name.endsWith('/notify') && file.endsWith('worker.ts')) return {dailyReminders: async () => { if (reminderFails) throw Error('Reminder for sam@example.test failed: D1_ERROR at row 7'); return 0; }};
+        if (name.endsWith('/reminder-watch') && file.endsWith('worker.ts')) return {reminderWatch: async () => 'early'};
+        if (name.endsWith('/usaw-check') && file.endsWith('worker.ts')) return {purgeStaleLookups: async () => 0};
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'));
         throw Error('unexpected import ' + name);
       }});
@@ -45,7 +47,7 @@ const marker = () => { const r = sqlite.prepare("SELECT payload FROM academy_set
 const T0 = Date.parse('2026-11-09T15:00:00.000Z'), at = min => new Date(T0 + min * 60000);
 let n = 0;
 const error = (min, p, status = 500, message = 'D1_ERROR: no such column for pat@example.test token=abc') =>
-  sqlite.prepare('INSERT INTO error_log VALUES (?,?,?,?,?,?)').run('e' + (++n), at(min).toISOString(), 'GET', p, status, message);
+  sqlite.prepare('INSERT INTO error_log(id,at,method,path,status,message) VALUES (?,?,?,?,?,?)').run('e' + (++n), at(min).toISOString(), 'GET', p, status, message);
 
 // --- Email not set up: nothing is sent, nothing is stored, nothing throws ---
 error(0, '/register');

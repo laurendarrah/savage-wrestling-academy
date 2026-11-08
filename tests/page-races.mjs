@@ -108,7 +108,7 @@ const submit = form => form.onsubmit({preventDefault() {}});
   const fieldset = html.match(/<fieldset id="editor" disabled>([\s\S]*?)<\/fieldset>/);
   assert.ok(fieldset, 'the editor starts disabled');
   for (const id of ['headline', 'intro', 'mission', 'coachList', 'achList', 'alumList', 'address', 'email', 'saveButton']) assert.match(fieldset[1], new RegExp(`id="${id}"`), id + ' is inside the disabled editor');
-  assert.match(fieldset[1], /onclick="addRow\('achievements'\)"[\s\S]*onclick="addRow\('alumni'\)"[\s\S]*onclick="showPreview\('team'\)"/, 'the add and preview buttons wait too');
+  assert.match(fieldset[1], /data-add="achievements"[\s\S]*data-add="alumni"[\s\S]*data-preview="team"/, 'the add and preview buttons wait too (listeners since #274, no inline handlers)');
   const site = {headline: 'Built on the mat', intro: 'Wrestling.', mission: '', coaches: [], achievements: [], alumni: [], address: '', email: ''};
   const net = server(() => HOLD);
   const {el, run} = page('app/website/screen.html', net.fetch, {editor: {disabled: true}});

@@ -4,10 +4,11 @@
 // Responds 200 once an event is recorded, including rejected ones, so Stripe does not retry forever.
 import {verifyStripeSignature, applyStripeEvent} from '../../../lib/stripe-webhook';
 import {webhookSecret, type StripeMode} from '../../../lib/checkout-config';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 const MAX_BODY = 512 * 1024;
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const secrets = (['test', 'live'] as StripeMode[]).map(mode => ({mode, secret: webhookSecret(mode)})).filter(s => s.secret);
   if (!secrets.length) return Response.json({error: 'Webhook not configured.'}, {status: 503});
   if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY) return Response.json({error: 'Too large.'}, {status: 413});

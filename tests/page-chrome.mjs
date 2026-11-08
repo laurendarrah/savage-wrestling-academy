@@ -10,7 +10,7 @@ function load(file) {
   if (loaded.has(file)) return loaded.get(file);
   const module = {exports: {}}; loaded.set(file, module.exports);
   vm.runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
-    {module, exports: module.exports, URL, Headers, Response, Request, require: name => load('lib/' + name.replace('./', '') + '.ts')});
+    {module, exports: module.exports, URL, Headers, Response, Request, crypto, Uint8Array, Array, require: name => load('lib/' + name.replace('./', '') + '.ts')});
   return module.exports;
 }
 const module = {exports: load('lib/page-chrome.ts')};

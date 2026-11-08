@@ -2,14 +2,15 @@ import { accountReply,verifiedAccount,strongAccount,sameOrigin,verifiedOwner } f
 import { accountRole,roleDestination } from '../../../lib/access-control';
 import { rateLimited } from '../../../lib/rate-limit';
 import { securityEvent } from '../../../lib/security-events';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign in with your email and password first.'},401,auth.headers);
  const {data,error}=await auth.client.auth.mfa.listFactors();if(error)return accountReply({error:'Unable to load authenticator settings.'},502,auth.headers);
  const {role}=await accountRole(auth.user);
  return accountReply({email:auth.user.email,role,strong:auth.strong,required:role==='owner'||role==='coach',destination:roleDestination(role),factors:data.totp.filter(f=>f.status==='verified').map(f=>({id:f.id,name:f.friendly_name||'Authenticator'}))},200,auth.headers);
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await strongAccount(request);const reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!auth.user?.email_confirmed_at)return reply({error:'Sign in first.'},401);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);

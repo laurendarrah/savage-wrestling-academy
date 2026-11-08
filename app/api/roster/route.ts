@@ -5,11 +5,11 @@ import {accountRole} from '../../../lib/access-control';
 import {academyToday} from '../../../lib/public-schedule';
 import {rosterFor, checkIn, undoCheckIn, validDate, type Scope} from '../../../lib/roster';
 import {scanCheckIn} from '../../../lib/passes';
-import {dailyReminders, quietly} from '../../../lib/notify';
 import {academyMinutes} from '../../../lib/lessons';
 import {receiveCash} from '../../../lib/cash-bookings';
 import {coachCollector, ownerCollector, type Collector} from '../../../lib/collectors';
 import {voidOffline} from '../../../lib/offline-payments';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 // collector: who taps Cash received (issue #248), kept on the payment as who collected it. A coach is named by their
@@ -26,17 +26,16 @@ async function staff(request: Request): Promise<{scope: Scope | null; actor: str
   return {scope: null, actor: null, headers: auth.headers, mfa: !!owner.mfaRequired};
 }
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const s = await staff(request), reply = (b: unknown, st = 200) => accountReply(b, st, s.headers);
   if (!s.scope) return reply({error: s.mfa ? 'Authenticator verification required.' : 'Staff access required.'}, 403);
   const today = academyToday(), date = new URL(request.url).searchParams.get('date') || today;
   if (!validDate(date)) return reply({error: 'Choose a valid date.'}, 400);
   if (s.scope.role === 'coach' && date !== today) return reply({error: 'Coaches can open today\'s roster only.'}, 403);
-  await quietly(() => dailyReminders());
   return reply({date, today, role: s.scope.role, sessions: await rosterFor(date, s.scope)});
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   const s = await staff(request), reply = (b: unknown, st = 200) => accountReply(b, st, s.headers);
   if (!s.scope || !s.actor) return reply({error: s.mfa ? 'Authenticator verification required.' : 'Staff access required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);

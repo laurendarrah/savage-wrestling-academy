@@ -56,8 +56,10 @@ To change the schema, edit `db/schema.ts`, then run `pnpm db:generate` to add a 
 | `notifications` | Automatic notices (card expiring, waiver to sign, payment recorded…), each sent once |
 | **Running the site** | |
 | `security_events` | The security log shown on `/security-log` |
-| `error_log` | Recent server errors for Site health (last 500) |
-| `auth_attempts` | Rate-limit counters |
+| `error_log` | Recent server errors for Site health (last 500), with the request id and the role of whoever asked (#274) |
+| `auth_attempts` | Rate-limit counters, one row per counter per minute (or hour) |
+
+Indexes added in #274 for the pages that read these tables most: `orders(status,kind,program,term_start)`, `orders(status,kind,item_id)` and `orders(status,paid_at)` for rosters, payments and the books; `stripe_events(order_id,outcome)` for refund dates and installments; `security_events(created_at,id)` and `family_accounts(updated_at,user_id)` for the security log's and the family list's paging. `tests/query-plans.mjs` checks the plans.
 | `recovery_snapshots`, `restore_guard`, `restore_staging` | Restore bookkeeping: snapshots taken before a restore, the guard that keeps a restore all-or-nothing, and uploaded parts of a large restore |
 | `waitlist_entries` | **No longer used.** Waitlists were removed (#210); the table and its rows stay for backups, the family data download and the security log |
 

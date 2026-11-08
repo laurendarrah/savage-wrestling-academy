@@ -1,6 +1,7 @@
 // Outgoing email (issue #72). Off until both EMAIL_API_KEY and MAIL_FROM are set; until then messages are in-app only
 // and each recipient is marked "skipped". The adapter speaks Resend's batch API; the provider is decided on #87.
 import {env} from 'cloudflare:workers';
+import {EMAIL_TIMEOUT_MS, timeoutSignal} from './net';
 
 type Env = Cloudflare.Env & {EMAIL_API_KEY?: string; MAIL_FROM?: string};
 export type Outgoing = {to: string; subject: string; text: string};
@@ -44,7 +45,9 @@ export async function sendEmailsDetailed(list: Outgoing[]): Promise<EmailResult[
     try {
       const r = await fetch('https://api.resend.com/emails/batch', {
         method: 'POST', headers: {Authorization: 'Bearer ' + e.EMAIL_API_KEY, 'Content-Type': 'application/json'},
-        body: JSON.stringify(chunk.map(m => ({from: e.MAIL_FROM, to: [m.to], subject: m.subject, text: m.text})))
+        body: JSON.stringify(chunk.map(m => ({from: e.MAIL_FROM, to: [m.to], subject: m.subject, text: m.text}))),
+        // A provider that hangs counts as unreachable after a few seconds (issue #274) instead of holding the request.
+        signal: timeoutSignal(EMAIL_TIMEOUT_MS)
       });
       result = r.ok ? {status: 'sent', reason: null} : {status: 'failed', reason: failureReason(r.status)};
     } catch { result = {status: 'failed', reason: failureReason(null)}; }

@@ -4,6 +4,7 @@ import {env} from 'cloudflare:workers';
 import {strongAccount, ownerIdentity, accountReply, sameOrigin, OWNER_EMAIL} from '../../../lib/account-auth';
 import {coachAccess} from '../../../lib/access-control';
 import {cleanProfile, profileView, saveProfile, LIMITS} from '../../../lib/coach-profile';
+import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 // Whose profile this request may touch: the coach's own, or for the owner any coach on /staff (or themselves).
@@ -21,13 +22,13 @@ async function target(request: Request, asked: unknown) {
   return {headers: auth.headers, email: staff.email, name: staff.name, actor: auth.user!.id, byOwner: false};
 }
 
-export async function GET(request: Request) {
+export const GET = withApi(GET_); async function GET_(request: Request) {
   const t = await target(request, new URL(request.url).searchParams.get('email'));
   if (t.error) return t.error;
   return accountReply({email: t.email, byOwner: t.byOwner, limits: LIMITS, profile: await profileView(t.email!, t.name!)}, 200, t.headers);
 }
 
-export async function POST(request: Request) {
+export const POST = withApi(POST_); async function POST_(request: Request) {
   if (!sameOrigin(request)) return accountReply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return accountReply({error: 'JSON required.'}, 415);
   const raw = await request.text();

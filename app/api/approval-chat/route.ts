@@ -1,6 +1,7 @@
 import {env} from 'cloudflare:workers';
 import {strongAccount,verifiedOwner,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {rateLimited} from '../../../lib/rate-limit';
+import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 async function access(request:Request,requestId:string){
  const auth=await strongAccount(request),owner=verifiedOwner(auth.user);
@@ -10,7 +11,7 @@ async function access(request:Request,requestId:string){
  if(!thread||(!owner&&thread.user_id!==auth.user.id))return {...auth,owner,thread:null,error:'Conversation not found.',status:404};
  return {...auth,owner,thread,error:null,status:200};
 }
-export async function GET(request:Request){
+export const GET = withApi(GET_); async function GET_(request:Request){
  const url=new URL(request.url),id=url.searchParams.get('requestId')??'';if(!/^[a-zA-Z0-9-]{1,80}$/.test(id))return accountReply({error:'Choose an approval conversation.'},400);
  const auth=await access(request,id);if(auth.error)return accountReply({error:auth.error},auth.status,auth.headers);
  const before=url.searchParams.get('before')??'';if(before&&!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z\|[a-zA-Z0-9-]{1,80}$/.test(before))return accountReply({error:'Invalid message cursor.'},400,auth.headers);
@@ -19,7 +20,7 @@ export async function GET(request:Request){
  const result=await query.all<{id:string;sender_role:string;body:string;created_at:string}>(),more=result.results.length>100,rows=result.results.slice(0,100),oldest=rows.at(-1);
  return accountReply({wrestlerName:auth.thread!.wrestler_name,messages:rows.reverse(),next:more&&oldest?oldest.created_at+'|'+oldest.id:null},200,auth.headers);
 }
-export async function POST(request:Request){
+export const POST = withApi(POST_); async function POST_(request:Request){
  if(!sameOrigin(request))return accountReply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return accountReply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>10000)return accountReply({error:'Message is too long.'},413);let input;try{input=JSON.parse(raw)}catch{return accountReply({error:'Invalid request.'},400)}

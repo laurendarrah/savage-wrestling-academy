@@ -44,7 +44,7 @@ const checks=(name,chosen=[])=>PROGRAMS.map(([v,n])=>`<label><input type="checkb
 const picked=(root,name)=>[...root.querySelectorAll(`input[name="${name}"]:checked`)].map(i=>i.value);
 const say=t=>{$('status').textContent=t};
 let state=null;
-async function call(body){const r=await fetch('/api/staff',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error(data.error||'Request failed.');return data}
+async function call(body){const r=await fetch('/api/staff',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error((data.error||'Request failed.')+(data.requestId?' (reference '+String(data.requestId).slice(0,8)+')':''));return data}
 function profileBits(s){return `${s.bio?`<p class="bio">${esc(s.bio)}</p>`:'<p class="bio muted">No profile yet. The coach can add a bio from coach home, or you can.</p>'}${s.specialties.length?`<ul class="chips">${s.specialties.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}`}
 function coachCard(s){
  const upcoming=s.upcomingLessons?`<p class="warn">${s.upcomingLessons} booked lesson${s.upcomingLessons===1?'':'s'} still to come.</p>`:'';
