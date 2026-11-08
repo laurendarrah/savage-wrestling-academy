@@ -24,7 +24,7 @@ const {ownerTopbar, ownerSidebar} = load('lib/owner-shell.ts');
 // ---------- Owner dashboard ----------
 // Only self-hosted fonts: the Inter label font was never loaded (it fell back to Arial at 9px).
 assert.doesNotMatch(portal + shellCss, /fonts\.googleapis|\bInter\b/, 'no Inter and no Google Fonts request');
-assert.match(shellCss, /\.os-brand small\{display:block;margin-top:8px;font:700 12px\/1\.2 var\(--os-body\);/, 'the brand label is Barlow at a readable size');
+assert.match(shellCss, /\.os-brand small\{display:block;margin-top:4px;font:700 11px\/1\.2 var\(--os-body\);/, 'the brand label is Barlow at a readable size');
 assert.match(shellCss, /--os-body:Barlow,/);
 
 // The dashboard gets the owner shell but not savage.css, so it carries the savage.css tokens under the same names.
@@ -35,8 +35,13 @@ assert.deepEqual(mirrored, shared, 'the dashboard uses the same program and warn
 assert.match(portal, /\.notice\{[^}]*background:var\(--swa-warn-bg\);border:1px solid var\(--swa-warn-line\);[^}]*color:var\(--swa-warn-ink\)/, 'amber notes use the warning tokens');
 assert.match(read('public/responsive.css'), /\.event\.cal-advanced,[^{]*\{background:var\(--swa-prog-advance,#000\);color:var\(--swa-prog-advance-ink,#fff\)/, 'calendar cards use the program tokens');
 
-// Calendar cards are read, not pressed: they keep the body font, so "6:00 PM–7:30 PM" no longer breaks over four lines.
-assert.match(portal, /main button:not\(\.toollink\):not\(\.tool\):not\(\.event\):not\(\.mobile-practice\),main a\.button\{font-family:'Barlow Condensed'/);
+// Buttons are Barlow sentence case; only the primary is condensed capitals (issue #280). Calendar cards are read, not
+// pressed: they keep their own look, so "6:00 PM–7:30 PM" never breaks over four lines.
+assert.match(portal, /main button:not\(\.toollink\):not\(\.tool\):not\(\.event\):not\(\.mobile-practice\),main a\.button\{font-family:Barlow,[^}]*text-transform:none/);
+assert.match(portal, /main button\.primary,main a\.button\.primary,main \.primary\{font-family:'Barlow Condensed'[^}]*text-transform:uppercase/);
+// The dashboard's title is a row on the ground, not a textured band with a watermark; h2 is Barlow sentence case.
+assert.doesNotMatch(portal, /--texture|main \.title::after|savage-logo-256/);
+assert.match(portal, /\nh2\{font:700 20px\/1\.2 Barlow,[^}]*text-transform:none/);
 assert.match(portal, /\.dayname\{[^}]*font-size:12px;[^}]*color:var\(--gray\)\}/, 'day names are dark enough to read');
 
 // Run the dashboard's own helpers.

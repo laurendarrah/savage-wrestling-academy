@@ -4,7 +4,6 @@
    The dashboard does not load savage.css, so the colors below repeat its tokens as fallbacks. */
 :root{--os-red:var(--swa-red,#C4222C);--os-ink:var(--swa-ink,#111113);--os-muted:var(--swa-muted,#55585F);--os-line:var(--swa-line,#E4E6EA);
   --os-hair:var(--swa-hair,rgba(17,17,19,.08));--os-ground:var(--swa-ground,#F3F4F6);--os-shadow:var(--swa-shadow,0 1px 2px rgba(17,17,19,.05),0 10px 28px -12px rgba(17,17,19,.16));
-  --os-texture:radial-gradient(90% 140% at 100% 0%,rgba(196,34,44,.22),transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 1px,transparent 1px 10px),linear-gradient(180deg,#141416,#0D0D0F);
   --os-side:264px;--os-body:Barlow,'Helvetica Neue',Arial,sans-serif;--os-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif}
 
 /* Moving between owner pages: the sidebar and header keep still while the middle cross-fades. Browsers without
@@ -22,9 +21,8 @@ html body .os-skip{position:absolute;left:12px;top:-80px;z-index:100;padding:12p
 html body .os-skip:focus{top:12px}
 
 html body .os{display:grid;grid-template-columns:var(--os-side) minmax(0,1fr);min-height:100vh}
-/* The page's own content. Clipped sideways, so a page's edge-to-edge black heading band stops at the sidebar. */
+/* The page's own content, clipped sideways. Owner pages open with the title row (lib/page-chrome.ts), never the band. */
 html body .os-work{min-width:0;overflow-x:clip}
-html body .os-work .swa-head::before{width:300vw}
 html body .os-work main h1[tabindex="-1"]:focus{outline:none}
 /* Pages shared with coaches (the roster, curricula) link coaches back to Coach home; the owner has the sidebar. */
 html body .os-work #home.swa-back{display:none}
@@ -32,26 +30,29 @@ html body .os-work #home.swa-back{display:none}
 @media (min-width:901px){html body:not([data-swa-page="/"]) .os-work>main{padding-left:32px;padding-right:32px}}
 
 /* ---------- Sidebar ---------- */
+/* Flat dark surface (the dark set from savage.css): no texture, no watermark; depth comes from the lighter current
+   item. Items are 44px tall, group labels 12px, and a count can sit at an item's right edge (.os-badge). */
 html body .os-side{position:sticky;top:0;z-index:40;height:100vh;height:100dvh;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;
-  padding:22px 14px 18px;background:var(--os-texture);background-color:#0D0D0F;color:#fff;font:15px/1.4 var(--os-body);scrollbar-width:thin;scrollbar-color:#3A3B40 transparent}
-html body .os-side-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:0 8px}
-html body .os-brand{display:flex;flex-direction:column;align-items:flex-start;gap:8px;color:#fff;text-decoration:none;font:italic 800 36px/1 var(--os-display);letter-spacing:1px}
+  padding:24px 12px 16px;background:var(--swa-dark-0,#0D0D0F);border-right:1px solid var(--swa-dark-line,rgba(255,255,255,.08));color:var(--swa-dark-text,#ECEDEF);font:15px/1.4 var(--os-body);scrollbar-width:thin;scrollbar-color:#3A3B40 transparent}
+html body .os-side-top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px}
+html body .os-brand{display:flex;align-items:center;gap:12px;min-height:44px;color:#fff;text-decoration:none;font:italic 900 24px/1 var(--os-display);letter-spacing:-.3px}
 html body .os-brand:hover{color:#fff}
-html body .os-brand img{display:block;width:56px;height:56px}
-html body .os-brand small{display:block;margin-top:8px;font:700 12px/1.2 var(--os-body);letter-spacing:2.4px;font-style:normal;color:#fff}
-html body .os-redline{height:4px;width:38px;background:var(--os-red);margin:18px 8px 8px}
+html body .os-brand img{display:block;flex:none;width:40px;height:40px}
+html body .os-brand small{display:block;margin-top:4px;font:700 11px/1.2 var(--os-body);letter-spacing:1.8px;font-style:normal;color:var(--swa-dark-muted,#A6A9B0)}
+html body .os-redline{height:3px;width:32px;background:var(--os-red);margin:16px 8px 0}
 html body .os-list{list-style:none;margin:0;padding:0}
-html body .os-list li{margin:1px 0}
-html body .os-nav a,html body .os-family-drawer a{display:flex;align-items:center;gap:12px;min-height:38px;padding:6px 10px 6px 9px;border-left:3px solid transparent;border-radius:6px;
-  color:#AEB2BA;font:600 15px/1.25 var(--os-body);letter-spacing:0;text-transform:none;text-decoration:none;overflow-wrap:normal}
+html body .os-list li{margin:0}
+html body .os-nav a,html body .os-family-drawer a{display:flex;align-items:center;gap:12px;min-height:44px;padding:4px 12px 4px 9px;border-left:3px solid transparent;border-radius:6px;
+  color:var(--swa-dark-muted,#A6A9B0);font:600 15px/1.25 var(--os-body);letter-spacing:0;text-transform:none;text-decoration:none;overflow-wrap:normal}
 html body .os-nav a:hover,html body .os-family-drawer a:hover{color:#fff;background:rgba(255,255,255,.06)}
-html body .os-nav a[aria-current=page]{color:#fff;background:#292A2F;border-left-color:var(--os-red)}
+html body .os-nav a[aria-current=page]{color:#fff;background:var(--swa-dark-2,#222327);border-left-color:var(--os-red)}
 html body .os-nav svg{flex:none;display:block;width:18px;height:18px}
+html body .os-badge{flex:none;margin-left:auto;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--os-red);color:#fff;font:700 12px/22px var(--os-body);text-align:center;letter-spacing:0}
 html body .os-side :focus-visible{outline:3px solid #E25C63;outline-offset:2px}
-html body .os-group{margin:16px 0 4px;padding:0 12px;font:700 11px/1.2 var(--os-body);letter-spacing:1.8px;text-transform:uppercase;color:#80848E}
-html body .os-fold{margin-top:12px}
-html body .os-fold summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:36px;padding:0 12px;border-radius:6px;cursor:pointer;
-  font:700 11px/1.2 var(--os-body);letter-spacing:1.8px;text-transform:uppercase;color:#80848E}
+html body .os-group{margin:24px 0 4px;padding:0 12px;font:700 12px/1.2 var(--os-body);letter-spacing:1.6px;text-transform:uppercase;color:var(--swa-muted-2,#80848E)}
+html body .os-fold{margin-top:16px}
+html body .os-fold summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:0 12px;border-radius:6px;cursor:pointer;
+  font:700 12px/1.2 var(--os-body);letter-spacing:1.6px;text-transform:uppercase;color:var(--swa-muted-2,#80848E)}
 html body .os-fold summary::-webkit-details-marker{display:none}
 html body .os-fold summary::after{content:"";width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px)}
 html body .os-fold[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
@@ -102,7 +103,6 @@ html body .os-panel hr{width:auto;border:0;border-top:1px solid var(--os-line);m
   html body .os-close{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;min-height:44px;padding:0;margin:0;border:1px solid #494A50;border-radius:8px;
     background:#292A2F;color:#fff;box-shadow:none}
   html body .os-close:hover{border-color:#fff;color:#fff}
-  html body .os-brand{font-size:30px}html body .os-brand img{width:44px;height:44px}
   html body .os-nav a,html body .os-family-drawer a{min-height:44px}
   html body .os-family-drawer{display:block;margin-top:8px}
   html body .os-top{min-height:60px;padding:8px 16px;gap:8px 12px;flex-wrap:wrap;background:#0D0D0F;color:#fff;border-bottom:1px solid rgba(255,255,255,.06)}

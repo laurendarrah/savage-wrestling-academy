@@ -56,8 +56,10 @@ const FAMILY_LINKS = '<a href="/welcome">Welcome page</a> <a href="/team">Team p
 
 // The sidebar: brand, every destination in its group (the folded group opens when it holds the current page), and on
 // phones the "What families see" links, since the header there has room only for the menu, logo and Account.
-export function ownerSidebar(current: string | null) {
-  const link = (href: string, label: string) => `<li><a href="${esc(href)}"${href === current ? ' aria-current="page"' : ''}>${svg(OWNER_ICONS[href] ?? '')}<span>${esc(label)}</span></a></li>`;
+// `badges` puts a count beside a destination (.os-badge: unread messages, cash due), by href; zero shows nothing.
+export function ownerSidebar(current: string | null, badges: Record<string, number> = {}) {
+  const badge = (href: string) => badges[href] ? `<span class="os-badge" aria-label="${esc(badges[href])} waiting">${esc(badges[href] > 99 ? '99+' : badges[href])}</span>` : '';
+  const link = (href: string, label: string) => `<li><a href="${esc(href)}"${href === current ? ' aria-current="page"' : ''}>${svg(OWNER_ICONS[href] ?? '')}<span>${esc(label)}</span>${badge(href)}</a></li>`;
   const groups = OWNER_NAV.map((g, n) => {
     const list = `<ul class="os-list">${g.items.map(i => link(i.href, i.label)).join('')}</ul>`;
     if (!g.label) return list;
@@ -65,7 +67,7 @@ export function ownerSidebar(current: string | null) {
     return `<p class="os-group" id="swa-os-g${n}">${esc(g.label)}</p>${list.replace('<ul class="os-list">', `<ul class="os-list" aria-labelledby="swa-os-g${n}">`)}`;
   }).join('');
   return `<div class="os-side" id="swa-os-side" data-os-pages="${OWNER_SHELL_PAGES.join(' ')}">`
-    + '<div class="os-side-top"><a class="os-brand" href="/"><img src="/brand/savage-logo-128.png" alt="" width="56" height="56"><span>SAVAGE<small>WRESTLING ACADEMY</small></span></a>'
+    + '<div class="os-side-top"><a class="os-brand" href="/"><img src="/brand/savage-logo-128.png" alt="" width="40" height="40"><span>SAVAGE<small>WRESTLING ACADEMY</small></span></a>'
     + `<button type="button" class="os-close" id="swa-os-close" aria-label="Close menu">${svg('<path d="M18 6L6 18M6 6l12 12"/>', 22)}</button></div>`
     + '<div class="os-redline"></div>'
     + `<nav class="os-nav" id="swa-os-nav" aria-label="Owner pages">${groups}</nav>`

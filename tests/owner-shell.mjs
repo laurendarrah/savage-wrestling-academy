@@ -107,10 +107,12 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
   assert.doesNotMatch(html, /class="shell"|<aside|id="navToggle"/);
   assert.match(html, /<button type="button" class="os-item" onclick="closeOwnerTools\(\);reloadAcademy\(\)">Refresh saved data<\/button>/);
 }
-// A tool page keeps its heading and intro in the black heading band, inside the shell.
+// A tool page opens with the title row inside the shell: the heading, the intro's first sentence, and the rest behind
+// "How this works" (issue #280). No owner page carries the black band.
 {
   const {html} = await open('/payments');
-  assert.match(html, /<main id="swa-main"><div class="swa-head"><h1>Payments<\/h1><p class="muted">Every payment/);
+  assert.match(html, /<main id="swa-main"><div class="swa-title"><div class="swa-title__text"><h1>Payments<\/h1><p class="muted">Every payment, online and offline\.<\/p><\/div><\/div><details class="how"><summary>How this works<\/summary><p>Offline payments count/);
+  for (const path of Object.keys(ownerRoutes)) assert.doesNotMatch((await open(path)).html, /class="swa-head"/, path + ' has no band');
   assert.match(html, /href="\/savage\.css"><link rel="stylesheet" href="\/owner-shell\.css">/, 'the shell styles load after savage.css');
 }
 
