@@ -16,11 +16,11 @@ export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: 
 export type CashInfo = {bookingId: string; status: 'due' | 'paid'; cents: number; orderId: string | null; collectedAt: string | null; collectedBy: string | null};
 export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]; checkInBlocked: string | null; cash: CashInfo | null};
 export const PAY_AT_ACADEMY = 'Pay at the academy';
-// The cash booking key for a session: walk-ins name the program and date, extra practices their id. A program has one
-// practice a day, so the start time is left out (issue #272): the owner moving a practice's time keeps its walk-ins and
-// cash bookings on the roster. Stored order and booking item ids still carry the start they were booked with.
+// The cash booking key for a session: walk-ins name the program and date, extra practices and events (#273) their id. A
+// program has one practice a day, so the start time is left out (issue #272): the owner moving a practice's time keeps its
+// walk-ins and cash bookings on the roster. Stored order and booking item ids still carry the start they were booked with.
 export function cashKey(session: Session) {
-  return session.type === 'practice' ? `walkin|${session.program}:${session.date}` : session.type === 'live' ? `live|${session.key.split(':')[1]}` : null;
+  return session.type === 'practice' ? `walkin|${session.program}:${session.date}` : `${session.type}|${session.key.split(':')[1]}`;
 }
 // The same key from a cash booking row, for matching a booking to a session.
 export const cashBookingKey = (b: {kind: string; program: string | null; item_id: string; session_date: string}) =>
@@ -112,12 +112,15 @@ async function entitled(session: Session): Promise<Raw[]> {
     const [, id] = session.key.split(':');
     add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM orders WHERE status='paid' AND kind=? AND item_id=? AND EXISTS (SELECT 1 FROM json_each(orders.dates) WHERE value=?)`)
       .bind(session.type, id, d).all<any>()).results, session.type === 'live' ? 'Paid' : 'Registered');
-    if (session.type === 'live')
-      add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM cash_bookings WHERE status='due' AND kind='live' AND item_id=? AND session_date=?`)
-        .bind(id, d).all<any>()).results, PAY_AT_ACADEMY);
+    // Booked to pay cash at the academy: an extra practice on its date, or a camp, clinic or event on each day the
+    // booking covers (#273).
+    add((await env.DB!.prepare(`SELECT user_id,wrestler_id,wrestler_name FROM cash_bookings WHERE status='due' AND kind=? AND item_id=? AND ${CASH_ON_DAY}`)
+      .bind(session.type, id, d, d).all<any>()).results, PAY_AT_ACADEMY);
   }
   return rows;
 }
+// A cash booking is on a day when it is its session date or one of its dates (a full camp covers several).
+const CASH_ON_DAY = "(session_date=? OR EXISTS (SELECT 1 FROM json_each(cash_bookings.dates) WHERE value=?))";
 
 export async function rosterFor(date: string, scope: Scope) {
   const state = await academyState();
@@ -134,7 +137,7 @@ export async function rosterFor(date: string, scope: Scope) {
     env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
     env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date),
     env.DB!.prepare(`SELECT b.id,b.kind,b.program,b.item_id,b.session_date,b.user_id,b.wrestler_id,b.amount_cents,b.status,b.order_id,o.paid_at,${collectorNameSql('o')} AS collected_by
-      FROM cash_bookings b LEFT JOIN orders o ON o.id=b.order_id AND o.status='paid' WHERE b.session_date=? AND b.status IN ('due','paid')`).bind(date)
+      FROM cash_bookings b LEFT JOIN orders o ON o.id=b.order_id AND o.status='paid' WHERE (b.session_date=? OR EXISTS (SELECT 1 FROM json_each(b.dates) WHERE value=?)) AND b.status IN ('due','paid')`).bind(date, date)
   ]);
   const families = new Map<string, any>((fams.results as any[]).map(r => [r.user_id, {email: r.email, ...JSON.parse(r.payload)}]));
   const review = new Map<string, any>((reviews.results as any[]).map(r => [`${r.user_id}|${r.wrestler_id}`, r]));

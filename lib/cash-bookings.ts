@@ -1,8 +1,12 @@
 // Pay cash at the academy (issue #248, decided by Lauren on November 7). A family booking a walk-in or an extra practice
 // (Friday Night Live and the like, added to the decision the same day) can choose to pay cash at the academy instead of
-// paying online. The booking uses exactly the same checks and price as online checkout (lib/quotes.ts); the amount due is
-// worked out on the server when the booking is made and never comes from the browser.
+// paying online. Camps, clinics and events joined them in #273, so a family is never left with only a disabled button.
+// The booking uses exactly the same checks and price as online checkout (lib/quotes.ts); the amount due is worked out on
+// the server when the booking is made and never comes from the browser.
 //
+// - A camp booking covers every day the family chose (`dates`): all of them for the full camp, one for a single day.
+//   session_date is the first day. An unpaid camp booking holds a seat on each of its days (lib/capacity.ts) and puts
+//   the wrestler on each day's roster (lib/roster.ts), so cash and online bookings share one seat limit.
 // - A booking is 'due' until the coach or the owner taps Cash received. That writes an ordinary offline payment to orders
 //   (source 'offline', method cash, the same row lib/offline-payments.ts writes) and links it here, so it counts as paid
 //   everywhere orders are read: rosters, the family page, Payments and its spreadsheet, and Income and expenses. The
@@ -19,17 +23,24 @@ import {academyMinutes} from './lessons';
 import {notify, noticePaymentRecorded, quietly} from './notify';
 import {dayTime, academyDayStart} from './datetime';
 import {academyState, sessionsOn, canSee, cashKey, cashBookingKey, type Scope} from './roster';
+import {seatHolders} from './capacity';
 import {collectorNameSql, type Collector} from './collectors';
 export type {Collector} from './collectors';
 
-export const CASH_KINDS = ['walkin', 'live'] as const;
+export const CASH_KINDS = ['walkin', 'live', 'event'] as const;
 export type CashKind = typeof CASH_KINDS[number];
 export type CashRow = {
   id: string; user_id: string; email: string; wrestler_id: string; wrestler_name: string; kind: CashKind; program: string | null; item_id: string; item_label: string;
   session_date: string; start_time: string | null; end_time: string | null; base_cents: number; discount_cents: number; amount_cents: number; pricing: string;
   dedupe_key: string; status: 'due' | 'paid' | 'canceled'; order_id: string | null; created_at: string; updated_at: string;
-  canceled_at: string | null; canceled_by: string | null; cancel_reason: string | null;
+  canceled_at: string | null; canceled_by: string | null; cancel_reason: string | null; dates: string;
 };
+// The days a booking covers. Rows from before #273 carry '[]' until the migration fills them, so the session date stands in.
+export const bookingDates = (b: Pick<CashRow, 'session_date' | 'dates'>): string[] => {
+  try { const d = JSON.parse(b.dates || '[]'); return Array.isArray(d) && d.length ? d : [b.session_date]; } catch { return [b.session_date]; }
+};
+// What the family is told to bring the cash to: "the practice", "the session" or, for a camp, "the first day".
+export const whereToPay = (kind: CashKind) => kind === 'walkin' ? 'the practice' : kind === 'live' ? 'the session' : 'the academy on the first day';
 type Result = {status: number; error?: string; extra?: Record<string, unknown>; [k: string]: unknown};
 
 const now = () => new Date().toISOString();
@@ -44,45 +55,61 @@ export function beforeStart(b: Pick<CashRow, 'session_date' | 'start_time'>, tod
 
 // What a family, a coach or the owner is shown for a booking. "Pay at the academy: $40.00 due" is the family's wording.
 export function cashView(b: CashRow, today = academyToday(), minutes = academyMinutes()) {
-  return {id: b.id, kind: b.kind, program: b.program, itemId: b.item_id, item: b.item_label, date: b.session_date, start: b.start_time, end: b.end_time,
+  const cancellable = b.status === 'due' && beforeStart(b, today, minutes), past = b.session_date < today;
+  return {id: b.id, kind: b.kind, program: b.program, itemId: b.item_id, item: b.item_label, date: b.session_date, start: b.start_time, end: b.end_time, dates: bookingDates(b),
     wrestlerId: b.wrestler_id, wrestler: b.wrestler_name, amountCents: b.amount_cents, status: b.status, orderId: b.order_id,
     label: b.status === 'due' ? `Pay at the academy: ${dollars(b.amount_cents)} due` : b.status === 'paid' ? 'Paid at the academy' : 'Canceled',
-    cancellable: b.status === 'due' && beforeStart(b, today, minutes), past: b.session_date < today};
+    cancellable, past,
+    // Why an unpaid booking can no longer be canceled here (#273), in the family's words; null while it still can be.
+    cancelBlocked: b.status === 'due' && !cancellable ? `${sessionNoun(b.kind)} has started, so this can no longer be canceled. Ask the academy if you need to change it.` : null};
 }
+const sessionNoun = (kind: CashKind) => kind === 'walkin' ? 'The practice' : kind === 'live' ? 'The session' : 'The camp or event';
 
-// Book a walk-in (source 'membership', plan 'walkin', from /register) or an extra practice (source 'booking', type
-// 'live', from /book) to pay cash at the academy. Every booking check runs in lib/quotes.ts, as for online checkout.
+// Book a walk-in (source 'membership', plan 'walkin', from /register), an extra practice (source 'booking', type 'live')
+// or a camp, clinic or event (source 'booking', type 'event', from /booking) to pay cash at the academy. Every booking
+// check runs in lib/quotes.ts, as for online checkout: card, waiver, approval, the event's seat limit and its price.
 export async function bookCash(user: {id: string; email: string}, input: any): Promise<Result> {
-  if (!input || typeof input !== 'object') return {status: 400, error: 'Choose a walk-in or an extra practice.'};
+  if (!input || typeof input !== 'object') return {status: 400, error: 'Choose a walk-in, an extra practice or an event.'};
   // Only the fields the quote needs are passed on. Team codes are for monthly memberships only, so none is sent.
   const quote = input.source === 'membership' && input.plan === 'walkin'
     ? await quoteMembership(user.id, {wrestlerId: input.wrestlerId, program: input.program, plan: 'walkin', date: input.date, practiceId: input.practiceId})
     : input.source === 'booking' && input.type === 'live'
       ? await quoteBooking(user.id, {type: 'live', wrestlerId: input.wrestlerId, id: input.id, date: input.date})
-      : null;
-  if (!quote) return {status: 400, error: 'Paying cash at the academy is for walk-ins and extra practices.'};
+      : input.source === 'booking' && input.type === 'event'
+        ? await quoteBooking(user.id, {type: 'event', wrestlerId: input.wrestlerId, id: input.id, option: input.option})
+        : null;
+  if (!quote) return {status: 400, error: 'Paying cash at the academy is for walk-ins, extra practices, camps, clinics and events.'};
   if (!quote.ok) return {status: quote.status, error: quote.error, extra: quote.extra};
   const charge = quote.charge;
-  if (!charge || !(CASH_KINDS as readonly string[]).includes(charge.kind) || charge.dates.length !== 1)
+  if (!charge || !(CASH_KINDS as readonly string[]).includes(charge.kind) || charge.dates.length < 1 || (charge.kind !== 'event' && charge.dates.length !== 1))
     return {status: 409, error: 'This has no price set yet, so it can’t be booked here. Contact the academy.'};
-  const r: any = quote.review, slot = charge.kind === 'walkin' ? r.practice : r;
-  const id = crypto.randomUUID(), at = now(), date = charge.dates[0];
+  const r: any = quote.review, dates = [...charge.dates].sort(), date = dates[0];
+  // The first day's time: the practice's, the extra practice's, or the camp day's own time when the owner set one (#189).
+  const slot = charge.kind === 'walkin' ? r.practice : charge.kind === 'live' ? r : (r.schedule ?? []).find((x: any) => x.date === date) ?? null;
+  const id = crypto.randomUUID(), at = now();
   const family = await env.DB!.prepare('SELECT email FROM family_accounts WHERE user_id=?').bind(user.id).first<{email: string}>();
   const email = family?.email || user.email;
   let inserted;
   try {
-    inserted = await env.DB!.prepare(`INSERT INTO cash_bookings(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,session_date,start_time,end_time,base_cents,discount_cents,amount_cents,pricing,dedupe_key,status,created_at,updated_at)
-      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'due',?,? WHERE NOT EXISTS (SELECT 1 FROM orders WHERE dedupe_key=? AND status IN ('pending','paid'))`)
+    inserted = await env.DB!.prepare(`INSERT INTO cash_bookings(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,session_date,start_time,end_time,base_cents,discount_cents,amount_cents,pricing,dedupe_key,status,created_at,updated_at,dates)
+      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'due',?,?,? WHERE NOT EXISTS (SELECT 1 FROM orders WHERE dedupe_key=? AND status IN ('pending','paid'))`)
       .bind(id, user.id, email, quote.wrestler.id, quote.wrestler.name, charge.kind, charge.program, charge.itemId, charge.itemLabel, date,
-        slot?.start ?? null, slot?.end ?? null, charge.baseCents, charge.discountCents, charge.amountCents, JSON.stringify(charge.pricing), charge.dedupeKey, at, at, charge.dedupeKey).run();
+        slot?.start ?? null, slot?.end ?? null, charge.baseCents, charge.discountCents, charge.amountCents, JSON.stringify(charge.pricing), charge.dedupeKey, at, at, JSON.stringify(dates), charge.dedupeKey).run();
   } catch {
     return {status: 409, error: `${quote.wrestler.name} is already booked for this to pay at the academy. See your family account.`};
   }
   if (!changes(inserted)) return {status: 409, error: 'This is already paid, or an online payment for it was started. Check your family account.'};
+  // Two families booking the last camp seat at once: the quote saw a seat for both, so the booking's place in line is
+  // checked once it is written, as checkout does (lib/capacity.ts). The later one is removed and told the event is full.
+  const slots = charge.kind === 'event' ? Number((charge.pricing as any).slots) : 0;
+  if (slots > 0 && !(await cashWithinCapacity(id, charge.itemId, dates, slots))) {
+    await env.DB!.prepare('DELETE FROM cash_bookings WHERE id=?').bind(id).run();
+    return {status: 409, error: 'This event just filled up. Nothing was booked.'};
+  }
   const b = (await env.DB!.prepare('SELECT * FROM cash_bookings WHERE id=?').bind(id).first<CashRow>())!;
   await quietly(() => notify([{userId: user.id, email, kind: 'cash_booking', dedupeKey: `cash-booked:${id}`, link: '/family#purchaseHistory',
     subject: `Booked: ${b.item_label}`,
-    body: `${b.wrestler_name} is booked for ${b.item_label}, ${dayTime(b.session_date, b.start_time)}. Pay at the academy: ${dollars(b.amount_cents)} due, in cash at the practice. To cancel, use your family account before the practice starts.`}]));
+    body: `${b.wrestler_name} is booked for ${b.item_label}, ${dayTime(b.session_date, b.start_time)}. Pay at the academy: ${dollars(b.amount_cents)} due, in cash at ${whereToPay(b.kind)}. To cancel, use your family account before it starts.`}]));
   return {status: 200, booking: cashView(b)};
 }
 
@@ -104,11 +131,16 @@ export async function cancelByFamily(userId: string, bookingId: unknown): Promis
   if (!b) return {status: 404, error: 'Booking not found.'};
   if (b.status === 'paid') return {status: 409, error: 'This is already paid. Ask the academy if you need a refund.'};
   if (b.status === 'canceled') return {status: 409, error: 'This booking is already canceled.'};
-  if (!beforeStart(b)) return {status: 409, error: 'This practice has already started, so it can’t be canceled here. Contact the academy.'};
+  if (!beforeStart(b)) return {status: 409, error: `${sessionNoun(b.kind)} has already started, so it can’t be canceled here. Contact the academy.`};
   const at = now();
   const r = await env.DB!.prepare("UPDATE cash_bookings SET status='canceled',canceled_at=?,canceled_by=?,cancel_reason='Canceled by the family',updated_at=? WHERE id=? AND status='due'")
     .bind(at, userId, at, b.id).run();
-  return changes(r) ? {status: 200} : {status: 409, error: 'This booking changed. Refresh the page.'};
+  if (!changes(r)) return {status: 409, error: 'This booking changed. Refresh the page.'};
+  // The family's Messages get the cancellation too (#273), so there is a record of it beside the "Booked" notice.
+  await quietly(() => notify([{userId: b.user_id, email: b.email, kind: 'cash_booking_canceled', dedupeKey: `cash-canceled:${b.id}`, link: '/family#purchaseHistory',
+    subject: `Booking canceled: ${b.item_label}`,
+    body: `You canceled ${b.wrestler_name}'s booking for ${b.item_label}, ${dayTime(b.session_date, b.start_time)}. Nothing was charged and nothing is owed. To book again, use the calendar.`}]));
+  return {status: 200};
 }
 
 // The owner cancels an unpaid booking: nothing is charged, the spot is freed and the family gets a notice.
@@ -149,7 +181,7 @@ export async function receiveCash(bookingId: unknown, by: Collector, scope: Scop
   try {
     res = await env.DB!.batch([
       env.DB!.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
-        SELECT ?,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,json_array(session_date),base_cents,discount_cents,amount_cents,'usd',?,?,'paid',dedupe_key,0,?,?,?,NULL,NULL,'offline'
+        SELECT ?,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,CASE WHEN json_array_length(dates)>0 THEN dates ELSE json_array(session_date) END,base_cents,discount_cents,amount_cents,'usd',?,?,'paid',dedupe_key,0,?,?,?,NULL,NULL,'offline'
         FROM cash_bookings WHERE id=? AND status='due'`)
         .bind(id, JSON.stringify(pricing), JSON.stringify({offline: true, cashBooking: b.id, recordedBy: by.id, at}), at, at, at, b.id),
       env.DB!.prepare("UPDATE cash_bookings SET status='paid',order_id=?,updated_at=? WHERE id=? AND status='due' AND EXISTS (SELECT 1 FROM orders WHERE id=?)").bind(id, at, b.id, id),
@@ -167,6 +199,13 @@ export async function receiveCash(bookingId: unknown, by: Collector, scope: Scop
 // A session on the coach's check-in list today (canSee) is the one this booking is for.
 async function coachSees(b: CashRow, scope: Scope, today: string) {
   return sessionsOn(await academyState(), today).some(s => canSee(scope, s) && cashKey(s) === cashBookingKey(b));
+}
+
+// After writing a booking: does it rank within the seat limit on every day it covers, counting paid orders, checkouts in
+// progress and the other unpaid cash bookings (seatHolders in lib/capacity.ts lists all three, oldest first)?
+async function cashWithinCapacity(bookingId: string, eventId: string, dates: string[], slots: number) {
+  const holders = await seatHolders(eventId, dates);
+  return dates.every(d => { const i = (holders.get(d) ?? []).indexOf(bookingId); return i >= 0 && i < slots; });
 }
 
 // Unpaid bookings for the owner to follow up or cancel: earlier sessions first, then today and later. With them, the

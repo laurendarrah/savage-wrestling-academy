@@ -217,7 +217,7 @@ async function booking({orders = []}) {
   assert.equal(el('description').textContent, 'Mon, Nov 16 · Tue, Nov 17 · Time to be announced · $160.00', 'an event saved without times says so (issue #189)');
   assert.equal(el('wrestlerStatus').textContent, 'Sam Example is not registered yet.');
   assert.doesNotMatch(html, /← Calendar|Review only/, 'no own back link and no disclaimer first');
-  assert.equal((html.match(/Online payment isn’t open yet/g) || []).length, 1, 'payment is explained once, at review');
+  assert.equal((html.match(/Online payment isn’t open yet/g) || []).length, 0, 'payment is explained at review, in the server’s words; no disabled "isn’t open yet" button (#273)');
 }
 {
   const {el} = await booking({orders: [{kind: 'event', item_id: 'camp', wrestler_id: 'w-1', status: 'paid', dates: ['2026-11-16', '2026-11-17']}]});

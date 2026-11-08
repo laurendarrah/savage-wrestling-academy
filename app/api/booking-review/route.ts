@@ -4,6 +4,7 @@ import {strongAccount,sameOrigin,accountReply} from '../../../lib/account-auth';
 import {quoteBooking} from '../../../lib/quotes';
 import {checkoutKinds} from '../../../lib/checkout-config';
 import {withApi} from '../../../lib/api';
+import {CASH_KINDS} from '../../../lib/cash-bookings';
 export const dynamic='force-dynamic';
 export const POST = withApi(POST_); async function POST_(request:Request){
  const auth=await strongAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
@@ -14,6 +15,6 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large.'},413);let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}
  const kinds=checkoutKinds(),quote=await quoteBooking(auth.user.id,input,{checkoutKinds:kinds});
  if(!quote.ok)return reply({error:quote.error,...(quote.extra??{})},quote.status);
- // Friday Night Live and other extra practices with a price can be booked to pay cash at the academy (issue #248).
- return reply({review:quote.review,paymentsEnabled:!!quote.charge&&kinds.has(quote.charge.kind),cashEnabled:quote.charge?.kind==='live'});
+ // Extra practices (issue #248) and camps, clinics and events (#273) with a price can be booked to pay cash at the academy.
+ return reply({review:quote.review,paymentsEnabled:!!quote.charge&&kinds.has(quote.charge.kind),cashEnabled:!!quote.charge&&(CASH_KINDS as readonly string[]).includes(quote.charge.kind)});
 }

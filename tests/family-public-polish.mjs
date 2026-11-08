@@ -79,7 +79,7 @@ const json = body => ({ok: true, status: 200, json: async () => body});
 // parent has typed. The stand-in server holds each answer until the test releases it, as in tests/page-races.mjs.
 {
   const html = read('app/family/screen.html');
-  const fieldset = html.match(/<form id="familyForm"><fieldset id="familyFields" disabled>([\s\S]*?)<\/fieldset><\/form>/);
+  const fieldset = html.match(/<form id="familyForm" novalidate><fieldset id="familyFields" disabled>([\s\S]*?)<\/fieldset><\/form>/);
   assert.ok(fieldset, 'the profile form starts disabled');
   for (const id of ['homeAddress', 'homeCity', 'homeState', 'homeZip', 'emergencyContactName', 'emergencyContactPhone', 'wrestlers', 'save', 'cancelEdit']) assert.match(fieldset[1], new RegExp(`id="${id}"`), id + ' is inside the disabled fieldset');
   assert.match(fieldset[1], /name="parentName"[\s\S]*name="phone"[\s\S]*onclick="addWrestler\(\)"/, 'name, phone and + Add wrestler wait too');

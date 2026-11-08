@@ -26,6 +26,10 @@ const usaw = await startUsaw(+new URL(USAW).port);
 const browser = await playwright.chromium.launch();
 const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 const today = ny(0);
+// The weekly practice is 6:00–7:30 PM, or late in the evening when the walkthrough runs after 5 PM New York time, so
+// today's practice is still ahead: Register stops offering a practice once it has started (#273).
+const nyMinutes = (() => { const [h, m] = new Intl.DateTimeFormat('en-GB', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}).format(new Date()).split(':').map(Number); return h * 60 + m; })();
+const PRACTICE = nyMinutes >= 17 * 60 ? {start: '23:30', end: '23:59', label: '11:30 PM–11:59 PM'} : {start: '18:00', end: '19:30', label: '6:00 PM–7:30 PM'};
 const problems = [], passed = [];
 let current = '';
 const labels = new WeakMap();
@@ -136,11 +140,12 @@ await step('on a fresh site the owner publishes the programs with one click', as
 // ---------- Setup through the owner's real save paths ----------
 await step('owner saves the academy schedule, programs, camp and Friday Night Live', async () => {
   await owner.goto(BASE + '/');
-  const weekly = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: '18:00', end: '19:30'}));
+  const weekly = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: PRACTICE.start, end: PRACTICE.end}));
   const state = {kids: [], bookings: [], messages: [], offers: [], staff: [], attendance: {}, settings: {},
     programs: [['Elementary', 'SWA Development'], ['Intermediate', 'SWA Intermediate'], ['Advanced', 'SWA Advance']].map(([id, name]) => ({id, name, description: '', priceCents: 20000, walkInPriceCents: 4000})),
     seasons: ['Elementary', 'Intermediate', 'Advanced'].map(program => ({program, start: ny(-30), end: ny(120), weekly, excludedDates: []})),
-    events: [{id: 'winter-camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], schedule: [{date: ny(10), start: '09:00', end: '12:00'}], price: 160, day: 90, slots: 1, gradeRange: '', description: ''}],
+    events: [{id: 'winter-camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], schedule: [{date: ny(10), start: '09:00', end: '12:00'}], price: 160, day: 90, slots: 1, gradeRange: '', description: ''},
+      {id: 'spring-clinic', name: 'Spring clinic', type: 'Clinic', dates: [ny(12)], schedule: [{date: ny(12), start: '10:00', end: '12:00'}], price: 60, day: null, slots: 2, gradeRange: '', description: ''}],
     extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [ny(2)], enabled: true, start: '16:00', end: '17:00', memberCents: 1000, nonMemberCents: 2000}]};
   const got = await api(owner, '/api/academy');
   const r = await owner.evaluate(async ([s, rev]) => { const x = await fetch('/api/academy', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision: rev, data: s})}); return {status: x.status, body: await x.json()}; }, [state, got.body.revision]);
@@ -613,6 +618,58 @@ await step('camp fills; family 2 sees it is full, with no waitlist to join', asy
   expect(rid, 'riley id');
 });
 
+// ---------- Camps and clinics can be paid cash at the academy (#273) ----------
+await step('family books a clinic to pay cash; the seat is held; the owner sees it under Cash due and records the cash', async () => {
+  await family.goto(BASE + '/booking?type=event&id=spring-clinic'); await family.waitForSelector('#submit');
+  await waitText(family, 'h1', /Spring clinic/); await waitText(family, '#wrestlerStatus', /Sam Example is not registered yet/);
+  await family.click('#submit'); await family.waitForSelector('#payChoice:not([hidden])');
+  // Online checkout is closed in this walkthrough, so cash is the one way offered, already chosen; no disabled button is left.
+  expect(!(await family.isVisible('#payOnlineOption')) && await family.isVisible('#cashBox'), 'Pay cash at the academy is offered for a clinic while online payment is closed');
+  expect(!(await family.$('#payPending')) && !/To book, pay the academy/.test(await family.locator('#review').innerText()), 'no "isn’t open yet" dead end on the clinic');
+  await at(family, '#cashHint', /Book now and pay \$60\.00 in cash at the academy on the first day/);
+  await at(family, '#details', /2 spots left/);
+  await family.click('#cashButton');
+  await at(family, '#cashDone', /Pay at the academy: \$60\.00 due[\s\S]*Sam Example[\s\S]*Spring clinic/);
+  await shot(family, 'clinic-cash-booked');
+  // The unpaid booking holds a seat: the other family sees one spot left.
+  const seat = await api(family2, '/api/booking-review', {type: 'event', id: 'spring-clinic', wrestlerId: await wid(family2)});
+  expect(seat.status === 200 && seat.body.review.seatsLeft === 1, 'a cash booking takes a seat: ' + JSON.stringify(seat.body));
+  const again = await api(family, '/api/cash-bookings', {action: 'book', source: 'booking', type: 'event', id: 'spring-clinic', wrestlerId: samId});
+  expect(again.status === 409, 'a second cash booking for the same clinic is refused: ' + JSON.stringify(again.body));
+  await family.goto(BASE + '/family'); await at(family, '#purchaseList', /Spring clinic[\s\S]*\$60\.00 due[\s\S]*Bring the cash to the academy on the first day/);
+  await family.goto(BASE + '/inbox'); await at(family, 'main', /Booked: Spring clinic/);
+  // The owner's Cash due list has it; Cash received turns it into a paid order and the seat stays taken.
+  await openPayments(owner); await at(owner, '#cashRows', /Sam Example[\s\S]*Spring clinic[\s\S]*\$60\.00 due/);
+  await owner.locator('#cashRows [data-cash-paid]').first().click();
+  await at(owner, '#status', /Cash received for Sam Example/);
+  await at(owner, '#rows', /Sam Example[\s\S]*Spring clinic[\s\S]*Cash[\s\S]*\$60\.00/);
+  const after = await api(family2, '/api/booking-review', {type: 'event', id: 'spring-clinic', wrestlerId: await wid(family2)});
+  expect(after.status === 200 && after.body.review.seatsLeft === 1, 'the paid order keeps the seat: ' + JSON.stringify(after.body));
+  await family.goto(BASE + '/booking?type=event&id=spring-clinic'); await waitText(family, '#wrestlerStatus', /Sam Example is already registered/);
+});
+
+// ---------- No dead ends while a purchase type is closed online (#273) ----------
+await step('a membership review offers "Tell the academy I want this"; the owner gets the message; a second send the same day is refused', async () => {
+  // Family 2 (Riley): Sam already holds a membership, so his review would be refused.
+  const rileyId = await wid(family2);
+  await family2.goto(BASE + '/register?plan=monthly&program=Intermediate');
+  await family2.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family2.click('#reviewButton'); await family2.waitForSelector('#review:not([hidden])');
+  expect(await family2.isVisible('#interestButton') && !(await family2.$('#payPending')), 'one real action, no disabled "isn’t open yet" button');
+  await at(family2, '#contactLine', /20 Railroad St, Huntington Station, NY 11746/);
+  await family2.click('#interestButton'); await at(family2, '#interestDone', /Sent\.[\s\S]*Riley Two’s SWA Intermediate membership/);
+  await shot(family2, 'register-tell-academy');
+  const inbox = (await api(family2, '/api/inbox')).body, mine = (inbox.thread || []).find(m => /Request from the website: a 12-month SWA Intermediate membership, paid monthly, for Riley Two \(grade 8\)/.test(m.body));
+  expect(mine && mine.from === 'you', 'the request is in the family’s own conversation: ' + JSON.stringify(inbox.thread));
+  const families = await api(owner, '/api/messages?families=1&q=family.b');
+  const fam = (families.body.families || []).find(f => f.email === 'family.b@example.test');
+  expect(fam && fam.unread >= 1, 'the owner sees an unread message from the family: ' + JSON.stringify(families.body));
+  const thread = await api(owner, '/api/messages?family=' + encodeURIComponent(fam.userId));
+  expect((thread.body.thread || []).some(m => m.from === 'family' && /12-month SWA Intermediate membership/.test(m.body)), 'the owner reads the request: ' + JSON.stringify(thread.body));
+  const twice = await api(family2, '/api/interest', {kind: 'membership', wrestlerId: rileyId, program: 'Intermediate'});
+  expect(twice.status === 409 && /already told the academy/.test(twice.body.error), 'one request per item per day: ' + JSON.stringify(twice.body));
+});
+
 // ---------- USA Wrestling card at check-in (#210) ----------
 await step('a wrestler whose card is not verified can\'t be checked in; the roster says why; an owner exception lets them in', async () => {
   const rid = await wid(family2);
@@ -872,7 +929,7 @@ await step('owner edits the public website; a visitor sees the headline, mission
 await step('a coach clocks in and out of today\'s practice from coach home on a phone', async () => {
   const phone = await as('coach', {width: 390, height: 844});
   await phone.goto(BASE + '/coach'); await phone.waitForSelector('#clockCard [data-duty="head"]');
-  await at(phone, '#clockCard', /SWA Intermediate · 6:00 PM–7:30 PM/);
+  await at(phone, '#clockCard', new RegExp('SWA Intermediate · ' + PRACTICE.label));
   const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(over <= 1, `coach home scrolls sideways by ${over}px on a phone`);
   await phone.click('#clockCard [data-cc="in"]'); await at(phone, '#clockCard .cc-status', /Choose Head coach or Assistant coach first/);
@@ -882,7 +939,7 @@ await step('a coach clocks in and out of today\'s practice from coach home on a 
   expect(big && big.height >= 70 && big.width >= 300, 'a big clock-out button on a phone: ' + JSON.stringify(big));
   await shot(phone, 'coach-clocked-in');
   await phone.click('#clockCard [data-cc="out"]'); await at(phone, '#clockCard .cc-status', /Clocked out/);
-  await phone.goto(BASE + '/coach-time'); await at(phone, '#shifts', /SWA Intermediate · 6:00 PM–7:30 PM · Head coach/);
+  await phone.goto(BASE + '/coach-time'); await at(phone, '#shifts', new RegExp('SWA Intermediate · ' + PRACTICE.label + ' · Head coach'));
   await at(phone, '#submitHelp', /its last day|Sends every shift/);
   const over2 = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(over2 <= 1, `/coach-time scrolls sideways by ${over2}px on a phone`);
@@ -1130,7 +1187,7 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   for (const k of ['programs', 'schedule', 'website', 'waiver', 'coaches', 'lessons', 'address', 'signin'])
     expect(await owner.getAttribute(`[data-launch="${k}"]`, 'data-status') === 'done', `launch checklist: ${k} should be ready`);
   expect(await owner.getAttribute('[data-launch="email"]', 'data-status') === 'waiting', 'launch checklist: email waits on its setup');
-  await at(owner, '[data-launch="events"]', /1 camp coming up/); await at(owner, '[data-launch="live"]', /Switch to live when you’re ready/);
+  await at(owner, '[data-launch="events"]', /1 camp and 1 clinic coming up/); await at(owner, '[data-launch="live"]', /Switch to live when you’re ready/);
   const h = await owner.request.get(BASE + '/api/health'); expect(h.status() === 200 && (await h.json()).ok === true, 'health check');
   expect(!(await owner.isVisible('.sample-notice')) && !(await owner.isVisible('#previewMenu')), 'the dashboard has no sample notices or previews');
   const bg = await owner.locator('a.button.primary').first().evaluate(el => getComputedStyle(el).backgroundColor);
@@ -1291,7 +1348,7 @@ await step('one family cannot see another family\'s data', async () => {
 });
 await step('family pages fit a phone screen', async () => {
   const phone = await (async () => { const p = await (await browser.newContext({viewport: {width: 390, height: 844}, deviceScaleFactor: SHOTS ? 3 : 1, isMobile: true, hasTouch: true})); const c = (await import('./fake-supabase.mjs')).sessionCookie('family', AUTH); await p.addCookies([{name: c.name, value: c.value, url: BASE}]); return p.newPage(); })();
-  for (const path of ['/welcome', '/help', '/family', '/register', '/lesson', '/waiver', '/consent', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp']) {
+  for (const path of ['/welcome', '/help', '/calendar', '/family', '/register', '/lesson', '/waiver', '/consent', '/pass', '/wrestler?id=' + samId, '/inbox', '/booking?type=event&id=winter-camp', '/booking?type=event&id=spring-clinic']) {
     await phone.goto(BASE + path); await phone.waitForTimeout(700);
     // Against the 390px screen, not innerWidth: a phone widens innerWidth to fit content that pokes out (issue #222).
     const over = await phone.evaluate(() => document.documentElement.scrollWidth - 390);

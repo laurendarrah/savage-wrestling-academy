@@ -123,13 +123,16 @@ export const cashBookings=sqliteTable("cash_bookings",{
  baseCents:integer("base_cents").notNull(),discountCents:integer("discount_cents").notNull(),amountCents:integer("amount_cents").notNull(),
  pricing:text("pricing").notNull(),dedupeKey:text("dedupe_key").notNull(),status:text("status").notNull(),orderId:text("order_id"),
  createdAt:text("created_at").notNull(),updatedAt:text("updated_at").notNull(),
- canceledAt:text("canceled_at"),canceledBy:text("canceled_by"),cancelReason:text("cancel_reason")
+ canceledAt:text("canceled_at"),canceledBy:text("canceled_by"),cancelReason:text("cancel_reason"),
+ // Every day the booking covers, as a JSON array (#273): one date for a walk-in or an extra practice, every camp day for
+ // a full camp. session_date stays the first day, which is when the booking can no longer be canceled.
+ dates:text("dates").notNull().default('[]')
 },t=>[
  uniqueIndex("cash_bookings_open").on(t.dedupeKey).where(sql`${t.status} IN ('due','paid')`),
  index("cash_bookings_status_date").on(t.status,t.sessionDate),
  index("cash_bookings_user").on(t.userId),
  index("cash_bookings_session").on(t.kind,t.itemId,t.sessionDate),
- check("cash_bookings_kind",sql`${t.kind} IN ('walkin','live')`),
+ check("cash_bookings_kind",sql`${t.kind} IN ('walkin','live','event')`),
  check("cash_bookings_status",sql`${t.status} IN ('due','paid','canceled')`),
  check("cash_bookings_amounts",sql`${t.amountCents} >= 0 AND ${t.baseCents} >= 0 AND ${t.discountCents} >= 0 AND ${t.amountCents} = ${t.baseCents} - ${t.discountCents}`)
 ]);

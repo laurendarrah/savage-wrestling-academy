@@ -223,7 +223,9 @@ export async function quoteBooking(userId: string, input: any, opts?: QuoteOptio
     // Times of the chosen days, for the review only (issue #189). Days without one show "Time to be announced".
     schedule: (event.schedule ?? []).filter((x: any) => eventDates.includes(x.date)),
     cents: baseCents === null ? null : baseCents - memberDiscount, memberDiscountCents: memberDiscount, seatsLeft: left, status: 'registration_review',
-    message: (memberDiscount ? 'Your membership is active, so the 10% member discount for camps is applied.' : 'The price shown is the full price for this event.') + tail(opts, baseCents === null ? null : 'event')
+    // With a price, an event can always be booked to pay cash at the academy (#273), so the review never says to wait.
+    message: (memberDiscount ? 'Your membership is active, so the 10% member discount for camps is applied.' : 'The price shown is the full price for this event.')
+      + (baseCents !== null && !opts?.checkoutKinds?.has('event') ? ' Online payment isn’t open yet. You can book now and pay cash at the academy.' : tail(opts, baseCents === null ? null : 'event'))
   };
   const charge: Charge | null = baseCents === null ? null : {
     kind: 'event', program: null, itemId: String(event.id), itemLabel: option === 'full' ? String(event.name) : `${event.name} on ${dayDate(option)}`,

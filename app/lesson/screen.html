@@ -22,6 +22,14 @@ html body main>section.closed{border-left:4px solid #C4222C}
 html body a.button{display:inline-flex;align-items:center;justify-content:center;padding:0 18px;text-decoration:none}
 #pay,#requestGroup{padding:0 18px}
 .calm{margin:12px 0 0;padding:12px 16px;border-left:3px solid #B9C4C9;background:#F7F8FA;border-radius:0 6px 6px 0}
+/* While lesson payment is closed online (issue #273): one real action, then the academy's contact line. */
+#interestBox{margin:12px 0 0}
+html body #interestButton{padding:0 22px;min-height:48px}
+.contact-line{margin:12px 0 0;padding:12px 16px;background:#F7F8FA;border-radius:6px;font-size:15px;color:#3A3D44}
+.contact-line a{overflow-wrap:anywhere}
+.interest-done{margin:12px 0 0;padding:14px 16px;border-radius:8px;background:var(--swa-ok-bg);border:1px solid #9FCFAE;border-left:6px solid var(--swa-ok)}
+.interest-done p{margin:0 0 8px}.interest-done p:last-child{margin:0}
+@media(max-width:640px){html body #interestButton{width:100%}}
 .group{border:1.5px solid #E1E3E8;border-radius:8px;padding:16px;margin:12px 0 0}
 .group-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.group-head p{margin:0}
 .spots{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -58,20 +66,20 @@ html body .cal .cal-item .vh{position:absolute;width:1px;height:1px;margin:-1px;
 </style><script src="/month-picker.js"></script></head><body><main><h1>Book a private lesson</h1><p class="muted" id="intro">One-on-one, with a partner, or in a small group of up to six. Each family books and pays for their own wrestler at the price per wrestler. Times are New York time.</p>
 <section id="closed" class="closed" hidden aria-labelledby="closedHeading"><h2 id="closedHeading">No open lesson times right now</h2><p id="closedText">No coach has open lesson times right now. Coaches add new times often, so check back soon, or message the academy to ask about a lesson.</p><div class="go"><a class="button" href="/family" id="addWrestler" hidden>Add a wrestler</a><a class="button primary" href="/inbox" id="messageAcademy">Message the academy</a></div></section>
 <p id="status" role="status" aria-live="polite">Loading…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
-<section id="joinBox" hidden aria-labelledby="joinHeading"><h2 id="joinHeading">Join a private group</h2><div id="joinInfo"></div><label id="joinWrestlerLabel">Your wrestler<select id="joinWrestler"></select></label></section>
+<section id="joinBox" hidden aria-labelledby="joinHeading"><h2 id="joinHeading">Join a private group</h2><div id="joinInfo"></div><label id="joinWrestlerLabel"><span id="joinWrestlerLabelText">Your wrestler</span><select id="joinWrestler"></select></label></section>
 <section id="mine" hidden aria-labelledby="mineHeading"><h2 id="mineHeading">Your private groups</h2><p class="muted">Send the invite link to the families you want in the group. Each family signs in, books their own wrestler and pays the academy for their spot.</p><div id="mineList"></div></section>
 <section id="stepType" hidden aria-labelledby="typeHeading"><h2 id="typeHeading">1. Choose how to train</h2><div class="paths" id="paths"></div></section>
 <section id="stepWrestler" hidden aria-labelledby="wrestlerHeading"><h2 id="wrestlerHeading">2. Wrestler</h2>
-<label id="wrestlerLabel">Wrestler<select id="wrestler"></select></label>
+<label id="wrestlerLabel"><span id="wrestlerLabelText">Wrestler</span><select id="wrestler"></select></label>
 <div id="requestOptions" hidden><fieldset><legend>Group size</legend><div class="kinds" id="kinds"></div></fieldset><label id="spotsLabel" hidden>Number of wrestlers in the group<select id="spots"><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
-<fieldset><legend>Your wrestlers in this group</legend><div id="ownWrestlers"></div><p class="muted" id="ownHelp">Their spots are kept for them. The other spots are for families you invite.</p></fieldset></div></section>
+<fieldset><legend id="ownLegend">Your wrestlers in this group</legend><div id="ownWrestlers"></div><p class="muted" id="ownHelp">Their spots are kept for them. The other spots are for families you invite.</p></fieldset></div></section>
 <section id="stepTime" hidden aria-labelledby="timeHeading"><h2 id="timeHeading">3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="coachAbout" class="about" hidden></div>
 <div class="view-bar" id="viewBar" hidden><div class="seg" role="group" aria-label="Show open times as"><button type="button" id="viewList" aria-pressed="true">List</button><button type="button" id="viewMonth" aria-pressed="false">Month</button></div>
 <div class="month-picker" id="monthPicker" hidden><button type="button" class="month-step" id="monthPrev" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="monthSel"></select></label><button type="button" class="month-step" id="monthNext" aria-label="Next month">→</button></div></div>
 <div id="times"></div></section>
 <section id="reviewBox" hidden aria-labelledby="reviewHeading"><h2 id="reviewHeading">4. Review</h2><div class="summary" id="summary"></div>
 <div id="payArea"><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label><button class="primary" id="pay" disabled>Pay securely</button></div>
-<p id="notOpen" class="calm" hidden>Online payment for lessons isn’t open yet. To book this spot, pay the academy for your wrestler. Nothing is reserved until the academy records your payment.</p>
+<div id="notOpen" hidden><p class="calm">Online payment for lessons isn’t open yet. Tell the academy you want this spot and they’ll be in touch about how to pay. Nothing is reserved until the academy records your payment.</p><div id="interestBox"><button class="primary" id="interestButton" type="button">Tell the academy I want this</button><p class="contact-line" id="contactLine">Or reach the academy at 20 Railroad St, Huntington Station, NY 11746 · <a href="mailto:savagewrestlingclub@gmail.com">savagewrestlingclub@gmail.com</a></p></div></div><div id="interestDone" class="interest-done" hidden></div>
 <div id="requestArea" hidden><p class="calm">Nothing is charged now. You get an invite link to send to the families you want in the group. Each family pays the academy for their own wrestler, and each spot is confirmed once the academy records that payment.</p><button class="primary" id="requestGroup">Ask for this private group</button></div></section>
 </main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -165,6 +173,7 @@ function render(){
  const picking=hasPaths&&!!path;
  $('stepWrestler').hidden=$('stepTime').hidden=!picking;
  $('wrestlerLabel').hidden=path==='request';$('requestOptions').hidden=path!=='request';
+ renderWrestlerChoice();
  if(path==='request'){
   $('kinds').innerHTML=['partner','small-group'].filter(priced).map(f=>`<button type="button" class="choice" data-kind="${f}" aria-pressed="${f===kind}"><b>${f==='partner'?'Partner':'Small group'}</b><span class="muted">${f==='partner'?'2 wrestlers':'3 to 6 wrestlers'}</span><span class="price">${money(fmt(f).cents)} per wrestler</span></button>`).join('');
   document.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{kind=b.dataset.kind;review=null;render();check()});
@@ -187,6 +196,16 @@ function render(){
  document.querySelectorAll('[data-opening]').forEach(b=>b.onclick=()=>{opening=b.dataset.opening;review=null;render();check()});
  renderReview();
 }
+// The wrestler for a one-on-one or a group spot. A family with one wrestler has them chosen. With more than one, a
+// partner or small-group spot starts with no wrestler picked and asks "Which of your wrestlers?" (issue #273); a one-on-one
+// keeps the first wrestler chosen until the family picks another.
+let wrestlerPicked=false;
+function renderWrestlerChoice(){
+ const kids=(family&&family.wrestlers)||[],several=kids.length>1,sel=$('wrestler'),before=sel.value,ask=several&&path==='group';
+ sel.innerHTML=(several?'<option value="">Choose a wrestler</option>':'')+kids.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
+ sel.value=kids.some(w=>w.id===before)&&(wrestlerPicked||!ask)?before:ask?'':kids[0]?.id||'';
+ $('wrestlerLabelText').textContent=several?'Which of your wrestlers?':'Wrestler';
+}
 // About the coach (issue #190): their name, bio and specialties from their profile, for the chosen coach or time.
 function aboutCoach(key){const p=key&&data&&data.coaches?data.coaches[key]:null,box=$('coachAbout');if(!box)return;box.hidden=!p;if(!p)return;
  const initials=String(p.name||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('');
@@ -204,13 +223,30 @@ function renderReview(){
  const group=review.capacity>1;
  $('summary').innerHTML=`<p><strong>${esc(review.title)}</strong> with ${esc(review.coach)}</p><p>${esc(day(review.dates[0]))} · ${esc(clock(review.start))}–${esc(clock(review.end))}</p><p>For ${esc(review.wrestler)}${group?' · '+spotsText(review.spotsLeft,review.capacity):''}</p><p><strong>${money(review.cents)}</strong>${group?' per wrestler':''}</p>${review.message?`<p class="muted">${esc(review.message)}</p>`:''}`;
  $('payArea').hidden=!review.paymentsEnabled;$('notOpen').hidden=!!review.paymentsEnabled;$('pay').disabled=!$('acceptTerms').checked;
+ // While lesson payment is closed online, the one action is "Tell the academy I want this" (issue #273).
+ if(!review.paymentsEnabled){$('interestDone').hidden=true;$('interestButton').disabled=false;loadContact()}
 }
+// The academy's address and email (website settings when saved, else the academy's fixed address), loaded once.
+let contact=null,contactLoading=null;
+function loadContact(){if(contact||contactLoading)return contactLoading;contactLoading=(async()=>{try{const d=await call('/api/interest');if(d&&d.contact&&d.contact.address&&d.contact.email){contact=d.contact;$('contactLine').innerHTML='Or reach the academy at '+esc(contact.address)+' · <a href="mailto:'+esc(contact.email)+'">'+esc(contact.email)+'</a>'}}catch{}})();return contactLoading}
+// Which wrestler the review is for, and the lesson time: the opening the family chose, or the invite's group.
+const reviewWrestler=()=>path==='join'?$('joinWrestler').value:$('wrestler').value;
+let interestBusy=false;
+$('interestButton').onclick=async()=>{if(!review||review.kind==='request'||interestBusy)return;interestBusy=true;$('interestButton').disabled=true;$('status').textContent='Sending your request…';
+ try{const d=await call('/api/interest',{kind:'lesson',wrestlerId:reviewWrestler(),openingId:path==='join'?data.invite.id:opening});
+  const c=d.contact||contact;
+  $('notOpen').hidden=true;$('interestDone').innerHTML='<p><strong>Sent.</strong> The academy has your request for '+esc(review.wrestler)+'’s '+esc(String(review.title||'lesson').toLowerCase())+' with '+esc(review.coach)+', '+esc(day(review.dates[0]))+' · '+esc(clock(review.start))+', and will reply under Messages about how to pay.</p><p>'+(c?'Reach the academy any time at '+esc(c.address)+' · <a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>. ':'')+'<a href="/inbox">Open Messages →</a></p>';$('interestDone').hidden=false;
+  $('status').textContent='Request sent. The academy will be in touch.'}
+ catch(e){$('status').textContent=e.message;$('interestButton').disabled=false;if(/no longer available/.test(e.message)){opening='';review=null;await reload()}}
+ finally{interestBusy=false}};
 function renderJoin(){
  const g=data.invite,mine=g.mine,free=(family.wrestlers||[]).filter(w=>!(g.booked||[]).includes(w.id));
  $('joinHeading').textContent=mine?'This is your group':'Join '+(g.organizer||'a family')+'’s group';
  $('joinInfo').innerHTML=`<div class="summary"><p><strong>Private ${esc(nameOf(g.format).toLowerCase())}</strong> with ${esc(g.coach)}</p><p>${esc(day(g.date))} · ${esc(clock(g.start))}–${esc(clock(g.end))}</p><p>${g.spotsLeft?spotsText(g.spotsLeft,g.capacity):'This group is full.'}${priced(g.format)?' · '+money(fmt(g.format).cents)+' per wrestler':''}</p></div>`+(mine?'<p class="calm">Its invite link and who has joined are under Your private groups below.</p>':(g.booked||[]).length?'<p class="calm">Your wrestler is booked into this group.</p>':'');
- const sel=$('joinWrestler'),before=sel.value;
- sel.innerHTML=free.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');sel.value=free.some(w=>w.id===before)?before:free[0]?.id||'';
+ // With more than one wrestler, the family chooses; nobody is picked for them (issue #273).
+ const sel=$('joinWrestler'),before=sel.value,several=free.length>1;
+ sel.innerHTML=(several?'<option value="">Choose a wrestler</option>':'')+free.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');sel.value=free.some(w=>w.id===before)?before:several?'':free[0]?.id||'';
+ $('joinWrestlerLabelText').textContent=several?'Which of your wrestlers?':'Your wrestler';
  $('joinWrestlerLabel').hidden=mine||!g.spotsLeft||!free.length;
 }
 let checking=0;
@@ -218,7 +254,9 @@ async function check(){
  // Re-render only when something changes: rebuilding the buttons mid-click would swallow the click.
  if(path==='request')return checkRequest();
  const wrestlerId=path==='join'?$('joinWrestler').value:$('wrestler').value,openingId=path==='join'?data.invite?.id:opening;
- if(!openingId||!wrestlerId||(path==='join'&&(data.invite.mine||!data.invite.spotsLeft))){if(review){review=null;render()}return}
+ if(!openingId||!wrestlerId||(path==='join'&&(data.invite.mine||!data.invite.spotsLeft))){if(review){review=null;render()}
+  // A time is chosen but no wrestler yet (a family with several, #273): say what comes next.
+  if(openingId&&!wrestlerId&&!(path==='join'&&(data.invite.mine||!data.invite.spotsLeft)))$('status').textContent='Choose which of your wrestlers this lesson is for.';return}
  const ticket=++checking;$('status').textContent='Checking this spot…';
  try{const d=await call('/api/booking-review',{type:'lesson',wrestlerId,openingId,...(path==='one'?{format:'one-on-one'}:{}),...(path==='join'?{invite:joinCode}:{})});if(ticket!==checking)return;review={...d.review,paymentsEnabled:d.paymentsEnabled};$('status').textContent=review.capacity>1?'This spot is available.':'This time is available.'}
  catch(e){if(ticket!==checking)return;review=null;$('status').textContent=e.message;if(/no longer available|just booked|full/.test(e.message))await reload()}
@@ -235,7 +273,8 @@ function checkRequest(){
  else $('status').textContent=''
  renderReview();
 }
-function renderOwn(){$('ownWrestlers').innerHTML=(family.wrestlers||[]).map((w,i)=>`<label class="check"><input type="checkbox" data-own="${esc(w.id)}"${i===0?' checked':''}> ${esc(w.name)}</label>`).join('');document.querySelectorAll('[data-own]').forEach(i=>i.onchange=checkRequest)}
+// A family with one wrestler has them ticked; with more than one, the family chooses (issue #273).
+function renderOwn(){const kids=family.wrestlers||[],several=kids.length>1;$('ownLegend').textContent=several?'Which of your wrestlers are in this group?':'Your wrestlers in this group';$('ownWrestlers').innerHTML=kids.map(w=>`<label class="check"><input type="checkbox" data-own="${esc(w.id)}"${several?'':' checked'}> ${esc(w.name)}</label>`).join('');document.querySelectorAll('[data-own]').forEach(i=>i.onchange=checkRequest)}
 async function reload(){const q=joinCode?'?join='+encodeURIComponent(joinCode):'';data=await call('/api/lessons'+q);render()}
 async function copyLink(id){const input=$('link-'+id);try{await navigator.clipboard.writeText(input.value);$('status').textContent='Invite link copied. Send it to the families you want in the group.'}catch{input.focus();input.select();$('status').textContent='The link is selected. Copy it and send it to the families you want in the group.'}}
 async function cancelGroup(id){if(!confirm('Call off this private group? The time opens for other families again.'))return;try{await call('/api/lessons',{action:'cancel',openingId:id});await reload();$('status').textContent='Group called off.'}catch(e){$('status').textContent=e.message}}
@@ -251,7 +290,7 @@ $('pay').onclick=async()=>{if(!review||!$('acceptTerms').checked)return;$('pay')
 $('acceptTerms').onchange=()=>{$('pay').disabled=!$('acceptTerms').checked};
 $('viewList').onclick=()=>setView('list');$('viewMonth').onclick=()=>setView('month');
 if(typeof MonthPicker!=='undefined')MonthPicker.wire(picker(),m=>{shownMonth=m;render()});
-$('wrestler').onchange=check;$('joinWrestler').onchange=check;$('coach').onchange=()=>{render()};$('spots').onchange=checkRequest;
+$('wrestler').onchange=()=>{wrestlerPicked=!!$('wrestler').value;check()};$('joinWrestler').onchange=check;$('coach').onchange=()=>{render()};$('spots').onchange=checkRequest;
 // The help link goes to the document named in the message: the Parent Consent Form or the waiver (issue #195).
 function signHelp(p,t){const a=p.querySelector('a'),consent=/Parent Consent Form/.test(t);if(a){a.href=consent?'/consent':'/waiver';a.textContent=consent?'Sign the Parent Consent Form →':'Sign the waiver →'}}
 if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=$('status').textContent;$('cardHelp').hidden=!/USA Wrestling card/.test(t);$('waiverHelp').hidden=!/needs a signed .* before booking/.test(t);signHelp($('waiverHelp'),t)}).observe($('status'),{childList:true,characterData:true,subtree:true});
@@ -261,7 +300,7 @@ if(typeof MutationObserver==='function')new MutationObserver(()=>{const t=$('sta
   const [l,f]=await Promise.all([call('/api/lessons'+(joinCode?'?join='+encodeURIComponent(joinCode):'')).catch(e=>{if(joinCode&&e.data?.openings){$('status').textContent=e.message;joinCode='';return e.data}throw e}),call('/api/family')]);
   data=l;family=f.data;
   if(data.invite)path='join';
-  $('wrestler').innerHTML=(family.wrestlers||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');$('wrestler').value=family.wrestlers?.[0]?.id||'';renderOwn();
+  renderWrestlerChoice();renderOwn();
   const coaches=[...new Map(data.openings.map(o=>[o.coachKey,o.coach])).entries()];
   $('coach').innerHTML='<option value="">Any coach</option>'+coaches.map(([e,n])=>`<option value="${esc(e)}">${esc(n)}</option>`).join('');
   // Links from the calendar name a lesson type: open the path that offers it.
