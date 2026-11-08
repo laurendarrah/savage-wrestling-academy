@@ -88,30 +88,51 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(h, /1 shift · 3 h 44 min paid/); assert.match(h, /Clocked 6:00 PM – 9:44 PM \(3 h 44 min\)/); assert.match(h, /Paid 3 h 44 min at \$40\.00 an hour/); assert.doesNotMatch(h, /\b224 min/);
 }
 
-// ---------- 4. Coach home: shortcuts near the top, buttons that look like buttons ----------
+// ---------- 4. Coach home: tonight first, then two rows, the opening form behind the lessons (issue #286) ----------
 {
   const s = read('app/coach/screen.html');
-  const quick = s.match(/<nav id="quick" class="quick" aria-label="Coach shortcuts">([\s\S]*?)<\/nav>/);
-  assert.ok(quick && s.indexOf('id="quick"') < s.indexOf('id="clockCard"'), 'shortcuts come before the clock card');
-  const links = [...quick[1].matchAll(/<a class="([^"]+)"(?: id="(\w+)")? href="([^"]+)"( hidden)?>([^<]+)<\/a>/g)].map(([, cls, id, href, hidden, text]) => ({cls, id, href, hidden: !!hidden, text}));
-  deq(links.map(l => [l.text, l.href]), [['Sign your contract', '/contract'], ['Clock in', '#clockCard'], ['Check-in', '/roster'], ['Your hours', '/coach-time'], ['Lessons', '#lessons'],
-    ['Your month and practice plans', '/practice-plans'], ['Your profile', '/coach-profile'], ['Coach help', '/help/coach']]);
-  assert.ok(links.every(l => /\bbutton\b/.test(l.cls)), 'every shortcut uses the shared button style');
-  assert.ok(links.find(l => l.id === 'quickContract').hidden, 'the contract shortcut waits until the contract is unsigned');
-  // Even rows, so no shortcut sits alone: four columns (wide takes two, full a row), and two on a phone (wide and full
-  // take a row each).
-  const plain = links.filter(l => !/\b(wide|full)\b/.test(l.cls)).length, wide = links.filter(l => /\bwide\b/.test(l.cls)).length;
-  assert.equal((plain + 2 * wide) % 4, 0, 'four columns fill evenly'); assert.equal(plain % 2, 0, 'two columns on a phone fill evenly');
-  assert.ok(/\bfull\b/.test(links[0].cls), 'the contract to-do takes a row of its own');
-  assert.match(s, /\.quick\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\);[^}]*\}\.quick \.wide\{grid-column:span 2\}\.quick \.full\{grid-column:1\/-1\}/);
-  assert.match(s, /@media\(max-width:560px\)\{\.quick\{grid-template-columns:1fr 1fr\}\.quick \.wide\{grid-column:1\/-1\}\}/);
-  assert.match(s, /<section id="lessons" aria-labelledby="lessonsTitle">/); assert.match(s, /<section id="clockCard"/);
-  assert.match(s, /<a class="button primary" href="\/roster">Open check-in<\/a>/); assert.doesNotMatch(s, /class="go"|\.go\{/);
-  // The contract shortcut shows when the coach has not signed the version in force, and hides once they have.
+  const at = re => { const m = s.search(re); assert.ok(m >= 0, 'coach home has ' + re); return m; };
+  // Order on the page: the title, the notices, the dark Today card (its sessions, the clock, the actions), the two
+  // rows, the week, the lessons with the opening form behind them, then More.
+  const order = [/<h1 id="heading">/, /<p id="contractTodo" class="owner-note" hidden><\/p>/, /<section class="dark tonight" id="tonight"/, /<div id="sessions">/,
+    /<section id="clockCard" data-coach-clock aria-labelledby="clockCardTitle">/, /<a class="button" id="openCheckin" href="\/roster">Open check-in<\/a>/,
+    /<nav class="rows" aria-label="Lessons and hours">/, /<section aria-labelledby="weekTitle">/, /<section id="lessons" aria-labelledby="lessonsTitle">/, /<div id="slots">/,
+    /<details class="add" id="openingBox"><summary>Add a one-hour opening<\/summary><form id="opening">/, /<h2 id="moreTitle">More<\/h2>/];
+  order.reduce((prev, re) => { const i = at(re); assert.ok(i > prev, re + ' comes after the one before it'); return i; }, -1);
+  // The two rows and the More links. No grid of shortcuts; the contract to-do is a notice, never the primary button.
+  const rows = s.match(/<nav class="rows"[\s\S]*?<\/nav>/)[0];
+  deq([...rows.matchAll(/<a href="([^"]+)"><span><b>([^<]+)<\/b>/g)].map(m => [m[2], m[1]]), [['Lessons', '#lessons'], ['Your hours', '/coach-time']]);
+  const more = s.match(/<div class="more">([\s\S]*?)<\/div>/)[1];
+  deq([...more.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)].map(m => [m[2], m[1]]),
+    [['Your month and practice plans →', '/practice-plans'], ['Your profile →', '/coach-profile'], ['Coach help →', '/help/coach'], ['Your contract →', '/contract'], ['Time off →', '/coach-time'], ['Account security →', '/security']]);
+  assert.doesNotMatch(s, /quickContract|class="quick"|Sign your contract/, 'no shortcut grid and no primary contract button');
+  assert.doesNotMatch(s, /<a class="button primary"/, 'the one red action before the clock state is known is the clock-in button');
+  // The dark card restates the clock card's colors, and once the coach is on the clock, check-in turns red and Clock
+  // out steps back.
+  assert.match(s, /html body #clockCard \.cc-role button\[aria-pressed=true\]\{background:#fff;color:var\(--swa-ink,#111113\)/);
+  assert.match(s, /html body \.tonight\.on #clockCard \.cc-big\[data-cc="out"\]\{background:transparent/);
+  assert.match(s, /\$\('openCheckin'\)\.classList\?\.toggle\('primary',on\)/, 'Open check-in turns red when the coach is clocked in');
+  // The page script: the card's word, the Lessons row's line, today's plan line.
+  const p = page('app/coach/screen.html', async u => json(u === '/api/roster' ? {sessions: [{title: 'SWA Intermediate', start: '18:00', end: '19:30', entries: [{}, {}], checkedIn: 1}]}
+    : u === '/api/coach' ? {name: 'Coach Dana', programs: ['Intermediate'], openings: [
+      {id: 'a', date: '2026-11-09', start: '15:00', end: '16:00', format: 'one-on-one', formatName: 'One-on-one lesson', capacity: 1, spotsLeft: 0, roster: [{wrestler: 'Sam', parent: 'Pat', status: 'paid'}]},
+      {id: 'b', date: '2026-11-10', start: '15:00', end: '16:00', format: null, capacity: 1, spotsLeft: 1, roster: []}, {id: 'c', date: '2026-11-11', start: '15:00', end: '16:00', format: null, capacity: 1, spotsLeft: 1, roster: []}]}
+    : u === '/api/practice-plans?summary=1' ? {today: '2026-11-09', plans: [{program: 'Intermediate', date: '2026-11-09', published: true, title: 'Leg attacks'}, {program: 'Intermediate', date: '2026-11-10', published: true, title: 'Not today'}]} : {}));
+  await settle();
+  assert.equal(p.el('todayTitle').textContent, 'Tonight on the mat', 'every session starts at 4 PM or later');
+  assert.equal(p.el('lessonsSummary').textContent, '1 booked · 2 open times');
+  assert.equal(p.el('planLine').innerHTML, 'Plan shared for today: <b>Leg attacks</b>'); assert.equal(p.el('planLink').href, '/practice-plans?date=2026-11-09');
+  const word = sessions => { p.ctx.sess = sessions; return p.run('tonightWord(sess)'); };
+  assert.equal(word([{start: '09:00'}, {start: '18:00'}]), 'Today on the mat'); assert.equal(word([]), 'Today on the mat'); assert.equal(word([{start: '16:00'}]), 'Tonight on the mat');
+  p.ctx.list = []; assert.equal(p.run('lessonsSummary(list)'), 'No lessons or open times yet');
+  p.ctx.list = [{roster: [{}]}]; assert.equal(p.run('lessonsSummary(list)'), '1 booked');
+  p.ctx.d = {today: '2026-11-09', plans: []}; assert.equal(p.run('planLine(d)'), '');
+  p.ctx.d = {today: '2026-11-09', plans: [{date: '2026-11-09', published: true, title: '<b>x</b>'}]}; assert.equal(p.run('planLine(d)'), 'Plan shared for today: <b>&lt;b&gt;x&lt;/b&gt;</b>', 'escaped');
+  // The contract to-do shows when the coach has not signed the version in force, and hides once they have.
   for (const [signed, hidden] of [[false, false], [true, true]]) {
     const p = page('app/coach/screen.html', async u => json(u === '/api/contract' ? {document: {title: 'Coach contract 2026'}, signatures: signed ? [{current: true}] : []} : u === '/api/roster' ? {sessions: []} : u === '/api/coach' ? {name: 'Coach Dana', programs: [], openings: []} : {}));
     await settle();
-    assert.equal(p.el('quickContract').hidden, hidden, 'contract shortcut, signed=' + signed); assert.equal(p.el('contractTodo').hidden, hidden);
+    assert.equal(p.el('contractTodo').hidden, hidden, 'contract to-do, signed=' + signed);
   }
 }
 
@@ -152,4 +173,4 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   // Owner pages have the owner shell's sidebar instead of a back link (issue #261).
   assert.doesNotMatch(read('app/timesheets/screen.html'), /class="swa-back"/);
 }
-console.log('Coach polish tests passed: one hours-and-minutes formatter on pages and in flags, /coach-time tiles and the grey Send button with when it opens, /timesheets labels, coach home shortcuts and buttons, the profile preview is the team page card with its styles, one back link per page.');
+console.log('Coach polish tests passed: one hours-and-minutes formatter on pages and in flags, /coach-time tiles and the grey Send button with when it opens, /timesheets labels, coach home with tonight first and the opening form behind the lessons, the profile preview is the team page card with its styles, one back link per page.');

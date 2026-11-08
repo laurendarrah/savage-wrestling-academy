@@ -115,6 +115,16 @@ const openPayments = async page => {
   await page.waitForFunction(() => !/Loading/.test(document.querySelector('#rows')?.textContent ?? 'Loading') && !document.querySelector('#preview')?.disabled);
 };
 
+// The roster shows one session at a time behind its session tabs (issue #286): pick the session before acting on a
+// row in it. Rows of the other sessions are in the page (textContent checks still see them) but not on screen.
+const pickSession = async (page, re) => { await page.locator('#switcher [role=tab]', {hasText: re}).first().click(); await page.waitForSelector('.session:not([hidden])'); };
+const shownRow = (page, name) => page.locator('.session:not([hidden]) .row', {hasText: name}).first();
+// Saves, check-ins and clock actions answer with a toast (public/toast.js), which stays about four seconds.
+const toast = (page, re) => waitText(page, '#swa-toast', re, 8000);
+// Coach home keeps the one-hour opening form behind "Add a one-hour opening" under the lessons (issue #286).
+const openOpening = async page => { await page.waitForSelector('#openingBox'); await page.evaluate(() => { document.getElementById('openingBox').open = true; }); await page.waitForSelector('#opening'); };
+const openingForm = async page => { await page.goto(BASE + '/coach'); await openOpening(page); };
+
 const owner = await as('owner'), family = await as('family'), family2 = await as('family2'), coach = await as('coach');
 
 // ---------- A fresh site: the owner publishes the programs from the launch checklist (issue #147) ----------
@@ -404,9 +414,10 @@ await step('family books today\'s walk-in to pay cash; the coach sees $40 due an
   expect(again.status === 409, 'a second booking for the same practice is refused: ' + JSON.stringify(again.body));
   await family.goto(BASE + '/family'); await at(family, '#purchaseList', /Pay at the academy[\s\S]*\$40\.00 due/);
   // The coach sees it on today's roster, taps Cash received, and it counts as paid.
-  await coach.goto(BASE + '/roster'); await at(coach, '#sessions', /Sam Example[\s\S]*Pay at the academy · \$40\.00 due/);
-  await coach.locator('.row', {hasText: 'Sam Example'}).first().locator('[data-cash]').click();
-  await at(coach, '#status', /Cash received: \$40\.00 for Sam Example/);
+  await coach.goto(BASE + '/roster'); await at(coach, '#sessions', /Sam Example[\s\S]*\$40\.00 cash due/);
+  await pickSession(coach, /SWA Intermediate/);
+  await shownRow(coach, 'Sam Example').locator('[data-cash]').click();
+  await toast(coach, /Cash received: \$40\.00 for Sam Example/);
   await at(coach, '#sessions', /Sam Example[\s\S]*Walk-in paid[\s\S]*Received by Coach Dana/);
   await shot(coach, 'roster-cash-received');
   await openPayments(owner);
@@ -436,8 +447,10 @@ await step('Sam is on today\'s roster; owner checks in, undoes, then a QR scan c
   await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Sam Example/);
   // Staff see allergies or medical notes and the emergency contact at check-in (issue #188, #197 question 14).
   await waitText(owner, '#sessions', /Sam Example[\s\S]*No allergies or medical notes[\s\S]*Emergency contact: Jordan Emergency · 631-555-0188/);
-  await owner.locator('[data-checkin]').first().click(); await waitText(owner, '#status', /checked in/);
-  await owner.locator('[data-undo]').first().click(); await waitText(owner, '#status', /Check-in removed/);
+  await pickSession(owner, /SWA Intermediate/);
+  await shownRow(owner, 'Sam Example').locator('[data-checkin]').click(); await toast(owner, /Sam Example checked in/);
+  await at(owner, '#sessions', /Sam Example[\s\S]*Checked in \d{1,2}:\d{2} [AP]M/);
+  await shownRow(owner, 'Sam Example').locator('[data-undo]').click(); await toast(owner, /Check-in removed/);
   const pass = (await api(family, '/api/passes')).body.passes[0].code;
   let r = await api(owner, '/api/roster', {action: 'scan', date: today, code: pass});
   expect(r.status === 200 && !r.body.scan.already, 'first scan: ' + JSON.stringify(r.body).slice(0, 200));
@@ -484,9 +497,10 @@ await step('a coach records Friday Night Live cash; the owner sees Collected by 
     const booked = await api(family, '/api/cash-bookings', {action: 'book', source: 'booking', type: 'live', id: 'fnl', date: today, wrestlerId: samId});
     expect(booked.status === 200 && booked.body.booking.amountCents === 1000, 'Sam books Friday Night Live at the member price to pay cash: ' + JSON.stringify(booked.body));
     // Coach Dana coaches SWA Intermediate only, and Friday Night Live belongs to no program: she sees it anyway.
-    await coach.goto(BASE + '/roster'); await at(coach, '#sessions', /Friday Night Live[\s\S]*Sam Example[\s\S]*Pay at the academy · \$10\.00 due/);
-    await coach.locator('.session', {hasText: 'Friday Night Live'}).locator('.row', {hasText: 'Sam Example'}).locator('[data-cash]').click();
-    await at(coach, '#status', /Cash received: \$10\.00 for Sam Example/);
+    await coach.goto(BASE + '/roster'); await at(coach, '#sessions', /Friday Night Live[\s\S]*Sam Example[\s\S]*\$10\.00 cash due/);
+    await pickSession(coach, /Friday Night Live/);
+    await shownRow(coach, 'Sam Example').locator('[data-cash]').click();
+    await toast(coach, /Cash received: \$10\.00 for Sam Example/);
     await at(coach, '#sessions', /Friday Night Live[\s\S]*Sam Example[\s\S]*Received by Coach Dana · \d{1,2}:\d{2} [AP]M[\s\S]*Only the owner can undo cash/);
     await shot(coach, 'roster-fnl-cash-received');
     const paid = (await api(coach, '/api/roster')).body.sessions.find(x => x.type === 'live').entries.find(x => x.name === 'Sam Example').cash;
@@ -519,9 +533,9 @@ await step('a coach records Friday Night Live cash; the owner sees Collected by 
 
 // ---------- Private lessons ----------
 await step('coach adds an opening; owner sets prices; family reviews a lesson; owner records it; coach sees the booking', async () => {
-  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#opening');
+  await openingForm(coach);
   await coach.fill('#opening [name=date]', ny(3)); await coach.fill('#opening [name=start]', '15:00'); await coach.fill('#opening [name=end]', '16:00');
-  await coach.click('#opening button'); await waitText(coach, '#status', /Opening saved/);
+  await coach.click('#opening button'); await toast(coach, /Opening saved/);
   await owner.goto(BASE + '/lesson-settings'); await owner.waitForSelector('[data-price="one-on-one"]');
   await owner.fill('[data-price="one-on-one"]', '60'); await owner.click('#prices button'); await waitText(owner, '#status', /prices saved/);
   // Only one-on-ones have a price so far, so that is the one way to book and it is already chosen (issue #177).
@@ -542,12 +556,12 @@ await step('coach adds an opening; owner sets prices; family reviews a lesson; o
 });
 
 await step('coach removes an opening nobody booked; the booked one stays', async () => {
-  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#opening');
+  await openingForm(coach);
   await coach.fill('#opening [name=date]', ny(4)); await coach.fill('#opening [name=start]', '17:00'); await coach.fill('#opening [name=end]', '18:00');
-  await coach.click('#opening button'); await waitText(coach, '#status', /Opening saved/);
+  await coach.click('#opening button'); await toast(coach, /Opening saved/);
   const before = await coach.locator('[data-slot]').count();
   expect(before >= 1, 'the new opening should be removable');
-  await coach.locator('[data-slot]').last().click(); await waitText(coach, '#status', /Opening removed/);
+  await coach.locator('[data-slot]').last().click(); await toast(coach, /Opening removed/);
   await coach.waitForFunction(n => document.querySelectorAll('[data-slot]').length === n - 1, before);
 });
 
@@ -558,7 +572,7 @@ await step('owner adds an opening for a coach; the coach and families see it, in
   await at(owner, 'h1', /Lesson openings: Coach Dana/); await owner.waitForSelector('#weeks option[value="12"]', {state: 'attached'});
   await owner.fill('#date', ny(8)); await owner.fill('#start', '12:00'); await owner.dispatchEvent('#start', 'change');
   expect(await owner.inputValue('#end') === '13:00', 'the end time follows the start');
-  await owner.click('#save'); await at(owner, '#status', /Opening saved/);
+  await owner.click('#save'); await toast(owner, /Opening saved/);
   await at(owner, '#slots', /Open for families to book/);
   await shot(owner, 'owner-coach-openings');
   // The coach sees it on coach home; families can choose it, from the list or the month.
@@ -580,7 +594,7 @@ await step('owner adds an opening for a coach; the coach and families see it, in
   // The owner removes it again (nobody booked it); the change is in the security log.
   await owner.goto(BASE + '/coach-openings?email=coach.dana%40example.test'); await owner.waitForSelector('#slots [data-slot]');
   const before = await owner.locator('#slots [data-slot]').count();
-  await owner.locator('#slots article', {hasText: '12:00 PM'}).locator('[data-slot]').click(); await at(owner, '#status', /Opening removed/);
+  await owner.locator('#slots article', {hasText: '12:00 PM'}).locator('[data-slot]').click(); await toast(owner, /Opening removed/);
   await owner.waitForFunction(n => document.querySelectorAll('#slots [data-slot]').length === n - 1, before);
   await owner.goto(BASE + '/security-log'); const log = await owner.content();
   expect(log.includes('Lesson openings added for a coach') && log.includes('A coach’s lesson opening removed') && log.includes('Coach Dana'), 'owner changes are in the security log');
@@ -679,8 +693,11 @@ await step('a wrestler whose card is not verified can\'t be checked in; the rost
   const r = await api(owner, '/api/payments', {action: 'record', userId: 'e2e-family-b', wrestlerId: rid, kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:${practice.start}`, method: 'cash'});
   expect(r.status === 200, 'walk-in recorded: ' + JSON.stringify(r.body));
   await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Riley Two can.t be checked in: the USA Wrestling card has not been verified yet\. Check it and mark it verified on the USA Wrestling cards page\./);
-  const row = owner.locator('.row', {hasText: 'Riley Two'}).first();
-  expect(await row.locator('button:has-text("Can’t check in")').isDisabled() && !(await row.locator('[data-checkin]').count()), 'no Check in button for Riley');
+  await pickSession(owner, /SWA Intermediate/);
+  const row = shownRow(owner, 'Riley Two');
+  // A held wrestler: the red-outlined row, a disabled Hold where Check in would be, and the reason behind "Why?".
+  expect(await row.locator('button:has-text("Hold")').isDisabled() && !(await row.locator('[data-checkin]').count()), 'no Check in button for Riley');
+  expect(await row.evaluate(el => el.classList.contains('hold')) && await row.locator('details.why summary').isVisible(), 'the held row is marked and has Why?');
   await shot(owner, 'roster-card-blocked');
   const pass = (await api(family2, '/api/passes')).body.passes[0].code;
   let s = await api(owner, '/api/roster', {action: 'scan', date: today, code: pass});
@@ -718,10 +735,10 @@ await step('coach posts a small group with 4 spots; two families each book a wre
   await owner.goto(BASE + '/lesson-settings'); await owner.waitForSelector('[data-price="small-group"]');
   await waitText(owner, 'h2', /Price per wrestler/);
   await owner.fill('[data-price="partner"]', '45'); await owner.fill('[data-price="small-group"]', '35'); await owner.click('#prices button'); await waitText(owner, '#status', /prices saved/);
-  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#opening');
+  await openingForm(coach);
   await coach.fill('#opening [name=date]', ny(5)); await coach.fill('#opening [name=start]', '10:00'); await coach.fill('#opening [name=end]', '11:00');
   await coach.selectOption('#format', 'small-group'); await coach.selectOption('#spots', '4');
-  await coach.click('#opening button.primary'); await waitText(coach, '#status', /Opening saved/);
+  await coach.click('#opening button'); await toast(coach, /Opening saved/);
   await waitText(coach, '#slots', /Small-group lesson[\s\S]*4 of 4 spots left[\s\S]*Coach-hosted/);
   // Each family sees the group with its spots and books their own wrestler at the price per wrestler.
   for (const [page, name, left] of [[family, 'Sam Example', '4 of 4'], [family2, 'Riley Two', '3 of 4']]) {
@@ -742,9 +759,9 @@ await step('coach posts a small group with 4 spots; two families each book a wre
   expect(pay.body.coaches[0]?.lessons === 2 && pay.body.coaches[0]?.wrestlers === 3 && pay.body.coaches[0]?.grossCents === 6000 + 2 * 3500, 'coach pay: ' + JSON.stringify(pay.body.coaches[0]));
 });
 await step('a family starts a private partner lesson; a second family joins through the invite link; the lesson is full', async () => {
-  await coach.goto(BASE + '/coach'); await coach.waitForSelector('#opening');
+  await openingForm(coach);
   await coach.fill('#opening [name=date]', ny(6)); await coach.fill('#opening [name=start]', '16:00'); await coach.fill('#opening [name=end]', '17:00');
-  await coach.click('#opening button.primary'); await waitText(coach, '#status', /Opening saved/);
+  await coach.click('#opening button'); await toast(coach, /Opening saved/);
   await family.goto(BASE + '/lesson'); await family.waitForSelector('[data-path="request"]:not([disabled])');
   await family.click('[data-path="request"]'); await family.click('[data-kind="partner"]');
   expect(await family.isChecked('[data-own]'), 'the family’s wrestler is in the group');
@@ -853,13 +870,13 @@ await step('the new coach writes a profile and posts a weekly opening; families 
   await at(lee, '#saved', /^Not saved yet$/);
   await lee.fill('#displayName', 'Lee Tran'); await lee.fill('#bio', 'Ten years coaching folkstyle. Former state qualifier.');
   await lee.fill('#specialties', 'Takedowns, Mat returns'); await lee.fill('#phone', '(631) 555-0199');
-  await lee.click('#saveProfile'); await at(lee, '#status', /Profile saved/);
+  await lee.click('#saveProfile'); await toast(lee, /Profile saved/);
   await at(lee, '#preview', /Lee Tran[\s\S]*Takedowns[\s\S]*Ten years/);
   await shot(lee, 'coach-profile');
-  await lee.goto(BASE + '/coach'); await lee.waitForSelector('#opening');
+  await openingForm(lee);
   await lee.fill('#opening [name=date]', ny(9)); await lee.fill('#opening [name=start]', '17:00'); await lee.fill('#opening [name=end]', '18:00');
   await lee.selectOption('#weeks', '3'); await at(lee, '#repeatHelp', /Adds 3 openings/);
-  await lee.click('#opening button.primary'); await at(lee, '#status', /3 openings saved/);
+  await lee.click('#opening button'); await toast(lee, /3 openings saved/);
   expect((await lee.locator('[data-slot]').count()) === 3, 'three weekly openings');
   await shot(lee, 'coach-weekly');
   const listing = await api(family, '/api/lessons');
@@ -876,8 +893,9 @@ await step('the owner adds himself as a coach, opens Coach view and posts an ope
   await waitText(owner, '#status', /You are now a coach too/);
   await owner.goto(BASE + '/'); await owner.click('a.toollink[href="/coach"]'); await owner.waitForURL(/\/coach$/);
   await waitText(owner, '#heading', /Justin/); expect(await owner.isVisible('#ownerNote'), 'owner note in Coach view');
+  await openOpening(owner);
   await owner.fill('#opening [name=date]', ny(10)); await owner.fill('#opening [name=start]', '08:00'); await owner.fill('#opening [name=end]', '09:00');
-  await owner.click('#opening button.primary'); await waitText(owner, '#status', /Opening saved/);
+  await owner.click('#opening button'); await toast(owner, /Opening saved/);
   await shot(owner, 'owner-coach-view');
   const listing = await api(family, '/api/lessons');
   expect(listing.body.openings.some(o => o.coach === 'Justin' && o.date === ny(10)), 'families can book the owner');
@@ -938,7 +956,7 @@ await step('a coach clocks in and out of today\'s practice from coach home on a 
   const big = await phone.locator('#clockCard [data-cc="out"]').boundingBox();
   expect(big && big.height >= 70 && big.width >= 300, 'a big clock-out button on a phone: ' + JSON.stringify(big));
   await shot(phone, 'coach-clocked-in');
-  await phone.click('#clockCard [data-cc="out"]'); await at(phone, '#clockCard .cc-status', /Clocked out/);
+  await phone.click('#clockCard [data-cc="out"]'); await toast(phone, /Clocked out/);
   await phone.goto(BASE + '/coach-time'); await at(phone, '#shifts', new RegExp('SWA Intermediate · ' + PRACTICE.label + ' · Head coach'));
   await at(phone, '#submitHelp', /its last day|Sends every shift/);
   const over2 = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -954,9 +972,9 @@ await step('the coach adds a missed shift for last month and sends it; the owner
   await coach.waitForFunction(() => !/Choose a date first/.test(document.querySelector('#addSession').textContent));
   await coach.selectOption('#addDuty', 'head'); await coach.fill('#addForm [name=in]', '18:00'); await coach.fill('#addForm [name=out]', '19:30');
   await coach.fill('#addForm [name=reason]', 'Phone died at practice');
-  await coach.click('#addForm button.primary'); await at(coach, '#status', /Shift added/);
+  await coach.click('#addForm button[type=submit]'); await toast(coach, /Shift added/);
   await coach.click('#prev'); await at(coach, '#shifts', /Added by hand, not clocked: Phone died at practice/);
-  await coach.click('#submit'); await at(coach, '#status', /1 shift sent to the academy/);
+  await coach.click('#submit'); await toast(coach, /1 shift sent to the academy/);
   await at(coach, '#monthState', /Sent to the academy/);
   await owner.goto(BASE + '/timesheets?month=' + month); await at(owner, '#coaches', /Coach Dana[\s\S]*Sent, waiting for you/);
   const dana = owner.locator('section.coach', {hasText: 'Coach Dana'});
@@ -976,7 +994,7 @@ await step('a coach asks for time off; the owner approves; only coaches in the s
   expect((await api(owner, '/api/staff', {action: 'grant', email: 'coach.lee@example.test', name: 'Coach Lee', programs: ['Elementary', 'Intermediate']})).status === 200, 'Lee joins SWA Intermediate');
   await coach.goto(BASE + '/coach-time'); await coach.waitForSelector('#offForm');
   await coach.fill('#offForm [name=start]', ny(30)); await coach.fill('#offForm [name=end]', ny(31)); await coach.fill('#offForm [name=reason]', 'Family wedding');
-  await coach.click('#offForm button.primary'); await at(coach, '#status', /Time off requested/);
+  await coach.click('#offForm button[type=submit]'); await toast(coach, /Time off requested/);
   await at(coach, '#offList', /Waiting for the academy/);
   await owner.goto(BASE + '/timesheets'); await at(owner, '#offPending', /Coach Dana[\s\S]*Family wedding[\s\S]*SWA Intermediate practice/);
   await owner.click('#offPending [data-decision="approve"]'); await at(owner, '#status', /Time off approved\. 1 coach was told/);
@@ -994,7 +1012,7 @@ await step('owner publishes a coach contract; the coach sees a to-do, signs it o
   await owner.fill('#wTitle', 'Coach contract 2026'); await owner.fill('#wBody', 'Sample contract text for testing only. '.repeat(8));
   await owner.click('#publish'); await at(owner, '#status', /Published/);
   await coach.goto(BASE + '/coach'); await at(coach, '#contractTodo', /To do:[\s\S]*Coach contract 2026/);
-  expect(await coach.isVisible('#opening'), 'an unsigned contract does not block coaching');
+  expect(await coach.isVisible('#openingBox'), 'an unsigned contract does not block coaching');
   await coach.click('#contractTodo a'); await coach.waitForURL(/\/contract$/); await coach.waitForSelector('#signatureCanvas');
   expect(!(await coach.isVisible('#wrestlerField')), 'a coach signs for themselves, with no wrestler to choose');
   await coach.fill('#signer', 'Dana Coach'); await draw(coach, '#signatureCanvas');

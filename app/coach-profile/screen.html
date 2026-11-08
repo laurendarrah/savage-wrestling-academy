@@ -1,28 +1,28 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach profile | Savage Wrestling Academy</title><style>
-*{box-sizing:border-box}body{font:16px Arial;line-height:1.55;background:#f4f5f7;color:#141416;margin:0}main{max-width:760px;margin:auto;padding:24px 16px 48px}
-section{background:#fff;border:1px solid #e1e3e8;border-radius:6px;padding:20px;margin:18px 0}h1{margin:8px 0 4px}h2{margin:0 0 12px}
-label{display:block;font-weight:600;margin:16px 0}input,textarea{display:block;width:100%;padding:12px;border:1px solid #ccc;border-radius:6px;margin-top:6px;font:inherit}textarea{min-height:140px;resize:vertical}
-button{font:inherit;padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;color:#141416}.primary{background:#c4222c;color:#fff;border-color:#c4222c}
-.muted{color:#55585f}.hint{display:block;font-weight:400;font-size:15px;color:#55585f;margin-top:4px}.count{float:right;font-weight:400;font-size:14px;color:#55585f;font-variant-numeric:tabular-nums}
-.who{display:flex;gap:16px;align-items:center}.avatar{flex:none;width:72px;height:72px;border-radius:50%;background:#141416;color:#fff;display:grid;place-items:center;font:800 28px/1 'Barlow Condensed','Arial Narrow',Arial,sans-serif;letter-spacing:.5px;text-transform:uppercase;border:2px solid #c4222c}
-.who p{margin:0}
+*{box-sizing:border-box}body{margin:0}main{max-width:var(--swa-width-narrow,760px);margin:auto;padding:24px 16px 48px}
+html body main>section{margin:16px 0}h2{margin:0 0 12px}
+label{display:block;font-weight:600;margin:16px 0}input,textarea{display:block;width:100%;margin-top:6px}textarea{min-height:140px;resize:vertical}
+.hint{display:block;font-weight:400;font-size:var(--swa-t-15,15px);color:var(--swa-muted,#55585F);margin-top:4px}.count{float:right;font-weight:400;font-size:var(--swa-t-13,13px);color:var(--swa-muted,#55585F);font-variant-numeric:tabular-nums}
+/* Who this is: the initials in the brand's black disc with the red ring, the name, the sign-in email. */
+.who{display:flex;gap:16px;align-items:center}.avatar{flex:none;width:72px;height:72px;border-radius:50%;background:var(--swa-dark-0,#0D0D0F);color:#fff;display:grid;place-items:center;font:800 28px/1 var(--swa-display,'Barlow Condensed','Arial Narrow',Arial,sans-serif);letter-spacing:.5px;text-transform:uppercase;border:2px solid var(--swa-red,#C4222C)}
+.who p{margin:0}.who b{font-size:var(--swa-t-20,20px)}
 /* What families see (issue #223): the team page's own coach card. Its styles come from lib/website.ts with the route. */
-.coaches{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-top:14px}#previewNote{margin:12px 0 0}
+.coaches{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:12px}#previewNote{margin:12px 0 0}
 <!--slot:coachcss-->
-#status{font-weight:600}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}[hidden]{display:none!important}
+#status{font-weight:600}.actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:24px}[hidden]{display:none!important}
 fieldset{border:0;margin:0;padding:0;min-width:0}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <a href="/coach" id="back" class="swa-back">← Coach home</a>
 <h1 id="heading">Your coach profile</h1>
 <p id="intro">Families see your name, bio and specialties next to your private lesson times. Your phone number stays with the academy.</p>
 <section aria-labelledby="aboutTitle"><h2 id="aboutTitle">About you</h2>
-<div class="who"><div class="avatar" id="avatar" aria-hidden="true"></div><div><p><b id="whoName"></b></p><p class="muted" id="whoEmail"></p></div></div>
+<div class="who"><div class="avatar" id="avatar" aria-hidden="true"></div><div><p><b id="whoName"></b></p><p class="muted swa-secondary" id="whoEmail"></p></div></div>
 <form id="profileForm"><fieldset id="profileFields" disabled>
 <label for="displayName">Name families see <span class="count" id="nameCount"></span><input id="displayName" name="displayName" maxlength="60" required autocomplete="name"></label>
 <label for="bio">Short bio <span class="count" id="bioCount"></span><span class="hint">A few sentences: your wrestling background and how you coach.</span><textarea id="bio" name="bio" maxlength="500"></textarea></label>
 <label for="specialties">Specialties<span class="hint">Separate them with commas, for example: Takedowns, Mat returns, Youth fundamentals. Up to 6.</span><input id="specialties" name="specialties" maxlength="300"></label>
 <label for="phone">Phone<span class="hint">Only the academy sees this.</span><input id="phone" name="phone" type="tel" maxlength="20" autocomplete="tel"></label>
-<div class="actions"><button class="primary" id="saveProfile">Save profile</button><span id="saved" class="muted"></span></div>
+<div class="actions"><button class="primary" id="saveProfile">Save profile</button><span id="saved" class="muted swa-secondary"></span></div>
 </fieldset></form></section>
 <section class="plain" aria-labelledby="previewTitle"><h2 id="previewTitle">What families see</h2><p class="muted">Your card as the team page shows it when the academy lists you there.</p><div class="coaches" id="preview"></div><p class="muted" id="previewNote" hidden>No bio yet, so families see your name and specialties only.</p></section>
 <p id="status" role="status" aria-live="polite"></p></main>
@@ -31,6 +31,8 @@ const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,
 const asked=new URLSearchParams(location.search).get('email')||'';
 const q=asked?'?email='+encodeURIComponent(asked):'';
 async function call(body){const r=await fetch('/api/coach-profile'+(body?'':q),body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error(data.error||'Something went wrong. Please try again.');return data}
+// A save is a toast (public/toast.js, issue #280); without the helper, the status line says it. Errors stay on the line.
+const say=(text,kind)=>{if(typeof swaToast==='function')swaToast(text,{kind});else $('status').textContent=text};
 const initials=n=>String(n||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('')||'?';
 const list=v=>String(v||'').split(',').map(s=>s.trim()).filter(Boolean).filter((s,i,all)=>all.findIndex(x=>x.toLowerCase()===s.toLowerCase())===i);
 // The bio as the server saves it (lib/coach-profile.ts): line breaks kept, at most one blank line, trimmed.
@@ -52,6 +54,6 @@ function fill(d){const p=d.profile;$('displayName').value=p.displayName||'';$('b
 // (issue #220). If it cannot load, they stay disabled: saving then would replace a profile the coach never saw.
 async function load(){try{fill(await call());$('profileFields').disabled=false}catch(e){$('status').textContent=e.message}}
 ['displayName','bio','specialties'].forEach(id=>$(id).addEventListener('input',preview));
-$('profileForm').onsubmit=async e=>{e.preventDefault();$('profileFields').disabled=true;try{const d=await call({email:asked||undefined,displayName:$('displayName').value,bio:$('bio').value,specialties:list($('specialties').value),phone:$('phone').value});fill({...d,email:$('whoEmail').textContent,byOwner:!!asked});$('status').textContent='Profile saved.'}catch(err){$('status').textContent=err.message}finally{$('profileFields').disabled=false}};
+$('profileForm').onsubmit=async e=>{e.preventDefault();$('profileFields').disabled=true;try{const d=await call({email:asked||undefined,displayName:$('displayName').value,bio:$('bio').value,specialties:list($('specialties').value),phone:$('phone').value});fill({...d,email:$('whoEmail').textContent,byOwner:!!asked});say('Profile saved.','ok')}catch(err){$('status').textContent=err.message}finally{$('profileFields').disabled=false}};
 load();
 </script></body></html>

@@ -8,15 +8,15 @@ input,select{font:inherit}input,select{width:100%;min-width:0}
 .pick{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-end}.pick label{flex:1 1 260px;margin:0}
 #status{font-weight:600;min-height:1.5em}[hidden]{display:none!important}
 .list{display:grid;gap:12px;margin-top:12px}
-html body .list article{margin:0;padding:16px 18px;border:1px solid var(--swa-line);border-radius:10px;background:var(--swa-white)}
+html body .list article{margin:0;padding:16px;border:1px solid var(--swa-line);border-radius:var(--swa-r-card,12px);background:var(--swa-surface,#fff)}
 html body .list article.booked{border-color:var(--swa-ok);box-shadow:inset 3px 0 0 var(--swa-ok)}
-.when{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.when h3{margin:0;font-size:18px}.when p{margin:0;font-variant-numeric:tabular-nums}
+.when{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.when h3{margin:0;font-size:var(--swa-t-17,17px)}.when p{margin:0;font-variant-numeric:tabular-nums}
 .spots{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.kind{margin:4px 0 0;font-size:15px}
 .roster{list-style:none;padding:0;margin:10px 0 0;border-top:1px solid var(--swa-line)}.roster li{padding:8px 0;border-bottom:1px solid var(--swa-line);overflow-wrap:anywhere}
-.tag{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--swa-warn-bg);color:var(--swa-warn-ink);font-size:13px;font-weight:700}
-details.edit{margin-top:10px}details.edit summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:var(--swa-red)}
+.tag{margin-left:6px}
+details.edit{margin-top:10px}details.edit summary{color:var(--swa-muted);font-size:15px}
 .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
-.note{margin:10px 0 0;padding:10px 14px;border-left:3px solid var(--swa-silver);background:var(--swa-ground);border-radius:0 6px 6px 0}
+.note{margin:12px 0 0;padding:10px 14px;border-left:3px solid var(--swa-silver);background:var(--swa-surface-2,#F8F9FA);border-radius:0 6px 6px 0;font-size:var(--swa-t-15,15px)}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <a class="swa-back" href="/staff">← Coaches</a>
 <h1 id="heading">Lesson openings</h1>
@@ -39,7 +39,9 @@ const statusTag={paying:'Paying now',kept:'Not paid yet'};
 const formatOptions=f=>[['','Open time'],['one-on-one','One-on-one only'],['partner','Partner lesson: 2 wrestlers'],['small-group','Small group']].map(([v,n])=>`<option value="${v}"${v===(f||'')?' selected':''}>${n}</option>`).join('');
 let data=null,coachEmail='';
 async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong.');return d}
-function rosterHtml(list){return '<ul class="roster">'+list.map(r=>`<li><b>${esc(r.wrestler)}</b>${statusTag[r.status]?' <span class="tag">'+statusTag[r.status]+'</span>':''}<br>Parent: ${esc(r.parent||'Not saved')}${r.phone?' · <a href="tel:'+esc(r.phone)+'">'+esc(r.phone)+'</a>':''}${r.email?' · '+esc(r.email):''}</li>`).join('')+'</ul>'}
+// A saved change is a toast (public/toast.js, issue #280); without the helper, the status line says it.
+const say=(text,kind)=>{if(typeof swaToast==='function')swaToast(text,{kind});else $('status').textContent=text};
+function rosterHtml(list){return '<ul class="roster">'+list.map(r=>`<li><b>${esc(r.wrestler)}</b>${statusTag[r.status]?' <span class="tag pill warn">'+statusTag[r.status]+'</span>':''}<br>Parent: ${esc(r.parent||'Not saved')}${r.phone?' · <a href="tel:'+esc(r.phone)+'">'+esc(r.phone)+'</a>':''}${r.email?' · '+esc(r.email):''}</li>`).join('')+'</ul>'}
 // One lesson or open time, as on coach home: who is booked, spots left, and the same change and remove rules.
 function slotHtml(s){
  const roster=s.roster||[],taken=roster.some(r=>r.status!=='kept'),group=s.capacity>1;
@@ -67,14 +69,14 @@ function render(){
  $('profileLink').href=c.you?'/coach-profile':'/coach-profile?email='+encodeURIComponent(c.email);
  repeatOptions(data.maxWeeks);
  const booked=data.openings.filter(s=>(s.roster||[]).length),open=data.openings.filter(s=>!(s.roster||[]).length);
- $('slots').innerHTML=[...booked,...open].map(slotHtml).join('')||'<p class="muted">No lessons or open times coming up. Add an opening above.</p>';
+ $('slots').innerHTML=[...booked,...open].map(slotHtml).join('')||'<p class="empty">No lessons or open times coming up. Add an opening above.</p>';
  document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>removeSlot(b.dataset.slot,!!b.dataset.family));
  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>saveType(b.dataset.edit));
 }
 async function removeSlot(id,family){if(!confirm(family?'A family asked for this time as a private group. Remove it and tell them it is called off?':'Remove this opening? Families can no longer book it.'))return;
- try{await call('/api/coach-openings',{action:'remove',email:coachEmail,id});await load(coachEmail);$('status').textContent='Opening removed.'}catch(e){$('status').textContent=e.message}}
+ try{await call('/api/coach-openings',{action:'remove',email:coachEmail,id});await load(coachEmail);say('Opening removed.','ok')}catch(e){$('status').textContent=e.message}}
 async function saveType(id){const f=document.querySelector('[data-edit-format="'+id+'"]').value,n=Number(document.querySelector('[data-edit-spots="'+id+'"]').value);
- try{await call('/api/coach-openings',{action:'update',email:coachEmail,id,format:f||null,spots:f==='small-group'?n:undefined});await load(coachEmail);$('status').textContent='Lesson type saved.'}catch(e){$('status').textContent=e.message}}
+ try{await call('/api/coach-openings',{action:'update',email:coachEmail,id,format:f||null,spots:f==='small-group'?n:undefined});await load(coachEmail);say('Lesson type saved.','ok')}catch(e){$('status').textContent=e.message}}
 async function load(email){data=await call('/api/coach-openings?email='+encodeURIComponent(email));coachEmail=data.coach.email;render()}
 // Every coach with access, and the owner when they coach too.
 function coachOptions(staff){const list=[...(staff.self&&staff.self.active?[{...staff.self,displayName:(staff.self.displayName||'You')+' (you)'}]:[]),...(staff.staff||[]).filter(s=>s.active)];
@@ -88,6 +90,6 @@ $('coach').onchange=async()=>{try{await load($('coach').value);history.replaceSt
 $('format').onchange=()=>{$('spotsLabel').hidden=$('format').value!=='small-group'};
 $('weeks').onchange=repeatHelp;$('date').onchange=repeatHelp;
 $('start').onchange=()=>{const v=$('start').value;if(/^\d\d:\d\d$/.test(v)&&+v.slice(0,2)<23)$('end').value=String(+v.slice(0,2)+1).padStart(2,'0')+v.slice(2)};
-$('openingForm').onsubmit=async e=>{e.preventDefault();if(!data)return;$('save').disabled=true;try{const r=await call('/api/coach-openings',openingInput());await load(coachEmail);$('status').textContent=savedText(r)}catch(error){$('status').textContent=error.message}finally{$('save').disabled=false}};
+$('openingForm').onsubmit=async e=>{e.preventDefault();if(!data)return;$('save').disabled=true;try{const r=await call('/api/coach-openings',openingInput());await load(coachEmail);say(savedText(r),'ok')}catch(error){$('status').textContent=error.message}finally{$('save').disabled=false}};
 start();
 </script></body></html>

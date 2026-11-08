@@ -1,13 +1,170 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Roster and check-in | Savage Wrestling Academy</title><style>*{box-sizing:border-box}body{font:16px Arial,sans-serif;line-height:1.5;background:#f5f5f6;color:#18191c;margin:0}main{max-width:900px;margin:auto;padding:20px 16px 60px}h1{line-height:1.15;margin:12px 0 4px}a{color:#a92330}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:16px 0}.toolbar label{display:flex;flex-direction:column;font-weight:bold;font-size:14px}input,button{font:inherit}input{padding:10px;border:1px solid #ccc;border-radius:6px}button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#18191c;cursor:pointer}button.primary{background:#d72732;border-color:#d72732;color:#fff}button:disabled{opacity:.55}.session{background:#fff;border:1px solid #ddd;border-radius:10px;padding:18px;margin:16px 0}.session-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}.session-head h2{margin:0;font-size:20px}.count{font-weight:bold}.muted{color:#626672}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;border-top:1px solid #eee;padding:12px 0;flex-wrap:wrap}.row.done{background:#f3faf4}.who{min-width:220px;flex:1}.who strong{font-size:17px}.badge{display:inline-block;font-size:12px;font-weight:bold;background:#eef0f3;border-radius:999px;padding:2px 8px;margin:2px 4px 0 0}.badge.ok{background:#dff3e3;color:#11632a}.badge.warn{background:#fde8e8;color:#8a1c1c}.row.card-problem{border-left:4px solid #d72732;padding-left:10px}.block-reason{margin:8px 0 4px;padding:8px 10px;border-radius:6px;background:#fde8e8;color:var(--swa-red-dark,#8a1c1c);font-weight:bold;font-size:15px;line-height:1.4}.block-reason .fix-link{display:inline-block;margin-top:4px;font-weight:600}button.blocked{border-style:dashed;color:var(--swa-muted,#55585f);cursor:not-allowed}.empty{color:#626672;font-style:italic}.scan-ok,.scan-warn,.scan-bad{border-radius:8px;padding:12px;margin-top:10px;font-size:18px}.scan-ok{background:#dff3e3;color:#11632a}.scan-warn{background:#fff1dd;color:#8d5917}.scan-bad{background:#fde8e8;color:#8a1c1c}#status{font-weight:bold;min-height:1.5em}@media print{.toolbar,button{display:none}.session{break-inside:avoid;border:0}}.safety{margin-top:6px;font-size:15px;overflow-wrap:anywhere}.safety .medical{display:inline-block;background:#FDECEC;color:#8E1A22;border-radius:6px;padding:2px 8px;white-space:pre-line}
-/* Pay at the academy (issue #248): the amount due in the academy's warning colors, and a Cash received button. */
-.badge.due{background:var(--swa-warn-bg,#FFF7E6);color:var(--swa-warn-ink,#5C3B00);border:1px solid var(--swa-warn-line,#F0D49C)}
-.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-button.cash{background:var(--swa-ink,#111113);border-color:var(--swa-ink,#111113);color:#fff}
-.row.owes{border-left:4px solid var(--swa-warn-line,#F0D49C);padding-left:10px}
-/* Who received the cash (issue #250). */
-.received{display:inline-block;font-size:14px;color:#11632a;margin:2px 4px 0 0}.small{font-size:13px}
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Check-in | Savage Wrestling Academy</title><style>
+/* The mat screen (issue #286, redesign Phase 3). Read at arm's length under gym lights, one-handed: dark ground, one
+   row per wrestler, one 56px Check in per row, Scan at the thumb. The same page inside the owner shell sits on the
+   light ground: every color below is a page token (--m-*) that resolves to the dark set for a coach and the light set
+   for the owner, so the rows, states and spacing are one layout. Selectors carry body[data-swa-page="/roster"] so they
+   outrank the shared stylesheet, which loads after this one. */
+*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:0 auto;padding:0 16px 112px}
+[hidden]{display:none!important}
+body[data-swa-page="/roster"]{--m-ground:var(--swa-ground);--m-surface:var(--swa-surface);--m-surface-in:var(--swa-ok-bg);--m-raise:var(--swa-surface-2);--m-line:var(--swa-hair);--m-line-2:#CDD0D6;--m-text:var(--swa-ink);--m-strong:var(--swa-ink);--m-muted:var(--swa-muted);--m-ok:var(--swa-ok);--m-warn:var(--swa-warn);--m-bad:var(--swa-bad);--m-ok-line:rgba(31,111,58,.45);--m-bad-line:rgba(196,34,44,.6);--m-field:#FBFBFC;--m-tab:var(--swa-surface);--m-tab-line:#CDD0D6;--m-tab-on:var(--swa-ink);--m-tab-on-text:#FFFFFF;--m-tab-on-sub:#C9CED4;--m-alert-bg:var(--swa-red-soft);--m-alert-ink:var(--swa-ink);--m-shadow:var(--swa-shadow-sm)}
+/* A coach's mat: the dark set. Depth is a lighter layer, text is off-white, the site bar gives way to the compact bar. */
+body[data-swa-page="/roster"]:not([data-swa-shell]){background:var(--swa-dark-0);color:var(--swa-dark-text);--m-ground:var(--swa-dark-0);--m-surface:var(--swa-dark-1);--m-surface-in:var(--swa-dark-2);--m-raise:var(--swa-dark-3);--m-line:var(--swa-dark-line);--m-line-2:rgba(255,255,255,.3);--m-text:var(--swa-dark-text);--m-strong:#FFFFFF;--m-muted:var(--swa-dark-muted);--m-ok:#8FD3A4;--m-warn:#FFD27A;--m-bad:#FF7B82;--m-ok-line:rgba(143,211,164,.45);--m-bad-line:rgba(255,123,130,.6);--m-field:var(--swa-dark-1);--m-tab:var(--swa-dark-1);--m-tab-line:var(--swa-dark-line);--m-tab-on:#FFFFFF;--m-tab-on-text:var(--swa-ink);--m-tab-on-sub:var(--swa-muted);--m-alert-bg:var(--swa-red-soft);--m-alert-ink:var(--swa-ink);--m-shadow:none}
+body[data-swa-page="/roster"]:not([data-swa-shell]) .swa-bar{display:none}
+
+/* The compact bar: back, the title, Scan. Sticky for a coach; a plain title row inside the owner shell. */
+body[data-swa-page="/roster"] .mat-bar{position:sticky;top:0;z-index:20;margin:0 -16px;padding:0 16px;background:var(--m-ground);border-bottom:1px solid var(--m-line)}
+body[data-swa-page="/roster"] .mat-bar__in{min-height:56px;display:flex;align-items:center;gap:12px}
+body[data-swa-page="/roster"] .mat-bar #home{display:inline-flex;align-items:center;min-height:44px;margin:0;color:var(--m-muted);font:600 var(--swa-t-15)/1 var(--swa-body);text-decoration:none;white-space:nowrap}
+body[data-swa-page="/roster"] .mat-bar #home:hover{color:var(--m-strong)}
+body[data-swa-page="/roster"] .mat-bar h1{margin:0 auto;font-size:var(--swa-t-24);letter-spacing:.2px;color:var(--m-strong)}
+body[data-swa-page="/roster"] .mat-bar button.scan{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:var(--swa-r-control);border:1px solid var(--m-line-2);background:transparent;color:var(--m-strong);font:600 var(--swa-t-15)/1 var(--swa-body);box-shadow:none}
+body[data-swa-page="/roster"] .mat-bar button.scan:hover{border-color:var(--m-strong);color:var(--m-strong)}
+body[data-swa-page="/roster"] .mat-bar button.scan svg{width:18px;height:18px}
+body[data-swa-page][data-swa-shell] .mat-bar{position:static;margin:0;padding:8px 0 0;border:0;background:none}
+body[data-swa-page][data-swa-shell] .mat-bar h1{margin:0 auto 0 0;font-size:var(--swa-t-35)}
+@media (min-width:900px){body[data-swa-page][data-swa-shell] .mat-bar h1{font-size:var(--swa-t-42)}}
+
+/* The session switcher: the only navigation a coach needs tonight. A tab is the session, its time, Now, and N of M in. */
+body[data-swa-page="/roster"] .sessions{position:sticky;top:56px;z-index:19;margin:0 -16px;padding:12px 16px;background:var(--m-ground);border-bottom:1px solid var(--m-line)}
+body[data-swa-page][data-swa-shell] .sessions{position:static;margin:0;padding:12px 0;border:0;background:none}
+body[data-swa-page="/roster"] .sessions__in{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}
+body[data-swa-page="/roster"] .sessions__in::-webkit-scrollbar{display:none}
+body[data-swa-page="/roster"] .sessions__in button.seg{flex:1 0 auto;min-width:150px;max-width:280px;min-height:56px;padding:8px 12px;border-radius:var(--swa-r-control);border:1px solid var(--m-tab-line);background:var(--m-tab);color:var(--m-muted);text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px;font:400 var(--swa-t-13)/1.2 var(--swa-body);box-shadow:none;scroll-snap-align:start}
+body[data-swa-page="/roster"] .sessions__in button.seg b{display:block;font:700 var(--swa-t-17)/1.15 var(--swa-body);color:var(--m-strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body[data-swa-page="/roster"] .sessions__in button.seg:hover{border-color:var(--m-line-2);color:var(--m-muted)}
+body[data-swa-page="/roster"] .sessions__in button.seg[aria-selected=true]{background:var(--m-tab-on);border-color:var(--m-tab-on);color:var(--m-tab-on-sub)}
+body[data-swa-page="/roster"] .sessions__in button.seg[aria-selected=true] b{color:var(--m-tab-on-text)}
+body[data-swa-page="/roster"] .now{display:inline-block;vertical-align:1px;padding:1px 6px;border-radius:var(--swa-r-chip);background:var(--swa-red);color:#FFFFFF;font:700 11px/1.4 var(--swa-body);letter-spacing:1px;text-transform:uppercase}
+body[data-swa-page="/roster"] .sessions__in .skeleton{flex:1 0 auto;min-width:150px;height:56px;border-radius:var(--swa-r-control);margin:0}
+
+/* Tools: the owner's date, the search field, and Refresh and Print behind one quiet menu. */
+body[data-swa-page="/roster"] .tools{display:flex;align-items:center;gap:8px;margin:16px 0 12px}
+body[data-swa-page="/roster"] .tools label.date{display:flex;flex-direction:column;gap:4px;font-size:var(--swa-t-13);color:var(--m-muted);flex:0 1 180px}
+body[data-swa-page="/roster"] .tools label.date input{min-height:var(--swa-h-control);background:var(--m-field);color:var(--m-text);border-color:var(--m-line-2)}
+body[data-swa-page="/roster"] .tools label.search{flex:1 1 auto;display:flex;align-items:center;gap:8px;min-height:var(--swa-h-control);padding:0 12px;border-radius:var(--swa-r-control);background:var(--m-field);border:1px solid var(--m-line-2);color:var(--m-muted);font-weight:400}
+body[data-swa-page="/roster"] .tools label.search svg{width:20px;height:20px;flex:none}
+body[data-swa-page="/roster"] .tools label.search input#search{flex:1;min-width:0;min-height:46px;padding:0;border:0;background:none;box-shadow:none;color:var(--m-strong);font:400 var(--swa-t-17)/1 var(--swa-body)}
+body[data-swa-page="/roster"] .tools label.search input#search:focus{outline:none;box-shadow:none;background:none}
+body[data-swa-page="/roster"] .tools label.search:focus-within{border-color:var(--swa-red);box-shadow:0 0 0 1px var(--swa-red),0 0 0 5px rgba(196,34,44,.22)}
+body[data-swa-page="/roster"] .tools label.search input#search::placeholder{color:var(--m-muted)}
+body[data-swa-page="/roster"] details.more{position:relative;flex:none;margin:0}
+body[data-swa-page="/roster"] details.more>summary{min-width:48px;min-height:48px;justify-content:center;padding:0;border-radius:var(--swa-r-control);border:1px solid var(--m-line-2);color:var(--m-strong);font:700 22px/1 var(--swa-body);letter-spacing:1px}
+body[data-swa-page="/roster"] details.more>summary::after{content:none}
+body[data-swa-page="/roster"] details.more .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:21;display:flex;flex-direction:column;min-width:180px;padding:8px;border-radius:var(--swa-r-card);background:var(--m-surface);border:1px solid var(--m-line-2);box-shadow:0 12px 32px -12px rgba(0,0,0,.5)}
+body[data-swa-page="/roster"] details.more .menu button{justify-content:flex-start;text-align:left;min-height:44px;border:0;background:none;box-shadow:none;color:var(--m-text);text-decoration:none;padding:0 12px;border-radius:6px}
+body[data-swa-page="/roster"] details.more .menu button:hover{background:var(--m-surface-in);color:var(--m-strong)}
+body[data-swa-page="/roster"] #status{margin:0 0 12px;font-weight:600;color:var(--m-muted)}
+body[data-swa-page="/roster"] #status:empty{display:none}
+body[data-swa-page="/roster"] .how{margin:8px 0 0}
+body[data-swa-page="/roster"] .how>summary,body[data-swa-page="/roster"] .how>p{color:var(--m-muted)}
+body[data-swa-page="/roster"] .how>summary:hover{color:var(--m-strong)}
+
+/* One session: its name and the count on one line, a meta line, then the rows. */
+body[data-swa-page="/roster"] .session{padding:0;margin:0 0 24px;background:none;border:0;box-shadow:none;border-radius:0}
+body[data-swa-page="/roster"] .session-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 2px}
+body[data-swa-page="/roster"] .session .session-head h2{margin:0;color:var(--m-strong)}
+body[data-swa-page="/roster"] .count{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-29);line-height:1;color:var(--m-strong);font-variant-numeric:tabular-nums;white-space:nowrap}
+body[data-swa-page="/roster"] .count small{font:600 var(--swa-t-15)/1 var(--swa-body);color:var(--m-muted);margin-left:4px}
+body[data-swa-page="/roster"] .session .meta{margin:0 0 12px;color:var(--m-muted);font-size:var(--swa-t-15)}
+body[data-swa-page="/roster"] .list{display:grid;gap:8px}
+body[data-swa-page="/roster"] .empty{color:var(--m-muted)}
+body[data-swa-page="/roster"] .empty>svg{color:var(--m-muted)}
+
+/* One wrestler = one row: name first, state second, one button. Everything else is a tap away. The 120ms ease-out is
+   the state change: a row that was just checked in starts from the plain surface (.enter) and settles into the lighter
+   one with its check mark. */
+body[data-swa-page="/roster"] .row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:12px 12px 12px 16px;border-radius:var(--swa-r-card);background:var(--m-surface);border:1px solid var(--m-line);box-shadow:var(--m-shadow);transition:background-color .12s ease-out,border-color .12s ease-out}
+body[data-swa-page="/roster"] .row.done{background:var(--m-surface-in);border-color:var(--m-ok-line)}
+body[data-swa-page="/roster"] .row.done.enter{background:var(--m-surface);border-color:var(--m-line)}
+body[data-swa-page="/roster"] .row.hold{border-color:var(--m-bad-line)}
+body[data-swa-page="/roster"] .row .who{min-width:0}
+body[data-swa-page="/roster"] .row .name{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font:700 var(--swa-t-24)/1.1 var(--swa-body);letter-spacing:-.2px;color:var(--m-strong);overflow-wrap:anywhere}
+body[data-swa-page="/roster"] .row .name small{font:400 var(--swa-t-15)/1 var(--swa-body);color:var(--m-muted)}
+body[data-swa-page="/roster"] .flag{display:inline-flex;align-items:center;gap:5px;min-height:26px;padding:0 9px;border-radius:var(--swa-r-chip);background:var(--swa-red);color:#FFFFFF;font:700 var(--swa-t-13)/1 var(--swa-body);letter-spacing:.3px}
+body[data-swa-page="/roster"] .flag svg{width:13px;height:13px}
+body[data-swa-page="/roster"] .row .state{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;margin-top:6px;font-size:var(--swa-t-15);line-height:1.35;color:var(--m-muted)}
+/* The state line is text, not pills: the words carry the state and the color underlines it. */
+body[data-swa-page="/roster"] .row .state>*{display:inline;min-height:0;padding:0;border:0;background:none;font:inherit;line-height:inherit;color:var(--m-muted);vertical-align:baseline;letter-spacing:0}
+body[data-swa-page="/roster"] .row .state>*:not(:last-child)::after{content:"·";margin:0 6px;color:var(--m-muted);font-weight:400}
+body[data-swa-page="/roster"] .row .state .badge.ok,body[data-swa-page="/roster"] .row .state .badge.verified{color:var(--m-ok);font-weight:600}
+body[data-swa-page="/roster"] .row .state .badge.due{color:var(--m-warn);font-weight:700}
+body[data-swa-page="/roster"] .row .state .badge.warn{color:var(--m-bad);font-weight:700}
+body[data-swa-page="/roster"] .row .state .received,body[data-swa-page="/roster"] .row .state .small{color:var(--m-muted);font-size:var(--swa-t-13)}
+body[data-swa-page="/roster"] .row .state .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+body[data-swa-page="/roster"] .row details.why{margin:4px 0 0}
+body[data-swa-page="/roster"] .row details.why>summary{display:inline-flex;min-height:32px;color:var(--m-muted);font-size:var(--swa-t-13);font-weight:600}
+body[data-swa-page="/roster"] .row details.why>summary::after{width:6px;height:6px}
+body[data-swa-page="/roster"] .block-reason{margin:4px 0 0;padding:8px 12px;border-left:3px solid var(--swa-red);border-radius:0 6px 6px 0;background:var(--m-alert-bg);color:var(--m-alert-ink);font-weight:600;font-size:var(--swa-t-15);line-height:1.4}
+body[data-swa-page="/roster"] .block-reason .fix-link{display:inline-block;margin-top:4px;font-weight:600;color:var(--swa-red-dark)}
+/* The actions column: the one button, with Cash received under it when cash is owed. */
+body[data-swa-page="/roster"] .row .actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:132px}
+body[data-swa-page="/roster"] .row .actions button{padding:0 16px;white-space:nowrap}
+body[data-swa-page="/roster"] .row .actions button.primary{min-width:132px}
+body[data-swa-page="/roster"] .row .actions button.cash{min-height:44px;background:var(--m-tab-on);color:var(--m-tab-on-text);border-color:var(--m-tab-on);font-weight:700;box-shadow:none}
+body[data-swa-page="/roster"] .row .actions button.cash:hover{background:var(--m-tab-on);color:var(--m-tab-on-text);border-color:var(--m-tab-on)}
+body[data-swa-page="/roster"] .row .actions button.quiet{min-height:44px;border:1px solid var(--m-line-2);background:transparent;color:var(--m-text);text-decoration:none;font-size:var(--swa-t-15)}
+body[data-swa-page="/roster"] .row .actions button.quiet:hover{border-color:var(--m-strong);color:var(--m-strong)}
+body[data-swa-page="/roster"] .row .actions button.blocked{min-height:var(--swa-h-big);background:var(--m-raise);color:var(--m-muted);border:1px solid var(--m-line);box-shadow:none;opacity:1;cursor:not-allowed;font-family:var(--swa-display);font-weight:700;font-size:var(--swa-t-20);letter-spacing:.8px;text-transform:uppercase}
+body[data-swa-page="/roster"] .row .in{display:flex;align-items:center;justify-content:center;gap:6px;min-height:32px;color:var(--m-ok);font:700 var(--swa-t-15)/1 var(--swa-body);white-space:nowrap}
+body[data-swa-page="/roster"] .row .in svg{width:18px;height:18px;flex:none}
+/* The detail: open for a flagged wrestler, folded behind the row otherwise. Numbers are tap-to-call. */
+body[data-swa-page="/roster"] .row details.detail{grid-column:1/-1;margin:0}
+body[data-swa-page="/roster"] .row details.detail>summary{color:var(--m-muted);font-size:var(--swa-t-13);font-weight:600;min-height:36px}
+body[data-swa-page="/roster"] .row details.detail[open]>summary{margin-bottom:4px}
+body[data-swa-page="/roster"] .row .detail__body{display:grid;gap:8px;padding:8px 0 4px;border-top:1px solid var(--m-line);font-size:var(--swa-t-15);color:var(--m-text)}
+body[data-swa-page="/roster"] .row .detail__body .lbl{display:block;color:var(--m-muted);font-size:var(--swa-t-13);letter-spacing:1.2px;text-transform:uppercase;font-weight:700}
+body[data-swa-page="/roster"] .row .detail__body a{color:var(--m-strong);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+body[data-swa-page="/roster"] .row .detail__body .muted{color:var(--m-muted)}
+body[data-swa-page="/roster"] .safety{overflow-wrap:anywhere}
+body[data-swa-page="/roster"] .safety .medical{display:block;background:var(--m-alert-bg);color:var(--m-alert-ink);border-left:3px solid var(--swa-red);padding:8px 12px;border-radius:0 6px 6px 0;white-space:pre-line;margin-bottom:8px}
+body[data-swa-page="/roster"] .safety strong{color:inherit}
+
+/* The pass scanner: the camera and its result, in a card on the ground. */
+body[data-swa-page="/roster"] #scanner{margin:16px 0 0;padding:16px;border-radius:var(--swa-r-card);background:var(--m-surface);border:1px solid var(--m-line);box-shadow:none}
+body[data-swa-page="/roster"] #scanner .session-head{margin-bottom:8px}
+body[data-swa-page="/roster"] #scanner h2{margin:0;color:var(--m-strong)}
+body[data-swa-page="/roster"] #scanner .muted{color:var(--m-muted);font-size:var(--swa-t-15);margin:0 0 12px}
+body[data-swa-page="/roster"] #scanner button{background:transparent;color:var(--m-strong);border-color:var(--m-line-2);box-shadow:none}
+body[data-swa-page="/roster"] #video{width:100%;max-width:480px;border-radius:8px;background:#000;display:block}
+.scan-ok,.scan-warn,.scan-bad{border-radius:8px;padding:12px;margin-top:12px;font-size:var(--swa-t-17)}.scan-ok{background:#dff3e3;color:#11632a}.scan-warn{background:#fff1dd;color:#8d5917}.scan-bad{background:#fde8e8;color:#8a1c1c}
+.scan-ok button,.scan-warn button{margin:8px 8px 0 0}
+
+/* Skeleton rows while the roster loads: the dark set's own shimmer. */
+body[data-swa-page="/roster"] .skeleton.row{height:88px;display:block;padding:0;border:0}
+body[data-swa-page="/roster"]:not([data-swa-shell]) .skeleton{background-image:linear-gradient(90deg,var(--swa-dark-1) 25%,var(--swa-dark-2) 50%,var(--swa-dark-1) 75%)}
+
+/* The dock: Scan a pass at the thumb, always there on a phone. The toast rides above it. */
+body[data-swa-page="/roster"] .dock{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:12px 16px max(12px,env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(13,13,15,0),var(--m-ground) 40%)}
+body[data-swa-page][data-swa-shell] .dock{background:linear-gradient(180deg,rgba(243,244,246,0),var(--m-ground) 40%)}
+body[data-swa-page="/roster"] .dock__in{max-width:1120px;margin:0 auto;display:flex;gap:8px}
+body[data-swa-page="/roster"] .dock button{flex:1}
+html body[data-swa-page="/roster"] #swa-toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+
 /* Phones: a phone number is a full-size tap target (issue #232). */
-@media(max-width:640px){a[href^="tel:"]{display:inline-flex;align-items:center;min-height:44px;padding:0 4px}.actions{justify-content:flex-start;width:100%}.actions button{min-height:44px;flex:1 1 auto}}</style><script src="/jsqr-1.4.0.js" defer></script><link rel="stylesheet" href="/responsive.css"></head><body><main><a id="home" class="swa-back" href="/">← Back</a><h1>Roster &amp; check-in</h1><p class="muted">Wrestlers listed here have a paid membership, a paid walk-in or registration, or an active scholarship for the session, or booked a walk-in or extra practice to pay cash at the academy (shown with the amount due: tap Cash received when they pay). A wrestler can be checked in only with a USA Wrestling card the academy has verified and that is current that day, unless the owner allowed an exception. Times are New York time.</p><div class="toolbar"><label id="dateLabel">Date<input type="date" id="date"></label><label>Find a wrestler<input type="search" id="search" placeholder="Name" autocomplete="off"></label><button id="refresh" type="button">Refresh</button><button type="button" id="printRoster">Print</button><button type="button" id="scanStart" class="primary">Scan passes</button></div><section id="scanner" class="session" hidden><div class="session-head"><h2>Scan entry passes</h2><button type="button" id="scanStop">Stop camera</button></div><p class="muted">Point the camera at a family's QR pass. Each wrestler is checked in once, into the session closest to now.</p><video id="video" playsinline muted style="width:100%;max-width:480px;border-radius:8px;background:#000"></video><div id="scanResult" role="status" aria-live="assertive"></div></section><p id="status" role="status" aria-live="polite">Loading roster…</p><div id="sessions"></div></main><script>
+@media(max-width:640px){a[href^="tel:"]{display:inline-flex;align-items:center;min-height:44px;padding:0 4px}body[data-swa-page="/roster"] .tools{flex-wrap:wrap}body[data-swa-page="/roster"] .tools label.date{flex:1 1 100%}}
+@media (min-width:900px){
+  main{padding:0 32px 48px}
+  body[data-swa-page="/roster"] .mat-bar,body[data-swa-page="/roster"] .sessions{margin:0 -32px;padding-left:32px;padding-right:32px}
+  body[data-swa-page="/roster"] .sessions__in button.seg{flex:0 0 auto;min-width:220px}
+  body[data-swa-page="/roster"] .row{padding:16px 16px 16px 24px}
+  body[data-swa-page="/roster"] .row .actions{flex-direction:row;align-items:center;justify-content:flex-end;min-width:0}
+  body[data-swa-page="/roster"] .row .actions button.primary{min-width:160px}
+  body[data-swa-page="/roster"] .dock{display:none}
+  html body[data-swa-page="/roster"] #swa-toast{bottom:auto}
+}
+@media (min-width:901px){body[data-swa-page][data-swa-shell] .os-work>main{padding-left:32px;padding-right:32px}}
+@media print{body[data-swa-page="/roster"]{background:#fff;color:#000}.mat-bar,.sessions,.tools,.dock,#scanner,button,.swa-bar{display:none!important}body[data-swa-page="/roster"] .session{display:block!important;break-inside:avoid}body[data-swa-page="/roster"] .row{border:1px solid #ccc;background:#fff;color:#000}body[data-swa-page="/roster"] .row .name,body[data-swa-page="/roster"] .row .state>*{color:#000}}
+</style><script src="/jsqr-1.4.0.js" defer></script><link rel="stylesheet" href="/responsive.css"></head><body><main>
+<div class="mat-bar"><div class="mat-bar__in"><a id="home" class="swa-back" href="/">← Back</a><h1>Check-in</h1><button type="button" id="scanStart" class="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>Scan</button></div></div>
+<div class="sessions"><div id="switcher"><div class="sessions__in" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span></div></div></div>
+<section id="scanner" hidden><div class="session-head"><h2>Scan entry passes</h2><button type="button" id="scanStop">Stop camera</button></div><p class="muted">Point the camera at a family's QR pass. Each wrestler is checked in once, into the session closest to now.</p><video id="video" playsinline muted></video><div id="scanResult" role="status" aria-live="assertive"></div></section>
+<div class="tools"><label id="dateLabel" class="date" hidden>Date<input type="date" id="date"></label><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="search" id="search" placeholder="Find a wrestler" aria-label="Find a wrestler" autocomplete="off"></label><details class="more"><summary aria-label="More actions">⋯</summary><div class="menu"><button id="refresh" type="button" class="quiet">Refresh</button><button type="button" id="printRoster" class="quiet">Print</button></div></details></div>
+<p id="status" role="status" aria-live="polite">Loading roster…</p>
+<div id="sessions"><div class="list" aria-hidden="true"><span class="skeleton row"></span><span class="skeleton row"></span><span class="skeleton row"></span></div></div>
+<details class="how"><summary>How this works</summary><p>Wrestlers listed here have a paid membership, a paid walk-in or registration, or an active scholarship for the session, or booked a walk-in or extra practice to pay cash at the academy (shown with the amount due: tap Cash received when they pay). A wrestler can be checked in only with a USA Wrestling card the academy has verified and that is current that day, unless the owner allowed an exception. Times are New York time.</p></details>
+</main>
+<div class="dock"><div class="dock__in"><button type="button" id="scanDock" class="primary big">Scan a pass</button></div></div>
+<script>
 const cardBad=e=>['missing','expired','invalid','recheck','current'].includes(e.card)||e.waiverSigned===false;
 const blockedNow=e=>!e.checkedInAt&&!!e.checkInBlocked;
 // Pay at the academy (issue #248). An unpaid booking can still be checked in; the amount due stays in view until Cash
@@ -16,13 +173,15 @@ const blockedNow=e=>!e.checkedInAt&&!!e.checkInBlocked;
 const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);
 const owes=e=>!!e.cash&&e.cash.status==='due';
 const receivedText=c=>'Received by '+(c.collectedBy||'the academy')+(c.collectedAt?' · '+timeOf(c.collectedAt):'');
-function cashBadge(e){const c=e.cash;if(!c)return '';return c.status==='due'?'<span class="badge due">Pay at the academy · '+esc(money(c.cents))+' due</span>':'<span class="badge ok">Cash '+esc(money(c.cents))+'</span><span class="received">'+esc(receivedText(c))+'</span>'}
-function cashButtons(e,at){const c=e.cash;if(!c)return '';if(c.status==='due')return `<button class="cash" type="button" data-cash="${at}">Cash received</button>`;return data.role==='owner'&&c.orderId?`<button type="button" data-cash-undo="${at}">Undo cash</button>`:c.orderId?'<span class="muted small">Only the owner can undo cash</span>':''}
+function cashBadge(e){const c=e.cash;if(!c)return '';return c.status==='due'?'<span class="badge due">'+esc(money(c.cents))+' cash due</span>':'<span class="badge ok">Cash '+esc(money(c.cents))+'</span><span class="received">'+esc(receivedText(c))+'</span>'}
+function cashButtons(e,at){const c=e.cash;if(!c)return '';if(c.status==='due')return `<button class="cash" type="button" data-cash="${at}">Cash received</button>`;return data.role==='owner'&&c.orderId?`<button type="button" class="quiet" data-cash-undo="${at}">Undo cash</button>`:''}
+// A coach is told who can undo cash, on the state line beside who received it.
+const cashNote=e=>e.cash&&e.cash.status==='paid'&&e.cash.orderId&&data.role!=='owner'?'<span class="muted small">Only the owner can undo cash</span>':'';
 function dueLine(s){const list=s.entries.filter(owes);return list.length?' · '+list.length+' to pay at the academy ('+money(list.reduce((n,e)=>n+e.cash.cents,0))+' due)':''}
 // USA Wrestling card on the session date (issue #68). Since #210 the server refuses check-in unless the card is verified
-// and current, or the owner allowed an exception; e.checkInBlocked carries its plain reason.
+// and current, or the owner allowed an exception; e.checkInBlocked carries its plain reason, shown behind "Why?".
 function cardBadge(e){const d=e.cardExpires?new Date(e.cardExpires+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}):'';
- return e.card==='missing'?'<span class="badge warn">No USA Wrestling card</span>':e.card==='expired'?'<span class="badge warn">USA Wrestling card expired '+esc(d)+'</span>':e.card==='invalid'?'<span class="badge warn">USA Wrestling card not valid'+(e.cardNote?': '+esc(e.cardNote):'')+'</span>':e.card==='recheck'?'<span class="badge warn">USA Wrestling card changed, needs checking</span>':e.card==='current'?'<span class="badge warn">USA Wrestling card not verified yet</span>':e.card==='verified'?'<span class="badge">Card verified</span>':''}
+ return e.card==='missing'?'<span class="badge warn">No USA Wrestling card</span>':e.card==='expired'?'<span class="badge warn">USA Wrestling card expired '+esc(d)+'</span>':e.card==='invalid'?'<span class="badge warn">USA Wrestling card not valid'+(e.cardNote?': '+esc(e.cardNote):'')+'</span>':e.card==='recheck'?'<span class="badge warn">USA Wrestling card changed, needs checking</span>':e.card==='current'?'<span class="badge warn">USA Wrestling card not verified yet</span>':e.card==='verified'?'<span class="badge verified">Card <span aria-hidden="true">✓</span><span class="vh">verified</span></span>':''}
 // Allergies or medical notes and the emergency contact (issue #188, #197 question 14), for staff at check-in.
 const noNotes=v=>/^(none|n\/?a|no)\.?$/i.test(String(v??'').trim());
 function safety(e){
@@ -30,6 +189,8 @@ function safety(e){
  const call=e.emergencyName||e.emergencyPhone?'<strong>Emergency contact:</strong> '+esc(e.emergencyName||'')+(e.emergencyPhone?' · <a href="tel:'+esc(e.emergencyPhone)+'">'+esc(e.emergencyPhone)+'</a>':''):'<span class="muted">Emergency contact not given yet</span>';
  return '<div class="safety">'+notes+'<br>'+call+'</div>';
 }
+// The red Allergy flag: only when the family wrote something that is not "none".
+const flagged=e=>!!e.allergies&&!noNotes(e.allergies);
 const waiverBadge=e=>(e.waiverSigned===false?'<span class="badge warn">Waiver not signed</span>':'')+((e.exceptions||[]).length?'<span class="badge">Owner exception: '+e.exceptions.map(x=>x==='usaw'?'card':'waiver').join(', ')+'</span>':'');
 // The owner's way out of a blocked check-in (issue #271): the cards page opened on this wrestler, on the list that fits
 // (waiting to be verified, or blocked). Coaches see the reason only; they cannot verify cards.
@@ -38,28 +199,55 @@ const cardsLink=e=>data&&data.role==='owner'?' <a class="fix-link" href="/cards?
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{if(!t)return '';const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
 const timeOf=iso=>new Date(iso).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'});
-let data=null,busy=false;
+const gradeText=g=>g==='K'?'Kindergarten':g==='Adult'?'Adult':'Grade '+esc(g);
+const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+const FLAG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+const EMPTY='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 13h6M9 17h4"/></svg>';
+// Feedback is a toast (public/toast.js, issue #280); without it, the status line says the same thing.
+const say=(text,kind)=>{if(typeof swaToast==='function')swaToast(text,{kind,duration:kind==='bad'?8000:4000});else $('status').textContent=text};
+let data=null,busy=false,selected=0,chosen=false;
 async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error((d.error||'Roster unavailable.')+(d.requestId?' (reference '+String(d.requestId).slice(0,8)+')':''));return d}
-function render(){
+// New York minutes now, for which session is running or next. Only today has a "now".
+const nyMinutes=()=>{const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());const g=t=>Number(p.find(x=>x.type===t)?.value||0);return g('hour')*60+g('minute')};
+const mins=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?+m[1]*60+ +m[2]:null};
+// 'now' for a session in progress, 'next' for the first one still to start, else ''. Timeless sessions (a camp day with
+// no time yet) count as all day: 'now'.
+function phase(sessions){if(!data||data.date!==data.today)return sessions.map(()=>'');const n=nyMinutes(),out=sessions.map(s=>{const a=mins(s.start),b=mins(s.end);return a===null?'now':a<=n&&(b===null||n<b)?'now':''});
+ if(!out.includes('now')){const i=sessions.findIndex(s=>{const a=mins(s.start);return a!==null&&a>n});if(i>=0)out[i]='next'}return out}
+const rowKey=e=>e.userId+'|'+e.wrestlerId;
+function render(changed){
  if(!data)return;
- const q=$('search').value.trim().toLowerCase();
- if(!data.sessions.length){$('sessions').innerHTML='<p class="empty">No practices, camps or sessions are scheduled for this date.</p>';return}
+ const q=$('search').value.trim().toLowerCase(),filtered=s=>s.entries.filter(e=>!q||e.name.toLowerCase().includes(q));
+ if(!data.sessions.length){$('switcher').innerHTML='';$('sessions').innerHTML='<div class="empty">'+EMPTY+'<p>No practices, camps or sessions are scheduled for this date.</p></div>';return}
+ const phases=phase(data.sessions);
+ if(selected>=data.sessions.length)selected=0;
+ // A search that finds nobody in the open session but someone in another opens that one.
+ if(q&&!filtered(data.sessions[selected]).length){const i=data.sessions.findIndex(s=>filtered(s).length);if(i>=0)selected=i}
+ $('switcher').innerHTML='<div class="sessions__in" role="tablist" aria-label="Sessions">'+data.sessions.map((s,si)=>`<button type="button" role="tab" class="seg" id="tab${si}" aria-selected="${si===selected}" aria-controls="s${si}" tabindex="${si===selected?0:-1}" data-session="${si}"><b>${esc(s.title)}</b><small>${esc(s.start?clock(s.start):s.type==='event'?'Time TBA':'All day')}${phases[si]?' <span class="now">'+phases[si]+'</span>':''} · ${s.checkedIn} of ${s.entries.length} in</small></button>`).join('')+'</div>';
  $('sessions').innerHTML=data.sessions.map((s,si)=>{
-  const list=s.entries.filter(e=>!q||e.name.toLowerCase().includes(q));
+  const list=filtered(s);
   // A camp, clinic or event day without a time yet says so (issue #189).
   const when=s.start?clock(s.start)+'–'+clock(s.end):s.type==='event'?'Time to be announced':'All day';
-  return `<section class="session"><div class="session-head"><h2>${esc(s.title)}</h2><span class="count">${s.checkedIn} of ${s.entries.length} checked in</span></div><p class="muted">${esc(when)}${s.type==='live'?' · Separate purchase':s.type==='event'?' · Camp, clinic or event':''}${s.entries.filter(blockedNow).length?' · '+s.entries.filter(blockedNow).length+' can’t be checked in until their USA Wrestling card is sorted out':''}${dueLine(s)}</p>${list.length?list.map((e,ei)=>`<div class="row${e.checkedInAt?' done':''}${cardBad(e)?' card-problem':owes(e)?' owes':''}"><div class="who"><strong>${esc(e.name)}</strong>${e.grade?` <span class="muted">· ${e.grade==='K'?'Kindergarten':e.grade==='Adult'?'Adult':'Grade '+esc(e.grade)}</span>`:''}<div>${e.sources.filter(x=>x!=='Pay at the academy').map(x=>`<span class="badge ok">${esc(x)}</span>`).join('')}${cashBadge(e)}${cardBadge(e)}${waiverBadge(e)}</div>${blockedNow(e)?`<p class="block-reason" id="why${si}-${ei}">${esc(e.checkInBlocked)}${cardsLink(e)}</p>`:''}<div class="muted">${esc(e.parentName||'Parent name not saved')}${e.phone?' · <a href="tel:'+esc(e.phone)+'">'+esc(e.phone)+'</a>':''}${e.email?' · '+esc(e.email):''}</div>${safety(e)}</div><div class="actions">${cashButtons(e,si+':'+ei)}${e.checkedInAt?`<span class="badge ok">Checked in ${esc(timeOf(e.checkedInAt))}</span> <button type="button" data-undo="${si}:${ei}">Undo</button>`:blockedNow(e)?`<button class="blocked" type="button" disabled aria-describedby="why${si}-${ei}">Can’t check in</button>`:`<button class="primary" type="button" data-checkin="${si}:${ei}">Check in</button>`}</div></div>`).join(''):`<p class="empty">${s.entries.length?'No wrestler matches that name.':'Nobody is registered for this session yet.'}</p>`}</section>`}).join('');
- const pick=v=>{const [si,ei]=v.split(':').map(Number),s=data.sessions[si],list=s.entries.filter(e=>!q||e.name.toLowerCase().includes(q));return {s,e:list[ei]}};
+  return `<section class="session" id="s${si}" role="tabpanel" aria-labelledby="tab${si}"${si===selected?'':' hidden'}><div class="session-head"><h2>${esc(s.title)}</h2><span class="count">${s.checkedIn}<small>/ ${s.entries.length} in</small></span></div><p class="muted meta">${esc(when)}${s.type==='live'?' · Separate purchase':s.type==='event'?' · Camp, clinic or event':''}${s.entries.filter(blockedNow).length?' · '+s.entries.filter(blockedNow).length+' can’t be checked in until their USA Wrestling card is sorted out':''}${dueLine(s)}</p>${list.length?'<div class="list">'+list.map((e,ei)=>`<div class="row${e.checkedInAt?' done':''}${cardBad(e)?' card-problem':owes(e)?' owes':''}${blockedNow(e)?' hold':''}" data-row="${esc(rowKey(e))}"><div class="who"><div class="name"><strong>${esc(e.name)}</strong>${e.grade?`<small>${gradeText(e.grade)}</small>`:''}${flagged(e)?'<span class="flag">'+FLAG+'Allergy</span>':''}</div><div class="state">${e.sources.filter(x=>x!=='Pay at the academy').map(x=>`<span class="badge ok">${esc(x)}</span>`).join('')}${cashBadge(e)}${cardBadge(e)}${waiverBadge(e)}${cashNote(e)}</div>${blockedNow(e)?`<details class="why"><summary>Why?</summary><p class="block-reason" id="why${si}-${ei}">${esc(e.checkInBlocked)}${cardsLink(e)}</p></details>`:''}</div><div class="actions">${e.checkedInAt?`<span class="in">${CHECK}Checked in ${esc(timeOf(e.checkedInAt))}</span><button type="button" class="quiet" data-undo="${si}:${ei}">Undo</button>`:blockedNow(e)?`<button class="blocked" type="button" disabled aria-describedby="why${si}-${ei}">Hold</button>`:`<button class="primary big" type="button" data-checkin="${si}:${ei}">Check in</button>`}${cashButtons(e,si+':'+ei)}</div><details class="detail"${flagged(e)?' open':''}><summary>Contact and notes</summary><div class="detail__body"><div><span class="lbl">Parent</span>${esc(e.parentName||'Parent name not saved')}${e.phone?' · <a href="tel:'+esc(e.phone)+'">'+esc(e.phone)+'</a>':''}${e.email?' · '+esc(e.email):''}</div>${safety(e)}</div></details></div>`).join('')+'</div>':`<div class="empty">${EMPTY}<p>${s.entries.length?'No wrestler matches that name.':'Nobody is registered for this session yet.'}</p></div>`}</section>`}).join('');
+ const pick=v=>{const [si,ei]=v.split(':').map(Number),s=data.sessions[si],list=filtered(s);return {s,e:list[ei]}};
+ document.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{selected=Number(b.dataset.session);chosen=true;render()});
  document.querySelectorAll('[data-checkin]').forEach(b=>b.onclick=()=>{const {s,e}=pick(b.dataset.checkin);act('checkin',s,e)});
  document.querySelectorAll('[data-undo]').forEach(b=>b.onclick=()=>{const {s,e}=pick(b.dataset.undo);if(confirm('Undo check-in for '+e.name+'?'))act('undo',s,e)});
  document.querySelectorAll('[data-cash]').forEach(b=>b.onclick=()=>{const {e}=pick(b.dataset.cash);cashReceived(e)});
  document.querySelectorAll('[data-cash-undo]').forEach(b=>b.onclick=()=>{const {e}=pick(b.dataset.cashUndo);undoCash(e)});
+ // The row that just changed settles into its new state over 120ms (the stylesheet's .enter; no motion when reduced).
+ if(changed){const el=document.querySelector?.('[data-row="'+String(rowKey(changed)).replace(/"/g,'')+'"]');if(el&&el.classList){el.classList.add('enter');void el.offsetWidth;el.classList.remove('enter')}}
 }
-async function act(action,s,e){if(busy)return;busy=true;$('status').textContent=action==='checkin'?'Checking in '+e.name+'…':'Undoing…';try{const d=await call('/api/roster',{action,date:data.date,sessionKey:s.key,userId:e.userId,wrestlerId:e.wrestlerId});data.sessions=d.sessions;render();$('status').textContent=action==='checkin'?e.name+' checked in.':'Check-in removed for '+e.name+'.'}catch(err){$('status').textContent=err.message}finally{busy=false}}
-async function cashReceived(e){if(busy||!owes(e)||!confirm('Record '+money(e.cash.cents)+' cash received from '+e.name+'’s family?'))return;busy=true;$('status').textContent='Recording cash for '+e.name+'…';try{const d=await call('/api/roster',{action:'cash',date:data.date,bookingId:e.cash.bookingId});data.sessions=d.sessions;render();$('status').textContent='Cash received: '+money(e.cash.cents)+' for '+e.name+'. It now counts as paid.'}catch(err){$('status').textContent=err.message}finally{busy=false}}
-async function undoCash(e){if(busy||!e.cash||!e.cash.orderId)return;const reason=prompt('Undo the cash recorded for '+e.name+'? The payment is voided and '+money(e.cash.cents)+' shows as due again. Why?','Cash received tapped by mistake');if(reason===null)return;busy=true;try{const d=await call('/api/roster',{action:'cash-undo',date:data.date,orderId:e.cash.orderId,reason});data.sessions=d.sessions;render();$('status').textContent='Cash payment undone for '+e.name+'. '+money(e.cash.cents)+' is due again.'}catch(err){$('status').textContent=err.message}finally{busy=false}}
-async function load(date){$('status').textContent='Loading roster…';try{data=await call('/api/roster'+(date?'?date='+encodeURIComponent(date):''));$('date').value=data.date;$('dateLabel').hidden=data.role!=='owner';$('home').hidden=data.role==='owner';$('home').href='/coach';$('home').textContent='← Coach home';render();const total=data.sessions.reduce((n,s)=>n+s.entries.length,0);$('status').textContent=data.sessions.length?(total===1?'1 wrestler is':total+' wrestlers are')+' registered across '+data.sessions.length+' session'+(data.sessions.length===1?'':'s')+'.':'Nothing is scheduled for this date.'}catch(e){$('status').textContent=e.message}}
-$('date').onchange=()=>load($('date').value);$('search').oninput=render;$('refresh').onclick=()=>load(data?.date);
+// Arrow keys move between the session tabs.
+$('switcher').onkeydown=e=>{if(!data||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const n=data.sessions.length;selected=e.key==='Home'?0:e.key==='End'?n-1:(selected+(e.key==='ArrowRight'?1:n-1))%n;render();$('tab'+selected)?.focus()};
+async function act(action,s,e){if(busy)return;busy=true;try{const d=await call('/api/roster',{action,date:data.date,sessionKey:s.key,userId:e.userId,wrestlerId:e.wrestlerId});data.sessions=d.sessions;render(e);say(action==='checkin'?e.name+' checked in.':'Check-in removed for '+e.name+'.','ok')}catch(err){say(err.message,'bad')}finally{busy=false}}
+async function cashReceived(e){if(busy||!owes(e)||!confirm('Record '+money(e.cash.cents)+' cash received from '+e.name+'’s family?'))return;busy=true;try{const d=await call('/api/roster',{action:'cash',date:data.date,bookingId:e.cash.bookingId});data.sessions=d.sessions;render(e);say('Cash received: '+money(e.cash.cents)+' for '+e.name+'. It now counts as paid.','ok')}catch(err){say(err.message,'bad')}finally{busy=false}}
+async function undoCash(e){if(busy||!e.cash||!e.cash.orderId)return;const reason=prompt('Undo the cash recorded for '+e.name+'? The payment is voided and '+money(e.cash.cents)+' shows as due again. Why?','Cash received tapped by mistake');if(reason===null)return;busy=true;try{const d=await call('/api/roster',{action:'cash-undo',date:data.date,orderId:e.cash.orderId,reason});data.sessions=d.sessions;render(e);say('Cash payment undone for '+e.name+'. '+money(e.cash.cents)+' is due again.','ok')}catch(err){say(err.message,'bad')}finally{busy=false}}
+async function load(date){$('status').textContent='Loading roster…';try{data=await call('/api/roster'+(date?'?date='+encodeURIComponent(date):''));$('date').value=data.date;$('dateLabel').hidden=data.role!=='owner';$('home').hidden=data.role==='owner';$('home').href='/coach';$('home').textContent='← Coach home';
+ // Open on the session that is running or next; a refresh keeps the one the coach chose.
+ if(!chosen||!data.sessions[selected]){const p=phase(data.sessions);selected=Math.max(0,p.indexOf('now')>=0?p.indexOf('now'):p.indexOf('next'))}
+ render();$('status').textContent=data.sessions.length?'':'Nothing is scheduled for this date.'}catch(e){$('status').textContent=e.message}}
+$('date').onchange=()=>{chosen=false;load($('date').value)};$('search').oninput=()=>render();$('refresh').onclick=()=>{document.querySelector?.('details.more')?.removeAttribute('open');load(data?.date)};
 load(new URLSearchParams(location.search).get('date')||'');
 
 // QR pass scanner (issue #71). The server decides who can be checked in; the camera only reads the code.
@@ -68,7 +256,9 @@ function stopScan(){clearTimeout(scan.timer);scan.stream?.getTracks().forEach(t=
 function showScan(cls,html){$('scanResult').innerHTML='<div class="'+cls+'">'+html+'</div>'}
 async function submitScan(code,sessionKey){
  scan.busy=true;
- try{const d=await call('/api/roster',{action:'scan',date:data.date,code,...(sessionKey?{sessionKey}:{})});data.sessions=d.sessions;render();const r=d.scan,e=r.entry||{};
+ try{const d=await call('/api/roster',{action:'scan',date:data.date,code,...(sessionKey?{sessionKey}:{})});data.sessions=d.sessions;const r=d.scan,e=r.entry||{};
+  // The scanned session comes to the front, so the row that just changed is the one in view.
+  const si=data.sessions.findIndex(s=>s.key===r.sessionKey);if(si>=0)selected=si;render(e.userId?e:undefined);
   // A scan that gets here was allowed. A card problem means the owner allowed an exception for it (#210).
   const warn=[e.card==='missing'?'No USA Wrestling card on file':e.card==='expired'?'USA Wrestling card expired':e.card==='invalid'?'USA Wrestling card not valid':['recheck','current'].includes(e.card)?'USA Wrestling card not verified':'',e.waiverSigned===false?'Waiver not signed':''].filter(Boolean).map(x=>(e.exceptions||[]).includes('usaw')&&/USA Wrestling/.test(x)?x+' (owner exception)':x);
   const other=(r.others||[]).map(o=>'<button type="button" data-scan-session="'+esc(o.key)+'" data-code="'+esc(code)+'">Use '+esc(o.title)+(o.start?' '+esc(clock(o.start)):'')+' instead</button>').join(' ');
@@ -89,13 +279,14 @@ function tickScan(){
  }
  scan.timer=setTimeout(tickScan,200);
 }
-$('scanStart').onclick=async()=>{
+async function startScan(){
  if(!data)return;
- if(!navigator.mediaDevices?.getUserMedia){$('status').textContent='This browser cannot use the camera. Check wrestlers in from the list.';return}
- $('scanner').hidden=false;showScan('','Waiting for camera permission…');
+ if(!navigator.mediaDevices?.getUserMedia){say('This browser cannot use the camera. Check wrestlers in from the list.','bad');return}
+ $('scanner').hidden=false;showScan('','Waiting for camera permission…');$('scanner').scrollIntoView?.({block:'nearest'});
  try{scan.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const v=$('video');v.srcObject=scan.stream;await v.play();showScan('','Camera on. Hold a pass in view.');tickScan()}
- catch(e){stopScan();$('status').textContent=e?.name==='NotAllowedError'?'Camera permission was denied. Allow it in browser settings, or check in from the list.':'Camera unavailable. Check wrestlers in from the list.'}
-};
+ catch(e){stopScan();say(e?.name==='NotAllowedError'?'Camera permission was denied. Allow it in browser settings, or check in from the list.':'Camera unavailable. Check wrestlers in from the list.','bad')}
+}
+$('scanStart').onclick=startScan;$('scanDock').onclick=startScan;
 $('scanStop').onclick=stopScan;window.addEventListener('pagehide',stopScan);
 $('printRoster').onclick=()=>window.print();
 </script></body></html>

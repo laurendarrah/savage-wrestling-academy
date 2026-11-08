@@ -147,7 +147,7 @@ for (const role of ['coach', 'owner']) {
   }});
   await settle();
   const out = el('sessions').innerHTML, row = name => { const at = out.indexOf(name); return out.slice(out.lastIndexOf('<div class="row', at), out.indexOf('<div class="row', at + 1) > 0 ? out.indexOf('<div class="row', at + 1) : undefined); };
-  assert.match(row('Ana Due'), /<span class="badge due">Pay at the academy · \$40\.00 due<\/span>/);
+  assert.match(row('Ana Due'), /<span class="badge due">\$40\.00 cash due<\/span>/, 'the amount due on the state line (issue #286)');
   assert.doesNotMatch(row('Ana Due'), /badge ok">Pay at the academy/, 'not shown as a green paid badge');
   assert.match(row('Ana Due'), /<button class="cash" type="button" data-cash="0:0">Cash received<\/button>/);
   assert.match(row('Ana Due'), /Checked in/, 'checked in while the cash is still due');
@@ -158,7 +158,8 @@ for (const role of ['coach', 'owner']) {
   assert.equal(/Only the owner can undo cash/.test(row('Ben Paid')), role === 'coach', 'a coach is told who can undo it');
   assert.doesNotMatch(row('Cal Member'), /data-cash|badge due/);
   assert.match(out, /· 1 to pay at the academy \(\$40\.00 due\)/);
-  assert.match(html, /\.actions button\{min-height:44px/, 'full-size buttons at phone width');
+  assert.match(html, /\.row \.actions button\.cash\{min-height:44px/, 'Cash received is a full-size tap target under the 56px Check in (issue #286)');
+  assert.match(html, /<button class="primary big" type="button" data-checkin=/, 'Check in is the 56px red button');
   await vm.runInContext('cashReceived(data.sessions[0].entries[0])', ctx); await settle();
   const sent = calls.at(-1).body;
   assert.equal(sent.action, 'cash'); assert.equal(sent.bookingId, 'cb-a'); assert.equal(sent.date, day); assert.ok(!('amountCents' in sent));
