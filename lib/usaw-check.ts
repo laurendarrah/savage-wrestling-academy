@@ -101,6 +101,15 @@ export async function lookupsFor(userId: string): Promise<Map<string, LookupRow>
 // The family's view of the latest lookup: what happened and when, never the name on someone else's card.
 export const familyLookup = (row: LookupRow | null) => row ? {outcome: row.outcome, checkedAt: row.checked_at} : null;
 
+// Retention (issue #274): a lookup that found someone else's card ('mismatch') holds a stranger's name, and one that
+// found no card ('not_found') says nothing useful once its one-day cache window has passed. The daily job removes
+// both after CACHE_HOURS; verified, inactive and season answers stay as the record of the check.
+export async function purgeStaleLookups(now = new Date()) {
+  const before = new Date(now.getTime() - CACHE_HOURS * 3600e3).toISOString();
+  const r = await env.DB!.prepare("DELETE FROM usaw_lookups WHERE outcome IN ('mismatch','not_found') AND checked_at<?").bind(before).run();
+  return Number(r.meta?.changes ?? (r as any).changes ?? 0);
+}
+
 // Checks the wrestlers whose card number or season changed in a family save. Never fails the save.
 export async function checkChangedCards(request: Request, userId: string, before: {wrestlers?: CardWrestler[]} | null, after: {wrestlers: CardWrestler[]}) {
   const old = new Map((before?.wrestlers || []).map(w => [w.id, lookupId(w.usawNumber || '') + '|' + (w.usawExpires || '')]));

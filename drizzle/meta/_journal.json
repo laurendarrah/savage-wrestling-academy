@@ -316,6 +316,13 @@
       "when": 1794104184226,
       "tag": "0044_lucky_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1794105813376,
+      "tag": "0045_long_caretaker",
+      "breakpoints": true
     }
   ]
 }

@@ -358,6 +358,19 @@ r = await call(checkApi, 'POST', {wrestlerId: 'k1'}, 'https://evil.test'); asser
   assert.equal(c.state, 'verified'); assert.equal(c.verifiedBy, 'owner', 'the owner\'s decision stands');
 }
 
+// Retention (issue #274): lookups that found someone else's card or no card are purged by the daily job once their
+// one-day cache window has passed; verified and inactive answers, and fresh ones, stay.
+{
+  const now = Date.now(), old = new Date(now - 25 * 3600e3).toISOString(), fresh = new Date(now - 3600e3).toISOString();
+  sqlite.prepare('DELETE FROM usaw_lookups').run();
+  const put = (u, w, outcome, status, at) => sqlite.prepare("INSERT INTO usaw_lookups(user_id,wrestler_id,number,expires,season,status,outcome,card_name,card_state,checked_at) VALUES (?,?,'1','2027-08-31','2027-08-31',?,?,'Someone Else','NY',?)").run(u, w, status, outcome, at);
+  put('q1', 'a', 'mismatch', 'active', old); put('q1', 'b', 'not_found', 'not_found', old); put('q2', 'a', 'mismatch', 'active', fresh);
+  put('q3', 'a', 'verified', 'active', old); put('q3', 'b', 'inactive', 'inactive', old); put('q3', 'c', 'season', 'active', old);
+  assert.equal(await check.purgeStaleLookups(new Date(now)), 2);
+  assert.deepEqual(sqlite.prepare('SELECT user_id||wrestler_id AS k FROM usaw_lookups ORDER BY k').all().map(r => r.k), ['q2a', 'q3a', 'q3b', 'q3c']);
+  assert.equal(await check.purgeStaleLookups(new Date(now)), 0, 'nothing more to remove');
+}
+
 // Nothing in any request to USA Wrestling but the card number.
 for (const s of stub.seen) {
   const text = JSON.stringify(s.body);

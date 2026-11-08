@@ -18,8 +18,10 @@ export const ALERT_GAP_MS = 3600000;
 const LOOKBACK_MS = 86400000;
 // Scheduled jobs record their failures under these paths (build/worker.ts).
 export const SCHEDULED_JOBS: Record<string, string> = {'/daily-reminders': 'The morning reminders (card and waiver reminders to families)',
+  '/daily-reminders-missed': 'The morning reminders had not run by 10 AM New York (the site ran them from a page visit instead)',
   '/coach-retention': 'The daily cleanup of records of coaches removed more than 3 years ago',
-  '/stripe-fees': 'Reading card fees from Stripe for the books (Income and expenses)'};
+  '/stripe-fees': 'Reading card fees from Stripe for the books (Income and expenses)',
+  '/restore-staging': 'The daily cleanup of unfinished restore uploads'};
 // Things that are not site errors but need the owner soon, recorded under these paths by the code that notices them
 // (issue #272: lib/stripe-webhook.ts writes a line when a family disputes a card payment with their bank).
 export const DISPUTE_PATH = '/stripe-dispute';

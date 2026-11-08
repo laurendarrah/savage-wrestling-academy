@@ -1,22 +1,31 @@
 import { env } from 'cloudflare:workers';
 import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
 import { validFamily, cleanFamily, emptyFamily, familyProblem, missingDetails, missingMessage } from '../../../lib/family-records';
-import { cardVerification, seasonOptions, CARD_RENEWAL_DAYS } from '../../../lib/usaw';
-import { checkChangedCards, familyLookup, lookupView, lookupsFor } from '../../../lib/usaw-check';
-import { exceptionFor } from '../../../lib/exceptions';
-import { dailyReminders, noticeApprovalProfileChanged, quietly } from '../../../lib/notify';
+import { cardStatus, reviewSource, seasonOptions, CARD_RENEWAL_DAYS, type Review } from '../../../lib/usaw';
+import { checkChangedCards, familyLookup, lookupView, type LookupRow } from '../../../lib/usaw-check';
+import { noticeApprovalProfileChanged, quietly } from '../../../lib/notify';
 import { academyToday } from '../../../lib/public-schedule';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return accountReply({error:'Authenticator verification required.'},403,auth.headers);
- const row=await env.DB!.prepare('SELECT payload,revision,updated_at FROM family_accounts WHERE user_id=?').bind(auth.user.id).first<{payload:string;revision:number;updated_at:string}>();
- await quietly(()=>dailyReminders());
- const data=row?JSON.parse(row.payload):emptyFamily(),today=academyToday(),cards:Record<string,unknown>={};
+ const today=academyToday(),cards:Record<string,unknown>={};
+ // The family record and everything about its cards in one batch (issue #274): the owner's reviews, the card
+ // exceptions covering today (issue #89) and the latest USA Wrestling checks (issue #202), for every wrestler at once.
+ const [fam,reviews,exceptions,lookups]=await env.DB!.batch([
+  env.DB!.prepare('SELECT payload,revision,updated_at FROM family_accounts WHERE user_id=?').bind(auth.user.id),
+  env.DB!.prepare('SELECT wrestler_id,number,expires,status,note,reviewed_at,reviewed_by FROM usaw_reviews WHERE user_id=?').bind(auth.user.id),
+  env.DB!.prepare("SELECT wrestler_id,ends_on FROM booking_exceptions WHERE user_id=? AND rule='usaw' AND revoked_at IS NULL AND starts_on<=? AND ends_on>=? ORDER BY ends_on DESC").bind(auth.user.id,today,today),
+  env.DB!.prepare('SELECT wrestler_id,number,expires,season,status,outcome,card_name,card_state,checked_at FROM usaw_lookups WHERE user_id=?').bind(auth.user.id),
+ ]);
+ const row=(fam.results as {payload:string;revision:number;updated_at:string}[])[0];
+ const data=row?JSON.parse(row.payload):emptyFamily();
+ const reviewOf=new Map((reviews.results as (NonNullable<Review>&{wrestler_id:string})[]).map(r=>[r.wrestler_id,r]));
+ const exceptionUntil=new Map<string,string>();for(const e of exceptions.results as {wrestler_id:string;ends_on:string}[])if(!exceptionUntil.has(e.wrestler_id))exceptionUntil.set(e.wrestler_id,e.ends_on);
+ const lookupOf=new Map((lookups.results as (LookupRow&{wrestler_id:string})[]).map(r=>[r.wrestler_id,r]));
  // USA Wrestling card status per wrestler, including the owner's review, so the family sees what blocks booking.
  // The latest automatic check on USA Wrestling (issue #202): what happened and when, never the name on the card.
- const lookups=await lookupsFor(auth.user.id);
- for(const w of data.wrestlers){const x=await exceptionFor(auth.user.id,w.id,'usaw',[today]);cards[w.id]={...await cardVerification(auth.user.id,w,today),exceptionUntil:x?.endsOn??null,lookup:familyLookup(lookupView(w,lookups.get(w.id)))}}
+ for(const w of data.wrestlers){const review=reviewOf.get(w.id)??null,status=cardStatus(w,review,today);cards[w.id]={...status,verified:status.state==='verified',...reviewSource(review,status),exceptionUntil:exceptionUntil.get(w.id)??null,lookup:familyLookup(lookupView(w,lookupOf.get(w.id)))}}
  // The card seasons a family can choose today (issue #131); the page offers them in the wrestler editor.
  return accountReply({email:auth.user.email,data,cards,cardSeasons:seasonOptions(today),cardRenewalDays:CARD_RENEWAL_DAYS,revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
 }

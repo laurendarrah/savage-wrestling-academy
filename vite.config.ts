@@ -57,6 +57,8 @@ export default defineConfig(async () => {
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import("@cloudflare/vite-plugin");
   return {
+    // The build id /api/health reports (issue #274): the commit the Deploy workflow built, "dev" locally.
+    define: { __BUILD_ID__: JSON.stringify((process.env.BUILD_ID || process.env.GITHUB_SHA || "dev").slice(0, 12)) },
     plugins: [
       ownerWorkspaceScript(),
       vinext(),

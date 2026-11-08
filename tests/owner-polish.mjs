@@ -148,7 +148,7 @@ assert.equal(el('errorList').hidden, true, 'no table when there is nothing in it
 assert.match(el('now').innerHTML, /0 site errors in the last 24 hours/);
 el = await healthPage([{at: '2026-11-07T12:00:00Z', method: 'GET', path: '/x', status: 500, message: '<oops>'}]);
 assert.equal(el('errorList').hidden, false); assert.equal(el('noErrors').hidden, true);
-assert.match(el('rows').innerHTML, /<code>GET \/x<\/code><\/td><td>500<\/td><td>&lt;oops&gt;<\/td>/);
+assert.match(el('rows').innerHTML, /<code>GET \/x<\/code><\/td><td><\/td><td>500<\/td><td>&lt;oops&gt;<\/td>/);
 assert.match(el('now').innerHTML, /1 site error in the last 24 hours/);
 
 // ---------- One month picker on /financials, /timesheets and /coach-time ----------

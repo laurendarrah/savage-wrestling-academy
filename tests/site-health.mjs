@@ -56,6 +56,9 @@ const worker = (() => {
         if (name.endsWith('/page-chrome')) return load(path.resolve('lib/page-chrome.ts'));
         if (name.endsWith('/owner-alerts')) return {alertOwner: async db => { alerts.push(db); return 'off'; }};
         if (name.endsWith('/notify')) return {dailyReminders: async () => { reminders++; if (reminderFails) throw Error('mail provider down'); return 0; }};
+        if (name.endsWith('/reminder-watch')) return {reminderWatch: async () => { watches++; return 'early'; }};
+        if (name.endsWith('/usaw-check')) return {purgeStaleLookups: async () => 0};
+        if (name.endsWith('/api')) return {RECORDED_HEADER: 'X-SWA-Error-Recorded'};
         if (name.endsWith('/coach-retention')) return {cleanupRemovedCoaches: async () => { cleanups++; if (cleanupFails) throw Error('D1 busy'); return {}; }};
         if (name.endsWith('/stripe-fees')) return {recordStripeFees: async () => { feeRuns++; return feeRun; }};
         if (name.endsWith('/backup-records')) return {clearStaleStaging: async () => { stagingRuns++; if (stagingFails) throw Error('staging cleanup failed'); }};
@@ -63,7 +66,7 @@ const worker = (() => {
       }});
   return module.exports.default;
 })();
-let stagingRuns = 0, stagingFails = false, reminders = 0, reminderFails = false, cleanups = 0, cleanupFails = false, feeRuns = 0, feeRun = {mode: 'test', checked: 0, recorded: 0, failed: 0, waiting: 0, error: null, skipped: null};
+let watches = 0, stagingRuns = 0, stagingFails = false, reminders = 0, reminderFails = false, cleanups = 0, cleanupFails = false, feeRuns = 0, feeRun = {mode: 'test', checked: 0, recorded: 0, failed: 0, waiting: 0, error: null, skipped: null};
 const alerts = [];
 const pending = [];
 const ctx = {waitUntil: p => pending.push(p)};
@@ -84,14 +87,22 @@ assert.equal(alerts.length, 1, 'each recorded error checks whether to alert the 
 const r = await hit('https://swa.test/api/roster', new Error('D1_ERROR: no such table: orders'));
 assert.ok(r.thrown); assert.match(rows().at(-1).message, /no such table: orders/);
 // Only the last 500 are kept.
-for (let i = 0; i < 505; i++) sqlite.prepare("INSERT INTO error_log VALUES (?,?,?,?,?,?)").run('old' + i, new Date(Date.now() - 864e5 * 3 - i * 1000).toISOString(), 'GET', '/old', 500, 'old');
+for (let i = 0; i < 505; i++) sqlite.prepare("INSERT INTO error_log(id,at,method,path,status,message) VALUES (?,?,?,?,?,?)").run('old' + i, new Date(Date.now() - 864e5 * 3 - i * 1000).toISOString(), 'GET', '/old', 500, 'old');
 await hit('https://swa.test/new', new Response('', {status: 503}));
 assert.equal(rows().length, 500); assert.ok(rows().some(x => x.path === '/new'));
 
 // Health check: public, no private data.
 const healthApi = load(path.resolve('app/api/health/route.ts'));
 let h = await healthApi.GET(); assert.equal(h.status, 200); const hb = await h.json();
-assert.equal(hb.ok, true); assert.equal(hb.database, 'ok'); assert.deepEqual(Object.keys(hb).sort(), ['database', 'ms', 'ok', 'time']);
+assert.equal(hb.ok, true); assert.equal(hb.database, 'ok'); assert.deepEqual(Object.keys(hb).sort(), ['build', 'configured', 'database', 'lastCronRun', 'ms', 'ok', 'time']);
+// Issue #274: the build, the last scheduled run and which services are set up, as yes or no only.
+assert.equal(hb.build, 'dev'); assert.equal(hb.lastCronRun, null, 'no scheduled run yet');
+assert.deepEqual(hb.configured, {email: false, supabase: false, stripeWebhook: false});
+assert.ok(!JSON.stringify(hb).includes('sb_publishable'), 'never a value');
+env.EMAIL_API_KEY = 're_secret_value'; env.MAIL_FROM = 'a@b.test'; env.SUPABASE_URL = 'https://x.supabase.co'; env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_value'; env.STRIPE_TEST_WEBHOOK_SECRET = 'whsec_value';
+const hb2 = await (await healthApi.GET()).json(); assert.deepEqual(hb2.configured, {email: true, supabase: true, stripeWebhook: true});
+for (const v of ['re_secret_value', 'sb_publishable_value', 'whsec_value', 'x.supabase.co']) assert.ok(!JSON.stringify(hb2).includes(v), 'presence only: ' + v);
+delete env.EMAIL_API_KEY; delete env.MAIL_FROM; delete env.SUPABASE_URL; delete env.SUPABASE_PUBLISHABLE_KEY; delete env.STRIPE_TEST_WEBHOOK_SECRET;
 
 // Owner page data: owner only, recent errors and the 24-hour count.
 const siteApi = load(path.resolve('app/api/site-health/route.ts'));
@@ -102,6 +113,9 @@ assert.equal(s.last24h, 3, 'three errors today'); assert.ok(s.errors.length >= 3
 let before = alerts.length;
 pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
 assert.equal(reminders, 1, 'scheduled run should send daily reminders');
+assert.ok(sqlite.prepare("SELECT updated_at FROM academy_settings WHERE id='cron-run'").get(), 'the run notes when it ran (issue #274)');
+assert.ok((await (await healthApi.GET()).json()).lastCronRun, '/api/health reports it');
+assert.ok(watches >= 1, 'every request checks the morning reminders from the Worker, not from a page route');
 reminderFails = true;
 pending.length = 0; await worker.scheduled({cron: '41 12 * * *'}, {DB}, ctx); await Promise.all(pending);
 const last = sqlite.prepare('SELECT * FROM error_log ORDER BY at DESC LIMIT 1').get();
