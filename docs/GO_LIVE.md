@@ -6,8 +6,8 @@ Follow the steps in order. The old Sites site keeps running until the domain is 
 
 ## 1. Accounts (Justin)
 
-- [ ] Create a Cloudflare account in the academy's name (free plan to start; Workers Paid is $5/month if limits are reached). Add Lauren as an administrator.
-  - **When to switch to Workers Paid:** the free plan allows about 50 database queries per page load or scheduled run, and Workers Paid allows 1,000. The academy is far below the free limit today. Load checks at 3,000 families (PRs #219 and #242) show the backup download, the daily reminders and the longest owner lists start needing more than 50 somewhere past about 1,000 families. **Warning signs:** a backup download that fails, missed morning reminders, or "too many subrequests" errors on `/site-health`. Switch at about 750 families, or as soon as any of those appear. Workers & Pages → Plans in Cloudflare.
+- [ ] Create a Cloudflare account in the academy's name. **Recommendation (#274): choose Workers Paid ($5/month) before launch** rather than the free plan. Add Lauren as an administrator.
+  - **Why Paid before launch:** the free plan allows about 50 database queries per page load or scheduled run, and Workers Paid allows 1,000. The November 8 engineering audit measured where the free limit breaks: the morning reminders with email on need more than 50 queries at about **650 families**, and the Backups page's download at about **700**; the roster's first load of the day was close behind before #274 moved the reminders off page loads. A few hundred families with email on is enough to be in reach of those limits in a busy season, and the failure mode is quiet (missed reminders, a backup that fails). **Warning signs if the site is still on the free plan:** a backup download that fails, "Last reminder run" on `/site-health` not showing today, or "too many subrequests" errors there. Workers & Pages → Plans in Cloudflare.
 - [ ] Decide the site address, for example `register.savagewrestling.com`. Whoever controls the domain's DNS needs to be available on cut-over day.
 - [ ] Accept the invite to the new Supabase project (see below).
 - [ ] Create the academy's Stripe account yourself (decided on #4): you own it, its payouts and its keys. Step 6 connects it to the site. Add Lauren to it only if you want her help.
@@ -92,7 +92,7 @@ With a test family (not a real family):
 
 Before families join, run the full launch test pass with a test family in Stripe test mode, then delete the test family: [docs/LAUNCH_TEST_PASS.md](LAUNCH_TEST_PASS.md) (#24). Restore Justin's first backup into a local copy to prove backups work: [docs/RESTORE_DRILL.md](RESTORE_DRILL.md) (#25).
 
-Daily card and waiver reminders now run every morning at 7:41 (8:41 in summer) New York time from a Cloudflare schedule. Nothing to set up; they appear under Workers → the worker → Settings → Triggers.
+Daily card and waiver reminders now run every morning at 7:41 (8:41 in summer) New York time from a Cloudflare schedule. Nothing to set up; they appear under Workers → the worker → Settings → Triggers. If a morning's run is missed, the site runs them from the first page visit after 10 AM New York and tells the owner (#274); `/site-health` shows "Last reminder run".
 
 ## 8. Cut over
 

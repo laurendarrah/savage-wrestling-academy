@@ -167,6 +167,7 @@ Drafts based on what the platform does are in [docs/policies](policies/README.md
 - **One owner login.** Only one email can manage the academy, and there is no tested recovery if that login or its authenticator is lost. Set up a second authenticator before launch.
 - **Sample data looks real.** Resolved November 6 (#147): the owner workspace has no sample screens left.
 - **No programs on a new site.** Families see no programs until the owner chooses Publish the programs on the launch checklist. Check the practice days and times under Schedules before launch.
+- **Cloudflare plan (added November 8, #274).** The free Workers plan's limit of about 50 database queries per run is reached by the morning reminders at about 650 families with email on and by the Backups page at about 700. The recommendation is now Workers Paid ($5/month) before launch rather than waiting for a warning sign; [GO_LIVE](GO_LIVE.md) step 1 says why.
 
 ## The handoff review's roadmap
 

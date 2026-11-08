@@ -4,10 +4,13 @@
 
 - Supabase verifies email/password sessions. The backend validates the user with `getUser()` before reading private records.
 - The verified owner email is `savagewrestlingclub@gmail.com`. Owner APIs additionally require AAL2 and an active verified TOTP factor. ChatGPT identity is not an alternative path into owner data.
-- Coach access comes from the owner-managed `staff_access` table, queried on every protected request. Coaches require AAL2 and can access only their own coach openings. Assigned programs do not grant access to family records or owner settings.
+- Coach access comes from the owner-managed `staff_access` table, queried on every protected request. Coaches require AAL2 and can access only their own coach openings. Assigned programs do not grant access to family records or owner settings. On lesson and practice rosters a coach sees the parent's name and phone, never the family's sign-in email (#274).
 - Families are scoped by the verified Supabase user ID, never an ID provided in a request body. Optional family TOTP is enforced on private family APIs after enrollment.
-- Mutating endpoints validate same-origin JSON requests. Authentication and MFA attempts are limited by originating IP and target account. Supabase also applies its own limits.
+- Mutating endpoints validate same-origin JSON requests. Authentication and MFA attempts are limited by originating IP and target account, with separate counters for sign-in, sign-up, password reset and confirmation email (10 a minute per email, 30 a minute per address, 30 an hour per email for sign-in); sign-out and password changes are counted per signed-in account, never under a shared key (#274). Supabase also applies its own limits.
 - Session cookies are HttpOnly, Secure, and SameSite=Lax. Private responses are no-store. Credentials and authenticator secrets are not written to application logs or profile tables.
+- Who is asking is worked out once per request (`lib/account-auth.ts`): one `getUser()` call to Supabase, with the authenticator level read from the session token; every call to Supabase and to the email provider gives up after a few seconds. `SUPABASE_URL` must be https, like `APP_ORIGIN`, except a local stand-in on loopback. When Supabase cannot be reached, routes answer 503 ("Sign-in is temporarily unavailable") and pages say so; nobody is signed out and Site health shows the outage (#274).
+- Signed-in pages carry `Content-Security-Policy` with `script-src 'nonce-…' 'strict-dynamic'`: only the scripts the Worker tagged for that response can run, so markup that reaches a page cannot run code. The nonce is fresh per response and never cached. Pages that still use inline event handlers are listed in `tests/csp-nonce.mjs` and the list may only shrink. A `Permissions-Policy` allows the camera (for the pass scanner) and nothing else. `tests/html-escaping.mjs` fails on any value written with `innerHTML` that is not escaped or a number, date, id or fixed word (#274).
+- Every API route is wrapped in `withApi()` (`lib/api.ts`): a failure answers JSON with a request id, which the page shows as a reference, and is recorded in `error_log` with the id, the path (never the query string) and the role of whoever asked, with emails, quoted text, ids and long values redacted from the message (#274).
 
 ## Enrollment and recovery
 
@@ -23,9 +26,14 @@ Restores validate project identity and record shapes, check for concurrent chang
 
 Downloads are manual. Separately, the Deploy workflow exports the whole live database and encrypts it with `BACKUP_PASSPHRASE` before each publish, kept 30 days as a workflow artifact. There is no scheduled off-site backup service. Store encrypted exports separately and retain the passphrase privately. Recovery is tested on isolated SQLite databases and, with `pnpm restore:drill`, on a local copy of the site ([docs/RESTORE_DRILL.md](docs/RESTORE_DRILL.md)); no production restore was performed.
 
+## Retention
+
+Nothing ages out automatically except what is transient: `auth_attempts` (rate-limit counters, by the minute), `error_log` (the last 500), unfinished restore uploads (after a day), the records of coaches removed more than 3 years ago (#212), and USA Wrestling lookups that found someone else's card or no card, which hold a stranger's name and are removed after their one-day cache window (#274). The rest waits on the retention policy ([docs/policies](docs/policies/README.md)).
+
 ## Tests
 
 - `node tests/security-hardening.mjs`: owner and family MFA enforcement, no ChatGPT bypass, coach assignment/revocation and isolation, backup encryption/tamper checks, recovery snapshot, transactional restore and concurrent-change rollback.
+- `node tests/rate-limit-keys.mjs`, `tests/api-errors.mjs`, `tests/csp-nonce.mjs`, `tests/html-escaping.mjs`, `tests/reminder-watch.mjs`, `tests/query-plans.mjs`: the #274 hardening: per-account rate-limit keys, the API error wrapper and Supabase-outage handling, the nonce script policy on every signed-in page, escaping of every `innerHTML` write, the watched morning reminders, and the query plans of the indexed pages.
 - `node tests/owner-workspace.mjs`: settings and scheduling validation, durable saving, stale-write rejection and save queues.
 - `pnpm audit --prod --json`: installed production dependency advisories; this is not a penetration test. It does not see vinext, `@vitejs/plugin-rsc` or `react-server-dom-webpack`, which are dev dependencies but partly bundled into the Worker. The full audit, what was fixed and what remains are in `docs/DEPENDENCY_ADVISORIES.md`.
 - `pnpm typecheck` and `pnpm build`.
