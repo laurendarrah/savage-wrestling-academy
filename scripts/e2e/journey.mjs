@@ -929,11 +929,16 @@ await step('owner edits the public website; a visitor sees the headline, mission
 await step('a coach clocks in and out of today\'s practice from coach home on a phone', async () => {
   const phone = await as('coach', {width: 390, height: 844});
   await phone.goto(BASE + '/coach'); await phone.waitForSelector('#clockCard [data-duty="head"]');
+  // The card offers today's practice and Friday Night Live, which the cash step above left on today (#272): the one
+  // running or starting next is sorted first, so the coach taps the practice by name, not whichever button is first (#287).
   await at(phone, '#clockCard', new RegExp('SWA Intermediate · ' + PRACTICE.label));
+  await at(phone, '#clockCard', /Friday Night Live · 4:00 PM–5:00 PM/);
+  const practiceButton = '#clockCard [data-cc="in"][data-session^="practice:Intermediate:"]';
+  expect(await phone.locator(practiceButton).count() === 1, 'one Clock in button for today\'s SWA Intermediate practice');
   const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(over <= 1, `coach home scrolls sideways by ${over}px on a phone`);
-  await phone.click('#clockCard [data-cc="in"]'); await at(phone, '#clockCard .cc-status', /Choose Head coach or Assistant coach first/);
-  await phone.click('#clockCard [data-duty="head"]'); await phone.click('#clockCard [data-cc="in"]');
+  await phone.click(practiceButton); await at(phone, '#clockCard .cc-status', /Choose Head coach or Assistant coach first/);
+  await phone.click('#clockCard [data-duty="head"]'); await phone.click(practiceButton);
   await at(phone, '#clockCard', /On the clock[\s\S]*SWA Intermediate[\s\S]*Head coach/);
   const big = await phone.locator('#clockCard [data-cc="out"]').boundingBox();
   expect(big && big.height >= 70 && big.width >= 300, 'a big clock-out button on a phone: ' + JSON.stringify(big));
