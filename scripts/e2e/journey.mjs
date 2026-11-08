@@ -30,6 +30,12 @@ const today = ny(0);
 // today's practice is still ahead: Register stops offering a practice once it has started (#273).
 const nyMinutes = (() => { const [h, m] = new Intl.DateTimeFormat('en-GB', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}).format(new Date()).split(':').map(Number); return h * 60 + m; })();
 const PRACTICE = nyMinutes >= 17 * 60 ? {start: '23:30', end: '23:59', label: '11:30 PM–11:59 PM'} : {start: '18:00', end: '19:30', label: '6:00 PM–7:30 PM'};
+// In the last 45 minutes of the New York day even the 11:30 PM practice has started (or will before the cash step runs),
+// so the cash walk-in and its roster check use tomorrow's practice instead; the receipt is still recorded today.
+const cashDay = nyMinutes < 23 * 60 + 15 ? today : ny(1);
+if (cashDay !== today) console.log(`    note: ${nyMinutes} minutes into the New York day; the cash walk-in uses tomorrow's practice (${cashDay})`);
+// Opens the roster for a day; the page itself opens on today.
+const rosterOn = async (page, day) => { await page.goto(BASE + '/roster'); if (day !== today) { await page.fill('#date', day); await page.dispatchEvent('#date', 'change'); } };
 const problems = [], passed = [];
 let current = '';
 const labels = new WeakMap();
@@ -390,7 +396,7 @@ await step('family reviews a walk-in once card and waiver are in order', async (
 
 // ---------- Pay cash at the academy (issue #248) ----------
 await step('family books today\'s walk-in to pay cash; the coach sees $40 due and taps Cash received; Payments shows it', async () => {
-  await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${today}`);
+  await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${cashDay}`);
   await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
   await family.click('#reviewButton');
   await family.waitForSelector('#payChoice:not([hidden])');
@@ -400,11 +406,11 @@ await step('family books today\'s walk-in to pay cash; the coach sees $40 due an
   await family.click('#cashButton');
   await at(family, '#cashDone', /Pay at the academy: \$40\.00 due[\s\S]*Sam Example/);
   await shot(family, 'register-cash-booked');
-  const again = await api(family, '/api/cash-bookings', {action: 'book', source: 'membership', plan: 'walkin', wrestlerId: samId, program: 'Intermediate', date: today, practiceId: (await api(family, '/api/cash-bookings')).body.bookings[0].itemId});
+  const again = await api(family, '/api/cash-bookings', {action: 'book', source: 'membership', plan: 'walkin', wrestlerId: samId, program: 'Intermediate', date: cashDay, practiceId: (await api(family, '/api/cash-bookings')).body.bookings[0].itemId});
   expect(again.status === 409, 'a second booking for the same practice is refused: ' + JSON.stringify(again.body));
   await family.goto(BASE + '/family'); await at(family, '#purchaseList', /Pay at the academy[\s\S]*\$40\.00 due/);
   // The coach sees it on today's roster, taps Cash received, and it counts as paid.
-  await coach.goto(BASE + '/roster'); await at(coach, '#sessions', /Sam Example[\s\S]*Pay at the academy · \$40\.00 due/);
+  await rosterOn(coach, cashDay); await at(coach, '#sessions', /Sam Example[\s\S]*Pay at the academy · \$40\.00 due/);
   await coach.locator('.row', {hasText: 'Sam Example'}).first().locator('[data-cash]').click();
   await at(coach, '#status', /Cash received: \$40\.00 for Sam Example/);
   await at(coach, '#sessions', /Sam Example[\s\S]*Walk-in paid[\s\S]*Received by Coach Dana/);
