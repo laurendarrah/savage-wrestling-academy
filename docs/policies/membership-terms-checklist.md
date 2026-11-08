@@ -7,7 +7,7 @@ The draft terms are already on the site at `/membership-terms`, labeled "Draft f
 - The monthly plan bills on the monthly anniversary of the purchase and stops automatically after 12 payments. The site sets the end date on the Stripe subscription.
 - The membership ends after 12 months. Continuing requires a new signup; there is **no automatic renewal**.
 - Regular scheduled practices in the chosen program are included. Friday Night Live, camps, clinics and lessons are separate. SWA Advance requires coach approval.
-- A failed monthly payment shows "Payment needs attention" to the family, and the wrestler stays on the roster through the paid-through date.
+- Each monthly payment covers through the next billing day itself. A failed monthly payment shows "Payment needs attention" to the family and tells the owner; the wrestler stays on the roster for 7 days after the paid-through day while Stripe retries the card (#271), never past the 12-month end. If Stripe gives up and cancels the plan, the membership ends on the paid-through day and both are told. [Decision: confirm the 7-day grace, or choose another length.]
 - Program transfers are made by the owner, and no money moves automatically.
 - Every wrestler needs a current USA Wrestling card and, if published, a signed waiver before booking.
 

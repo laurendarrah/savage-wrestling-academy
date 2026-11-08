@@ -2,10 +2,10 @@
 // (#87), by email. Coaches have no inbox, so their notices are email only. Each event has a dedupe key and is sent once,
 // however many times the code that triggers it runs. Links use appOrigin(), never a hard-coded host.
 import {env} from 'cloudflare:workers';
-import {appOrigin} from './account-auth';
+import {appOrigin, OWNER_EMAIL} from './account-auth';
 import {academyToday} from './public-schedule';
 import {sendEmailsDetailed} from './email';
-import {currentVersion, FAMILY_KINDS, LIVE_SIGNATURE, DOCUMENTS, type Kind} from './documents';
+import {currentVersion, FAMILY_KINDS, LIVE_SIGNATURE, DOCUMENTS, CARRIED_NAME, SIGNATURE_JOIN, signatureCounts, type Kind} from './documents';
 import {dayTime, fullDate} from './datetime';
 import {cardSeason, isSeasonEnd, renewalDue} from './usaw';
 import {chunks, eachFamily, jsonChunks, keysetPage} from './paging';
@@ -61,6 +61,27 @@ export async function noticeApproval(approvalId: string, status: string) {
       : `The academy has not approved ${a.wrestler_name} for SWA Advance at this time. You can talk it over with Justin in the private conversation on the registration page.`}]);
 }
 
+// A family changed a wrestler's grade or name while an SWA Advance request waits (issue #271). The owner is told: the
+// request still stands after a grade change within 7–12 and shows "Requested as Grade 9, now Grade 10" on /approvals;
+// a renamed entry no longer applies, so the family asks again. One notice per change.
+export async function noticeApprovalProfileChanged(userId: string, before: {id: string; name: string; grade: string}[], after: {id: string; name: string; grade: string}[]) {
+  const list: Notice[] = [];
+  if (!OWNER_EMAIL) return;
+  for (const w of after) {
+    const was = before.find(x => x.id === w.id);
+    if (!was || (was.name === w.name && was.grade === w.grade)) continue;
+    const a = await env.DB!.prepare("SELECT id,wrestler_name,grade,status FROM program_approvals WHERE user_id=? AND wrestler_id=? AND program='Advanced' AND status='pending'").bind(userId, w.id).first<{id: string; wrestler_name: string; grade: string; status: string}>();
+    if (!a) continue;
+    const renamed = was.name.trim().toLowerCase() !== w.name.trim().toLowerCase(), high = ['7', '8', '9', '10', '11', '12'].includes(w.grade);
+    list.push({userId: null, email: OWNER_EMAIL, kind: 'approval_profile_changed', dedupeKey: `approval-changed:${a.id}:${w.name}:${w.grade}`, link: '/approvals',
+      subject: renamed ? `SWA Advance request: ${was.name} was renamed ${w.name}` : `SWA Advance request: ${w.name} is now Grade ${w.grade}`,
+      body: renamed ? `The family changed the wrestler on a waiting SWA Advance request from ${was.name} to ${w.name}. The request no longer applies: if it is the same wrestler, the family asks again; if they renamed the entry for another child, that child needs their own request. Nothing is approved.`
+        : high ? `${w.name}'s grade changed from ${was.grade} to ${w.grade} while their SWA Advance request waits. The request still stands and shows "Requested as Grade ${a.grade}, now Grade ${w.grade}" on SWA Advance approvals, where you can approve or decline it.`
+        : `${w.name}'s grade changed from ${was.grade} to ${w.grade}, outside grades 7–12, so their waiting SWA Advance request no longer applies. The family may have mistyped the grade.`});
+  }
+  if (list.length) await notify(list);
+}
+
 export async function noticeCardRejected(userId: string, wrestlerId: string, note: string) {
   const f = await family(userId), w = f?.wrestlers?.find((x: any) => x.id === wrestlerId);
   if (!f || !w) return;
@@ -90,6 +111,48 @@ export async function noticeLessonBooked(orderId: string) {
     subject: `New lesson: ${o.wrestler_name}, ${dayTime(date, p.start)}`,
     body: `${o.wrestler_name} booked ${Number(p.slots) > 1 ? 'a spot in your' : 'a'} ${p.formatName ?? 'private lesson'} with you for ${dayTime(date, p.start)}.${p.partners ? ` Training partners: ${p.partners}.` : ''} The lesson's roster is on your coach page.`});
   await notify(list);
+}
+
+// --- Monthly memberships (issue #271) ---
+// The owner has no inbox, so an owner notice is email only (userId null), like a coach's. OWNER_EMAIL is the owner's
+// address from lib/account-auth.ts; with none set, nothing goes to the owner.
+const ownerNotice = (n: Omit<Notice, 'userId' | 'email'>): Notice[] => OWNER_EMAIL ? [{...n, userId: null, email: OWNER_EMAIL}] : [];
+const dollars = (c: number) => '$' + (c / 100).toFixed(2);
+async function membershipOrder(orderId: string) {
+  return await env.DB!.prepare('SELECT o.*,s.paid_through,s.payments_made,s.payments_total FROM orders o JOIN subscriptions s ON s.order_id=o.id WHERE o.id=?').bind(orderId).first<any>();
+}
+// A monthly payment failed: the family is asked to fix the card; the owner sees who, and for how long the wrestler stays
+// on the roster (the grace, lib/membership-term.ts). One notice per failed invoice event, so Stripe's retries, which
+// each send their own event, each get one, and a replay none.
+export async function noticeInstallmentFailed(orderId: string, eventId: string) {
+  const o = await membershipOrder(orderId);
+  if (!o) return;
+  await notify([{userId: o.user_id, email: o.email, kind: 'installment_failed', dedupeKey: `installment-failed:${orderId}:${eventId}`, link: '/family#memberships',
+    subject: `Payment needs attention: ${o.wrestler_name}'s membership`,
+    body: `The monthly payment for ${o.wrestler_name}'s ${o.item_label} did not go through. Stripe will try the card again over the next few days; to fix it sooner, update the card in Stripe's email receipt or contact the academy. ${o.wrestler_name} can still come to practice through ${longDate(o.term_end)}. After that, the membership pauses until a payment goes through.`},
+    ...ownerNotice({kind: 'installment_failed_owner', dedupeKey: `installment-failed-owner:${orderId}:${eventId}`, link: '/payments#attention',
+      subject: `Payment needs attention: ${o.wrestler_name} (${o.email})`,
+      body: `A monthly payment for ${o.wrestler_name}'s ${o.item_label} failed at Stripe (${o.payments_made} of ${o.payments_total} payments made, paid through ${longDate(o.paid_through)}). Stripe retries the card by itself. ${o.wrestler_name} stays on the roster through ${longDate(o.term_end)}. The Payment needs attention list on Payments shows every membership in this state.`})]);
+}
+// Stripe collected a different amount than the membership's price (a coupon, or a price edited in Stripe). The payment
+// counted; the owner checks it is what they meant.
+export async function noticeInstallmentMismatch(orderId: string, eventId: string, number: number, paidCents: number, expectedCents: number, invoiceId: string) {
+  const o = await membershipOrder(orderId);
+  if (!o) return;
+  await notify(ownerNotice({kind: 'installment_mismatch_owner', dedupeKey: `installment-mismatch:${orderId}:${eventId}`, link: '/payments#attempts',
+    subject: `Check a monthly payment: ${o.wrestler_name} paid ${dollars(paidCents)}, not ${dollars(expectedCents)}`,
+    body: `Stripe collected ${dollars(paidCents)} for payment ${number} of ${o.payments_total} on ${o.wrestler_name}'s ${o.item_label}; the membership's price is ${dollars(expectedCents)}. The payment counts and the books show ${dollars(paidCents)}. If this is not a discount you gave in Stripe, check the subscription${invoiceId ? ` (invoice ${invoiceId})` : ''} in your Stripe dashboard.`}));
+}
+// The monthly plan ended before its 12 payments: the family's access ends on the paid-through day.
+export async function noticeSubscriptionCanceled(orderId: string, eventId: string) {
+  const o = await membershipOrder(orderId);
+  if (!o) return;
+  await notify([{userId: o.user_id, email: o.email, kind: 'subscription_canceled', dedupeKey: `subscription-canceled:${orderId}:${eventId}`, link: '/family#memberships',
+    subject: `${o.wrestler_name}'s membership has ended`,
+    body: `The monthly payments for ${o.wrestler_name}'s ${o.item_label} have stopped after ${o.payments_made} of ${o.payments_total}, so the membership ends on ${longDate(o.term_end)}. To keep training, sign up again from your family account, or talk to the academy.`},
+    ...ownerNotice({kind: 'subscription_canceled_owner', dedupeKey: `subscription-canceled-owner:${orderId}:${eventId}`, link: '/payments',
+      subject: `Membership ended early: ${o.wrestler_name} (${o.email})`,
+      body: `Stripe canceled the monthly plan for ${o.wrestler_name}'s ${o.item_label} after ${o.payments_made} of ${o.payments_total} payments. ${o.wrestler_name} comes off the roster after ${longDate(o.term_end)}. The family has been told.`})]);
 }
 
 export async function noticeTransfer(orderId: string, toProgramName: string, effective: string) {
@@ -135,15 +198,20 @@ export async function dailyReminders(force = false, today = academyToday()) {
   for (const kind of FAMILY_KINDS) { const version = await currentVersion(kind); if (version) docs.push({kind, version}); }
   let saved = 0;
   for await (const families of eachFamily(REMINDER_BATCH)) {
-    // Who signed each document in force, for this batch's families only.
-    const signed = new Map<string, Set<string>>(docs.map(d => [d.version.id, new Set<string>()]));
+    // Who signed each document in force, for this batch's families only. A signature counts for the same wrestler entry
+    // by the family's saved names (lib/documents.ts signatureCounts, issue #271), exactly as booking and the roster decide.
+    const signed = new Map<string, any[]>();
     if (docs.length) for (const ids of chunks(families.map(f => f.user_id), 80))
-      for (const s of (await env.DB!.prepare(`SELECT version_id,user_id,wrestler_id,wrestler_name FROM waiver_signatures s WHERE version_id IN (${docs.map(() => '?').join(',')}) AND user_id IN (${ids.map(() => '?').join(',')}) AND ${LIVE_SIGNATURE}`)
-        .bind(...docs.map(d => d.version.id), ...ids).all<any>()).results)
-        signed.get(s.version_id)?.add(`${s.user_id}|${s.wrestler_id}|${String(s.wrestler_name).trim().toLowerCase()}`);
+      for (const s of (await env.DB!.prepare(`SELECT s.version_id,s.user_id,s.wrestler_id,s.wrestler_name,${CARRIED_NAME} FROM waiver_signatures s ${SIGNATURE_JOIN} WHERE s.version_id IN (${docs.map(() => '?').join(',')}) AND s.user_id IN (${ids.map(() => '?').join(',')}) AND ${LIVE_SIGNATURE}`)
+        .bind(...docs.map(d => d.version.id), ...ids).all<any>()).results) {
+        const k = `${s.version_id}|${s.user_id}|${s.wrestler_id}`;
+        if (!signed.has(k)) signed.set(k, []);
+        signed.get(k)!.push(s);
+      }
     const list: Notice[] = [];
     for (const f of families) {
-      for (const w of JSON.parse(f.payload).wrestlers ?? []) {
+      const kids = JSON.parse(f.payload).wrestlers ?? [];
+      for (const w of kids) {
         const exp = w.usawExpires as string | undefined;
         if (w.usawNumber && exp && exp >= today && exp <= soon)
           list.push({userId: f.user_id, email: f.email, kind: 'card_expiring', dedupeKey: `card-soon:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
@@ -152,7 +220,7 @@ export async function dailyReminders(force = false, today = academyToday()) {
           list.push({userId: f.user_id, email: f.email, kind: 'card_expired', dedupeKey: `card-expired:${f.user_id}:${w.id}:${exp}`, link: '/family#summary',
             ...cardExpiredNotice(w.name, exp, today)});
         for (const {kind, version} of docs) {
-          if (signed.get(version.id)!.has(`${f.user_id}|${w.id}|${String(w.name).trim().toLowerCase()}`)) continue;
+          if ((signed.get(`${version.id}|${f.user_id}|${w.id}`) ?? []).some(s => signatureCounts(s, w, kids))) continue;
           if (kind === 'waiver')
             list.push({userId: f.user_id, email: f.email, kind: 'waiver_needed', dedupeKey: `waiver:${version.id}:${f.user_id}:${w.id}`, link: '/waiver?wrestler=' + encodeURIComponent(w.id),
               subject: `Please sign the ${version.title} for ${w.name}`,

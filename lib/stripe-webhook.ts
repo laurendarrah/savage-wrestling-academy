@@ -3,8 +3,8 @@
 // Each Stripe event id is stored once, so repeated, late or out-of-order deliveries cannot apply twice.
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
-import {noticeLessonBooked, quietly} from './notify';
-import {membershipTerm, paidThroughAfter} from './membership-term';
+import {noticeInstallmentFailed, noticeInstallmentMismatch, noticeLessonBooked, noticeSubscriptionCanceled, quietly} from './notify';
+import {graceEnd, membershipTerm, paidThroughAfter} from './membership-term';
 export {membershipTerm, paidThroughAfter};
 import {storedStripeKeyFor, stripeClientFor} from './stripe-test';
 import {alertOwner, DISPUTE_PATH} from './owner-alerts';
@@ -110,15 +110,31 @@ export async function applyStripeEvent(event: any): Promise<Outcome & {duplicate
     if (again) return {outcome: again.outcome, orderId: again.order_id, duplicate: true};
     throw e;
   }
-  if (outcome.startsWith('rejected:'))
+  if (outcome.startsWith('rejected:')) {
     await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
       .bind(crypto.randomUUID(), 'stripe', 'stripe_event_rejected', `${event.id} ${outcome}`, at).run();
+    // A refused payment message reaches the owner through the hourly alert email (issue #271), never more than one an hour.
+    await quietly(() => alertOwner(env.DB));
+  }
   // A paid lesson tells the coach and the family (issue #105); other notices are not needed for online payments.
   if (outcome.startsWith('paid') && orderId) await quietly(() => noticeLessonBooked(orderId));
   // A new dispute is a problem for the owner to answer in Stripe within days: it goes through the site's problem alerts
   // (lib/owner-alerts.ts), which email the owner at most once an hour and show on Site health.
   if (outcome === 'disputed') await quietly(() => alertOwner(env.DB));
+  // Monthly memberships (issue #271): a failed payment, a mismatched amount and a canceled plan each tell the family
+  // and the owner once, keyed by the event, so a replay sends nothing more.
+  if (orderId) await quietly(() => installmentNotices(outcome, orderId, event));
   return {outcome, orderId, duplicate: false};
+}
+
+async function installmentNotices(outcome: string, orderId: string, event: any) {
+  const obj = event.data?.object ?? {};
+  if (outcome === 'installment-failed') await noticeInstallmentFailed(orderId, event.id);
+  if (outcome === 'subscription-canceled') await noticeSubscriptionCanceled(orderId, event.id);
+  if (/^installment-\d+-of-\d+$/.test(outcome)) {
+    const row = await env.DB!.prepare('SELECT amount_cents,expected_cents,payment_number FROM installment_payments WHERE id=?').bind(event.id).first<{amount_cents: number; expected_cents: number; payment_number: number}>();
+    if (row && row.amount_cents !== row.expected_cents) await noticeInstallmentMismatch(orderId, event.id, row.payment_number, row.amount_cents, row.expected_cents, typeof obj.id === 'string' ? obj.id : '');
+  }
 }
 
 // The order a card payment belongs to: a one-time payment by its PaymentIntent, or one monthly payment via its fee row
@@ -227,36 +243,8 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
     return none('ignored:' + event.type, orderId);
   }
 
-  if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
-    const subscriptionId = typeof obj.subscription === 'string' ? obj.subscription : obj.parent?.subscription_details?.subscription ?? null;
-    if (typeof subscriptionId !== 'string') return none('ignored:no-subscription');
-    if (obj.billing_reason === 'subscription_create') return none('ignored:first-payment-counted-at-checkout');
-    const sub = await env.DB!.prepare('SELECT s.order_id,s.status,s.payments_made,s.payments_total,s.term_start,s.term_end,o.amount_cents FROM subscriptions s JOIN orders o ON o.id=s.order_id WHERE s.stripe_subscription_id=?')
-      .bind(subscriptionId).first<{order_id: string; status: string; payments_made: number; payments_total: number; term_start: string; term_end: string; amount_cents: number}>();
-    // A later invoice for a subscription we have not recorded yet: let Stripe retry once checkout completion arrives.
-    if (!sub) throw new Error('Unknown subscription; retry later.');
-    if (event.type === 'invoice.payment_failed')
-      return {outcome: 'installment-failed', orderId: sub.order_id, writes: [
-        env.DB!.prepare("UPDATE subscriptions SET status='past_due',updated_at=? WHERE order_id=? AND status IN ('active','past_due')").bind(at, sub.order_id)
-      ]};
-    if (obj.amount_paid !== sub.amount_cents) return none('rejected:amount-mismatch', sub.order_id);
-    if (sub.payments_made >= sub.payments_total) return none('rejected:payment-beyond-term-refund-needed', sub.order_id);
-    const made = sub.payments_made + 1;
-    const paidThrough = made >= sub.payments_total ? sub.term_end : paidThroughAfter(sub.term_start, made);
-    return {outcome: `installment-${made}-of-${sub.payments_total}`, orderId: sub.order_id, writes: [
-      env.DB!.prepare("UPDATE subscriptions SET payments_made=?,paid_through=?,status='active',updated_at=? WHERE order_id=? AND payments_made=?").bind(made, paidThrough, at, sub.order_id, sub.payments_made),
-      env.DB!.prepare('UPDATE orders SET term_end=?,updated_at=? WHERE id=?').bind(paidThrough, at, sub.order_id)
-    ]};
-  }
-
-  if (event.type === 'customer.subscription.deleted') {
-    const sub = await env.DB!.prepare('SELECT order_id,payments_made,payments_total FROM subscriptions WHERE stripe_subscription_id=?').bind(obj.id).first<{order_id: string; payments_made: number; payments_total: number}>();
-    if (!sub) return none('ignored:unknown-subscription');
-    const ended = sub.payments_made >= sub.payments_total ? 'completed' : 'canceled';
-    return {outcome: 'subscription-' + ended, orderId: sub.order_id, writes: [
-      env.DB!.prepare('UPDATE subscriptions SET status=?,updated_at=? WHERE order_id=?').bind(ended, at, sub.order_id)
-    ]};
-  }
+  if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') return invoicePlan(event, at);
+  if (event.type === 'customer.subscription.deleted') return subscriptionEndedPlan(event, at);
 
   // Refunds (issue #42). amount_refunded is Stripe's running total for the payment, so it is stored as it is, never added
   // up, with the event's own time: a replay is stored once (stripe_events), and a late or out-of-order event still lands
@@ -284,4 +272,61 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
   }
   if (DISPUTE_KINDS[event.type]) return planDispute(event, at);
   return none('ignored:' + event.type);
+}
+
+type Plan = {outcome: string; orderId: string | null; writes: D1PreparedStatement[]};
+type SubRow = {order_id: string; status: string; payments_made: number; payments_total: number; term_start: string; term_end: string; paid_through: string; amount_cents: number; livemode: number};
+
+// Monthly payments 2 to 12 (issues #20 and #271).
+// - invoice.payment_failed: the plan is past due, the family and the owner are told (installmentNotices), and the wrestler
+//   keeps roster access for a short grace after the paid-through day while Stripe retries (graceEnd). Nothing is extended.
+// - invoice.paid: the payment counts whatever Stripe collected. A coupon or a price edit in Stripe makes the amount differ
+//   from the membership's price; it is stored per payment (installment_payments), the books read that amount, and the
+//   owner is told about the difference. A replay stores nothing twice (stripe_events), and the payments_made guard keeps
+//   two deliveries of different invoices from counting the same number, whatever order they arrive in.
+async function invoicePlan(event: any, at: string): Promise<Plan> {
+  const obj = event.data?.object ?? {};
+  const none = (outcome: string, orderId: string | null = null): Plan => ({outcome, orderId, writes: []});
+  const subscriptionId = typeof obj.subscription === 'string' ? obj.subscription : obj.parent?.subscription_details?.subscription ?? null;
+  if (typeof subscriptionId !== 'string') return none('ignored:no-subscription');
+  if (obj.billing_reason === 'subscription_create') return none('ignored:first-payment-counted-at-checkout');
+  const sub = await env.DB!.prepare('SELECT s.order_id,s.status,s.payments_made,s.payments_total,s.term_start,s.term_end,s.paid_through,o.amount_cents,o.livemode FROM subscriptions s JOIN orders o ON o.id=s.order_id WHERE s.stripe_subscription_id=?')
+    .bind(subscriptionId).first<SubRow>();
+  // A later invoice for a subscription we have not recorded yet: let Stripe retry once checkout completion arrives.
+  if (!sub) throw new Error('Unknown subscription; retry later.');
+  if (event.type === 'invoice.payment_failed') {
+    if (!['active', 'past_due'].includes(sub.status)) return none('ignored:subscription-' + sub.status, sub.order_id);
+    return {outcome: 'installment-failed', orderId: sub.order_id, writes: [
+      env.DB!.prepare("UPDATE subscriptions SET status='past_due',updated_at=? WHERE order_id=? AND status IN ('active','past_due')").bind(at, sub.order_id),
+      // The grace runs from the paid-through day; a late or repeated failure never shortens access already granted.
+      env.DB!.prepare('UPDATE orders SET term_end=max(term_end,?),updated_at=? WHERE id=?').bind(graceEnd(sub.paid_through, sub.term_end), at, sub.order_id)
+    ]};
+  }
+  if (sub.payments_made >= sub.payments_total) return none('rejected:payment-beyond-term-refund-needed', sub.order_id);
+  const paid = Number.isSafeInteger(obj.amount_paid) && obj.amount_paid >= 0 ? obj.amount_paid : null;
+  if (paid === null) return none('rejected:malformed', sub.order_id);
+  const made = sub.payments_made + 1;
+  const paidThrough = made >= sub.payments_total ? sub.term_end : paidThroughAfter(sub.term_start, made);
+  const mismatch = paid !== sub.amount_cents ? [env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
+    .bind(crypto.randomUUID(), 'stripe', 'installment_amount_mismatch', `${sub.order_id} ${made} ${paid} ${sub.amount_cents}`, at)] : [];
+  return {outcome: `installment-${made}-of-${sub.payments_total}`, orderId: sub.order_id, writes: [...mismatch,
+    env.DB!.prepare("UPDATE subscriptions SET payments_made=?,paid_through=?,status='active',updated_at=? WHERE order_id=? AND payments_made=?").bind(made, paidThrough, at, sub.order_id, sub.payments_made),
+    env.DB!.prepare('UPDATE orders SET term_end=?,updated_at=? WHERE id=?').bind(paidThrough, at, sub.order_id),
+    env.DB!.prepare('INSERT INTO installment_payments(id,order_id,invoice_id,payment_number,amount_cents,expected_cents,livemode,received_at) VALUES (?,?,?,?,?,?,?,?)')
+      .bind(event.id, sub.order_id, typeof obj.id === 'string' ? obj.id : null, made, paid, sub.amount_cents, sub.livemode, at)
+  ]};
+}
+
+// The plan ended at Stripe: after the 12th payment (completed), or earlier (canceled by the family, the owner, or Stripe
+// after its retries failed). A canceled plan's access ends on the paid-through day: the grace after a failed payment
+// (issue #271) stops, and the family and the owner are told (installmentNotices).
+async function subscriptionEndedPlan(event: any, at: string): Promise<Plan> {
+  const obj = event.data?.object ?? {};
+  const sub = await env.DB!.prepare('SELECT order_id,payments_made,payments_total,paid_through FROM subscriptions WHERE stripe_subscription_id=?').bind(obj.id).first<{order_id: string; payments_made: number; payments_total: number; paid_through: string}>();
+  if (!sub) return {outcome: 'ignored:unknown-subscription', orderId: null, writes: []};
+  const ended = sub.payments_made >= sub.payments_total ? 'completed' : 'canceled';
+  return {outcome: 'subscription-' + ended, orderId: sub.order_id, writes: [
+    env.DB!.prepare('UPDATE subscriptions SET status=?,updated_at=? WHERE order_id=?').bind(ended, at, sub.order_id),
+    ...(ended === 'canceled' ? [env.DB!.prepare('UPDATE orders SET term_end=min(term_end,?),updated_at=? WHERE id=?').bind(sub.paid_through, at, sub.order_id)] : [])
+  ]};
 }

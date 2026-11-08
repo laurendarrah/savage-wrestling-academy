@@ -10,6 +10,7 @@
 import {OWNER_EMAIL, appOrigin} from './account-auth';
 import {emailConfigured, failureWords, sendEmailsDetailed} from './email';
 import {when} from './datetime';
+import {REJECTIONS} from './stripe-outcomes';
 
 type DB = D1Database | undefined;
 export const ALERT_KEY = 'owner-alert';
@@ -25,7 +26,10 @@ export const DISPUTE_PATH = '/stripe-dispute';
 export const NOTICES: Record<string, string> = {[DISPUTE_PATH]: 'A family disputed a card payment with their bank. Open Payments (the payment says Disputed), then answer the dispute in Stripe before its deadline'};
 
 type Marker = {sentAt?: string; coveredUntil?: string; count?: number; status?: string; reason?: string | null};
-type ErrorRow = {at: string; path: string; status: number};
+// A problem the alert covers: a server error (error_log) or, since issue #271, a Stripe payment message the site refused
+// (security_events 'stripe_event_rejected', with path STRIPE_REFUSED and the refusal in `outcome`).
+export const STRIPE_REFUSED = '/stripe-refused';
+type ErrorRow = {at: string; path: string; status: number; outcome?: string};
 
 // "/api/checkout/session" -> "/api/checkout", "/register" -> "/register". Paths never carry a query string.
 export function area(path: string) {
@@ -37,9 +41,10 @@ const kind = (status: number) => status === 502 || status === 503 || status === 
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
 export function alertEmail(rows: ErrorRow[], origin: string | null, now = new Date()) {
-  const jobs = new Map<string, number>(), pages = new Map<string, number>(), notices = new Map<string, number>();
+  const jobs = new Map<string, number>(), pages = new Map<string, number>(), notices = new Map<string, number>(), refused = new Map<string, number>();
   for (const r of rows) {
-    if (SCHEDULED_JOBS[r.path]) jobs.set(r.path, (jobs.get(r.path) ?? 0) + 1);
+    if (r.path === STRIPE_REFUSED) { const key = REJECTIONS[r.outcome ?? ''] ?? 'Stripe sent a payment message the site could not match.'; refused.set(key, (refused.get(key) ?? 0) + 1); }
+    else if (SCHEDULED_JOBS[r.path]) jobs.set(r.path, (jobs.get(r.path) ?? 0) + 1);
     else if (NOTICES[r.path]) notices.set(r.path, (notices.get(r.path) ?? 0) + 1);
     else { const key = `${area(r.path)}: ${kind(Number(r.status))}`; pages.set(key, (pages.get(key) ?? 0) + 1); }
   }
@@ -47,12 +52,15 @@ export function alertEmail(rows: ErrorRow[], origin: string | null, now = new Da
   if (notices.size) lines.push('Needs your attention:', ...[...notices].map(([p, n]) => `- ${NOTICES[p]}${n > 1 ? ` (${plural(n, 'time')})` : ''}`), '');
   if (jobs.size) lines.push('Scheduled jobs that didn\'t finish:', ...[...jobs].map(([p, n]) => `- ${SCHEDULED_JOBS[p]}: ${plural(n, 'time')}`), '');
   if (pages.size) lines.push('Server errors, by page:', ...[...pages].sort((a, b) => b[1] - a[1]).map(([k, n]) => `- ${k} (${n})`), '');
+  if (refused.size) lines.push('Payment messages from Stripe the site refused (the Payment attempts list on Payments shows which family and purchase):', ...[...refused].map(([k, n]) => `- ${k} (${n})`), '');
   const first = rows[0]?.at, last = rows.at(-1)?.at;
   const span = first && last && first !== last ? `between ${when(first, now)} and ${when(last, now)}` : `at ${when(first ?? now, now)}`;
-  const subject = notices.has(DISPUTE_PATH) && !jobs.size && !pages.size ? 'Site alert: a family disputed a card payment'
-    : jobs.size && !pages.size && !notices.size ? 'Site alert: a scheduled job didn\'t finish' : `Site alert: ${plural(rows.length, 'new problem')} on the academy site`;
+  const only = (m: Map<string, unknown>) => m.size && [jobs, pages, notices, refused].every(x => x === m || !x.size);
+  const subject = notices.has(DISPUTE_PATH) && !jobs.size && !pages.size && !refused.size ? 'Site alert: a family disputed a card payment'
+    : only(refused) ? `Site alert: ${plural(rows.length, 'payment message')} from Stripe refused`
+    : only(jobs) ? 'Site alert: a scheduled job didn\'t finish' : `Site alert: ${plural(rows.length, 'new problem')} on the academy site`;
   const text = [`The Savage Wrestling Academy site recorded ${plural(rows.length, 'new problem')} ${span} (New York time).`, '', ...lines,
-    origin ? `See what happened on the Site health page (owner sign-in needed):\n${origin}/site-health` : 'See what happened on the Site health page in the owner dashboard.', '',
+    origin ? `See what happened on the Site health page (owner sign-in needed):\n${origin}/site-health${refused.size ? `\nand under Payment attempts on Payments:\n${origin}/payments#attempts` : ''}` : 'See what happened on the Site health page in the owner dashboard' + (refused.size ? ', and under Payment attempts on Payments.' : '.'), '',
     'One or two errors right after an update can be normal. A steady stream means something needs fixing, so share the Site health page with whoever maintains the site.', '',
     'You get at most one of these emails an hour. Anything that happens in between is in the next one.', '', '—', 'Savage Wrestling Academy site'].join('\n');
   return {subject, text};
@@ -75,7 +83,12 @@ export async function alertOwner(db: DB, now = new Date()): Promise<'off' | 'non
     const floor = new Date(now.getTime() - LOOKBACK_MS).toISOString();
     const after = value.coveredUntil && value.coveredUntil > floor ? value.coveredUntil : floor;
     // error_log keeps only the latest 500 rows (lib/site-health.ts), so this reads every problem there is (issue #46).
-    const rows = (await db.prepare('SELECT at, path, status FROM error_log WHERE at>? AND at<=? ORDER BY at, id').bind(after, now.toISOString()).all<ErrorRow>()).results;
+    // Refused Stripe messages (issue #271) are the security log's 'stripe_event_rejected' rows, "eventId rejected:why".
+    const [errors, refused] = await db.batch([
+      db.prepare('SELECT at, path, status FROM error_log WHERE at>? AND at<=? ORDER BY at, id').bind(after, now.toISOString()),
+      db.prepare("SELECT created_at AS at, target FROM security_events WHERE action='stripe_event_rejected' AND created_at>? AND created_at<=? ORDER BY created_at, id LIMIT 200").bind(after, now.toISOString())]);
+    const rows: ErrorRow[] = [...(errors.results as ErrorRow[]), ...(refused.results as {at: string; target: string}[]).map(r => ({at: r.at, path: STRIPE_REFUSED, status: 0, outcome: String(r.target).split(' ')[1] ?? ''}))]
+      .sort((a, b) => a.at.localeCompare(b.at));
     if (!rows.length) return 'none';
     // Claim the alert before sending, so two errors at the same moment send one email between them.
     const at = now.toISOString(), next: Marker = {sentAt: at, coveredUntil: rows.at(-1)!.at, count: rows.length, status: 'sending', reason: null};

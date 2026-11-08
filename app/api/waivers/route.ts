@@ -2,7 +2,7 @@
 // signed. Without a kind it is the waiver; ?kind= (or "kind" when posting) chooses the Parent Consent Form or the coach
 // contract.
 import {ownerIdentity, accountReply, sameOrigin, OWNER_EMAIL} from '../../../lib/account-auth';
-import {DOCUMENTS, isKind, ownerDocuments, publishDocument, retireDocument, reissueSignature, signersPage, type Kind} from '../../../lib/documents';
+import {DOCUMENTS, isKind, ownerDocuments, publishDocument, retireDocument, reissueSignature, carrySignature, signersPage, type Kind} from '../../../lib/documents';
 import {pageSize, PAGE_SIZE} from '../../../lib/paging';
 import {dailyReminders, noticeReissue, quietly} from '../../../lib/notify';
 export const dynamic = 'force-dynamic';
@@ -38,8 +38,13 @@ export async function POST(request: Request) {
     await quietly(() => noticeReissue(kind, r.signature!, r.version!, r.reason!));
     return reply({ok: true});
   }
+  // Carry a signature over to a wrestler's new name (issue #271), with the reason, when a rename did not carry it by itself.
+  if (input?.action === 'carry') {
+    const r = await carrySignature(kind, input.signatureId, input.reason, auth.owner.userId);
+    return r.status === 200 ? reply({ok: true, wrestler: r.wrestler, from: r.from}) : reply({error: r.error}, r.status);
+  }
   const r = input?.action === 'publish' ? await publishDocument(kind, input.title, input.body, auth.owner.userId)
-    : input?.action === 'retire' ? await retireDocument(kind, auth.owner.userId) : {status: 400, error: 'Choose publish, retire or reissue.'};
+    : input?.action === 'retire' ? await retireDocument(kind, auth.owner.userId) : {status: 400, error: 'Choose publish, retire, reissue or carry.'};
   // Families hear about a new family document at once (the daily reminder, sent now); coaches see a to-do on coach home.
   if (r.status === 200 && input.action === 'publish' && DOCUMENTS[kind].signer === 'parent') await quietly(() => dailyReminders(true));
   return r.status === 200 ? reply({ok: true}) : reply({error: (r as any).error}, r.status);

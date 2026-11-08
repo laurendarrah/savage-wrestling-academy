@@ -178,14 +178,70 @@ await step('Stripe reports the first payment: the app sets the 12-payment end da
   expect(s && s.payments_made === 1 && s.payments_total === 12 && s.cancel_at, 'subscription ' + JSON.stringify(s));
   await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /Active membership/);
 });
-await step('the second monthly payment extends paid-through; a failed one shows "needs attention"', async () => {
+await step('the second monthly payment extends paid-through to the next billing day', async () => {
   const before = sql("SELECT paid_through FROM subscriptions")[0].paid_through;
-  let r = await webhook('invoice.paid', {id: 'in_rehearsal_2', object: 'invoice', subscription: 'sub_rehearsal_1', billing_reason: 'subscription_cycle', amount_paid: 20000, livemode: false});
-  expect(r.status === 200, 'invoice.paid ' + JSON.stringify(r.body));
-  const s = sql("SELECT payments_made,paid_through FROM subscriptions")[0];
+  const r = await webhook('invoice.paid', {id: 'in_rehearsal_2', object: 'invoice', subscription: 'sub_rehearsal_1', billing_reason: 'subscription_cycle', amount_paid: 20000, livemode: false});
+  expect(r.status === 200 && r.body.outcome === 'installment-2-of-12', 'invoice.paid ' + JSON.stringify(r.body));
+  const s = sql("SELECT payments_made,paid_through,term_start FROM subscriptions")[0];
   expect(s.payments_made === 2 && s.paid_through > before, 'not extended ' + JSON.stringify(s));
-  r = await webhook('invoice.payment_failed', {id: 'in_rehearsal_3', object: 'invoice', subscription: 'sub_rehearsal_1', billing_reason: 'subscription_cycle', amount_due: 20000, livemode: false});
-  await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /needs attention/i);
+  // Issue #271: paid through the billing day itself (the second payment covers through the day the third is due).
+  const [y, m, d] = s.term_start.split('-').map(Number), due = new Date(Date.UTC(y, m - 1 + 2, Math.min(d, new Date(Date.UTC(y, m + 2, 0)).getUTCDate()))).toISOString().slice(0, 10);
+  expect(s.paid_through === due && sql(`SELECT term_end FROM orders WHERE id='${monthlyOrder}'`)[0].term_end === due, 'paid through the billing day: ' + JSON.stringify(s) + ' expected ' + due);
+});
+// Issue #271 (audit M4): a failed monthly payment tells the family and the owner, lists the membership under Payment
+// needs attention, and keeps the wrestler on the roster for a 7-day grace after the paid-through day.
+await step('a failed monthly payment: family and owner told, "Payment needs attention" on /payments, a 7-day grace on the roster', async () => {
+  const paidThrough = sql("SELECT paid_through FROM subscriptions")[0].paid_through;
+  const r = await webhook('invoice.payment_failed', {id: 'in_rehearsal_3', object: 'invoice', subscription: 'sub_rehearsal_1', billing_reason: 'subscription_cycle', amount_due: 20000, livemode: false});
+  expect(r.status === 200 && r.body.outcome === 'installment-failed', 'invoice.payment_failed ' + JSON.stringify(r.body));
+  const s = sql("SELECT status FROM subscriptions")[0], o = sql(`SELECT term_end FROM orders WHERE id='${monthlyOrder}'`)[0];
+  const grace = new Date(Date.parse(paidThrough + 'T12:00:00Z') + 7 * 864e5).toISOString().slice(0, 10);
+  expect(s.status === 'past_due' && o.term_end === grace, 'grace: ' + JSON.stringify({s, o, grace}));
+  const told = sql("SELECT kind,user_id FROM notifications WHERE kind IN ('installment_failed','installment_failed_owner') ORDER BY kind");
+  expect(told.length === 2 && told[0].kind === 'installment_failed' && told[0].user_id === 'e2e-family-a' && told[1].user_id === null, 'notices ' + JSON.stringify(told));
+  await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /Payment needs attention[\s\S]*can still come to practice through/i);
+  if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-family-past-due.png`, fullPage: true});
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#attentionRows', /Sam Example[\s\S]*Payment failed/);
+  expect((await owner.textContent('#tAttention')).trim() === '1', 'the tile counts it');
+  if (SHOTS) await owner.screenshot({path: `${SHOTS}/pay-owner-payments-attention.png`, fullPage: true});
+  // The dashboard tile.
+  await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Payment needs attention1Monthly payments that failed at Stripe/, 15000);
+  if (SHOTS) await owner.screenshot({path: `${SHOTS}/pay-owner-dashboard-attention.png`, fullPage: false});
+  // The wrestler is still on the roster during the grace (today is inside it).
+  const roster = await api(owner, '/api/roster?date=' + ny(0));
+  expect(roster.body.sessions.some(x => x.entries.some(e => e.name === 'Sam Example' && e.sources.includes('Member'))), 'Sam dropped off the roster during the grace');
+});
+// Issue #271 (audit M5): a payment for another amount (a coupon or a price edit in Stripe) still counts, for the amount
+// Stripe collected, and the owner is told about the difference.
+await step('a monthly payment for a different amount counts for what Stripe collected and is flagged for the owner', async () => {
+  const r = await webhook('invoice.paid', {id: 'in_rehearsal_4', object: 'invoice', subscription: 'sub_rehearsal_1', billing_reason: 'subscription_cycle', amount_paid: 15000, livemode: false});
+  expect(r.status === 200 && r.body.outcome === 'installment-3-of-12', 'invoice.paid ' + JSON.stringify(r.body));
+  const s = sql("SELECT status,payments_made FROM subscriptions")[0];
+  expect(s.status === 'active' && s.payments_made === 3, 'counted ' + JSON.stringify(s));
+  const p = sql("SELECT invoice_id,payment_number,amount_cents,expected_cents FROM installment_payments WHERE payment_number=3")[0];
+  expect(p && p.invoice_id === 'in_rehearsal_4' && p.payment_number === 3 && p.amount_cents === 15000 && p.expected_cents === 20000, 'stored ' + JSON.stringify(p));
+  expect(sql("SELECT target FROM security_events WHERE action='installment_amount_mismatch'").length === 1, 'flagged in the security log');
+  expect(sql("SELECT kind FROM notifications WHERE kind='installment_mismatch_owner'").length === 1, 'the owner is told');
+  const books = await api(owner, '/api/financials');
+  expect(books.body.lines.some(l => l.id === 'installment:' + `evt_rehearsal_${evt}` && l.amountCents === 15000), 'the books show $150.00 for payment 3');
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#tAttention', /^0$/);
+  expect(await owner.isHidden('#attention'), 'paid up again: the attention list is gone');
+  await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /Monthly payment for a different amount[\s\S]*Stripe collected \$150\.00, the price is \$200\.00/);
+});
+// Issue #271 (audit O3): every online checkout and Stripe's last word about it, in plain words, on /payments.
+await step('the Payment attempts list on /payments shows each checkout with what happened', async () => {
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#attemptRows', /Sam Example/);
+  const rows = await owner.textContent('#attemptRows');
+  expect(/12-month membership, monthly payment[\s\S]*Monthly payment 3 of 12 received\./.test(rows), 'the membership attempt: ' + rows);
+  expect(/walk-in[\s\S]*Refunded in full\./.test(rows), 'the refunded walk-in: ' + rows);
+  expect(rows.includes(sql(`SELECT stripe_session_id FROM orders WHERE id='${monthlyOrder}'`)[0].stripe_session_id), 'the Stripe session id to look up');
+  await owner.fill('#attemptsQ', 'nobody'); await waitText(owner, '#attemptRows', /No online payment attempts match/);
+  await owner.fill('#attemptsQ', 'family.a'); await waitText(owner, '#attemptRows', /Sam Example/);
+  if (SHOTS) await owner.screenshot({path: `${SHOTS}/pay-owner-payments-attempts.png`, fullPage: true});
+  // A refused message is in the security log and raises the owner alert (email is off in the rehearsal, so nothing is sent).
+  const r = await webhook('checkout.session.completed', {id: 'cs_test_nowhere', object: 'checkout.session', client_reference_id: 'no-such-order', metadata: {order_id: 'no-such-order'}, payment_status: 'paid', amount_total: 4000, currency: 'usd', livemode: false, mode: 'payment'});
+  expect(r.status === 200 && r.body.outcome === 'rejected:unknown-order', 'refused ' + JSON.stringify(r.body));
+  await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /Stripe message refused[\s\S]*It named an order the site does not have/);
 });
 await step('a late Stripe event for an upfront order started before #210 still records it, with its 12-month term', async () => {
   const at = new Date(Date.now() - 20 * 60000).toISOString();

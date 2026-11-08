@@ -309,6 +309,13 @@
       "when": 1794097743002,
       "tag": "0043_orange_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1794104184226,
+      "tag": "0044_lucky_miracleman",
+      "breakpoints": true
     }
   ]
 }

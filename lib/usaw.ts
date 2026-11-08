@@ -131,35 +131,58 @@ export async function listCards(onDate: string) {
       const review = byKey.get(f.user_id + '/' + w.id) ?? null, status = cardStatus(w, review, onDate), l = lookups.get(f.user_id + '/' + w.id);
       const lookup = l && l.number === status.number.replace(/[\s-]/g, '') && l.expires === status.expires
         ? {status: l.status, outcome: l.outcome, name: l.card_name, state: l.card_state, checkedAt: l.checked_at} : null;
+      // note: the owner's reason for a rejection, or (issue #271) why a card was verified against the USA Wrestling lookup.
       return {userId: f.user_id, email: f.email, parentName: p.parentName || '', phone: p.phone || '', wrestlerId: w.id, wrestler: w.name, grade: w.grade,
-        ...status, reviewedAt: review && review.number === status.number && review.expires === status.expires ? review.reviewed_at : null,
+        ...status, note: status.note || (status.state === 'verified' && review ? review.note : ''),
+        reviewedAt: review && review.number === status.number && review.expires === status.expires ? review.reviewed_at : null,
         ...reviewSource(review, status), lookup};
     });
   });
 }
 
-export type CardRow = Awaited<ReturnType<typeof listCards>>[number];
-export const CARD_FILTERS = ['problems', 'all', 'unreviewed'] as const;
+// blocksToday (issue #271): the wrestler has a session today and this card stops their check-in (lib/roster.ts
+// checkInBlock: missing, expired, not valid, changed, or on file but not yet verified, with no owner exception). The
+// cards route sets it from today's roster; the page and the dashboard count it as "Can't check in today".
+export type CardRow = Awaited<ReturnType<typeof listCards>>[number] & {blocksToday?: boolean};
+// 'waiting' is the list of cards that only need the owner's check ('unreviewed' is its older name, kept for links).
+export const CARD_FILTERS = ['problems', 'all', 'waiting', 'unreviewed'] as const;
 const BLOCKED = ['missing', 'expired', 'invalid', 'recheck'];
 // The owner's filters on the cards page, the same rules the page has always used.
 export const cardBlocked = (c: CardRow) => BLOCKED.includes(c.state);
+// Waiting for the owner (issue #271): on file and not yet verified, or changed after a rejection. Such a card books but
+// does not check in, so the default list shows it beside the blocked ones.
+export const cardWaiting = (c: CardRow) => c.state === 'current' || c.state === 'recheck';
 // The renewal list (issue #210): a current card expiring within CARD_RENEWAL_DAYS of the chosen date.
 export const cardSoon = (c: CardRow, onDate: string) => (c.state === 'current' || c.state === 'verified') && c.expires <= renewalDue(onDate);
 export const cardFlagged = (c: CardRow) => c.state === 'current' && !!c.lookup && ['inactive', 'not_found', 'mismatch', 'season'].includes(c.lookup.outcome);
 export function cardMatches(c: CardRow, show: string, q: string, onDate: string) {
-  const shown = show === 'all' || (show === 'unreviewed' ? c.state === 'current' || c.state === 'recheck' : cardBlocked(c) || cardSoon(c, onDate) || cardFlagged(c));
+  const shown = show === 'all' || (show === 'waiting' || show === 'unreviewed' ? cardWaiting(c) : cardBlocked(c) || cardWaiting(c) || cardSoon(c, onDate) || cardFlagged(c));
   const text = q.trim().toLowerCase();
   return shown && (!text || [c.wrestler, c.parentName, c.email].join(' ').toLowerCase().includes(text));
 }
-// Blocked cards first, then by expiration date and wrestler name; family and wrestler ids make the key unique.
-export const cardKey = (c: CardRow) => [cardBlocked(c) ? 0 : 1, c.expires || '', String(c.wrestler || '').toLowerCase(), c.userId, c.wrestlerId];
+// Cards that stop a check-in today first, then blocked cards, then by expiration date and wrestler name; family and
+// wrestler ids make the key unique.
+export const cardKey = (c: CardRow) => [c.blocksToday ? 0 : 1, cardBlocked(c) ? 0 : 1, c.expires || '', String(c.wrestler || '').toLowerCase(), c.userId, c.wrestlerId];
 // One page of the cards page (issue #46): counts over every wrestler, and the matching cards a page at a time.
 export function cardsPage(cards: CardRow[], o: {show?: string | null; q?: string | null; cursor?: string | null; onDate: string; limit?: number}) {
   const show = CARD_FILTERS.includes(o.show as any) ? o.show! : 'all';
   const matching = cards.filter(c => cardMatches(c, show, o.q ?? '', o.onDate));
   const page = pageOf(matching, cardKey, o.cursor, o.limit ?? PAGE_SIZE);
   return {cards: page.rows, next: page.next, matched: matching.length,
-    totals: {all: cards.length, blocked: cards.filter(cardBlocked).length, soon: cards.filter(c => cardSoon(c, o.onDate)).length, verified: cards.filter(c => c.state === 'verified').length}};
+    totals: {all: cards.length, blocked: cards.filter(cardBlocked).length, waiting: cards.filter(cardWaiting).length, blockedToday: cards.filter(c => c.blocksToday).length,
+      soon: cards.filter(c => cardSoon(c, o.onDate)).length, verified: cards.filter(c => c.state === 'verified').length}};
+}
+
+// What the latest USA Wrestling lookup (issue #202) said about the card on file, when it disagrees with marking it
+// verified: not active, no such card, another name, or another season. Null when the lookup agrees or there is none.
+// The owner can still mark the card verified by hand, with a note saying why (issue #271).
+export async function lookupDisagreement(userId: string, wrestlerId: string, number: string, expires: string) {
+  const l = await env.DB!.prepare('SELECT number,expires,outcome,card_name,card_state FROM usaw_lookups WHERE user_id=? AND wrestler_id=?').bind(userId, wrestlerId)
+    .first<{number: string; expires: string; outcome: string; card_name: string | null; card_state: string | null}>();
+  if (!l || l.number !== number.replace(/[\s-]/g, '') || l.expires !== expires || !['inactive', 'not_found', 'mismatch', 'season'].includes(l.outcome)) return null;
+  const who = l.card_name ? `${l.card_name}${l.card_state ? ', ' + l.card_state : ''}` : '';
+  const words = {inactive: 'the card is not active', not_found: 'there is no card with this number', mismatch: `the name on the card is ${who || 'not shown'}`, season: 'the card is for another season'}[l.outcome] ?? l.outcome;
+  return {outcome: l.outcome, words};
 }
 
 export async function clearReview(userId: string, wrestlerId: string, ownerId: string) {

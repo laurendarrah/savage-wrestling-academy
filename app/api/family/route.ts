@@ -4,7 +4,7 @@ import { validFamily, cleanFamily, emptyFamily, familyProblem, missingDetails, m
 import { cardVerification, seasonOptions, CARD_RENEWAL_DAYS } from '../../../lib/usaw';
 import { checkChangedCards, familyLookup, lookupView, lookupsFor } from '../../../lib/usaw-check';
 import { exceptionFor } from '../../../lib/exceptions';
-import { dailyReminders, quietly } from '../../../lib/notify';
+import { dailyReminders, noticeApprovalProfileChanged, quietly } from '../../../lib/notify';
 import { academyToday } from '../../../lib/public-schedule';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
@@ -43,7 +43,10 @@ export async function PUT(request:Request){
  if(!row)return reply({error:'Your profile changed on another device. Reload before saving.'},409);
  // A new or changed card number is checked on USA Wrestling's public verify page (issue #202). It never fails the save.
  let lookups:Record<string,string>={};
- try{lookups=await checkChangedCards(request,auth.user.id,before?JSON.parse(before.payload):null,clean)}catch{}
+ const earlier=before?JSON.parse(before.payload):null;
+ try{lookups=await checkChangedCards(request,auth.user.id,earlier,clean)}catch{}
+ // The owner hears when a wrestler with a waiting SWA Advance request changes grade or name (issue #271).
+ if(earlier?.wrestlers)await quietly(()=>noticeApprovalProfileChanged(auth.user!.id,earlier.wrestlers,clean.wrestlers));
  // The saved profile as stored (trimmed, state in capitals), so the page shows exactly what was kept.
  return reply({revision:row.revision,updatedAt:now,lookups,data:clean});
 }

@@ -16,10 +16,10 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Family profiles and wrestlers | Built, with contact, safety and medical details shown to staff on the roster (#188) | `/family`, `lib/family-records.ts` | |
 | Family data requests | Download everything; ask to close the account; owner handles requests (#113) and can delete a test family (#259) | `/family`, `/data-requests`, `/accounts`, `lib/family-deletion.ts` | Data retention policy (draft) |
 | **Programs and booking** | | | |
-| Program rules and SWA Advance approvals | Built. Development K–6, Intermediate 7–12, Advance 7–12 with coach approval for every wrestler, with private chat | `lib/program-approval.ts`, `/approvals` | |
+| Program rules and SWA Advance approvals | Built. Development K–6, Intermediate 7–12, Advance 7–12 with coach approval for every wrestler, with private chat. A decision follows the wrestler through grade changes within 7–12 (#271) | `lib/program-approval.ts`, `/approvals` | |
 | Registration and booking review | Built; prices from `lib/quotes.ts`, including team codes, member pricing and scholarships | `/register`, `/booking` | |
-| Online payment | Built: Stripe Checkout, signed webhook, refunds, card disputes, card fees. Each purchase type stays closed until `CHECKOUT_KINDS` lists it | `lib/checkout.ts`, `lib/stripe-webhook.ts`, `/payment-setup` | Stripe account and webhook (#26), refund policy (#3) |
-| Monthly memberships | Built: 12 monthly payments that stop on their own. A year paid upfront is not offered (#210) | `lib/membership-term.ts`, `subscriptions` | Membership terms (#2, #20) |
+| Online payment | Built: Stripe Checkout, signed webhook, refunds, card disputes, card fees, and a Payment attempts list with Stripe's last word on every checkout (#271). Each purchase type stays closed until `CHECKOUT_KINDS` lists it | `lib/checkout.ts`, `lib/stripe-webhook.ts`, `/payment-setup` | Stripe account and webhook (#26), refund policy (#3) |
+| Monthly memberships | Built: 12 monthly payments that stop on their own. A year paid upfront is not offered (#210). A failed payment tells the family and the owner, lists the membership under Payment needs attention and keeps a 7-day grace on the roster; a payment for another amount counts for what Stripe collected (#271) | `lib/membership-term.ts`, `subscriptions`, `installment_payments` | Membership terms (#2, #20), the grace length |
 | Pay cash at the academy | Built for walk-ins and extra practices; coaches or the owner tap **Cash received** (#248, #250) | `/booking`, `/roster`, `lib/cash-bookings.ts` | |
 | Offline payments | Owner records cash or check, voids mistakes, exports CSV | `/payments`, `lib/offline-payments.ts` | |
 | Camps and events | Built, with per-day times and seat limits. A full event is full: waitlists were removed (#210) | `app/portal.html`, `lib/capacity.ts` | |
@@ -29,7 +29,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | **At the door** | | | |
 | Roster and check-in | Built from paid orders and cash bookings, by hand or by scanning QR passes (#22, #71) | `/roster`, `lib/roster.ts`, `/pass` | |
 | USA Wrestling cards | Missing or expired cards block booking; only verified cards check in. Automatic lookup on USA Wrestling's verify page; owner reviews the rest and sees renewals 30 days ahead (#68, #131, #202, #210) | `/cards`, `lib/usaw.ts`, `lib/usaw-check.ts` | |
-| Waivers, Parent Consent Form, coach contracts | Owner publishes; families or coaches sign with a drawn signature; unsigned wrestlers can't book once a document is published; the owner can ask for a signature again (#69, #195, #239) | `/waivers`, `/consent-forms`, `/contracts`, `lib/documents.ts` | Attorney review of the wording (#44) |
+| Waivers, Parent Consent Form, coach contracts | Owner publishes; families or coaches sign with a drawn signature; unsigned wrestlers can't book once a document is published; the owner can ask for a signature again, or carry one over to a renamed wrestler (#69, #195, #239, #271) | `/waivers`, `/consent-forms`, `/contracts`, `lib/documents.ts` | Attorney review of the wording (#44) |
 | Owner exceptions | Dated exceptions to the card, waiver and consent-form blocks (#89) | `/cards`, `/waivers`, `lib/exceptions.ts` | |
 | Wrestler view | Entry pass, what is coming up, what blocks booking (#76) | `/wrestler` | |
 | **Messages** | | | |

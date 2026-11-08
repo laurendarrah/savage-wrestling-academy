@@ -85,11 +85,17 @@ const sign = () => call(waiverApi, 'POST', {versionId: version, wrestlerId: 'w-p
 assert.equal((await sign()).status, 200);
 const walkin = () => quotes.quoteMembership('p1', {wrestlerId: 'w-p1', program: 'Intermediate', plan: 'walkin', date: ny(1), practiceId: `Intermediate:${ny(1)}:18:00`});
 assert.equal((await walkin()).ok, true);
-fam('p1', [{id: 'w-p1', name: 'Younger Sibling', grade: '8', ...card}]);   // same entry renamed to another child
+// A typo fix keeps the signature (issue #271): the same entry, and no other wrestler has the old name.
+fam('p1', [{id: 'w-p1', name: 'Wrestler P1', grade: '8', ...card}]);
+assert.equal((await walkin()).ok, true, 'a corrected name keeps the signature');
+as('p1'); assert.equal((await call(waiverApi, 'GET')).body.signatures[0].current, true);
+// The same entry renamed to another child, with the signed child added under the old name: it does not carry over.
+fam('p1', [{id: 'w-p1', name: 'Younger Sibling', grade: '8', ...card}, {id: 'w-p1-new', name: 'Wrestler p1', grade: '9', ...card}]);
 assert.match((await walkin()).error, /Younger Sibling needs a signed Waiver/, 'the signature does not carry over');
 as('p1'); assert.equal((await call(waiverApi, 'GET')).body.signatures[0].current, false);
 assert.equal((await sign()).status, 200, 'the new child can be signed for');
 assert.equal((await walkin()).ok, true);
+fam('p1', [{id: 'w-p1', name: 'Younger Sibling', grade: '8', ...card}]);
 
 // --- 4. A waiver exception must cover the booked dates ---
 fam('p2', [{id: 'w-p2', name: 'Wrestler p2', grade: '8', ...card}]);

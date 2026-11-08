@@ -76,13 +76,16 @@ function seed(sqlite){
   run("INSERT INTO payment_disputes VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",'evt_dispute_1','dp_1','ord-1','pi_1','ch_1','created',240000,'fraudulent','needs_response',now,0,now);
   // Issue #239: the owner asked for a signature to be signed again.
   run("INSERT INTO signature_reissues VALUES (?,?,?,?,?)",'ws-1','parent-1','Signed for the wrong wrestler','owner',now);
+  // Issue #271: a signature carried over to a wrestler's new name, and a monthly payment as Stripe reported it.
+  run("INSERT INTO signature_carryovers VALUES (?,?,?,?,?,?,?)",'ws-1','parent-1','w-1','Samuel Example','Same child, name corrected','owner',now);
+  run("INSERT INTO installment_payments VALUES (?,?,?,?,?,?,?,?)",'evt_inv_2','ord-1','in_2',2,18000,20000,0,now);
   // Issue #248: a walk-in booked to pay cash at the academy.
   run(`INSERT INTO cash_bookings(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,session_date,start_time,end_time,base_cents,discount_cents,amount_cents,pricing,dedupe_key,status,order_id,created_at,updated_at,canceled_at,canceled_by,cancel_reason)
     VALUES ('cash-1','parent-1','pat@example.test','w-1','Sam Example','walkin','Advanced','Advanced:2026-11-20:18:00','SWA Advance walk-in','2026-11-20','18:00','19:30',4000,0,4000,'{"plan":"walkin"}','parent-1|w-1|walkin|Advanced|2026-11-20','due',NULL,?,?,NULL,NULL,NULL)`,now,now);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];
-const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues','cash_bookings','payment_disputes'];
+const restorable=[...legacy,'orders','stripe_events','subscriptions','attendance','usaw_reviews','waiver_versions','waiver_signatures','academy_settings','wrestler_passes','waitlist_entries','membership_transfers','announcements','announcement_recipients','family_messages','booking_exceptions','notifications','data_requests','coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues','cash_bookings','payment_disputes','signature_carryovers','installment_payments'];
 // Every table is either backed up or deliberately left out (see lib/backup-records.ts). A new migration that adds a
 // table fails here until someone decides which.
 {

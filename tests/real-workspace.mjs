@@ -83,8 +83,9 @@ assert.deepEqual([saved.kids, saved.staff], [[], []], 'nothing sample is saved w
 // The published grade wording matches the server's grade rules (lib/program-approval.ts).
 const rules = readFileSync('lib/program-approval.ts', 'utf8');
 assert.match(rules, /program==='Elementary'\)return \['K','1','2','3','4','5','6'\]/);
-assert.match(rules, /program==='Intermediate'\)return \['7','8','9','10','11','12'\]/);
-assert.match(rules, /program==='Advanced'&&\['7','8','9','10','11','12'\]/);
+assert.match(rules, /HIGH_SCHOOL=\['7','8','9','10','11','12'\]/);
+assert.match(rules, /program==='Intermediate'\)return HIGH_SCHOOL\.includes/);
+assert.match(rules, /program==='Advanced'&&HIGH_SCHOOL\.includes/);
 
 // Every owner destination (lib/owner-nav.ts, the shell's sidebar, issue #261) is a real page or a real settings editor,
 // and nothing says sample, preview or demo. Sections open on the dashboard, each with its own address.

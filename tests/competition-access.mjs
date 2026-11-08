@@ -56,14 +56,17 @@ assert.equal((await decisions.POST(req('/api/owner-approvals','POST',{id,status:
 assert.equal((await chat.POST(req('/api/approval-chat','POST',{requestId:id,message:'x'.repeat(2001)}))).status,400);
 assert.equal((await chat.POST(req('/api/approval-chat','POST',{requestId:id,message:'bad origin'},'alice','https://evil.test'))).status,403);
 // High-school wrestlers also require a saved coach decision for both plans.
-for(const grade of ['9','12']){
- profile.wrestlers[2].grade=grade;sqlite.prepare('UPDATE family_accounts SET payload=? WHERE user_id=?').run(JSON.stringify(profile),'alice-uuid');
- assert.equal((await review('kid-9')).status,403);assert.equal((await review('kid-9',{plan:'walkin'})).status,403);
- assert.equal((await requests.POST(req('/api/program-approvals','POST',{action:'request',wrestlerId:'kid-9'}))).status,200);
- const approval=sqlite.prepare('SELECT * FROM program_approvals WHERE wrestler_id=?').get('kid-9');
- assert.equal((await decisions.POST(req('/api/owner-approvals','POST',{id:approval.id,status:'approved',updatedAt:approval.updated_at},'owner'))).status,200);
- assert.equal((await review('kid-9')).status,200);
-}
+assert.equal((await review('kid-9')).status,403);assert.equal((await review('kid-9',{plan:'walkin'})).status,403);
+assert.equal((await requests.POST(req('/api/program-approvals','POST',{action:'request',wrestlerId:'kid-9'}))).status,200);
+{const approval=sqlite.prepare('SELECT * FROM program_approvals WHERE wrestler_id=?').get('kid-9');
+ assert.equal((await decisions.POST(req('/api/owner-approvals','POST',{id:approval.id,status:'approved',updatedAt:approval.updated_at},'owner'))).status,200);}
+assert.equal((await review('kid-9')).status,200);
+// The decision follows the wrestler through a grade change within 7–12 (issue #271); leaving 7–12 ends it.
+profile.wrestlers[2].grade='12';sqlite.prepare('UPDATE family_accounts SET payload=? WHERE user_id=?').run(JSON.stringify(profile),'alice-uuid');
+assert.equal((await review('kid-9')).status,200,'approved at grade 9, still approved at grade 12');
+profile.wrestlers[2].grade='6';sqlite.prepare('UPDATE family_accounts SET payload=? WHERE user_id=?').run(JSON.stringify(profile),'alice-uuid');
+assert.equal((await review('kid-9')).status,403,'grade 6 is outside SWA Advance');
+profile.wrestlers[2].grade='9';sqlite.prepare('UPDATE family_accounts SET payload=? WHERE user_id=?').run(JSON.stringify(profile),'alice-uuid');
 console.log('Passed: grade gates, forged approval rejection, parent request isolation, owner decisions and revocation, stale profile/decision protection, private chat isolation, sender-role enforcement, MFA, validation and CSRF.');
 
 // Saved profile grades control every program, for membership and walk-in requests.

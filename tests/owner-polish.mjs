@@ -121,8 +121,9 @@ for (const f of ['app/site-health/screen.html', 'app/messages/screen.html', 'app
 const payments = read('app/payments/screen.html');
 assert.match(payments, /<select id="family" aria-label="Family">/, 'the family list has a name');
 assert.match(payments, /<a class="button" id="csv"/);
-for (const [f, label] of [['app/payments/screen.html', 'All payments'], ['app/cards/screen.html', 'Wrestlers and their cards'], ['app/site-health/screen.html', 'Site errors in the last 7 days'], ['app/coach-pay/screen.html', '${esc(c.coach)}: paid lessons']])
-  assert.ok(read(f).includes(`<div class="table" role="region" aria-label="${label}" tabindex="0">`), f + ': a wide table scrolls with the keyboard and says what it is');
+// On phones the payments and cards tables stack into cards instead (.stack, public/responsive.css, issue #271).
+for (const [f, label, cls] of [['app/payments/screen.html', 'All payments', 'table stack'], ['app/cards/screen.html', 'Wrestlers and their cards', 'table stack'], ['app/site-health/screen.html', 'Site errors in the last 7 days', 'table'], ['app/coach-pay/screen.html', '${esc(c.coach)}: paid lessons', 'table']])
+  assert.ok(read(f).includes(`<div class="${cls}" role="region" aria-label="${label}" tabindex="0">`), f + ': a wide table scrolls with the keyboard and says what it is');
 const messages = read('app/messages/screen.html');
 assert.match(messages, /html body button\.fam\{font-family:var\(--swa-body\);[^}]*text-transform:none/, 'family names in the body font');
 assert.match(messages, /@media\(max-width:640px\)\{#sentTable thead\{[^}]*\}#sentTable,#sentTable tbody,#sentTable tr,#sentTable td\{display:block\}/, 'sent announcements stack on a phone');

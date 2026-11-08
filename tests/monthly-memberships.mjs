@@ -37,7 +37,8 @@ function load(file) {
       require(name) {
         if (name === 'cloudflare:workers') return {env};
         if (name === 'stripe') return StripeMock;
-        if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',strongAccount: async () => ({user: {id: 'p1', email: 'pat@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}), sameOrigin: () => true, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
+        if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test', OWNER_EMAIL: 'owner@example.test', strongAccount: async () => ({user: {id: 'p1', email: 'pat@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
+          ownerIdentity: async () => ({owner: {userId: 'owner-id'}, user: {id: 'owner-id'}, headers: new Headers()}), sameOrigin: () => true, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name.endsWith('/rate-limit')) return {rateLimited: async () => false};
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'));
         throw Error('unexpected import ' + name);
@@ -49,11 +50,17 @@ const lib = load(path.resolve('lib/stripe-webhook.ts'));
 const checkout = load(path.resolve('app/api/checkout/route.ts'));
 const webhook = load(path.resolve('app/api/stripe-webhook/route.ts'));
 
-// --- Paid-through dates follow Stripe's monthly billing, including short months ---
-assert.equal(lib.paidThroughAfter('2026-11-05', 1), '2026-12-04');
-assert.equal(lib.paidThroughAfter('2026-11-05', 11), '2027-10-04');
-assert.equal(lib.paidThroughAfter('2027-01-31', 1), '2027-02-27', 'Jan 31 bills next on Feb 28');
-assert.equal(lib.paidThroughAfter('2027-01-31', 2), '2027-03-30', 'then on Mar 31');
+// --- Paid-through dates follow Stripe's monthly billing, including short months. Since issue #271 a payment covers
+// through the next billing day itself, so a member is still on the roster on billing-day morning. ---
+assert.equal(lib.paidThroughAfter('2026-11-05', 1), '2026-12-05');
+assert.equal(lib.paidThroughAfter('2026-11-05', 11), '2027-10-05');
+assert.equal(lib.paidThroughAfter('2027-01-31', 1), '2027-02-28', 'Jan 31 bills next on Feb 28');
+assert.equal(lib.paidThroughAfter('2027-01-31', 2), '2027-03-31', 'then on Mar 31');
+assert.equal(lib.membershipTerm('2026-11-05').end, '2027-11-04', 'the 12-month term still ends the day before the anniversary');
+const term = load(path.resolve('lib/membership-term.ts'));
+assert.equal(term.GRACE_DAYS, 7);
+assert.equal(term.graceEnd('2026-12-05', '2027-11-04'), '2026-12-12', 'a failed payment keeps access for 7 days after the paid-through day');
+assert.equal(term.graceEnd('2027-11-01', '2027-11-04'), '2027-11-04', 'never past the membership’s own end');
 
 // --- Setup ---
 const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
@@ -113,34 +120,85 @@ assert.equal(sub().cancel_at, '2027-11-05T15:00:00.000Z');
 w = await deliver('invoice.paid', invoice('subscription_create'));
 assert.equal(w.body.outcome, 'ignored:first-payment-counted-at-checkout'); assert.equal(sub().payments_made, 1);
 
-// --- Failed payment, then recovery ---
-w = await deliver('invoice.payment_failed', invoice('subscription_cycle'));
+// --- Failed payment (issue #271): past due, a short grace on the roster, the family and the owner told once ---
+const notices = kind => sqlite.prepare('SELECT * FROM notifications WHERE kind=? ORDER BY created_at').all(kind);
+w = await deliver('invoice.payment_failed', invoice('subscription_cycle'), 'evt_fail_1');
 assert.equal(w.body.outcome, 'installment-failed'); assert.equal(sub().status, 'past_due');
-assert.equal(order().term_end, lib.paidThroughAfter(today, 1), 'access is not extended by a failed payment');
-w = await deliver('invoice.paid', invoice('subscription_cycle', 100));
-assert.equal(w.body.outcome, 'rejected:amount-mismatch'); assert.equal(sub().payments_made, 1);
+assert.equal(sub().paid_through, lib.paidThroughAfter(today, 1), 'a failed payment extends nothing');
+assert.equal(order().term_end, term.graceEnd(lib.paidThroughAfter(today, 1), sub().term_end), 'the wrestler stays on the roster through the grace');
+assert.equal(notices('installment_failed').length, 1); assert.equal(notices('installment_failed')[0].user_id, 'p1');
+assert.match(notices('installment_failed')[0].body, /did not go through[\s\S]*Sam can still come to practice through/);
+assert.equal(notices('installment_failed_owner').length, 1); assert.equal(notices('installment_failed_owner')[0].email, 'owner@example.test'); assert.equal(notices('installment_failed_owner')[0].user_id, null);
+assert.match(notices('installment_failed_owner')[0].body, /1 of 12 payments made[\s\S]*Payment needs attention list/);
+await deliver('invoice.payment_failed', invoice('subscription_cycle'), 'evt_fail_1');
+assert.equal(notices('installment_failed').length, 1, 'a replay tells nobody again');
+// Stripe's retry fails too: another notice, the same grace.
+await deliver('invoice.payment_failed', invoice('subscription_cycle'), 'evt_fail_2');
+assert.equal(notices('installment_failed').length, 2); assert.equal(order().term_end, term.graceEnd(lib.paidThroughAfter(today, 1), sub().term_end));
+// The owner's lists: Payment needs attention on /payments, and the dashboard tile count.
+const paymentsApi = load(path.resolve('app/api/payments/route.ts'));
+let att = await (await paymentsApi.GET(new Request('https://a.test/api/payments?attention=1'))).json();
+assert.equal(att.graceDays, 7); assert.equal(att.attention.length, 1);
+assert.equal(att.attention[0].wrestler, 'Sam'); assert.equal(att.attention[0].paymentsMade, 1); assert.equal(att.attention[0].failures, 2);
+assert.equal(att.attention[0].paidThrough, sub().paid_through); assert.equal(att.attention[0].rosterThrough, order().term_end);
+
+// --- A payment for another amount (a coupon or a price edit in Stripe) counts for what Stripe collected, and the owner is told (issue #271) ---
+w = await deliver('invoice.paid', invoice('subscription_cycle', 100, {id: 'in_coupon'}), 'evt_coupon');
+assert.equal(w.body.outcome, 'installment-2-of-12'); assert.equal(sub().payments_made, 2); assert.equal(sub().status, 'active');
+assert.equal(order().term_end, lib.paidThroughAfter(today, 2), 'access runs to the next billing day; the grace is over');
+assert.deepEqual({...sqlite.prepare("SELECT order_id,invoice_id,payment_number,amount_cents,expected_cents,livemode FROM installment_payments WHERE id='evt_coupon'").get()}, {order_id: orderId, invoice_id: 'in_coupon', payment_number: 2, amount_cents: 100, expected_cents: 20000, livemode: 0});
+assert.ok(sqlite.prepare("SELECT 1 FROM security_events WHERE action='installment_amount_mismatch' AND target=?").get(`${orderId} 2 100 20000`), 'flagged for the owner');
+assert.equal(notices('installment_mismatch_owner').length, 1); assert.match(notices('installment_mismatch_owner')[0].subject, /Sam paid \$1\.00, not \$200\.00/);
+assert.equal(notices('installment_mismatch_owner')[0].body.includes('in_coupon'), true);
+att = await (await paymentsApi.GET(new Request('https://a.test/api/payments?attention=1'))).json();
+assert.equal(att.attention.length, 0, 'paid up again');
+// The books read the amount Stripe collected.
+const books = load(path.resolve('lib/financials.ts'));
+const lines = await books.ledgerLines(today, today);
+assert.equal(lines.find(l => l.id === 'installment:evt_coupon').amountCents, 100);
+assert.equal(lines.find(l => l.id === 'payment:' + orderId).amountCents, 20000);
 w = await deliver('invoice.paid', invoice('subscription_cycle'));
-assert.equal(w.body.outcome, 'installment-2-of-12'); assert.equal(sub().status, 'active');
-assert.equal(order().term_end, lib.paidThroughAfter(today, 2));
+assert.equal(w.body.outcome, 'installment-3-of-12'); assert.equal(sub().status, 'active');
+assert.equal(order().term_end, lib.paidThroughAfter(today, 3));
+assert.equal(sqlite.prepare("SELECT count(*) n FROM security_events WHERE action='installment_amount_mismatch'").get().n, 1, 'the usual amount is not flagged');
+assert.equal(lines.length + 1, (await books.ledgerLines(today, today)).length);
 
 // --- Replayed invoice event is applied once ---
 const replay = await deliver('invoice.paid', invoice('subscription_cycle'), 'evt_same');
 const again = await deliver('invoice.paid', invoice('subscription_cycle'), 'evt_same');
-assert.equal(again.body.duplicate, true); assert.equal(sub().payments_made, 3);
+assert.equal(again.body.duplicate, true); assert.equal(sub().payments_made, 4);
+assert.equal(sqlite.prepare("SELECT count(*) n FROM installment_payments WHERE id='evt_same'").get().n, 1);
 
-// --- Payments 4 to 12, then a 13th is refused ---
-for (let i = 4; i <= 12; i++) assert.equal((await deliver('invoice.paid', invoice('subscription_cycle'))).body.outcome, `installment-${i}-of-12`);
+// --- Payments 5 to 12, then a 13th is refused ---
+for (let i = 5; i <= 12; i++) assert.equal((await deliver('invoice.paid', invoice('subscription_cycle'))).body.outcome, `installment-${i}-of-12`);
 assert.equal(sub().payments_made, 12);
 assert.equal(order().term_end, sub().term_end, 'the 12th payment covers the full term');
 w = await deliver('invoice.paid', invoice('subscription_cycle'));
 assert.equal(w.body.outcome, 'rejected:payment-beyond-term-refund-needed'); assert.equal(sub().payments_made, 12);
 assert.ok(sqlite.prepare("SELECT 1 FROM security_events WHERE target LIKE '%beyond-term%'").get(), 'flagged for refund');
+assert.equal(sqlite.prepare("SELECT count(*) n FROM installment_payments").get().n, 11, 'payments 2 to 12, one row each');
 
 // --- Ending: completed after 12, canceled before ---
 w = await deliver('customer.subscription.deleted', {id: 'sub_1'});
 assert.equal(w.body.outcome, 'subscription-completed'); assert.equal(sub().status, 'completed');
-sqlite.prepare("UPDATE subscriptions SET payments_made=4,status='active'").run();
-w = await deliver('customer.subscription.deleted', {id: 'sub_1'});
-assert.equal(w.body.outcome, 'subscription-canceled');
+assert.equal(notices('subscription_canceled').length, 0, 'a plan that ran its course is not "canceled"');
+// Canceled during a grace (issue #271): access ends on the paid-through day, and the family and the owner are told.
+sqlite.prepare("UPDATE subscriptions SET payments_made=4,status='past_due',paid_through=? WHERE order_id=?").run(lib.paidThroughAfter(today, 4), orderId);
+sqlite.prepare('UPDATE orders SET term_end=? WHERE id=?').run(term.graceEnd(lib.paidThroughAfter(today, 4), sub().term_end), orderId);
+w = await deliver('customer.subscription.deleted', {id: 'sub_1'}, 'evt_canceled');
+assert.equal(w.body.outcome, 'subscription-canceled'); assert.equal(sub().status, 'canceled');
+assert.equal(order().term_end, lib.paidThroughAfter(today, 4), 'the grace ends with the plan');
+assert.equal(notices('subscription_canceled').length, 1); assert.match(notices('subscription_canceled')[0].body, /stopped after 4 of 12/);
+assert.equal(notices('subscription_canceled_owner').length, 1);
+att = await (await paymentsApi.GET(new Request('https://a.test/api/payments?attention=1'))).json();
+assert.equal(att.attention.length, 0, 'a canceled plan is not waiting for a payment');
 
-console.log('Passed: monthly checkout is a subscription at the server price; checkout completion counts payment 1 and sets a 12-month end at Stripe (retried on failure); first invoice not double counted; failures mark past due without extending access; recovery, replays, payments 2-12, a refused 13th; completed versus canceled endings; paid-through dates across short months.');
+// --- Payment attempts (issue #271): the monthly checkout and Stripe's last word about it ---
+const attempts = await (await paymentsApi.GET(new Request('https://a.test/api/payments?attempts=1'))).json();
+assert.equal(attempts.attempts.length, 1); const a = attempts.attempts[0];
+assert.equal(a.id, orderId); assert.equal(a.sessionId, order().stripe_session_id); assert.equal(a.wrestler, 'Sam'); assert.equal(a.parent, 'Pat');
+assert.equal(a.outcome, 'subscription-canceled'); assert.equal(a.words, 'The monthly plan was canceled before 12 payments.'); assert.equal(a.state, 'paid');
+assert.equal((await (await paymentsApi.GET(new Request('https://a.test/api/payments?attempts=1&q=nobody'))).json()).attempts.length, 0);
+assert.equal((await (await paymentsApi.GET(new Request('https://a.test/api/payments?attempts=1&q=PAT@example'))).json()).attempts.length, 1, 'found by the family email');
+
+console.log('Passed: monthly checkout is a subscription at the server price; checkout completion counts payment 1 and sets a 12-month end at Stripe (retried on failure); first invoice not double counted; a failed payment marks past due, keeps a 7-day grace and tells the family and the owner once per failure; a payment for another amount counts for what Stripe collected and is flagged; recovery, replays, payments 2-12, a refused 13th; completed versus canceled endings, canceling ends the grace; paid-through dates on the billing day across short months; the attention and attempts lists.');

@@ -1,6 +1,6 @@
 # Database schema and migrations
 
-The academy's business data is in Cloudflare D1 (SQLite), bound to the Worker as `DB`. Supabase holds only sign-in accounts and authenticators. Checked against `db/schema.ts` and `drizzle/` on November 7, 2026 (#267): 43 migrations, 45 tables. The November 5 handoff's version of this page (13 migrations, 15 tables, with `schema.sql` and `schema.json` exports) is in [the archive](archive/handoff-2026-11-05/README.md).
+The academy's business data is in Cloudflare D1 (SQLite), bound to the Worker as `DB`. Supabase holds only sign-in accounts and authenticators. Checked against `db/schema.ts` and `drizzle/` on November 8, 2026 (#275, #271): 45 migrations, 48 tables. The November 5 handoff's version of this page (13 migrations, 15 tables, with `schema.sql` and `schema.json` exports) is in [the archive](archive/handoff-2026-11-05/README.md).
 
 ## Where the schema lives
 
@@ -26,12 +26,14 @@ To change the schema, edit `db/schema.ts`, then run `pnpm db:generate` to add a 
 | `wrestler_passes` | QR entry passes, one active per wrestler |
 | `waiver_versions`, `waiver_signatures` | Every signed document: waivers, the Parent Consent Form and coach contracts (`kind`), each published version and each signature |
 | `signature_reissues` | Signatures the owner asked to be signed again, with the reason |
+| `signature_carryovers` | Signatures the owner carried over to a wrestler's new name after a rename, with the reason (#271) |
 | `booking_exceptions` | The owner's dated exceptions to the card, waiver and consent-form booking blocks |
 | `data_requests` | Families' account-closure requests and how the owner handled them |
 | `scholarship_awards` | Scholarship offers, frozen terms, acceptance and drawn signatures |
 | **Money** | |
 | `orders` | Every purchase: online (Stripe) and offline (cash, check), with the server-calculated price, status, and for memberships the paid-through term |
 | `subscriptions` | Monthly memberships: one row per monthly order, ending after 12 payments |
+| `installment_payments` | Monthly payments 2 to 12 as Stripe reported them: the amount collected and the price at the time, one row per counted invoice event (#271) |
 | `stripe_events` | Every Stripe event id, stored once, so a repeated delivery changes nothing |
 | `payment_refunds` | Stripe's cumulative refunded amount per card payment, from `charge.refunded` events |
 | `payment_disputes` | Card disputes (chargebacks), one row per `charge.dispute.*` event: created, funds withdrawn, funds reinstated, closed |

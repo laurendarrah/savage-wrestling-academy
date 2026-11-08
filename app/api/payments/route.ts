@@ -7,6 +7,7 @@ import {findFamilies} from '../../../lib/family-search';
 import {pageSize} from '../../../lib/paging';
 import {unpaidCashBookings, receiveCash, cancelByOwner} from '../../../lib/cash-bookings';
 import {ownerCollector} from '../../../lib/collectors';
+import {paymentAttempts, paymentAttention} from '../../../lib/payment-attempts';
 export const dynamic = 'force-dynamic';
 const FAMILY_PICKER = 50;
 
@@ -21,6 +22,9 @@ export async function GET(request: Request) {
   }
   // Walk-ins and extra practices booked to pay cash at the academy and not paid yet (issue #248), to follow up or cancel.
   if (q.get('cash') === 'due') return reply(await unpaidCashBookings());
+  // Issue #271: monthly memberships whose latest payment failed, and every online payment attempt with Stripe's last word.
+  if (q.get('attention') === '1') return reply(await paymentAttention());
+  if (q.get('attempts') === '1') return reply(await paymentAttempts({q: q.get('q'), days: q.get('days') === 'all' ? 36500 : 90}));
   const filters = {from: q.get('from') ?? undefined, to: q.get('to') ?? undefined, status: q.get('status') ?? undefined, kind: q.get('kind') ?? undefined, source: q.get('source') ?? undefined,
     collector: q.get('collector') ?? undefined};
   // The spreadsheet has every matching payment, read in batches.

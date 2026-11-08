@@ -94,7 +94,8 @@ assert.equal((await event('evt_inv_2', 'invoice.paid', {subscription: 'sub_month
 assert.equal((await event('evt_inv_2', 'invoice.paid', {subscription: 'sub_month', billing_reason: 'subscription_cycle', amount_paid: 20000})).duplicate, true);
 assert.equal((await event('evt_inv_fail', 'invoice.payment_failed', {subscription: 'sub_month'})).outcome, 'installment-failed');
 assert.equal((await event('evt_inv_3', 'invoice.paid', {subscription: 'sub_month', billing_reason: 'subscription_cycle', amount_paid: 20000})).outcome, 'installment-3-of-12');
-assert.equal((await event('evt_inv_bad', 'invoice.paid', {subscription: 'sub_month', billing_reason: 'subscription_cycle', amount_paid: 1})).outcome, 'rejected:amount-mismatch', 'a wrong amount is not counted');
+// Issue #271: a payment for another amount (a coupon or a price edit in Stripe) counts for what Stripe collected.
+assert.equal((await event('evt_inv_odd', 'invoice.paid', {subscription: 'sub_month', billing_reason: 'subscription_cycle', amount_paid: 1})).outcome, 'installment-4-of-12', 'a different amount still counts');
 
 order('never', 'walkin', 4000);                                                             // started checkout, never paid
 order('expired', 'walkin', 4000);
@@ -109,19 +110,20 @@ order('newyear', 'event', 9000, {status: 'paid', paid_at: '2026-01-01T04:59:00.0
 
 let r = (await get('?month=' + month)).json();
 const ids = r.lines.map(l => l.id).sort();
-assert.deepEqual(ids, ['installment:evt_inv_2', 'installment:evt_inv_3', 'payment:cash', 'payment:month', 'payment:partial', 'payment:walk', 'payment:year', 'refund:evt_partial_refund', 'refund:evt_year_refund'],
+assert.deepEqual(ids, ['installment:evt_inv_2', 'installment:evt_inv_3', 'installment:evt_inv_odd', 'payment:cash', 'payment:month', 'payment:partial', 'payment:walk', 'payment:year', 'refund:evt_partial_refund', 'refund:evt_year_refund'],
   'each payment once; refunds out; nothing unpaid, expired, voided, free or from the other Stripe mode');
 const line = id => r.lines.find(l => l.id === id);
 assert.equal(line('payment:walk').source, 'online'); assert.equal(line('payment:walk').method, 'Card online'); assert.equal(line('payment:walk').category, 'Walk-ins');
 assert.equal(line('payment:cash').source, 'offline'); assert.equal(line('payment:cash').method, 'Cash');
 assert.equal(line('payment:month').description, 'SWA Intermediate monthly membership (payment 1 of 12) · Sam month');
 assert.equal(line('installment:evt_inv_3').description, 'SWA Intermediate monthly membership (payment 3 of 12) · Sam month');
+assert.equal(line('installment:evt_inv_odd').amountCents, 1, 'the books show what Stripe collected (issue #271)'); assert.equal(line('installment:evt_inv_3').amountCents, 20000);
 assert.equal(line('refund:evt_year_refund').type, 'refund'); assert.equal(line('refund:evt_year_refund').amountCents, 240000); assert.equal(line('refund:evt_year_refund').category, 'Refunds');
 // Issue #42: a partial refund leaves the payment in full and goes out as its own refund line.
 assert.equal(line('payment:partial').amountCents, 4000, 'the payment came in in full');
 assert.equal(line('refund:evt_partial_refund').amountCents, 1000); assert.match(line('refund:evt_partial_refund').description, /^Partial refund \(\$10\.00 of \$40\.00 refunded so far\): Walk-in practice/);
 assert.ok(r.lines.every(l => Number.isSafeInteger(l.amountCents) && l.amountCents > 0), 'whole, positive cents');
-const income = 4000 + 240000 + 4000 + 20000 * 3 + 5000;
+const income = 4000 + 240000 + 4000 + 20000 * 3 + 1 + 5000;
 const refunded = 240000 + 1000;
 assert.deepEqual(r.totals, {incomeCents: income, refundsCents: refunded, expensesCents: 0, netCents: income - refunded});
 assert.deepEqual(r.categories.out, [{category: 'Refunds', cents: refunded}]);
