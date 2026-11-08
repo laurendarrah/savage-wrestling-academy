@@ -37,7 +37,7 @@ async function openScreen({paymentsEnabled, checkout = {ok: true, body: {url: 'h
   assert.equal(el('reviewHeading').textContent, 'Not booked yet');
   assert.equal(el('status').textContent, '', 'the notice explains how to pay once; the status line stays empty');
   assert.match(el('details').innerHTML, /Fri, Dec 18/, 'dates read as people say them, not 2026-12-18');
-  assert.match(el('details').innerHTML, /\$20\.00 \(non-member price\)/, 'the wrestler sees their own price');
+  assert.match(el('details').innerHTML, /<span class="k">Total<\/span><span class="v">\$20\.00<small>Non-member price<\/small>/, 'the wrestler sees their own price as the receipt’s total');
 }
 
 // Checkout open: terms gate the button, and paying sends exactly what was reviewed, then goes to Stripe.

@@ -1,79 +1,106 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My family | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
-body{background:var(--swa-ground);color:#141416;margin:0}
-main{max-width:var(--swa-width-narrow);margin:auto;padding:0 16px 56px}
-/* Savage band at the top (issue #141): full-width black, painted with a shadow so it never scrolls sideways. */
-.fam-hero{background:#141416;color:#fff;box-shadow:0 0 0 100vmax #141416;clip-path:inset(0 -100vmax);padding:28px 0 0;margin:0 0 8px}
-.fam-hero .eyebrow{font-weight:700;font-size:13px;letter-spacing:2.4px;text-transform:uppercase;color:var(--swa-silver);margin:0}
-html body .fam-hero h1{color:#fff;font-size:clamp(38px,8vw,60px);margin:6px 0 6px;line-height:1}
-.fam-hero .lede{color:#D7DBE0;font-size:18px;margin:0 0 4px;max-width:46ch}
-.fam-hero .lede:empty{display:none}
-html body main>section,html body main>details.card{padding:22px;margin:18px 0}
-h1{margin:6px 0 2px}h2{margin:0 0 6px}
+/* The family home (redesign Phase 2, issue #282): a greeting row, then what matters today in two columns on a desk and
+   one on a phone: the dark "Next up" card, this week, three ways to book; the wrestler card, payments and the family's
+   contacts. Purchases and memberships follow further down; the Account menu holds the account tools. */
+body{background:var(--swa-ground);color:var(--swa-ink);margin:0}
+main{max-width:var(--swa-width-wide);margin:auto;padding:0 16px 56px}
+/* The greeting row keeps the fam-hero hook (lib/page-chrome.ts leaves a page with its own opening alone). */
+.fam-hero{padding:var(--swa-s-8) 0 0;margin:0 0 var(--swa-s-16)}
 .fam-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .fam-head>div{min-width:0}
-.fam-head #email{margin:0;overflow-wrap:anywhere}
-.account-menu{position:relative;flex:none;margin-top:8px}
-.account-menu summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;border:1.5px solid #6B7076;border-radius:6px;background:transparent;color:#fff;font-weight:600}
-.account-menu summary:hover,.account-menu[open] summary{border-color:#fff}
-.account-menu .signed-in{margin:0 0 4px;padding:8px 12px 10px;border-bottom:1px solid #E1E3E8;font-size:14px;color:var(--swa-muted);overflow-wrap:anywhere}
-.account-menu .signed-in span{display:block;color:#141416;font-weight:600}
+html body .fam-hero h1{margin:var(--swa-s-4) 0 0;font-size:var(--swa-t-35);line-height:1}
+html body .fam-hero .lede{margin:var(--swa-s-8) 0 0;color:var(--swa-muted);font-size:var(--swa-t-15)}
+.fam-hero .lede:empty{display:none}
+.account-menu{position:relative;flex:none;margin-top:4px}
+.account-menu summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;border:1px solid #CDD0D6;border-radius:var(--swa-r-control);background:var(--swa-surface);color:var(--swa-ink);font-weight:600;box-shadow:var(--swa-shadow-sm)}
+.account-menu summary:hover,.account-menu[open] summary{border-color:var(--swa-ink)}
+.account-menu .signed-in{margin:0 0 4px;padding:8px 12px 10px;border-bottom:1px solid var(--swa-line);font-size:14px;color:var(--swa-muted);overflow-wrap:anywhere}
+.account-menu .signed-in span{display:block;color:var(--swa-ink);font-weight:600}
 .account-menu summary::-webkit-details-marker{display:none}
 .account-menu summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px)}
 .account-menu[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
-.account-menu .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:230px;background:#fff;border:1px solid #E1E3E8;border-radius:6px;box-shadow:0 10px 30px rgba(20,20,22,.14);padding:6px;display:flex;flex-direction:column}
-html body .account-menu .menu a,html body .account-menu .menu button{display:flex;align-items:center;min-height:44px;padding:0 12px;border:0;border-radius:4px;background:none;color:#141416;text-decoration:none;font-weight:600;font-size:16px;text-align:left;width:100%}
-html body .account-menu .menu a:hover,html body .account-menu .menu button:hover{background:var(--swa-ground);color:#141416}
-/* Section links under the greeting. They wrap onto a second line on a phone rather than scrolling sideways, so
-   Memberships and Purchases are never hidden off-screen (issue #231). */
-.quick{display:flex;flex-wrap:wrap;gap:0 24px;margin:18px 0 0}
-html body .quick a{display:inline-flex;align-items:center;min-height:48px;padding:0;color:var(--swa-silver);text-decoration:none;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;font-size:17px;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;box-shadow:inset 0 -3px 0 transparent}
-html body .quick a:hover,html body .quick a:focus-visible{color:#fff;box-shadow:inset 0 -3px 0 var(--swa-red)}
+.account-menu .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:250px;background:var(--swa-surface);border:1px solid var(--swa-hair);border-radius:var(--swa-r-card);box-shadow:var(--swa-shadow);padding:6px;display:flex;flex-direction:column}
+html body .account-menu .menu a,html body .account-menu .menu button{display:flex;align-items:center;min-height:44px;padding:0 12px;border:0;border-radius:6px;background:none;color:var(--swa-ink);text-decoration:none;font-weight:600;font-size:16px;text-align:left;width:100%;box-shadow:none}
+html body .account-menu .menu a:hover,html body .account-menu .menu button:hover{background:var(--swa-ground);color:var(--swa-ink)}
+html body .account-menu .menu .sep{border-top:1px solid var(--swa-line);margin:4px 0}
+/* Two columns on a desk: what is next and how to book on the left, who and what is owed on the right */
+.fam-grid{display:grid;gap:var(--swa-s-16)}
+.fam-col{display:grid;gap:var(--swa-s-16);align-content:start;min-width:0}
+.fam-col:empty,.fam-col:not(:has(> :not([hidden]))){display:none}
+html body .fam-grid>.fam-col>section{margin:0}
+@media (min-width:900px){.fam-grid{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:var(--swa-s-24);align-items:start}.fam-col{gap:var(--swa-s-24)}}
+html body main>section,html body main>details.card{margin:var(--swa-s-16) 0}
+@media (min-width:900px){html body main>section{margin:var(--swa-s-24) 0}}
+h1{margin:6px 0 2px}h2{margin:0 0 6px}
 html body main>section.paid{background:var(--swa-ok-bg);border:1px solid #9FCFAE;border-left:6px solid var(--swa-ok);box-shadow:none}
-.paid p{margin:0 0 6px}.paid .paid-title{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:26px;text-transform:uppercase;color:#195b33;display:flex;align-items:center;gap:10px}
+.paid p{margin:0 0 6px}.paid .paid-title{font-family:var(--swa-display);font-weight:800;font-size:26px;text-transform:uppercase;color:#195b33;display:flex;align-items:center;gap:10px}
 .paid .paid-title::before{content:'✓';display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--swa-ok);color:#fff;font-size:18px}
-#status{font-weight:600;margin:12px 0 0;scroll-margin-top:80px}
+#status{font-weight:600;margin:0 0 var(--swa-s-12);scroll-margin-top:80px}
+/* Get set up: the four steps */
 .steps{list-style:none;padding:0;margin:14px 0 0;counter-reset:step}
 .progress{height:6px;border-radius:3px;background:#E9ECEF;margin:12px 0 4px;overflow:hidden}
 .progress span{display:block;height:100%;background:var(--swa-red);border-radius:3px;transition:width .3s}
-.step{display:grid;grid-template-columns:36px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-top:1px solid #E1E3E8;counter-increment:step}
-.step:not(.current):not(.done) h3,.step:not(.current):not(.done) p{color:#6B7076}
-.step.current{background:#FBF4F4;border-radius:8px;border-top-color:transparent;padding:16px 14px;margin:2px -14px}
+.step{display:grid;grid-template-columns:36px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-top:1px solid var(--swa-line);counter-increment:step}
+.step:not(.current):not(.done) h3,.step:not(.current):not(.done) p{color:var(--swa-muted)}
+.step.current{background:var(--swa-red-soft);border-radius:8px;border-top-color:transparent;padding:16px 14px;margin:2px -14px}
 .step.current+.step{border-top-color:transparent}
 .step:first-child{border-top:0}
-.step .mark{grid-row:span 3;width:32px;height:32px;border-radius:50%;border:2px solid var(--swa-silver);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:19px;color:var(--swa-muted)}
+.step .mark{grid-row:span 3;width:32px;height:32px;border-radius:50%;border:2px solid var(--swa-silver);display:flex;align-items:center;justify-content:center;font-family:var(--swa-display);font-weight:800;font-size:19px;color:var(--swa-muted)}
 .step .mark::before{content:counter(step)}
 .step.done .mark{background:var(--swa-ok);border-color:var(--swa-ok);color:#fff}
 .step.done .mark::before{content:"✓"}
 .step.current .mark{border-color:var(--swa-red);color:var(--swa-red)}
-.step h3{margin:4px 0 0;font-size:18px}
+.step h3{margin:4px 0 0;font-size:17px}
 .step.done p{color:var(--swa-muted)}
 .step p{margin:0}
 .step .done-note{color:var(--swa-ok);font-weight:600}
 .step .go{margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 html body .step .go .button,html body .step .go button{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;text-decoration:none}
-.next-when{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:clamp(26px,6vw,34px);line-height:1.05;margin:6px 0 4px;text-transform:uppercase}
-.next-what{margin:0 0 14px;font-size:18px}
-.later{list-style:none;padding:0;margin:16px 0 0;border-top:1px solid #E1E3E8}
-.later li{padding:10px 0;border-bottom:1px solid #E1E3E8;display:flex;gap:12px;flex-wrap:wrap}
-.later li b{min-width:150px}
-html body a.button{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;text-decoration:none}
-.kid{padding:16px 0;border-top:1px solid #E1E3E8}
-.kid:first-child{border-top:0;padding-top:4px}
-.kid-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.kid-top h3{margin:0;font-size:20px}
-.status-lines{list-style:none;padding:0;margin:10px 0 12px;display:flex;flex-direction:column;gap:8px}
+/* Next up: the dark card. The day as a tag, the time as the figure, the session and the wrestler, one red button. */
+html body #nextUp{position:relative;overflow:hidden}
+html body #nextUp::after{content:"";position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(196,34,44,.28),transparent 68%);pointer-events:none}
+html body #nextUp>*{position:relative}
+/* "NEXT UP · TODAY": the label and the day share one line */
+html body #nextUp h2.swa-label{display:inline-block;margin:0 var(--swa-s-8) 0 0;vertical-align:middle}
+.next-day{display:inline-block;margin:0;vertical-align:middle;font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px;text-transform:uppercase;color:var(--swa-dark-muted)}
+.next-day .today{display:inline-block;color:#fff;background:var(--swa-red);border-radius:4px;padding:2px 8px;font-size:var(--swa-t-13);font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.next-when{margin:var(--swa-s-12) 0 var(--swa-s-4);color:#fff}
+.next-what{margin:0;font-size:var(--swa-t-17);color:#fff}
+.next-what span{color:var(--swa-dark-muted)}
+.next-meta{margin:var(--swa-s-4) 0 0;font-size:var(--swa-t-15);color:var(--swa-dark-muted)}
+.next-actions{display:flex;gap:var(--swa-s-8);margin-top:var(--swa-s-16);flex-wrap:wrap}
+html body .next-actions a.button{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;text-decoration:none;white-space:nowrap}
+html body .next-actions a.button.primary{flex:1 1 auto}
+/* Payments: two figures */
+.money{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--swa-s-16)}
+.money .amt{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-29);line-height:1;letter-spacing:-.2px;font-variant-numeric:tabular-nums}
+.money .amt.due{color:var(--swa-warn)}
+.money .lbl{color:var(--swa-muted);font-size:var(--swa-t-15);margin-top:var(--swa-s-4)}
+.money>div:last-child{text-align:right}
+/* The wrestler card */
+.kid{padding:var(--swa-s-16) 0 0;margin-top:var(--swa-s-16);border-top:1px solid var(--swa-line)}
+.kid:first-child{border-top:0;padding-top:0;margin-top:0}
+.kid-top{display:flex;align-items:center;gap:var(--swa-s-12)}
+.kid-top h3{margin:0;font-size:var(--swa-t-20);line-height:1.2}
+.kid-sub{margin:2px 0 0;color:var(--swa-muted);font-size:var(--swa-t-15);overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:var(--swa-s-8);margin-top:var(--swa-s-12)}
+.chips .pill svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.status-lines{list-style:none;padding:0;margin:var(--swa-s-12) 0 0;display:flex;flex-direction:column;gap:var(--swa-s-8);font-size:var(--swa-t-15)}
 .status-lines li{overflow-wrap:anywhere}
-.kid-links{display:flex;flex-wrap:wrap;gap:10px}
-.parent-line{margin:16px 0 0;padding-top:14px;border-top:1px solid #E1E3E8}
-.summary-actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
-.training{margin-top:20px;padding-top:16px;border-top:1px solid #E1E3E8}
-.training h3{margin:0 0 6px}
-.training ul{margin:8px 0;padding-left:20px}
-.training li{margin:4px 0}
+.status-lines li.swa-caption{color:var(--swa-muted)}
+.kid-links{display:flex;flex-wrap:wrap;gap:var(--swa-s-8);margin-top:var(--swa-s-12)}
+html body .kid-links a.button{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;font-size:var(--swa-t-15);text-decoration:none}
+.kid-safety{margin:var(--swa-s-12) 0 0;padding:var(--swa-s-12);border-radius:var(--swa-r-control);background:var(--swa-surface-2);font-size:var(--swa-t-15);overflow-wrap:anywhere;white-space:pre-line}
+.kid-safety b{color:var(--swa-red)}
+.kid-safety.quiet{background:none;padding:0;color:var(--swa-muted);font-size:var(--swa-t-13)}
+#contactRows dl{margin:0}
+#contactRows dd{margin:0}
+html body #contactRows .swa-rows>div{grid-template-columns:96px minmax(0,1fr)}
+/* The profile editor */
+html body main>section#editor{max-width:var(--swa-width-narrow)}
 label{display:block;margin:14px 0}
 input,select,textarea{display:block;width:100%;margin-top:5px;box-sizing:border-box}
-/* Optional contact and safety details (issue #188) */
-.why-box{margin:22px 0 4px;padding:14px 16px;background:var(--swa-ground);border-radius:8px;font-size:16px}
+.why-box{margin:22px 0 4px;padding:14px 16px;background:var(--swa-surface-2);border-radius:8px;font-size:16px}
 .why-box p{margin:0}
 .details-group{border:0;padding:0;margin:18px 0 0;min-width:0}
 .details-group legend{padding:0;font-weight:700;font-size:18px;display:flex;align-items:center;gap:10px}
@@ -87,17 +114,12 @@ html body main>section.finish{border-left:6px solid var(--swa-red)}
 .row.emergency-row{grid-template-columns:1fr 1fr}
 .birth input{max-width:260px}
 html body .safety textarea{min-height:76px}
-.kid-safety{margin:0 0 12px;padding:10px 12px;border-left:3px solid var(--swa-silver);background:#F7F8F9;border-radius:0 6px 6px 0;font-size:16px;overflow-wrap:anywhere;white-space:pre-line}
-.contact-lines{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 0}
-.contact-lines div{min-width:0}
-.contact-lines dt{font-size:14px;color:var(--swa-muted)}
-.contact-lines dd{margin:3px 0 0;font-weight:600;overflow-wrap:anywhere}
 .row{display:grid;grid-template-columns:2fr 1fr;gap:14px}
 .card-row{grid-template-columns:1fr 1fr}
 .card-hint{margin:0 0 4px;font-size:15px}
-.athlete{border-bottom:1px solid #E1E3E8;padding-bottom:16px}
+.athlete{border-bottom:1px solid var(--swa-line);padding-bottom:16px}
 .card-line{margin:6px 0 10px}
-.card-check{margin-left:6px;min-height:36px;padding:4px 12px}
+.card-check{margin-left:6px}
 .form-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .form-actions button,.athlete button{padding:0 16px}
 .notice{border-left:3px solid var(--swa-red);padding-left:14px}
@@ -105,10 +127,8 @@ html body .safety textarea{min-height:76px}
 #familyFields{border:0;margin:0;padding:0;min-width:0}
 .section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .section-title h2,.section-title h3{margin:0}
-.billing-pill{font-size:13px;padding:3px 8px;background:#EEF0F3;border-radius:4px;display:inline-block;line-height:1.4;margin-right:4px}
-.billing-pill.active{background:var(--swa-ok-bg);color:var(--swa-ok)}
-.billing-pill.warning{background:var(--swa-warn-bg);color:var(--swa-warn-ink)}
-.member-card{border:1px solid #E1E3E8;border-radius:6px;padding:18px;margin:16px 0}
+/* Memberships and purchases */
+.member-card{border:1px solid var(--swa-line);border-radius:var(--swa-r-control);padding:16px;margin:16px 0}
 .member-card p{margin:8px 0 12px}
 .member-details{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:18px 0}
 .member-details div{min-width:0}
@@ -116,64 +136,61 @@ html body .safety textarea{min-height:76px}
 .member-details dd{font-weight:600;margin:3px 0 0;overflow-wrap:anywhere}
 .billing-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .billing-actions button{padding:0 16px}
-.empty-billing{padding:12px 0}
-.empty-billing h3{margin-bottom:6px}
-.purchase-item{padding:16px 0;border-bottom:1px solid #E1E3E8}
-.purchase-item:last-child{border-bottom:0}
-/* Booked to pay cash at the academy (issue #248): the amount due stands out, with Cancel until the practice starts. */
-.purchase-item.cash-due strong.due{color:var(--swa-warn-ink)}
-.purchase-item.cash-due button{margin-top:4px;min-height:44px}
-.purchase-item h4{margin:0 0 5px;font-size:17px}
-.purchase-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
-.purchase-top strong{white-space:nowrap}
 .billing-note{font-size:15px;color:var(--swa-muted)}
-#yourData summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;list-style:none}#yourData summary::-webkit-details-marker{display:none}#yourData summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);margin-left:12px;flex:none}#yourData details[open]>summary::after{transform:rotate(-135deg) translateY(-1px)}
+#purchaseList .due{color:var(--swa-warn-ink);white-space:nowrap}
+#purchaseList td small{display:block;font-size:var(--swa-t-13);color:var(--swa-muted);line-height:1.4}
+#purchaseList td button{margin-top:6px}
 main>section[id],#status{scroll-margin-top:80px}
 @media(max-width:560px){
- html body main>section,html body main>details.card{padding:16px}
  .row{grid-template-columns:1fr;gap:0}
  .row.emergency-row{grid-template-columns:1fr}
  .row.addr-row{grid-template-columns:1fr 1fr;gap:0 12px}
  .row.addr-row label:first-child{grid-column:1/-1}
- .contact-lines{grid-template-columns:1fr}
  .member-details{grid-template-columns:1fr}
  .member-card{padding:14px}
  .billing-actions{flex-direction:column;align-items:stretch}
  .billing-actions>*{width:100%;text-align:center}
- .purchase-top{flex-wrap:wrap}
- .kid-links>*,.summary-actions>*{flex:1 1 auto}
- .later li b{min-width:0}
- .quick{gap:0 18px}
- html body .quick a{min-height:44px}
+ .account-menu summary{padding:0 12px}
 }
 </style></head><body><main>
-<div class="fam-hero"><div class="fam-head"><div><p class="eyebrow">Savage Wrestling Academy</p><h1 id="hello">Your family</h1><p class="lede" id="heroLede"></p></div>
-<details class="account-menu" id="accountMenu"><summary>Account</summary><div class="menu"><p class="signed-in">Signed in as<span id="email"></span></p><a href="/help">Help</a><a href="/security">Account security</a><a href="/login?mode=change">Change password</a><a href="#yourData" id="yourDataLink">Your data</a><button type="button" onclick="signout()">Sign out</button></div></details></div>
-<nav class="quick" aria-label="Family account sections"><a href="/inbox" id="inboxLink">Messages</a><a href="/register">Training</a><a href="/lesson">Private lessons</a><a href="#memberships" id="membershipsLink">Memberships</a><a href="#purchaseHistory" id="purchasesLink">Purchases</a></nav></div>
+<div class="fam-hero"><div class="fam-head"><div><h1 id="hello">Your family</h1><p class="lede" id="heroLede"></p></div>
+<details class="account-menu" id="accountMenu"><summary>Account</summary><div class="menu"><p class="signed-in">Signed in as<span id="email"></span></p><a href="/help">Help</a><a href="/security">Account security</a><a href="/login?mode=change">Change password</a><div class="sep"></div><a href="/api/my-data?format=download" download id="yourDataLink">Download my family's data</a><button type="button" data-action="close-account">Ask to close my account</button><div class="sep"></div><button type="button" data-action="signout">Sign out</button></div></details></div></div>
 <p id="status" role="status" aria-live="polite">Loading…</p><section id="paid" class="paid" hidden role="status" aria-live="polite"></section>
-<section id="finishDetails" class="card finish" hidden aria-labelledby="finishHeading"><h2 id="finishHeading">Finish your wrestler’s details</h2><p id="finishText"></p><button class="primary" type="button" onclick="startSafety()">Add the details</button></section>
-<section id="start" class="card" hidden aria-labelledby="startHeading"><div class="section-title"><h2 id="startHeading">Get set up</h2><span class="billing-pill" id="startCount"></span></div><div class="progress" aria-hidden="true"><span id="startBar" style="width:0"></span></div><p class="muted" id="startLede"></p><ol class="steps" id="startSteps"></ol></section>
-<section id="nextUp" class="card" hidden aria-labelledby="nextUpHeading"><h2 id="nextUpHeading">Next up</h2><div id="nextUpBody"></div></section>
-<section id="summary" class="card" hidden tabindex="-1" aria-labelledby="savedHeading"><h2 id="savedHeading">Your wrestlers</h2><div id="savedDetails"></div><p class="muted" id="savedTime"></p><div class="summary-actions"><button type="button" onclick="editProfile()">Edit family profile</button></div>
-<div class="training"><h3>Training</h3><p id="readyNote">Choose a 12-month membership or a single walk-in practice. Online payment isn’t open yet, so pay at the academy.</p><p id="notEnrolledNote"><strong>No payment recorded yet.</strong> When you pay at the academy, your membership or registration shows here once the academy records it.</p><ul><li><a href="/register">Choose a membership or walk-in →</a></li><li><a href="/lesson">Book a private lesson with a coach →</a></li><li><a href="/calendar?view=live">Book an extra practice, such as Friday Night Live →</a></li><li><a href="/register?program=Advanced">Ask a coach about SWA Advance →</a></li></ul></div></section>
-<section id="editor" class="card" aria-labelledby="editorHeading"><h2 id="editorHeading">Your family profile</h2><p class="notice" id="editorNotice">Add your name, phone number and each wrestler, then choose Save family profile. When you pay at the academy, the payment shows here once the academy records it.</p><form id="familyForm" novalidate><fieldset id="familyFields" disabled><h3>Parent or guardian</h3><label>Your name<input name="parentName" maxlength="120" required autocomplete="name"></label><label>Phone number<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label><div class="why-box" id="detailsWhy"><p><strong>The academy needs these details for every family.</strong> They let us reach someone quickly and look after your wrestler if they get hurt or feel unwell at practice. The academy and your wrestler’s coaches see them at check-in, and you can update them at any time.</p></div><fieldset class="details-group"><legend>Home address</legend><label>Street address<input id="homeAddress" maxlength="300" autocomplete="address-line1" required></label><div class="row addr-row"><label>City<input id="homeCity" maxlength="100" autocomplete="address-level2" required></label><label>State<input id="homeState" maxlength="40" autocomplete="address-level1" required></label><label>ZIP code<input id="homeZip" maxlength="10" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" title="5 digits, for example 11746" required></label></div></fieldset><fieldset class="details-group"><legend>Emergency contact</legend><p class="muted field-hint" id="emergencyHint">Someone other than you that the academy can call if we can’t reach you.</p><div class="row emergency-row"><label>Name<input id="emergencyContactName" maxlength="120" autocomplete="off" aria-describedby="emergencyHint" required></label><label>Phone number<input id="emergencyContactPhone" type="tel" maxlength="40" autocomplete="off" aria-describedby="emergencyHint" required></label></div></fieldset><h3>Your wrestlers</h3><div id="wrestlers"></div><button type="button" onclick="addWrestler()">+ Add wrestler</button><p class="muted">Saving a wrestler doesn’t sign them up. Choose a membership or walk-in after you save.</p><div class="form-actions"><button class="primary" id="save">Save family profile</button><button id="cancelEdit" type="button" hidden onclick="cancelProfileEdit()">Cancel changes</button></div></fieldset></form></section>
-<section id="memberships" class="card" aria-labelledby="membershipsHeading"><div class="section-title"><h2 id="membershipsHeading">Memberships</h2><span class="billing-pill active" id="paymentsPill" hidden>Paid</span></div><p class="billing-note">After you pay for a membership, each wrestler’s program, start date, payments and end date show here.</p><div id="membershipCards"><p>Loading your family…</p></div></section>
-<section id="purchaseHistory" class="card" aria-labelledby="purchaseHeading"><h2 id="purchaseHeading">Purchase history</h2><p class="billing-note">Everything you pay for shows here: memberships, walk-ins, camps, clinics, events and private lessons. Extra practices such as Friday Night Live are separate purchases, with a lower price for members.</p><div id="purchaseList"><div class="empty-billing"><h3>No purchases yet</h3><p>Looking over a registration doesn’t charge you or hold a spot. Each payment shows here with its date and amount after you pay.</p></div></div></section>
-<section id="yourData" class="card" aria-labelledby="yourDataHeading"><h2 id="yourDataHeading">Your data</h2><p class="muted">Download everything the academy holds about your family: profile, payments, attendance, signed waivers, messages and more.</p><a class="button" href="/api/my-data?format=download" download>Download my family's data</a><details style="margin-top:14px"><summary>Ask to close my account</summary><form id="closeForm"><label>Anything the academy should know (optional)<textarea id="closeNote" maxlength="1000" rows="3"></textarea></label><button type="submit">Send request to the academy</button></form></details><p id="requestStatus" class="muted"></p></section>
+<section id="finishDetails" class="card finish" hidden aria-labelledby="finishHeading"><h2 id="finishHeading">Finish your wrestler’s details</h2><p id="finishText"></p><button class="primary" type="button" data-action="start-safety">Add the details</button></section>
+<div class="fam-grid"><div class="fam-col">
+<section id="start" class="card" hidden aria-labelledby="startHeading"><div class="section-title"><h2 id="startHeading">Get set up</h2><span class="pill" id="startCount"></span></div><div class="progress" aria-hidden="true"><span id="startBar" style="width:0"></span></div><p class="muted" id="startLede"></p><ol class="steps" id="startSteps"></ol></section>
+<section id="nextUp" class="card dark" hidden aria-labelledby="nextUpHeading"><h2 id="nextUpHeading" class="swa-label">Next up</h2><div id="nextUpBody"></div></section>
+<section id="week" class="card" hidden aria-labelledby="weekHeading"><div class="swa-section"><h2 id="weekHeading" class="swa-label">This week</h2><a href="/calendar">Calendar</a></div><div id="weekRows"></div><a class="swa-link" id="weekMore" href="/calendar">See the calendar →</a></section>
+<section id="book" class="card" hidden aria-labelledby="bookHeading"><h2 id="bookHeading" class="swa-label">Book</h2><div class="swa-doors" id="doors"></div></section>
+</div><div class="fam-col">
+<section id="summary" class="card" hidden tabindex="-1" aria-labelledby="savedHeading"><div class="swa-section"><h2 id="savedHeading" class="swa-label">Your wrestler</h2><button type="button" class="quiet" data-action="add-wrestler">Add another</button></div><div id="savedDetails"></div><p class="swa-caption" id="savedTime"></p></section>
+<section id="payments" class="card" hidden aria-labelledby="paymentsHeading"><div class="swa-section"><h2 id="paymentsHeading" class="swa-label">Payments</h2><a href="#purchases">History</a></div><div class="money" id="moneyLine"></div></section>
+<section id="contacts" class="card" hidden aria-labelledby="contactsHeading"><div class="swa-section"><h2 id="contactsHeading" class="swa-label">Family</h2><button type="button" class="quiet" id="editProfile" data-action="edit">Edit</button></div><div id="contactRows"></div></section>
+</div></div>
+<section id="editor" class="card" aria-labelledby="editorHeading"><h2 id="editorHeading">Your family profile</h2><p class="notice" id="editorNotice">Add your name, phone number and each wrestler, then choose Save family profile. When you pay at the academy, the payment shows here once the academy records it.</p><form id="familyForm" novalidate><fieldset id="familyFields" disabled><h3>Parent or guardian</h3><label>Your name<input name="parentName" maxlength="120" required autocomplete="name"></label><label>Phone number<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label><div class="why-box" id="detailsWhy"><p><strong>The academy needs these details for every family.</strong> They let us reach someone quickly and look after your wrestler if they get hurt or feel unwell at practice. The academy and your wrestler’s coaches see them at check-in, and you can update them at any time.</p></div><fieldset class="details-group"><legend>Home address</legend><label>Street address<input id="homeAddress" maxlength="300" autocomplete="address-line1" required></label><div class="row addr-row"><label>City<input id="homeCity" maxlength="100" autocomplete="address-level2" required></label><label>State<input id="homeState" maxlength="40" autocomplete="address-level1" required></label><label>ZIP code<input id="homeZip" maxlength="10" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" title="5 digits, for example 11746" required></label></div></fieldset><fieldset class="details-group"><legend>Emergency contact</legend><p class="muted field-hint" id="emergencyHint">Someone other than you that the academy can call if we can’t reach you.</p><div class="row emergency-row"><label>Name<input id="emergencyContactName" maxlength="120" autocomplete="off" aria-describedby="emergencyHint" required></label><label>Phone number<input id="emergencyContactPhone" type="tel" maxlength="40" autocomplete="off" aria-describedby="emergencyHint" required></label></div></fieldset><h3>Your wrestlers</h3><div id="wrestlers"></div><button type="button" data-action="add-wrestler-form">+ Add wrestler</button><p class="muted">Saving a wrestler doesn’t sign them up. Choose a membership or walk-in after you save.</p><div class="form-actions"><button class="primary" id="save">Save family profile</button><button id="cancelEdit" type="button" hidden data-action="cancel-edit">Cancel changes</button></div></fieldset></form></section>
+<section id="memberships" class="card" aria-labelledby="membershipsHeading"><div class="section-title"><h2 id="membershipsHeading">Memberships</h2><span class="pill ok" id="paymentsPill" hidden>Paid</span></div><p class="billing-note">After you pay for a membership, each wrestler’s program, start date, payments and end date show here.</p><div id="membershipCards"><p>Loading your family…</p></div></section>
+<section id="purchases" class="card" aria-labelledby="purchaseHeading"><h2 id="purchaseHeading">Purchases</h2><p class="billing-note">Everything you pay for shows here: memberships, walk-ins, camps, clinics, events and private lessons. Extra practices such as Friday Night Live are separate purchases, with a lower price for members.</p><div id="purchaseList"><div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16l-3-2-3 2-3-2-3 2-3-2z"/><path d="M8 9h8M8 13h5"/></svg><p>No purchases yet. Looking over a registration doesn’t charge you or hold a spot; each payment shows here with its date and amount after you pay.</p></div></div></section>
+<section id="yourData" class="card" hidden aria-labelledby="yourDataHeading"><h2 id="yourDataHeading">Close my account</h2><p class="muted">Ask the academy to close your family account. They contact you before anything is removed. You can also <a href="/api/my-data?format=download" download>download everything the academy holds about your family</a> first.</p><form id="closeForm"><label>Anything the academy should know (optional)<textarea id="closeNote" maxlength="1000" rows="3"></textarea></label><button type="submit">Send request to the academy</button></form><p id="requestStatus" class="muted"></p></section>
 </main><script>
 let scholarshipAwards=[];
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Short messages go to the shared toast (public/toast.js); without it (the tests' fake pages) they stay in #status.
+const toast=(text,kind)=>{if(typeof swaToast==='function'){swaToast(text,kind?{kind}:undefined);$('status').textContent=''}else $('status').textContent=text};
 // A paid checkout (issue #184): a clear green confirmation at the top, not a plain status line.
 function showPaid(o){const box=$('paid');box.innerHTML='<p class="paid-title">Payment confirmed</p><p><strong>'+esc(o.item_label)+'</strong> for '+esc(o.wrestler_name)+' is paid and booked.</p><p class="muted">Your receipt is under Purchases. Show your wrestler’s entry pass at the door.</p>';box.hidden=false;$('status').textContent='';box.scrollIntoView({block:'start'})}
-let profile={parentName:'',phone:'',wrestlers:[]},revision=0,ready=false,savedProfile=null,savedAt=null;const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let profile={parentName:'',phone:'',wrestlers:[]},revision=0,ready=false,savedProfile=null,savedAt=null;
 const gradeLabel=g=>g==='Adult'?'Adult':g==='K'?'Kindergarten':'Grade '+g;
+const firstName=n=>String(n||'').trim().split(/\s+/)[0]||'';
+const initials=n=>String(n||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('')||'?';
 // Birth date and allergies or medical notes for one wrestler, in the editor and on the saved profile (issue #188).
 function safetyFields(w,i){const none=noNotes(w.allergies);return '<div class="safety"><label class="birth">Birth date<input id="birth'+i+'" type="date" required min="1900-01-01" max="'+academyDay()+'" value="'+esc(w.birthDate||'')+'"></label>'
  +'<label>Allergies or medical notes<textarea id="allergies'+i+'" maxlength="500" rows="2" required aria-describedby="allergyHint'+i+'"'+(none?' disabled':'')+'>'+(none?'':esc(w.allergies||''))+'</textarea></label>'
- +'<label class="check"><input type="checkbox" id="none'+i+'" onchange="notesNone('+i+')"'+(none?' checked':'')+'>No allergies or medical notes</label><p class="muted card-hint" id="allergyHint'+i+'">Allergies, asthma, medication or anything else a coach should know in an emergency.</p></div>'}
-// A wrestler with nothing to note is saved as "None", so the answer is on record (#197, question 14).
+ +'<label class="check"><input type="checkbox" id="none'+i+'" data-notes="'+i+'"'+(none?' checked':'')+'>No allergies or medical notes</label><p class="muted card-hint" id="allergyHint'+i+'">Allergies, asthma, medication or anything else a coach should know in an emergency.</p></div>'}
+// A wrestler with nothing to note is saved as "None", so the answer is on record (issue #197, question 14).
 const noNotes=v=>/^(none|n\/?a|no)\.?$/i.test(String(v??'').trim());
 function notesNone(i){const box=document.getElementById('allergies'+i),none=document.getElementById('none'+i).checked;box.disabled=none;if(none)box.value='';else box.focus()}
-function safetyLine(w){const born=w.birthDate?'Born '+esc(longDate(w.birthDate)):'',notes=w.allergies?(noNotes(w.allergies)?'No allergies or medical notes':'<strong>Allergies or medical notes:</strong> '+esc(w.allergies)):'';return born||notes?'<p class="kid-safety">'+[born,notes].filter(Boolean).join('<br>')+'</p>':''}
+// The allergy line on the wrestler card: an allergy stands out; "none" and the birth date are a quiet caption.
+function safetyLine(w){const born=w.birthDate?'Born '+esc(longDate(w.birthDate)):'';if(w.allergies&&!noNotes(w.allergies))return '<p class="kid-safety"><b>Allergies or medical notes:</b> '+esc(w.allergies)+(born?'<br>'+born:'')+'</p>';const notes=w.allergies?'No allergies or medical notes':'';return born||notes?'<p class="kid-safety quiet">'+[born,notes].filter(Boolean).join(' · ')+'</p>':''}
 // What a saved profile still needs. lib/family-records.ts missingDetails() is the server's copy of this list.
 function missingDetails(p){const t=v=>String(v??'').trim(),out=[],add=(v,label)=>{if(!t(v))out.push(label)};
  add(p.homeAddress,'the street address');add(p.homeCity,'the city');add(p.homeState,'the state');add(p.homeZip,'the ZIP code');
@@ -183,23 +200,37 @@ function missingDetails(p){const t=v=>String(v??'').trim(),out=[],add=(v,label)=
 // Opens the editor at the first detail still missing.
 function startSafety(){if($('editor').hidden)editProfile();const k=DETAILS.find(k=>!String(profile[k]||'').trim()),i=profile.wrestlers.findIndex(w=>!w.birthDate||!String(w.allergies||'').trim()),w=profile.wrestlers[i];
  const field=$(k?k:w&&!w.birthDate?'birth'+i:'allergies'+i);if(field){field.focus();field.scrollIntoView({behavior:'smooth',block:'center'})}$('status').textContent='Add the missing details, then choose Save family profile.'}
-function contactLines(){const place=[profile.homeCity,[profile.homeState,profile.homeZip].filter(Boolean).join(' ')].filter(Boolean).join(', '),address=[profile.homeAddress,place].filter(Boolean).map(esc).join('<br>'),emergency=[profile.emergencyContactName,profile.emergencyContactPhone].filter(Boolean).map(esc).join(' · '),none='<span class="muted">Not added yet</span>';
- return '<dl class="contact-lines"><div><dt>Home address</dt><dd>'+(address||none)+'</dd></div><div><dt>Emergency contact</dt><dd>'+(emergency||none)+'</dd></div></dl>'}
-// The saved profile, one panel per wrestler with a plain line each for card, waiver and membership (issue #132).
+// The family card: parent, emergency contact and address as rows, with Edit beside the label.
+function contactRows(){const place=[profile.homeCity,[profile.homeState,profile.homeZip].filter(Boolean).join(' ')].filter(Boolean).join(', '),address=[profile.homeAddress,place].filter(Boolean).map(esc).join(', '),emergency=[profile.emergencyContactName,profile.emergencyContactPhone].filter(Boolean).map(esc).join(' · '),none='<span class="muted">Not added yet</span>';
+ const row=(k,v)=>'<div><dt class="d">'+k+'</dt><dd class="t">'+(v||none)+'</dd></div>';
+ return '<dl class="swa-rows">'+row('Parent',[profile.parentName,profile.phone].filter(Boolean).map(esc).join(' · '))+row('Emergency',emergency)+row('Address',address)+'</dl>'}
+// One card per wrestler (issue #132, redesigned in #282): avatar, name, grade and membership, the card, waiver and
+// consent chips, anything that needs attention as a line, the allergy line, and the pass and the wrestler's page.
+function kidCard(w){
+ const card=cardStatus(w),waiver=waiverStatus(w),consent=consentStatus(w),member=membershipStatus(w);
+ const chips=[card,waiver,consent].filter(Boolean).map(s=>pill(s.label,s.ok)).join('');
+ const lines=[card,waiver,consent,member].filter(s=>s&&s.text).map(s=>'<li'+(s.ok?' class="swa-caption"':'')+'>'+s.text+'</li>').join('');
+ return '<article class="kid" data-wrestler="'+esc(w.id)+'"><div class="kid-top"><div class="swa-avatar" aria-hidden="true">'+esc(initials(w.name))+'</div><div><h3>'+esc(w.name)+'</h3><p class="kid-sub">'+esc(gradeLabel(w.grade))+' · '+member.short+'</p></div></div>'
+  +'<div class="chips">'+chips+'</div>'+(lines?'<ul class="status-lines">'+lines+'</ul>':'')+safetyLine(w)
+  +'<div class="kid-links"><a class="button" href="/pass?wrestler='+encodeURIComponent(w.id)+'">Entry pass</a><a class="button" href="/wrestler?id='+encodeURIComponent(w.id)+'">'+esc(firstName(w.name))+'’s page</a></div></article>';
+}
 function showSummary(focus=false){
  $('editor').hidden=true;$('summary').hidden=false;
+ $('savedHeading').textContent=profile.wrestlers.length>1?'Your wrestlers':'Your wrestler';
  $('savedTime').textContent=savedAt?'Last saved '+when(savedAt)+'.':'';
- $('savedDetails').innerHTML=(profile.wrestlers.length?profile.wrestlers.map(w=>'<article class="kid"><div class="kid-top"><h3>'+esc(w.name)+'</h3><span class="muted">'+esc(gradeLabel(w.grade))+'</span></div><ul class="status-lines"><li>'+cardLine(w)+'</li>'+(waiverLine(w)?'<li>'+waiverLine(w)+'</li>':'')+(consentLine(w)?'<li>'+consentLine(w)+'</li>':'')+'<li>'+membershipLine(w)+'</li></ul>'+safetyLine(w)+'<div class="kid-links"><a class="button" href="/wrestler?id='+encodeURIComponent(w.id)+'">Wrestler view</a><a class="button" href="/pass?wrestler='+encodeURIComponent(w.id)+'">Entry pass</a></div></article>').join(''):'<p>No wrestlers added yet. Choose Edit family profile to add one.</p>')
-  +'<p class="parent-line"><strong>Parent or guardian:</strong> '+esc(profile.parentName)+(profile.phone?' · '+esc(profile.phone):'')+'</p>'+contactLines();
+ $('savedDetails').innerHTML=profile.wrestlers.length?profile.wrestlers.map(kidCard).join(''):'<div class="empty"><p>No wrestlers added yet.</p><button type="button" class="button" data-action="add-wrestler">Add a wrestler</button></div>';
+ $('contactRows').innerHTML=contactRows();
  renderHome();
  if(focus){$('summary').focus();$('summary').scrollIntoView({behavior:'smooth',block:'start'})}
 }
-function editProfile(){$('summary').hidden=true;$('editor').hidden=false;$('cancelEdit').hidden=!savedProfile;draw();renderHome();$('status').textContent='Make your changes, then choose Save family profile.';$('familyForm').elements.parentName.focus()}
-function cancelProfileEdit(){profile=JSON.parse(JSON.stringify(savedProfile));draw();showSummary(true);$('status').textContent='Nothing was changed.'}
+function editProfile(){$('summary').hidden=true;$('editor').hidden=false;$('cancelEdit').hidden=!savedProfile;draw();renderHome();$('familyForm').elements.parentName.focus()}
+function cancelProfileEdit(){profile=JSON.parse(JSON.stringify(savedProfile));draw();showSummary(true);toast('Nothing was changed.')}
+// "Add another" on the wrestler card: open the editor with a new wrestler ready to fill in.
+function addAnother(){if(!ready)return;if($('editor').hidden)editProfile();addWrestler();const i=profile.wrestlers.length-1,field=document.getElementById('name'+i);if(field){field.focus();if(field.scrollIntoView)field.scrollIntoView({behavior:'smooth',block:'center'})}}
 // Optional contact and safety details (issue #188). Empty fields are sent empty, which removes them.
 const DETAILS=['homeAddress','homeCity','homeState','homeZip','emergencyContactName','emergencyContactPhone'];
 function readFields(){const f=$('familyForm');profile.parentName=f.elements.parentName.value;profile.phone=f.elements.phone.value;for(const k of DETAILS)profile[k]=$(k).value.trim();profile.wrestlers=profile.wrestlers.map((w,i)=>({...w,name:document.getElementById('name'+i).value,grade:document.getElementById('grade'+i).value,usawNumber:document.getElementById('usaw'+i).value.trim().toUpperCase(),usawExpires:cardExpires(i),birthDate:document.getElementById('birth'+i).value,allergies:document.getElementById('none'+i).checked?'None':document.getElementById('allergies'+i).value.trim()}))}
-function draw(){const f=$('familyForm');f.elements.parentName.value=profile.parentName;f.elements.phone.value=profile.phone;for(const k of DETAILS)$(k).value=profile[k]||'';renderMembershipCards();$('wrestlers').innerHTML=profile.wrestlers.map((w,i)=>`<div class="athlete"><div class="row"><label>Wrestler ${i+1} name<input id="name${i}" value="${esc(w.name)}" maxlength="120" required></label><label>Grade<select id="grade${i}">${['K',...Array.from({length:12},(_,i)=>String(i+1)),'Adult'].map(g=>`<option value="${g}" ${g===w.grade?'selected':''}>${g==='K'?'Kindergarten':g}</option>`).join('')}</select></label></div><div class="row card-row"><label>USA Wrestling card number<input id="usaw${i}" value="${esc(w.usawNumber||'')}" maxlength="24" autocomplete="off" placeholder="From the USA Wrestling card"></label><div>${seasonField(w,i)}</div></div><p class="muted card-hint" id="usawHint${i}">Every USA Wrestling card expires on August 31, whatever month it was bought. New-season cards usually open in mid-August at <a href="https://www.usawmembership.com" target="_blank" rel="noopener">usawmembership.com</a>.</p><p class="muted card-line">${editorCardLine(w)}</p>${safetyFields(w,i)}<button type="button" onclick="removeWrestler(${i})">Remove wrestler</button></div>`).join('')||'<p class="muted">Add your first wrestler below.</p>'}
+function draw(){const f=$('familyForm');f.elements.parentName.value=profile.parentName;f.elements.phone.value=profile.phone;for(const k of DETAILS)$(k).value=profile[k]||'';renderMembershipCards();$('wrestlers').innerHTML=profile.wrestlers.map((w,i)=>`<div class="athlete"><div class="row"><label>Wrestler ${i+1} name<input id="name${i}" value="${esc(w.name)}" maxlength="120" required></label><label>Grade<select id="grade${i}">${['K',...Array.from({length:12},(_,i)=>String(i+1)),'Adult'].map(g=>`<option value="${g}" ${g===w.grade?'selected':''}>${g==='K'?'Kindergarten':g}</option>`).join('')}</select></label></div><div class="row card-row"><label>USA Wrestling card number<input id="usaw${i}" value="${esc(w.usawNumber||'')}" maxlength="24" autocomplete="off" placeholder="From the USA Wrestling card"></label><div>${seasonField(w,i)}</div></div><p class="muted card-hint" id="usawHint${i}">Every USA Wrestling card expires on August 31, whatever month it was bought. New-season cards usually open in mid-August at <a href="https://www.usawmembership.com" target="_blank" rel="noopener">usawmembership.com</a>.</p><p class="muted card-line">${editorCardLine(w)}</p>${safetyFields(w,i)}<button type="button" data-action="remove-wrestler" data-index="${i}">Remove wrestler</button></div>`).join('')||'<p class="muted">Add your first wrestler below.</p>'}
 // In the editor, a card still being typed gets a plain hint, not the red warning (issue #273); the saved view (cardLine) says
 // what blocks booking.
 function editorCardLine(w){const c=cardState(w);return c.state==='missing'?'Add the card number and choose its season. Booking needs a current card.':cardLine(w)}
@@ -208,7 +239,10 @@ function removeWrestler(i){readFields();profile.wrestlers.splice(i,1);draw()}
 // The profile form stays disabled until the saved profile is in, and while it saves, so nothing typed meanwhile is
 // overwritten by the load (issues #220, #231). If it cannot load, it stays disabled and says why: saving then would
 // replace a profile the parent never saw.
-async function loadFamily(){ready=false;$('save').disabled=true;$('familyFields').disabled=true;$('status').textContent='Loading…';try{const r=await fetch('/api/family',{cache:'no-store'}),body=await r.json().catch(()=>({}));if(r.status===401){location.href='/login';return}if(!r.ok)throw Error(body.error||'We couldn’t load your family account. Refresh the page to try again.');profile=body.data;cards=body.cards||{};cardSeasons=Array.isArray(body.cardSeasons)?body.cardSeasons:[];renewalDays=Number(body.cardRenewalDays)||0;revision=body.revision;$('email').textContent=body.email;draw();ready=true;loadScholarships();loadOrders();loadWaiver();loadConsent();loadUnread();loadRequests();savedAt=body.updatedAt;savedProfile=body.updatedAt?JSON.parse(JSON.stringify(profile)):null;if(savedProfile)showSummary();else renderHome();loadNextUp();$('status').textContent=''}catch(e){$('status').textContent=e.message}finally{$('save').disabled=!ready;$('familyFields').disabled=!ready}}
+async function loadFamily(){ready=false;$('save').disabled=true;$('familyFields').disabled=true;$('status').textContent='Loading…';try{const r=await fetch('/api/family',{cache:'no-store'}),body=await r.json().catch(()=>({}));if(r.status===401){location.href='/login';return}if(!r.ok)throw Error(body.error||'We couldn’t load your family account. Refresh the page to try again.');profile=body.data;cards=body.cards||{};cardSeasons=Array.isArray(body.cardSeasons)?body.cardSeasons:[];renewalDays=Number(body.cardRenewalDays)||0;revision=body.revision;$('email').textContent=body.email;draw();ready=true;loadScholarships();loadOrders();loadWaiver();loadConsent();loadUnread();loadRequests();loadContact();loadSchedule();savedAt=body.updatedAt;savedProfile=body.updatedAt?JSON.parse(JSON.stringify(profile)):null;if(savedProfile)showSummary();else renderHome();loadNextUp();$('status').textContent='';openFromHash()}catch(e){$('status').textContent=e.message}finally{$('save').disabled=!ready;$('familyFields').disabled=!ready}}
+// The tab bar's Account tab opens the Account menu (/family#account); "+ Add" on Choose training opens the editor with a
+// new wrestler (/family#add).
+function openFromHash(){const hash=String((typeof location!=='undefined'&&location.hash)||'');if(hash==='#account'){const m=$('accountMenu');m.open=true;if(m.scrollIntoView)m.scrollIntoView({block:'start'})}else if(hash==='#add')addAnother()}
 // What a required field is missing, in plain words (issue #273). The browser's own bubble only names one field and is easy
 // to miss on a phone, so the first problem goes in the status line and the field is scrolled into view.
 const FIELD_WORDS=[['parentName','Add your name.'],['homeAddress','Add the street address.'],['homeCity','Add the city.'],['homeState','Add the state.'],['homeZip','Add the ZIP code.'],['emergencyContactName','Add the emergency contact’s name.'],['emergencyContactPhone','Add the emergency contact’s phone number.']];
@@ -225,12 +259,18 @@ function firstProblem(){
 $('familyForm').onsubmit=async e=>{e.preventDefault();if(!ready)return;
  // The browser still judges the required fields (the form has novalidate only so the bubble gives way to this).
  const form=$('familyForm');if(typeof form.checkValidity==='function'&&!form.checkValidity()){const problem=firstProblem()||{el:form.querySelector&&form.querySelector(':invalid'),words:'Check the highlighted field.'};$('status').textContent=problem.words+' Then choose Save family profile.';if(problem.el){if(problem.el.scrollIntoView)problem.el.scrollIntoView({behavior:'smooth',block:'center'});if(problem.el.focus)problem.el.focus({preventScroll:true})}return}
- $('save').disabled=true;$('familyFields').disabled=true;$('status').textContent='Saving…';try{readFields();const r=await fetch('/api/family',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,data:profile})}),body=await r.json();if(!r.ok)throw Error(body.error||'Something went wrong.');revision=body.revision;savedAt=body.updatedAt;if(body.data&&Array.isArray(body.data.wrestlers))profile=body.data;savedProfile=JSON.parse(JSON.stringify(profile));renderMembershipCards();const found=Object.entries(body.lookups||{}).map(([id,o])=>{const w=profile.wrestlers.find(x=>x.id===id);return w?lookupMessage(w.name,o):''}).filter(Boolean);$('status').textContent='Your changes are saved.'+(found.length?' '+found.join(' '):'');showSummary(true);refreshCards();loadNextUp()}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth',block:'start'})}finally{$('save').disabled=false;$('familyFields').disabled=false}};
+ $('save').disabled=true;$('familyFields').disabled=true;$('status').textContent='Saving…';try{readFields();const r=await fetch('/api/family',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,data:profile})}),body=await r.json();if(!r.ok)throw Error(body.error||'Something went wrong.');revision=body.revision;savedAt=body.updatedAt;if(body.data&&Array.isArray(body.data.wrestlers))profile=body.data;savedProfile=JSON.parse(JSON.stringify(profile));renderMembershipCards();const found=Object.entries(body.lookups||{}).map(([id,o])=>{const w=profile.wrestlers.find(x=>x.id===id);return w?lookupMessage(w.name,o):''}).filter(Boolean);
+  // What USA Wrestling said about a card stays on the page; a plain save is a passing toast.
+  if(found.length)$('status').textContent='Your changes are saved. '+found.join(' ');else toast('Your changes are saved.','ok');
+  showSummary(true);refreshCards();loadNextUp()}catch(error){$('status').textContent=error.message+' Your changes have not been saved.';$('status').scrollIntoView({behavior:'smooth',block:'start'})}finally{$('save').disabled=false;$('familyFields').disabled=false}};
 async function loadScholarships(){
  try{const r=await fetch('/api/scholarship',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'We couldn’t load scholarship details. Refresh the page to try again.');scholarshipAwards=d.awards||[];renderMembershipCards();refreshHome()}catch(e){$('status').textContent=e.message}
 }
 // USA Wrestling cards (issue #68): every wrestler needs a card that is current on the date of anything booked.
 let cards={};
+// One pill for every state on the wrestler card: a tick when it is in order, amber when it needs the family.
+const CHECK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+const pill=(label,ok)=>'<span class="pill '+(ok?'ok':'warn')+'">'+(ok?CHECK:'')+label+'</span>';
 const academyDay=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 function cardState(w){
  const number=String(w.usawNumber||'').trim().toUpperCase(),expires=w.usawExpires||'',server=cards[w.id];
@@ -254,7 +294,7 @@ function seasonChoices(saved){
 }
 function seasonField(w,i){
  const saved=w.usawExpires||'',choices=seasonChoices(saved),other=!!saved&&!choices.some(s=>s.expires===saved),today=academyDay();
- return '<label>Card season<select id="usawSeason'+i+'" onchange="seasonPicked('+i+')" aria-describedby="usawHint'+i+'"><option value="">Choose the season on the card</option>'
+ return '<label>Card season<select id="usawSeason'+i+'" data-season="'+i+'" aria-describedby="usawHint'+i+'"><option value="">Choose the season on the card</option>'
   +choices.map(s=>'<option value="'+esc(s.expires)+'"'+(s.expires===saved?' selected':'')+'>'+esc(s.label)+' · '+(s.expires<today?'expired ':'expires ')+esc(longDate(s.expires))+'</option>').join('')
   +'<option value="other"'+(other?' selected':'')+'>My card has a different expiration date</option></select></label>'
   +'<label id="usawExpBox'+i+'"'+(other?'':' hidden')+'>Expiration date on the card<input id="usawExp'+i+'" type="date" value="'+(other?esc(saved):'')+'"></label>';
@@ -275,60 +315,73 @@ function lookupMessage(name,outcome){
 const cardFlagged=c=>c.state==='current'&&!!c.lookup&&['inactive','not_found','mismatch'].includes(c.lookup.outcome);
 // The academy's date of a stored time, for "Checked with USA Wrestling on …".
 const academyDate=t=>new Date(t).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
-function checkButton(w,c){return c===cards[w.id]&&c.state==='current'?' <button type="button" class="card-check" data-wrestler="'+esc(w.id)+'" onclick="checkMyCard(this.dataset.wrestler)">Check my card</button>':''}
+function checkButton(w,c){return c===cards[w.id]&&c.state==='current'?' <button type="button" class="card-check sm" data-action="check-card" data-wrestler="'+esc(w.id)+'">Check my card</button>':''}
 async function checkMyCard(id){
  const w=profile.wrestlers.find(x=>x.id===id);if(!w)return;
- $('status').textContent='Checking '+w.name+'’s card with USA Wrestling…';
+ toast('Checking '+w.name+'’s card with USA Wrestling…');
  try{const r=await fetch('/api/usaw-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wrestlerId:id})}),d=await r.json();if(!r.ok)throw Error(d.error||'We couldn’t check the card just now. The academy will check it.');
   cards[id]=d.card;refreshHome();$('status').textContent=lookupMessage(w.name,d.outcome)||'We couldn’t reach USA Wrestling just now. The academy will check '+w.name+'’s card, or try again later.'}
  catch(e){$('status').textContent=e.message}
 }
-function cardLine(w){
+// The card's state for the wrestler card: a label for the chip, whether it is in order, and the sentence under it.
+function cardStatus(w){
  const c=cardState(w),server=cards[w.id],blocked=server&&server.exceptionUntil?' The academy is allowing bookings until '+esc(longDate(server.exceptionUntil))+' while this is sorted out.':' <strong>Booking is blocked until this is fixed.</strong>',renew=' <a href="https://www.usawmembership.com" target="_blank" rel="noopener">Get or renew a card →</a>';
  const found=c.state==='current'&&c.lookup?c.lookup.outcome:'';
- if(found==='inactive')return '<span class="billing-pill warning">USA Wrestling card not active</span> USA Wrestling shows this card isn’t active. Renew it, then choose Check my card.'+renew+checkButton(w,c);
- if(found==='not_found')return '<span class="billing-pill warning">Check the card number</span> USA Wrestling has no card with this number. Check the number on the card and save it again.'+checkButton(w,c);
- if(found==='mismatch')return '<span class="billing-pill warning">Check the card number</span> The name on this USA Wrestling card doesn’t match '+esc(w.name)+'. Check the number; it may belong to someone else. If it is right, the academy will check it.'+checkButton(w,c);
- if(c.state==='missing')return '<span class="billing-pill warning">No USA Wrestling card</span> Add the card number and the card’s season.'+blocked+renew;
- if(c.state==='expired')return '<span class="billing-pill warning">USA Wrestling card expired</span> Expired '+esc(longDate(c.expires))+'.'+(isSeasonEnd(c.expires)?' Renew for the '+esc(seasonName(seasonEndOn(academyDay())))+', then choose it here.':'')+blocked+renew;
- if(c.state==='recheck')return '<span class="billing-pill warning">Waiting for the academy</span> The academy will check your updated card.'+blocked;
- if(c.state==='invalid')return '<span class="billing-pill warning">Card not verified</span> The academy could not verify this card'+(c.note?': '+esc(c.note):'')+'. Check the number and date.'+blocked;
+ if(found==='inactive')return {label:'USA Wrestling card not active',ok:false,text:'USA Wrestling shows this card isn’t active. Renew it, then choose Check my card.'+renew+checkButton(w,c)};
+ if(found==='not_found')return {label:'Check the card number',ok:false,text:'USA Wrestling has no card with this number. Check the number on the card and save it again.'+checkButton(w,c)};
+ if(found==='mismatch')return {label:'Check the card number',ok:false,text:'The name on this USA Wrestling card doesn’t match '+esc(w.name)+'. Check the number; it may belong to someone else. If it is right, the academy will check it.'+checkButton(w,c)};
+ if(c.state==='missing')return {label:'No USA Wrestling card',ok:false,text:'Add the card number and the card’s season.'+blocked+renew};
+ if(c.state==='expired')return {label:'USA Wrestling card expired',ok:false,text:'Expired '+esc(longDate(c.expires))+'.'+(isSeasonEnd(c.expires)?' Renew for the '+esc(seasonName(seasonEndOn(academyDay())))+', then choose it here.':'')+blocked+renew};
+ if(c.state==='recheck')return {label:'Waiting for the academy',ok:false,text:'The academy will check your updated card.'+blocked};
+ if(c.state==='invalid')return {label:'Card not verified',ok:false,text:'The academy could not verify this card'+(c.note?': '+esc(c.note):'')+'. Check the number and date.'+blocked};
  const soon=c.expires<=new Date(Date.now()+renewalDays*864e5).toLocaleDateString('en-CA',{timeZone:'America/New_York'});
  const season=isSeasonEnd(c.expires),next=season?seasonName((Number(c.expires.slice(0,4))+1)+'-08-31'):'';
- return '<span class="billing-pill '+(soon?'warning':'active')+'">USA Wrestling card '+(c.state==='verified'?'verified':'on file')+'</span> Current through '+esc(longDate(c.expires))+(season?', the end of the '+esc(seasonName(c.expires)):'')+'.'
+ return {label:'USA Wrestling card '+(c.state==='verified'?'verified':'on file'),ok:!soon,text:'Current through '+esc(longDate(c.expires))+(season?', the end of the '+esc(seasonName(c.expires)):'')+'.'
   +(c.state==='verified'&&c.verifiedBy==='usaw-lookup'&&c.verifiedAt?' Checked with USA Wrestling on '+esc(longDate(academyDate(c.verifiedAt)))+'.':'')
   +(found==='season'?' USA Wrestling shows this card is active; the academy will confirm the card’s season.':'')
   +(soon?(season?' Renew for the '+esc(next)+' by Aug 31. New-season cards usually open in mid-August.':' Renew soon. Sessions after that date cannot be booked.')+renew:'')
-  +(found==='season'?'':checkButton(w,c));
+  +(found==='season'?'':checkButton(w,c))};
 }
-// Unread announcements and messages (issue #72).
-async function loadUnread(){try{const r=await fetch('/api/inbox',{cache:'no-store'}),d=await r.json();if(r.ok&&d.unread)$('inboxLink').textContent='Messages ('+d.unread+' new)'}catch{}}
+// The same, as one line: the pill and the sentence (the editor's card line, and the tests).
+function cardLine(w){const s=cardStatus(w);return pill(s.label,s.ok)+' '+s.text}
+// Unread announcements and messages (issue #72): a count on the Messages tab (lib/page-chrome.ts familyTabs).
+async function loadUnread(){try{const r=await fetch('/api/inbox',{cache:'no-store'}),d=await r.json();const badge=$('inboxBadge');if(r.ok&&d.unread&&badge){badge.innerHTML=d.unread+'<span class="swa-sr"> new</span>';badge.hidden=false}}catch{}}
 // Waivers (issue #69) and the Parent Consent Form (issue #195): each shown only while the academy requires it.
 let waiverInfo=null,consentInfo=null;
 async function loadWaiver(){try{const r=await fetch('/api/waiver',{cache:'no-store'}),d=await r.json();if(r.ok){waiverInfo=d;refreshHome()}}catch{}}
 async function loadConsent(){try{const r=await fetch('/api/waiver?kind=parent_consent',{cache:'no-store'}),d=await r.json();if(r.ok){consentInfo=d;refreshHome()}}catch{}}
 function waiverLine(w){return docLine(waiverInfo&&waiverInfo.waiver,waiverInfo,w,'Waiver','/waiver','Sign the waiver')}
 function consentLine(w){return docLine(consentInfo&&consentInfo.document,consentInfo,w,'Parent Consent Form','/consent','Sign the form')}
-function docLine(doc,info,w,label,page,action){
- if(!doc)return '';
- const s=info.signatures.find(x=>x.current&&x.wrestlerId===w.id);
+function waiverStatus(w){return docStatus(waiverInfo&&waiverInfo.waiver,waiverInfo,w,'Waiver','/waiver','Sign the waiver')}
+function consentStatus(w){return docStatus(consentInfo&&consentInfo.document,consentInfo,w,'Parent Consent Form','/consent','Sign the form')}
+// The same as one line: the pill and the sentence.
+function docLine(doc,info,w,label,page,action){const st=docStatus(doc,info,w,label,page,action);return st?docPill(st.label,st.ok)+' '+st.text:''}
+// A document's state for one wrestler: null until the academy requires it; else the chip label, whether it is signed,
+// and the sentence (the copy, or what blocks booking and where to sign).
+function docStatus(doc,info,w,label,page,action){
+ if(!doc)return null;
+ const signed=info.signatures.find(x=>x.current&&x.wrestlerId===w.id);
+ if(signed)return {label:label+' signed',ok:true,text:'<a href="/waiver-copy?id='+encodeURIComponent(signed.id)+'" target="_blank" rel="noopener">View copy</a>'};
  // The academy asked for it to be signed again (issue #239): say so, with its reason, and keep the earlier copy at hand.
- const asked=!s&&info.signatures.find(x=>x.replaced&&x.versionId===doc.id&&x.wrestlerId===w.id);
- const again=asked?'<span class="billing-pill warning">Sign the '+(label==='Waiver'?'waiver':label)+' again</span> The academy asked you to sign it again: '+esc(asked.replaced.reason)+' <a href="/waiver-copy?id='+encodeURIComponent(asked.id)+'" target="_blank" rel="noopener">Earlier copy</a> ':'';
- return s?'<span class="billing-pill active">'+label+' signed</span> <a href="/waiver-copy?id='+encodeURIComponent(s.id)+'" target="_blank" rel="noopener">View copy</a>':(again||'<span class="billing-pill warning">'+label+' not signed</span> ')+(info.exceptions&&info.exceptions[w.id]?'The academy is allowing bookings until '+esc(longDate(info.exceptions[w.id]))+'.':'<strong>Booking is blocked until it is signed.</strong>')+' <a href="'+page+'?wrestler='+encodeURIComponent(w.id)+'">'+action+' →</a>';
+ const asked=info.signatures.find(x=>x.replaced&&x.versionId===doc.id&&x.wrestlerId===w.id);
+ const again=asked?'The academy asked you to sign it again: '+esc(asked.replaced.reason)+' <a href="/waiver-copy?id='+encodeURIComponent(asked.id)+'" target="_blank" rel="noopener">Earlier copy</a> ':'';
+ return {label:asked?'Sign the '+(label==='Waiver'?'waiver':label)+' again':label+' not signed',ok:false,text:again+(info.exceptions&&info.exceptions[w.id]?'The academy is allowing bookings until '+esc(longDate(info.exceptions[w.id]))+'.':'<strong>Booking is blocked until it is signed.</strong>')+' <a href="'+page+'?wrestler='+encodeURIComponent(w.id)+'">'+action+' →</a>'};
 }
+const docPill=(label,ok)=>'<span class="pill '+(ok?'ok':'warn')+'">'+(ok?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>':'')+label+'</span>';
 async function refreshCards(){try{const r=await fetch('/api/family',{cache:'no-store'}),d=await r.json();if(r.ok){cards=d.cards||{};refreshHome()}}catch{}}
 // Redraws what depends on cards, waivers, orders and scholarships once each of them arrives.
 function refreshHome(){if(!$('summary').hidden)showSummary();else renderHome()}
-// Membership line for a wrestler's panel: scholarship, membership or nothing yet.
-function membershipLine(w){
+// Membership for the wrestler card: a short line beside the grade, and a sentence only when there is something to do.
+function membershipStatus(w){
  const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
  const a=scholarshipAwards.find(a=>a.wrestler_id===w.id&&a.status==='active');
- if(a)return '<span class="billing-pill active">Scholarship</span> '+esc(names[a.program]||a.program)+', no tuition.';
+ if(a)return {label:'Scholarship',ok:true,short:esc(names[a.program]||a.program)+' scholarship, no tuition',text:''};
  const m=activeMembership(w);
- if(m)return '<span class="billing-pill '+(m.subscription_status==='past_due'?'warning':'active')+'">'+(m.subscription_status==='past_due'?'Payment needs attention':'Member')+'</span> '+esc(names[m.program]||m.program)+', 12-month membership through '+esc(longDate(m.membership_end||m.term_end))+'.';
- return '<span class="billing-pill">No membership</span> Not signed up for a membership yet. <a href="/register?wrestler='+encodeURIComponent(w.id)+'">Choose training →</a>';
+ if(m&&m.subscription_status==='past_due')return {label:'Payment needs attention',ok:false,short:esc(names[m.program]||m.program)+' member through '+esc(longDate(m.membership_end||m.term_end)),text:'<strong>Payment needs attention.</strong> The latest monthly payment did not go through. See <a href="#memberships">Memberships</a>.'};
+ if(m)return {label:'Member',ok:true,short:esc(names[m.program]||m.program)+' member through '+esc(longDate(m.membership_end||m.term_end)),text:''};
+ return {label:'No membership',ok:false,short:'No membership yet',text:'Not signed up for a membership yet. <a href="/register?wrestler='+encodeURIComponent(w.id)+'">Choose training →</a>'};
 }
+function membershipLine(w){const s=membershipStatus(w);return pill(s.label,s.ok)+' '+(s.text||s.short+'.')}
 // Guided start (issue #132): four steps for a family that isn't set up yet, each checked off from saved data only.
 function setupSteps(){
  const saved=savedProfile||{parentName:'',phone:'',wrestlers:[]},kids=saved.wrestlers||[];
@@ -338,10 +391,10 @@ function setupSteps(){
  // do not change; the family is only asked to check it.
  const toCheck=kids.filter(w=>!noCard.includes(w)&&cardFlagged(cardState(w)));
  const steps=[
-  {key:'details',title:'Your details',done:details,text:details?'Your name and phone number are saved.':'Add your name and phone number so the academy can reach you.',button:'<button type="button" onclick="startDetails()">Add your details</button>'},
+  {key:'details',title:'Your details',done:details,text:details?'Your name and phone number are saved.':'Add your name and phone number so the academy can reach you.',button:'<button type="button" data-action="start-details">Add your details</button>'},
   {key:'wrestler',title:'Your wrestler and USA Wrestling card',done:kids.length>0&&!noCard.length&&!toCheck.length,
    text:!kids.length?'Add each wrestler with their grade, USA Wrestling card number and the card’s season.':noCard.length?esc(noCard.map(w=>w.name).join(', '))+(noCard.length===1?' needs':' need')+' a current USA Wrestling card before booking.':toCheck.length?'Check the USA Wrestling card for '+esc(toCheck.map(w=>w.name).join(', '))+'. See the note under '+(toCheck.length===1?'that wrestler':'each wrestler')+'.':'Every wrestler has a current USA Wrestling card.',
-   button:'<button type="button" onclick="startWrestler()">'+(!kids.length?'Add a wrestler':!noCard.length&&toCheck.length?'Check the card':'Add the card')+'</button>'}
+   button:'<button type="button" data-action="start-wrestler">'+(!kids.length?'Add a wrestler':!noCard.length&&toCheck.length?'Check the card':'Add the card')+'</button>'}
  ];
  if(waiverInfo&&waiverInfo.waiver){
   const unsigned=kids.filter(w=>!waiverInfo.signatures.some(x=>x.current&&x.wrestlerId===w.id));
@@ -380,46 +433,80 @@ const sessionName=s=>s.type==='practice'?s.title+' practice':s.title;
 // Booked to pay cash at the academy and not paid yet (issue #248): "Pay at the academy: $40.00 due".
 const dueText=s=>typeof s.dueCents==='number'?'Pay at the academy: '+dollars(s.dueCents)+' due':'';
 const why={Membership:'Included in the membership',Scholarship:'Included in the scholarship','Walk-in':'Walk-in',Paid:'Paid',Registered:'Registered'};
+const whyShort={Membership:'membership',Scholarship:'scholarship','Walk-in':'walk-in',Paid:'paid',Registered:'registered','Pay at the academy':'pay at the academy'};
+const typeLabel={live:'Extra practice',event:'Camp / event',lesson:'Lesson'};
+// The academy's address (website settings when saved, else the academy's fixed address), for Directions.
+let contact=null;
+async function loadContact(){try{const r=await fetch('/api/interest',{cache:'no-store'}),d=await r.json();if(r.ok&&d.contact&&d.contact.address){contact=d.contact;renderHome()}}catch{}}
+const directions=()=>contact&&contact.address?'<a class="button" href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(contact.address)+'" target="_blank" rel="noopener">Directions</a>':'';
 function renderNextUp(setUp){
  const next=upcoming[0];
  $('nextUp').hidden=!upcomingLoaded||!(next||setUp);
  if($('nextUp').hidden)return;
- if(!next){$('nextUpBody').innerHTML='<p>Nothing is booked for the next three weeks.</p><p><a class="button" href="/calendar">See the calendar</a></p>';return}
- const same=upcoming.filter(s=>s.date===next.date&&s.start===next.start&&s.title===next.title).map(s=>s.wrestler);
- $('nextUpBody').innerHTML='<p class="next-when">'+esc(dayTime(next.date,next.start))+'</p><p class="next-what"><strong>'+esc(sessionName(next))+'</strong> · '+esc([...new Set(same)].join(', '))+'<br><span class="muted">'+esc(dueText(next)||why[next.why]||next.why||'')+(next.end?' · ends '+esc(clock(next.end)):'')+'</span></p><a class="button primary" href="/pass?wrestler='+encodeURIComponent(next.wrestlerId)+'">Show entry pass</a>'
-  +(upcoming.length>1?'<ul class="later" aria-label="Also coming up">'+upcoming.slice(1,4).map(x=>'<li><b>'+esc(dayTime(x.date,x.start))+'</b><span>'+esc(sessionName(x))+' · '+esc(x.wrestler)+'</span></li>').join('')+'</ul>':'');
+ if(!next){$('nextUpBody').innerHTML='<div class="empty"><p>Nothing is booked for the next three weeks.</p><a class="button" href="/calendar">See the calendar</a></div>';return}
+ const same=upcoming.filter(s=>s.date===next.date&&s.start===next.start&&s.title===next.title).map(s=>s.wrestler),day=dayName(next.date);
+ $('nextUpBody').innerHTML='<p class="next-day">'+(day==='Today'?'<b class="today">Today</b>':esc(day))+'</p><p class="next-when swa-figure">'+esc(clock(next.start)||'All day')+'</p><p class="next-what"><strong>'+esc(sessionName(next))+'</strong> <span>· '+esc([...new Set(same)].join(', '))+'</span></p><p class="next-meta">'+esc(dueText(next)||why[next.why]||next.why||'')+(next.end?' · ends '+esc(clock(next.end)):'')+'</p>'
+  +'<div class="next-actions"><a class="button primary" href="/pass?wrestler='+encodeURIComponent(next.wrestlerId)+'">Show entry pass</a>'+directions()+'</div>';
+}
+// This week: the next four sessions after the one in Next up, within seven days, and a link to the rest.
+function renderWeek(){
+ const kids=(savedProfile&&savedProfile.wrestlers)||[];
+ $('week').hidden=!savedProfile||!kids.length||!upcomingLoaded||!upcoming.length;
+ if($('week').hidden)return;
+ const until=addDays(academyDay(),7),rows=upcoming.slice(1).filter(s=>s.date<=until).slice(0,4);
+ $('weekRows').innerHTML=rows.length?'<ul class="swa-rows">'+rows.map(x=>'<li><div class="d">'+esc(dayName(x.date))+'<small>'+esc(clock(x.start)||'All day')+'</small></div><div class="t">'+esc(sessionName(x))+'<small>'+esc(x.wrestler)+' · '+esc(typeof x.dueCents==='number'?dollars(x.dueCents)+' due at the academy':whyShort[x.why]||String(x.why||'').toLowerCase())+'</small></div><div class="r">'+esc(typeLabel[x.type]||'')+'</div></li>').join('')+'</ul>':'<div class="empty"><p>Nothing else this week.</p></div>';
+ const more=$('weekMore');if(kids.length===1){more.href='/wrestler?id='+encodeURIComponent(kids[0].id);more.textContent='All of '+firstName(kids[0].name)+'’s sessions →'}else{more.href='/calendar';more.textContent='See the calendar →'}
+}
+// Book: three equal doors. The walk-in price and what is coming up come from the public schedule.
+let schedule=null;
+async function loadSchedule(){try{const r=await fetch('/api/public-schedule',{cache:'no-store'}),d=await r.json();if(r.ok){schedule=d;renderHome()}}catch{}}
+const ICON_WALK='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
+const ICON_LESSON='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>';
+const ICON_CAMP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></svg>';
+function renderDoors(){
+ $('book').hidden=!savedProfile;
+ if($('book').hidden)return;
+ const prices=((schedule&&schedule.programs)||[]).map(p=>p.walkInCents).filter(c=>typeof c==='number'),walk=prices.length?dollars(Math.min(...prices))+' a practice':'One practice';
+ const today=academyDay(),events=((schedule&&schedule.events)||[]).filter(e=>(e.dates||[]).some(d=>d>=today)),live=((schedule&&schedule.liveClasses)||[]).filter(c=>c.date>=today);
+ const soon=events.length?events.length+(events.length===1?' coming up':' coming up'):live.length?live[0].name+' '+dayName(live[0].date):'See what is coming up';
+ $('doors').innerHTML='<a class="swa-door" href="/register?plan=walkin">'+ICON_WALK+'Walk-in practice<small>'+esc(walk)+'</small></a><a class="swa-door" href="/lesson">'+ICON_LESSON+'Private lesson<small>One-on-one or a small group</small></a><a class="swa-door" href="/calendar#comingUp">'+ICON_CAMP+'Camps &amp; events<small>'+esc(soon)+'</small></a>';
+}
+// Payments: what is due at the academy and how many payments are on record.
+function renderMoney(){
+ $('payments').hidden=!savedProfile;
+ if($('payments').hidden)return;
+ const due=cashBookings.reduce((n,b)=>n+(Number(b.amountCents)||0),0),paid=orders.filter(o=>o.status==='paid').length;
+ $('moneyLine').innerHTML='<div><div class="amt'+(due?' due':'')+'">'+dollars(due)+'</div><div class="lbl">due at the academy</div></div><div><div class="amt">'+paid+'</div><div class="lbl">'+(paid===1?'payment':'payments')+' on record</div></div>';
 }
 function renderHome(){
  const name=String((savedProfile||{}).parentName||'').trim().split(/\s+/)[0];
  $('hello').textContent=name?'Hi, '+name:'Welcome';
- const setUp=renderStart();renderNextUp(setUp);
+ $('heroLede').textContent=todayLabel();
+ const setUp=renderStart();renderNextUp(setUp);renderWeek();renderDoors();renderMoney();
  // Families who saved before these details were required (issue #188) are asked to finish them. Nothing is blocked.
  const missing=savedProfile?missingDetails(savedProfile):[];$('finishDetails').hidden=!missing.length;
  if(missing.length)$('finishText').textContent='The academy now asks every family for a home address, an emergency contact, and each wrestler’s birth date and any allergies or medical notes, so coaches can look after your wrestler at practice. Still to add: '+missing.join(', ')+'.';
- $('heroLede').textContent=setUp?'':'A few quick steps and your wrestler is ready for the mat.';
- // A family with nothing saved or paid yet doesn't need empty membership, purchase and data sections.
+ $('contacts').hidden=!savedProfile||!$('editor').hidden;
+ // A family with nothing saved or paid yet doesn't need empty membership and purchase sections.
  const fresh=!savedProfile&&!orders.length&&!scholarshipAwards.length&&!cashBookings.length;
- for(const id of ['memberships','purchaseHistory','yourData'])$(id).hidden=fresh;
- $('membershipsLink').hidden=$('purchasesLink').hidden=$('yourDataLink').hidden=fresh;
+ for(const id of ['memberships','purchases'])$(id).hidden=fresh;
 }
 let orders=[],cashBookings=[];
 // Dates read "Nov 9, 2026"; moments read "Mon, Nov 9 · 3:00 PM" in New York time (issue #127).
 const longDate=d=>d?new Date(String(d).length===10?d+'T12:00:00Z':d).toLocaleDateString('en-US',{timeZone:String(d).length===10?'UTC':'America/New_York',month:'short',day:'numeric',year:'numeric'}):'';
-const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
+const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
 const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(String(t||''));if(!m)return '';const h=Number(m[1]);return (h%12||12)+':'+m[2]+' '+(h<12?'AM':'PM')};
 const dayTime=(d,t)=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'})+(t?' · '+clock(t):'');
+const addDays=(d,n)=>new Date(Date.parse(d+'T12:00:00Z')+n*864e5).toISOString().slice(0,10);
+// "Today", "Tomorrow", else "Mon, Nov 9", as the wrestler view says it.
+const dayName=d=>{const t=academyDay();return d===t?'Today':d===addDays(t,1)?'Tomorrow':dayTime(d)};
+const todayLabel=()=>new Date().toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'long',month:'short',day:'numeric'});
 const dollars=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(c||0)/100);
 async function loadOrders(){try{const r=await fetch('/api/orders',{cache:'no-store'}),d=await r.json();if(!r.ok)return;orders=Array.isArray(d.orders)?d.orders:[];cashBookings=Array.isArray(d.cashBookings)?d.cashBookings:[];checkoutOpen=d.checkoutOpen===true;renderMembershipCards();renderPurchases();renderStatusCopy();refreshHome()}catch{}}
-// Wording that depends on whether online payment is open and whether this family has paid for anything.
+// Wording that depends on whether online payment is open.
 let checkoutOpen=false;
 function renderStatusCopy(){
- const paid=orders.some(o=>o.status==='paid');
- if(checkoutOpen){
-  $('readyNote').textContent='Choose a 12-month membership, a walk-in, Friday Night Live or a camp, and pay securely online.';
-  $('editorNotice').textContent='Add your name, phone number and each wrestler, then choose Save family profile. You can then choose a membership, walk-in or camp and pay online.';
- }
- if(paid)$('notEnrolledNote').hidden=true;
- else if(checkoutOpen)$('notEnrolledNote').innerHTML='<strong>No membership has been purchased yet.</strong> Choose one below when you are ready.';
+ if(checkoutOpen)$('editorNotice').textContent='Add your name, phone number and each wrestler, then choose Save family profile. You can then choose a membership, walk-in or camp and pay online.';
 }
 function activeMembership(w){const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});return orders.find(o=>o.wrestler_id===w.id&&o.status==='paid'&&(o.kind==='annual'||o.kind==='monthly')&&o.term_start<=today&&o.term_end>=today)}
 // Walk-ins and extra practices booked to pay cash at the academy (issue #248) come first, with the amount due and, until
@@ -427,25 +514,26 @@ function activeMembership(w){const today=new Date().toLocaleDateString('en-CA',{
 // A camp covers several days (issue #273); the cash is brought on the first day. Once the session has started, the line says
 // why Cancel is gone instead of leaving the amount due with no way to change it.
 function cashItem(b){const days=Array.isArray(b.dates)&&b.dates.length>1?b.dates.map(d=>dayTime(d)).join(' · '):dayTime(b.date,b.start),where=b.kind==='live'?'session':b.kind==='event'?'academy on the first day':'practice';
- return `<article class="purchase-item cash-due"><div class="purchase-top"><div><h4>${esc(b.item)}</h4><span class="billing-pill warning">Pay at the academy</span></div><strong class="due">${dollars(b.amountCents)} due</strong></div><p>${esc(b.wrestler)}<br>${esc(days)}</p><p class="muted">${esc(b.label)}. ${b.past?'The academy will follow up with you about this payment.':'Bring the cash to the '+where+'.'+(b.cancellable?' You can cancel until it starts; nothing is charged.':b.cancelBlocked?' '+esc(b.cancelBlocked):'')}</p>${b.cancellable?`<button type="button" data-cash-cancel="${esc(b.id)}">Cancel booking</button>`:''}</article>`}
-async function cancelCash(id){const b=cashBookings.find(x=>x.id===id);if(!b||!confirm('Cancel '+b.wrestler+'’s booking for '+b.item+'? Nothing is charged.'))return;try{const r=await fetch('/api/cash-bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel',id})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not cancel. Please try again.');cashBookings=d.bookings||[];renderPurchases();refreshHome();loadNextUp();$('status').textContent='Booking canceled. Nothing was charged.'}catch(e){$('status').textContent=e.message}}
+ return `<tr class="cash-due"><td><strong>${esc(b.item)}</strong><small>${esc(days)}</small></td><td data-label="Wrestler">${esc(b.wrestler)}</td><td data-label="Status"><span class="pill warn">Pay at the academy</span><small>${esc(b.label)}. ${b.past?'The academy will follow up with you about this payment.':'Bring the cash to the '+where+'.'+(b.cancellable?' You can cancel until it starts; nothing is charged.':b.cancelBlocked?' '+esc(b.cancelBlocked):'')}</small>${b.cancellable?`<button type="button" class="sm" data-cash-cancel="${esc(b.id)}">Cancel booking</button>`:''}</td><td class="num"><strong class="due">${dollars(b.amountCents)} due</strong></td></tr>`}
+async function cancelCash(id){const b=cashBookings.find(x=>x.id===id);if(!b||!confirm('Cancel '+b.wrestler+'’s booking for '+b.item+'? Nothing is charged.'))return;try{const r=await fetch('/api/cash-bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel',id})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not cancel. Please try again.');cashBookings=d.bookings||[];renderPurchases();refreshHome();loadNextUp();toast('Booking canceled. Nothing was charged.')}catch(e){$('status').textContent=e.message}}
 // Cash handed over at the academy (issue #250) reads "Paid in cash at the academy"; who took it is for the academy only.
 const paidText=o=>(o.paid_in_cash?'Paid in cash at the academy on ':'Paid ')+esc(longDate(o.paid_at));
+// Purchases as one table (issue #282): the purchase, who it was for, its status, the amount. On a phone each row is two lines.
 function renderPurchases(){
- if((!Array.isArray(orders)||!orders.length)&&!cashBookings.length){$('purchaseList').innerHTML='<div class="empty-billing"><h3>No purchases yet</h3><p>Looking over a registration doesn’t charge you or hold a spot. Each payment shows here with its date and amount after you pay.</p></div>';return}
- const label={paid:'Paid',refunded:'Refunded',pending:'Checkout not finished'},cls={paid:'active',refunded:'',pending:'warning'};
- $('purchaseList').innerHTML=cashBookings.map(cashItem).join('')+orders.map(o=>`<article class="purchase-item"><div class="purchase-top"><div><h4>${esc(o.item_label)}</h4><span class="billing-pill ${cls[o.status]||''}">${esc(label[o.status]||o.status)}</span></div><strong>${dollars(o.amount_cents)}</strong></div><p>${esc(o.wrestler_name)}${o.dates&&o.dates.length?'<br>'+o.dates.map(longDate).map(esc).join(' · '):''}${o.discount_cents?'<br>Includes '+dollars(o.discount_cents)+' discount':''}</p><p class="muted">${o.status==='paid'?paidText(o):o.status==='refunded'?'Refunded after payment on '+esc(longDate(o.paid_at)):'Started '+esc(longDate(o.created_at))+'. Nothing has been charged.'}</p></article>`).join('');
+ if((!Array.isArray(orders)||!orders.length)&&!cashBookings.length){$('purchaseList').innerHTML='<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16l-3-2-3 2-3-2-3 2-3-2z"/><path d="M8 9h8M8 13h5"/></svg><p>No purchases yet. Looking over a registration doesn’t charge you or hold a spot; each payment shows here with its date and amount after you pay.</p></div>';return}
+ const label={paid:'Paid',refunded:'Refunded',pending:'Checkout not finished'},cls={paid:'ok',refunded:'neutral',pending:'warn'};
+ $('purchaseList').innerHTML='<table class="swa-table"><thead><tr><th>Purchase</th><th>Wrestler</th><th>Status</th><th class="num">Amount</th></tr></thead><tbody>'+cashBookings.map(cashItem).join('')+orders.map(o=>`<tr><td><strong>${esc(o.item_label)}</strong>${o.dates&&o.dates.length?'<small>'+o.dates.map(longDate).map(esc).join(' · ')+'</small>':''}${o.discount_cents?'<small>Includes '+dollars(o.discount_cents)+' discount</small>':''}</td><td data-label="Wrestler">${esc(o.wrestler_name)}</td><td data-label="Status"><span class="pill ${cls[o.status]||'neutral'}">${esc(label[o.status]||o.status)}</span><small class="muted">${o.status==='paid'?paidText(o):o.status==='refunded'?'Refunded after payment on '+esc(longDate(o.paid_at)):'Started '+esc(longDate(o.created_at))+'. Nothing has been charged.'}</small></td><td class="num"><strong>${dollars(o.amount_cents)}</strong></td></tr>`).join('')+'</tbody></table>';
  document.querySelectorAll('[data-cash-cancel]').forEach(b=>b.onclick=()=>cancelCash(b.dataset.cashCancel));
 }
 function renderMembershipCards(){
  const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
  $('membershipCards').innerHTML=profile.wrestlers.length?profile.wrestlers.map(w=>{
   const a=scholarshipAwards.find(a=>a.wrestler_id===w.id&&a.status==='active');
-  if(a)return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="billing-pill active">Active scholarship</span></div><p>${esc(names[a.program])} · <strong>$0.00 tuition</strong></p><p>Started ${esc(longDate(a.accepted_at))}. The scholarship continues under the agreement you accepted until it ends.</p><p class="billing-note">Additional paid practices, camps, clinics, travel, and private lessons are separate unless included in the final award.</p><details><summary>View your signed agreement</summary><p><a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View / print signed copy →</a> · <a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}&amp;download=1">Download copy</a></p><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(a.terms_text)}</p><p>Accepted by ${esc(a.signer)}.</p></details></article>`;
+  if(a)return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="pill ok">Active scholarship</span></div><p>${esc(names[a.program])} · <strong>$0.00 tuition</strong></p><p>Started ${esc(longDate(a.accepted_at))}. The scholarship continues under the agreement you accepted until it ends.</p><p class="billing-note">Additional paid practices, camps, clinics, travel, and private lessons are separate unless included in the final award.</p><details><summary>View your signed agreement</summary><p><a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View / print signed copy →</a> · <a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}&amp;download=1">Download copy</a></p><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(a.terms_text)}</p><p>Accepted by ${esc(a.signer)}.</p></details></article>`;
   const m=activeMembership(w);
-  if(m)return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="billing-pill ${m.subscription_status==='past_due'?'warning':'active'}">${m.subscription_status==='past_due'?'Payment needs attention':'Active membership'}</span></div><p>${esc(names[m.program]||m.program)} · 12-month membership</p><dl class="member-details"><div><dt>Membership started</dt><dd>${esc(longDate(m.term_start))}</dd></div><div><dt>12-month term ends</dt><dd>${esc(longDate(m.membership_end||m.term_end))}</dd></div><div><dt>Payment</dt><dd>${m.kind==='annual'?dollars(m.amount_cents)+' paid upfront on '+esc(longDate(m.paid_at)):dollars(m.amount_cents)+' a month · '+esc(m.payments_made??1)+' of '+esc(m.payments_total??12)+' payments made'}</dd></div>${m.kind==='monthly'?`<div><dt>Paid through</dt><dd>${esc(longDate(m.paid_through||m.term_end))}</dd></div>`:''}</dl>${m.subscription_status==='past_due'?'<p class="notice"><strong>Payment needs attention.</strong> The latest monthly payment did not go through. Stripe will try the card again; '+esc(w.name)+' can still come to practice through '+esc(longDate(m.term_end||m.paid_through))+'. After that the membership pauses until a payment goes through.</p>':''}<p class="billing-note">The membership ends after 12 months. Continuing requires a new signup. Friday Night Live, camps, clinics and private lessons are separate purchases.</p></article>`;
-  return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="billing-pill">Not enrolled</span></div><p class="muted">${esc(gradeLabel(w.grade))}</p><p>No membership is recorded for this wrestler yet, so there is no start date or next payment.</p><div class="billing-actions"><a class="button" href="/register?plan=monthly&amp;wrestler=${encodeURIComponent(w.id)}">12 months, pay monthly →</a><a class="button" href="/register?plan=walkin&amp;wrestler=${encodeURIComponent(w.id)}">One practice, walk-in →</a></div></article>`;
- }).join(''):'<div class="empty-billing"><h3>Add your wrestler to get started</h3><p>Save a wrestler in your family profile, then choose a program. A profile alone does not start a membership.</p></div>';
+  if(m)return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="pill ${m.subscription_status==='past_due'?'warn':'ok'}">${m.subscription_status==='past_due'?'Payment needs attention':'Active membership'}</span></div><p>${esc(names[m.program]||m.program)} · 12-month membership</p><dl class="member-details"><div><dt>Membership started</dt><dd>${esc(longDate(m.term_start))}</dd></div><div><dt>12-month term ends</dt><dd>${esc(longDate(m.membership_end||m.term_end))}</dd></div><div><dt>Payment</dt><dd>${m.kind==='annual'?dollars(m.amount_cents)+' paid upfront on '+esc(longDate(m.paid_at)):dollars(m.amount_cents)+' a month · '+esc(m.payments_made??1)+' of '+esc(m.payments_total??12)+' payments made'}</dd></div>${m.kind==='monthly'?`<div><dt>Paid through</dt><dd>${esc(longDate(m.paid_through||m.term_end))}</dd></div>`:''}</dl>${m.subscription_status==='past_due'?'<p class="notice"><strong>Payment needs attention.</strong> The latest monthly payment did not go through. Stripe will try the card again; '+esc(w.name)+' can still come to practice through '+esc(longDate(m.term_end||m.paid_through))+'. After that the membership pauses until a payment goes through.</p>':''}<p class="billing-note">The membership ends after 12 months. Continuing requires a new signup. Friday Night Live, camps, clinics and private lessons are separate purchases.</p></article>`;
+  return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="pill neutral">Not enrolled</span></div><p class="muted">${esc(gradeLabel(w.grade))}</p><p>No membership is recorded for this wrestler yet, so there is no start date or next payment.</p><div class="billing-actions"><a class="button" href="/register?plan=monthly&amp;wrestler=${encodeURIComponent(w.id)}">12 months, pay monthly →</a><a class="button" href="/register?plan=walkin&amp;wrestler=${encodeURIComponent(w.id)}">One practice, walk-in →</a></div></article>`;
+ }).join(''):'<div class="empty"><p>Add your wrestler to get started. Save a wrestler in your family profile, then choose a program; a profile alone does not start a membership.</p></div>';
  // "Paid" beside Memberships only while a wrestler has an active membership in good standing (issue #231): a paid
  // lesson, camp or walk-in is not a membership, and a past-due one says "Payment needs attention" on its card.
  $('paymentsPill').hidden=!profile.wrestlers.some(w=>{const m=activeMembership(w);return m&&m.subscription_status!=='past_due'});
@@ -453,7 +541,8 @@ function renderMembershipCards(){
  if(history.length)$('membershipCards').innerHTML+='<h3>Past scholarship agreements</h3>'+history.map(a=>`<p>${esc(a.wrestler_name)} · ${esc(a.status)}<br><a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View / print signed copy →</a> · <a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}&amp;download=1">Download copy</a></p>`).join('');
 
 }
-async function signout(){const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(r.ok)location.href='/login';else $('status').textContent='Sign-out failed. Please try again.'}async function checkoutReturn(){
+async function signout(){const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(r.ok)location.href='/login';else $('status').textContent='Sign-out failed. Please try again.'}
+async function checkoutReturn(){
  const q=new URLSearchParams((location&&location.search)||''),state=q.get('checkout'),id=q.get('order');
  if(!state||!id||!/^[0-9a-f-]{36}$/.test(id))return;
  if(state==='canceled'){$('status').textContent='Checkout canceled. Nothing was charged.';return}
@@ -466,10 +555,17 @@ async function signout(){const r=await fetch('/api/auth',{method:'POST',headers:
  }
  $('status').textContent='Stripe has your payment, and confirmation is taking longer than usual. Refresh this page in a minute. You will not be charged twice.';
 }
+// Buttons act through data-action, so the page runs under the script nonce policy (issue #274) with no inline handlers.
+const ACTIONS={signout,edit:editProfile,'cancel-edit':cancelProfileEdit,'add-wrestler':addAnother,'add-wrestler-form':addWrestler,'start-details':startDetails,'start-wrestler':startWrestler,'start-safety':startSafety,'close-account':showClose,'check-card':b=>checkMyCard(b.dataset.wrestler),'remove-wrestler':b=>removeWrestler(Number(b.dataset.index))};
+if(typeof document.addEventListener==='function'){
+ document.addEventListener('click',e=>{const b=e.target&&e.target.closest?e.target.closest('[data-action]'):null;if(!b)return;const fn=ACTIONS[b.dataset.action];if(fn){e.preventDefault();fn(b)}});
+ document.addEventListener('change',e=>{const t=e.target,d=t&&t.dataset;if(!d)return;if(d.notes!==undefined)notesNone(Number(d.notes));if(d.season!==undefined)seasonPicked(Number(d.season))});
+}
 // Show the checkout result after the profile loads, so the load message does not overwrite it.
 loadFamily().then(checkoutReturn);
-// Data requests (issue #113).
+// Data requests (issue #113): "Ask to close my account" in the Account menu opens the request card.
+function showClose(){$('accountMenu').open=false;$('yourData').hidden=false;const box=$('yourData');if(box.scrollIntoView)box.scrollIntoView({behavior:'smooth',block:'start'});const note=$('closeNote');if(note&&note.focus)note.focus({preventScroll:true})}
 async function loadRequests(){try{const r=await fetch('/api/my-data',{cache:'no-store'}),d=await r.json();if(r.ok)showRequests(d.requests||[])}catch{}}
-function showRequests(list){const open=list.find(x=>x.status==='open'),done=list.find(x=>x.status==='handled');$('requestStatus').textContent=open?'Your request to close your account was sent on '+longDate(open.created_at)+'. The academy will contact you.':done?'The academy has handled your earlier request. Their note: '+done.resolution:''}
+function showRequests(list){const open=list.find(x=>x.status==='open'),done=list.find(x=>x.status==='handled');$('requestStatus').textContent=open?'Your request to close your account was sent on '+longDate(open.created_at)+'. The academy will contact you.':done?'The academy has handled your earlier request. Their note: '+done.resolution:'';if(open||done)$('yourData').hidden=false}
 $('closeForm').onsubmit=async e=>{e.preventDefault();if(!confirm('Send a request to close your family account? The academy will contact you before anything is removed.'))return;try{const r=await fetch('/api/my-data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'close',note:$('closeNote').value})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not send the request.');showRequests(d.requests);$('closeNote').value=''}catch(err){$('requestStatus').textContent=err.message}};
 </script></body></html>

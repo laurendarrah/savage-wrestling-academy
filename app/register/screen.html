@@ -1,164 +1,156 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Choose your training | Savage Wrestling Academy LLC</title><style>
-/* Choose training (issue #144): the shared black header band (.swa-head in public/savage.css, issue #231), then one
-   white card per step, and a black bar with the price and the page's one red button. */
+/* Choose training (issue #144; redesign Phase 2, issue #282): the title row, then three steps in one column with the
+   price and the page's one red button beside them on a desk (a sticky summary) and under the thumb on a phone (a dark
+   bar). The wrestler is a chip row, the plan a two-way segmented control, the day grid is ink with red only on the
+   chosen day, and the review is its own receipt screen above one Confirm. */
 *{box-sizing:border-box}
-body{margin:0;background:var(--swa-ground);color:#141416}
-html body main{max-width:var(--swa-width-narrow);margin:0 auto;padding:0 16px 40px}
+body{margin:0;background:var(--swa-ground);color:var(--swa-ink)}
+html body main{max-width:var(--swa-width-wide);margin:0 auto;padding:0 16px 40px}
 [hidden]{display:none!important}
-/* The band's small label stays small (the shared band sizes its paragraphs for the intro) */
-
-.paynote{margin:0 0 16px;padding:12px 16px;background:#fff;border:1px solid #E1E3E8;border-left:3px solid var(--swa-silver);border-radius:6px;font-size:15px;color:#3A3D44}
-#status{font-weight:600;margin:0 0 14px}
+/* One line about paying, under the title row */
+.paynote{margin:0 0 var(--swa-s-16);font-size:var(--swa-t-15);color:var(--swa-muted);max-width:70ch}
+#status{font-weight:600;font-size:var(--swa-t-15);color:var(--swa-muted);margin:0 0 14px}
 #cardHelp,#waiverHelp{margin:-6px 0 14px;font-weight:600}
-/* Steps: each one is its own card with a numbered heading. */
-html body main>section#choices{background:none;border:0;padding:0;margin:0}
-html body .step{background:#fff;border:1px solid #E1E3E8;border-radius:8px;padding:24px;margin:0 0 16px;min-width:0}
-.step-head{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:0}
-.step-head .num{flex:none;width:30px;height:30px;border-radius:50%;background:#141416;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:17px}
-html body .step-head h2,.step-head .h2{margin:0;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.3px;font-size:clamp(22px,4.4vw,26px);line-height:1.1}
-.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* Steps on the left, the summary on the right */
+html body main>section#choices{background:none;border:0;padding:0;margin:0;box-shadow:none}
+.reg{display:grid;gap:var(--swa-s-16);align-items:start}
+.reg-steps{min-width:0}
+html body .step{background:var(--swa-surface);border:1px solid var(--swa-hair);border-radius:var(--swa-r-card);box-shadow:var(--swa-shadow);padding:var(--swa-s-16);margin:0 0 var(--swa-s-16);min-width:0}
+.step-head{display:flex;align-items:center;gap:12px;margin:0 0 var(--swa-s-16);padding:0}
+.step-head .num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--swa-ink);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--swa-display);font-weight:800;font-size:15px}
+html body .step-head h2,.step-head .h2{margin:0}
 label{display:block;margin:0}
 select,input{display:block;width:100%;margin-top:6px}
-.about{margin:16px 0 0;padding:14px 16px;background:#F7F8FA;border-radius:6px}
+.field{margin:var(--swa-s-16) 0 0}
+.field>span,.field-label{display:block;font-weight:600;font-size:var(--swa-t-15);margin:0 0 var(--swa-s-8)}
+.about{margin:16px 0 0;padding:12px 16px;background:var(--swa-surface-2);border-radius:var(--swa-r-control)}
 .about:has(#description:empty):has(#grades:empty){display:none}
 .about p{margin:0}
-#description{color:#2A2D33}
-#grades{font-size:15px;margin-top:6px}
+#description{color:var(--swa-ink);font-size:var(--swa-t-15)}
+#grades{font-size:var(--swa-t-13);margin-top:6px}
 #grades:empty{display:none}
-/* Plan cards */
-.plans{border:0;margin:0;min-width:0}
-.plans{padding:0}
+/* Plan: the segmented control; the hidden #plan input keeps the value */
+.plans{border:0;margin:0;min-width:0;padding:0}
 .plans legend{padding:0;width:100%}
-.plan-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-html body .plan-card{position:relative;display:flex;flex-direction:column;gap:2px;margin:0;padding:18px 18px 16px;border:1.5px solid #E1E3E8;border-radius:8px;background:#fff;cursor:pointer;font-weight:400;min-height:44px;transition:border-color .15s,box-shadow .15s}
-html body .plan-card:hover{border-color:#8A9095}
-html body .plan-card:has(input:checked){border-color:var(--swa-red);box-shadow:inset 0 0 0 1px var(--swa-red);background:#fff}
-html body .plan-card:has(input:focus-visible){outline:3px solid #141416;outline-offset:2px}
-.plan-card input{position:absolute;top:16px;right:16px;margin:0;width:22px;height:22px}
-.plan-text{display:flex;flex-direction:column;gap:4px;min-width:0;padding-right:30px}
-.plan-name{font-weight:700;font-size:15px;line-height:1.3;color:#3A3D44}
-.plan-price{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:27px;line-height:1.05;color:#141416;margin-top:6px}
-.plan-term{font-size:14px;color:var(--swa-muted)}
-#monthly{margin-top:18px}
-#teamCodeHelp{font-size:14px;margin:6px 0 0}
-.included{margin:16px 0 0;border-top:1px solid #E1E3E8}
-.included summary{cursor:pointer;font-weight:600;min-height:48px;display:flex;align-items:center;list-style:none}
-.included summary::-webkit-details-marker{display:none}
-.included summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-3px);margin-left:12px;flex:none}
-.included[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
-.included p{font-size:15px;color:#3A3D44}
-.calm{margin:18px 0 0;padding:12px 16px;border-left:3px solid var(--swa-silver);background:#F7F8FA;border-radius:0 6px 6px 0}
-#approvalGate{margin:18px 0 0;padding:18px;border:1.5px solid var(--swa-red);border-radius:8px;background:#FFF7F7}
-html body #approvalGate h2{font-size:22px;margin:0 0 6px}
+#monthly{margin-top:var(--swa-s-16)}
+#teamCodeHelp{font-size:var(--swa-t-13);margin:6px 0 0}
+.included{margin:16px 0 0;border-top:1px solid var(--swa-line)}
+.included p{font-size:var(--swa-t-15);color:var(--swa-muted)}
+.calm{margin:var(--swa-s-16) 0 0;padding:12px 16px;background:var(--swa-surface-2);border-radius:var(--swa-r-control);font-size:var(--swa-t-15);color:var(--swa-muted)}
+#approvalGate{margin:var(--swa-s-16) 0 0;padding:var(--swa-s-16);border:1px solid var(--swa-red);border-radius:var(--swa-r-control);background:var(--swa-red-soft)}
+html body #approvalGate h2{font-size:var(--swa-t-20);margin:0 0 6px}
 #approvalGate .row{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
-#approvalHelp{font-size:14px;color:var(--swa-muted);margin:0}
+#approvalHelp{font-size:var(--swa-t-13);color:var(--swa-muted);margin:0}
 /* The approval conversation sits right under the approval card (issue #273), not at the end of the page. */
 html body #approvalGate #chat{margin:16px 0 0;padding:16px 0 0;border:0;border-top:1px solid #F1C8CB;border-radius:0;background:none;box-shadow:none}
-html body #approvalGate #chat h2{font-size:20px;margin:0 0 6px}
-/* Calendar */
+html body #approvalGate #chat h2{font-size:var(--swa-t-20);margin:0 0 6px}
+/* Calendar: ink for days with a practice, red only on the chosen day, a red dot under today */
 .cal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
-.calendar-help{font-size:15px;color:var(--swa-muted);margin:0 0 4px;max-width:58ch}
-.calendar-month-input{width:210px;font-size:14px}
-.calendar-month-input select{min-height:42px;font-size:16px}
-.calendar-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:18px 0 10px}
-html body .calendar-toolbar button{width:44px;min-height:44px;padding:0;border:1.5px solid #E1E3E8;background:#fff;font-size:18px}
-html body .calendar-toolbar button:hover:not(:disabled){border-color:#141416}
-html body .calendar-toolbar h3{margin:0;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;font-size:22px;letter-spacing:.4px;text-transform:uppercase;text-align:center}
+.calendar-help{font-size:var(--swa-t-15);color:var(--swa-muted);margin:0 0 4px;max-width:58ch}
+.calendar-month-input{width:210px;font-size:var(--swa-t-13);font-weight:600}
+.calendar-month-input select{min-height:44px;font-size:16px}
+.calendar-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:var(--swa-s-16) 0 10px}
+html body .calendar-toolbar button{width:44px;min-height:44px;padding:0;font-size:18px}
+html body .calendar-toolbar h3{margin:0;font-size:var(--swa-t-17);text-align:center}
 .calendar-week,.calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
-.calendar-week span{text-align:center;font-size:12px;color:#6B7076;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 0}
-html body .calendar-day{min-width:0;min-height:56px;padding:6px 2px;border:1px solid #E1E3E8;border-radius:6px;background:#fff;color:#141416;line-height:1.2;font-weight:600;font-size:16px}
-html body .calendar-day:disabled{background:transparent;border-color:transparent;color:#A3A8AE;opacity:1;font-weight:400}
-html body .calendar-day.has-practice:hover{border-color:#141416}
-.calendar-day small{display:block;font-size:10px;margin-top:2px;color:#6B7076;font-weight:600;letter-spacing:.3px}
-.calendar-day .practice-dot{height:6px;width:6px;display:block;margin:5px auto 0;border-radius:50%;background:var(--swa-red)}
-html body .calendar-day[aria-pressed=true]{color:#fff;background:#141416;border-color:#141416}
-html body .calendar-day[aria-pressed=true] small{color:#D7DBE0}
-.calendar-legend{font-size:13px;margin:12px 0 0;color:#6B7076;display:flex;align-items:center;gap:8px}
-.calendar-legend span{display:inline-block;height:6px;width:6px;border-radius:50%;background:var(--swa-red)}
-#calendarAvailability{font-size:15px;margin:6px 0 0;color:#3A3D44}
+.calendar-week span{text-align:center;font-size:12px;color:var(--swa-muted);font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 0}
+html body .calendar-day{min-width:0;min-height:56px;padding:6px 2px 8px;border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface);color:var(--swa-ink);line-height:1.2;font-weight:700;font-size:16px;box-shadow:none;transition:border-color .15s,background-color .15s}
+html body .calendar-day:disabled{background:transparent;border-color:transparent;color:var(--swa-muted-2);opacity:1;font-weight:400;cursor:default}
+html body .calendar-day.has-practice:hover{border-color:var(--swa-ink)}
+.calendar-day small{display:block;font-size:10px;margin-top:2px;color:var(--swa-muted);font-weight:600;letter-spacing:.3px}
+html body .calendar-day[aria-pressed=true]{color:#fff;background:var(--swa-red);border-color:var(--swa-red)}
+html body .calendar-day[aria-pressed=true] small{color:rgba(255,255,255,.8)}
+/* Today: the shared underline (public/savage.css .today-mark) becomes a red dot under the number here */
+html body .calendar-day .today-mark{text-decoration:none}
+html body .calendar-day[aria-current=date]::after{content:"";display:block;width:6px;height:6px;border-radius:50%;background:var(--swa-red);margin:4px auto 0}
+html body .calendar-day[aria-current=date][aria-pressed=true]::after{background:#fff}
+.calendar-legend{font-size:var(--swa-t-13);margin:12px 0 0;color:var(--swa-muted);display:flex;align-items:center;gap:8px}
+.calendar-legend span{display:inline-block;height:12px;width:12px;border-radius:3px;background:var(--swa-surface);border:1px solid var(--swa-line)}
+#calendarAvailability{font-size:var(--swa-t-15);margin:6px 0 0;color:var(--swa-muted)}
 .practice-times{margin-top:16px}
-.practice-times h3{font-size:17px;margin:0 0 2px}
+.practice-times h3{font-size:var(--swa-t-17);margin:0 0 2px}
 .practice-times>p{margin:0 0 8px}
-html body .practice{display:block;width:100%;text-align:left;margin:8px 0;padding:14px 16px;border:1.5px solid #E1E3E8;border-radius:8px;background:#fff;color:#141416;font-weight:400;line-height:1.45}
-html body .practice:hover{border-color:#141416}
-html body .practice[aria-pressed=true]{border-color:var(--swa-red);box-shadow:inset 0 0 0 1px var(--swa-red)}
-html body .practice:disabled{background:#F7F8FA;color:var(--swa-muted);cursor:default;box-shadow:none}
-html body .practice:disabled:hover{border-color:#E1E3E8}
-.practice strong{font-size:17px}
-.practice small{color:var(--swa-muted);font-size:14px}
-.practice-selection{margin:12px 0 0;padding:12px 16px;background:#F7F8FA;border-left:3px solid #141416;border-radius:0 6px 6px 0;overflow-wrap:anywhere;font-weight:600;scroll-margin-bottom:var(--reviewbar-space)}
-.calendar-error{color:#A11B24}
+html body .practice{display:block;width:100%;text-align:left;margin:8px 0;padding:12px 16px;border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface);color:var(--swa-ink);font-weight:400;line-height:1.45;box-shadow:none}
+html body .practice:hover{border-color:var(--swa-ink)}
+html body .practice[aria-pressed=true]{border-color:var(--swa-ink);background:var(--swa-ink);color:#fff}
+html body .practice[aria-pressed=true] small{color:rgba(255,255,255,.8)}
+html body .practice:disabled{background:var(--swa-surface-2);color:var(--swa-muted);cursor:default;box-shadow:none}
+html body .practice:disabled:hover{border-color:var(--swa-line)}
+.practice strong{font-size:var(--swa-t-17)}
+.practice small{color:var(--swa-muted);font-size:var(--swa-t-13)}
+.practice-selection{margin:12px 0 0;padding:12px 16px;background:var(--swa-surface-2);border-left:3px solid var(--swa-ink);border-radius:0 8px 8px 0;overflow-wrap:anywhere;font-weight:600;scroll-margin-bottom:var(--reviewbar-space)}
+.calendar-error{color:var(--swa-red-dark)}
 /* The bar with the price and the page's one red button stays in view while choosing. The calendar step ends with room
-   for it (issue #273), so the bar never sits on the "Selected: …" line. */
+   for it (issue #273), so the bar never sits on the "Selected: …" line. On a phone it stays above the tab bar. */
 :root{--reviewbar-space:92px}
 html body .step.practice-calendar{padding-bottom:calc(24px + var(--reviewbar-space))}
-.reviewbar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;margin:4px 0 0;padding:14px 14px 14px 22px;background:#141416;color:#fff;border-radius:10px;box-shadow:0 10px 30px rgba(20,20,22,.22)}
-.reviewbar .price{margin:0;font-weight:600;font-size:16px;line-height:1.35;color:#fff;min-width:0}
-html body .reviewbar button.primary{flex:none;padding:0 22px;min-height:48px;font-size:17px}
-/* Review */
-html body main>section#review{padding:26px}
-html body #review h2{margin:0 0 14px}
-#reviewDetails>p{margin:0;padding:10px 0;border-bottom:1px solid #EEF0F3}
-#reviewDetails>p:first-child{padding-top:0}
-#reviewDetails strong{font-weight:700}
-#reviewDetails .price,#review .price{border-bottom:0;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:34px;line-height:1.1;padding-top:16px}
-#payNotice{margin:16px 0;padding:12px 16px;background:#F7F8FA;border-left:3px solid var(--swa-silver);border-radius:0 6px 6px 0}
-#payBox label{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;font-size:16px}
-#payBox label input{flex:none;margin:2px 0 0;width:22px}
-#payBox .small{font-size:14px;color:var(--swa-muted)}
+.reviewbar{position:sticky;bottom:calc(12px + var(--swa-tabs-space,0px));z-index:5;display:flex;align-items:center;justify-content:space-between;gap:16px;margin:4px 0 0;padding:14px 14px 14px 22px;background:var(--swa-dark-1);color:#fff;border:1px solid var(--swa-dark-line);border-radius:var(--swa-r-card);box-shadow:0 10px 30px rgba(20,20,22,.22)}
+.reviewbar .price{margin:0;font-weight:600;font-size:var(--swa-t-15);line-height:1.35;color:#fff;min-width:0}
+.reviewbar .price:empty::before{content:"Your selection";color:var(--swa-dark-muted)}
+html body .reviewbar button.primary{flex:none;padding:0 22px;min-height:48px}
+.reg-side .swa-label{display:none}
+@media (min-width:900px){
+ .reg{grid-template-columns:minmax(0,1fr) 320px;gap:var(--swa-s-24)}
+ .reg-side{position:sticky;top:84px}
+ .reg-side .swa-label{display:block}
+ html body .step{padding:var(--swa-s-24);margin-bottom:var(--swa-s-24)}
+ html body .step.practice-calendar{padding-bottom:var(--swa-s-24)}
+ .reviewbar{position:static;flex-direction:column;align-items:stretch;gap:var(--swa-s-16);margin:0;padding:var(--swa-s-24);background:var(--swa-surface);color:var(--swa-ink);border:1px solid var(--swa-hair);box-shadow:var(--swa-shadow)}
+ .reviewbar .price{color:var(--swa-ink);font-size:var(--swa-t-17)}
+ .reviewbar .price:empty::before{color:var(--swa-muted)}
+ html body .reviewbar button.primary{width:100%}
+}
+@media(max-width:640px){.pay-options{grid-template-columns:1fr}}
+/* Review: the receipt, one Confirm, the terms line beneath */
+html body main>section#review{max-width:var(--swa-width-narrow);padding:var(--swa-s-16)}
+html body #review h2{margin:0 0 var(--swa-s-16)}
+#payNotice{margin:var(--swa-s-16) 0 0}
+.pay-choice{border:0;margin:var(--swa-s-16) 0 0;padding:0;min-width:0}
+.pay-choice legend{padding:0;margin:0 0 var(--swa-s-8);font-weight:600;font-size:var(--swa-t-15)}
+.pay-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--swa-s-8)}
+html body .pay-option{position:relative;display:flex;flex-direction:column;gap:2px;margin:0;padding:12px 44px 12px 16px;border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface);cursor:pointer;font-weight:400;min-height:44px}
+html body .pay-option:hover{border-color:var(--swa-ink)}
+html body .pay-option:has(input:checked){border-color:var(--swa-ink);box-shadow:inset 0 0 0 1px var(--swa-ink)}
+html body .pay-option:has(input:focus-visible){outline:3px solid var(--swa-red);outline-offset:2px}
+.pay-option input{position:absolute;top:14px;right:12px;margin:0;width:22px;height:22px}
+.pay-option strong{font-size:var(--swa-t-15)}
+.pay-option small{font-size:var(--swa-t-13);color:var(--swa-muted)}
+.confirm{margin:var(--swa-s-16) 0 0}
+html body .confirm button.primary{width:100%;min-height:var(--swa-h-big)}
+.swa-terms.check{display:flex;gap:10px;align-items:flex-start;font-size:var(--swa-t-15);color:var(--swa-ink)}
+.swa-terms.check input{flex:none;margin:2px 0 0;width:22px}
+#cashNote,#payBox .small{margin:var(--swa-s-12) 0 0;font-size:var(--swa-t-13);color:var(--swa-muted)}
 /* While membership payment is closed online (issue #273): one real action, then the academy's contact line. */
-#interestBox{margin:16px 0 0}
-html body #interestButton{padding:0 22px;min-height:48px}
-.contact-line{margin:14px 0 0;padding:12px 16px;background:#F7F8FA;border-radius:6px;font-size:15px;color:#3A3D44}
+.contact-line{margin:var(--swa-s-12) 0 0;font-size:var(--swa-t-13);color:var(--swa-muted)}
 .contact-line a{overflow-wrap:anywhere}
-.interest-done{margin:16px 0 0;padding:14px 16px;border-radius:8px;background:var(--swa-ok-bg);border:1px solid #9FCFAE;border-left:6px solid var(--swa-ok)}
+.interest-done,.cash-done{margin:var(--swa-s-16) 0 0}
 .interest-done p{margin:0 0 8px}.interest-done p:last-child{margin:0}
-.review-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:20px}
-html body .review-actions button{padding:0 18px}
+.done-box{padding:var(--swa-s-16);border-radius:var(--swa-r-control);background:var(--swa-ok-bg);border-left:4px solid var(--swa-ok)}
+.review-actions{display:flex;align-items:center;gap:var(--swa-s-16);flex-wrap:wrap;margin-top:var(--swa-s-16)}
 html body a.button{display:inline-flex;align-items:center;padding:0 18px;text-decoration:none}
 #empty p{margin:0 0 18px}
-/* How to pay (issue #248): pay online, or book now and pay cash at the academy. One card per way, like the plan cards. */
-.pay-choice{border:0;margin:18px 0 0;padding:0;min-width:0}
-.pay-choice legend{padding:0;margin:0 0 10px;font-weight:700;font-size:17px}
-.pay-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-html body .pay-option{position:relative;display:flex;flex-direction:column;gap:4px;margin:0;padding:16px 46px 16px 16px;border:1.5px solid #E1E3E8;border-radius:8px;background:#fff;cursor:pointer;font-weight:400;min-height:44px}
-html body .pay-option:hover{border-color:#8A9095}
-html body .pay-option:has(input:checked){border-color:var(--swa-red);box-shadow:inset 0 0 0 1px var(--swa-red)}
-html body .pay-option:has(input:focus-visible){outline:3px solid #141416;outline-offset:2px}
-.pay-option input{position:absolute;top:16px;right:16px;margin:0;width:22px;height:22px}
-.pay-option strong{font-size:16px}
-.pay-option small{font-size:14px;color:var(--swa-muted)}
-#cashBox{margin-top:16px}
-#cashBox .small{font-size:14px;color:var(--swa-muted);margin:10px 0 0}
-html body #cashButton{padding:0 22px;min-height:48px}
-.cash-done{margin:4px 0 0}
-.cash-due{display:inline-block;margin:0 0 12px;padding:10px 14px;border-radius:6px;background:var(--swa-warn-bg);border:1px solid var(--swa-warn-line);color:var(--swa-warn-ink);font-weight:700;font-size:18px}
+.cash-due{display:inline-block;margin:0 0 12px;padding:10px 14px;border-radius:var(--swa-r-control);background:var(--swa-warn-bg);border:1px solid var(--swa-warn-line);color:var(--swa-warn-ink);font-weight:700;font-size:var(--swa-t-17)}
 @media(max-width:640px){
- html body .step{padding:18px 16px}
- .pair,.plan-cards{grid-template-columns:1fr}
- .plan-price{font-size:26px}
  .calendar-month-input{width:100%}
  .calendar-week,.calendar-days{gap:4px}
  html body .calendar-day{min-height:46px;font-size:15px}
  .calendar-day small{display:none}
  :root{--reviewbar-space:132px}
- .reviewbar{flex-direction:column;align-items:stretch;gap:8px;padding:12px;bottom:8px}
- .reviewbar .price{font-size:14px}
+ .reviewbar{flex-direction:column;align-items:stretch;gap:8px;padding:12px;bottom:calc(8px + var(--swa-tabs-space,0px))}
+ .reviewbar .price{font-size:var(--swa-t-15)}
  html body .reviewbar button.primary{width:100%}
- html body main>section#review{padding:18px 16px}
- .pay-options{grid-template-columns:1fr}
- html body #cashButton,html body #interestButton{width:100%}
 }
+@media(min-width:900px){html body main>section#review{padding:var(--swa-s-24)}}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <div class="swa-head"><p class="eyebrow">Savage Wrestling Academy</p><h1>Choose training</h1><p class="lede">One practice or a full year on the mat. Pick your wrestler, a program and how you want to train.</p></div>
-<p class="paynote" id="previewBanner">Online payment isn’t open yet. A walk-in can be booked now and paid in cash at the academy. For a membership, review your choice and tell the academy you want it; they’ll be in touch about paying, and it appears in your family account once your payment is recorded.</p>
+<p class="paynote" id="previewBanner">Online payment isn’t open yet: a walk-in is booked now and paid in cash at the academy; for a membership, tell the academy you want it and they’ll be in touch.</p>
 <p id="status" role="status" aria-live="polite">Loading your programs…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
-<section id="choices" hidden><form id="selection">
-<div class="step"><div class="step-head"><span class="num" aria-hidden="true">1</span><h2>Wrestler and program</h2></div><div class="pair"><label>Wrestler<select id="wrestler" required></select></label><label>Program<select id="program" required></select></label></div><div class="about"><p id="description"></p><p id="grades" class="muted"></p></div></div>
-<div class="step"><fieldset class="plans"><legend class="step-head"><span class="num" aria-hidden="true">2</span><span class="h2">How would you like to train?</span></legend><input type="hidden" id="plan" value="monthly"><div class="plan-cards"><label class="plan-card" for="plan-monthly"><input type="radio" name="planChoice" id="plan-monthly" value="monthly" checked onchange="choosePlan('monthly')"><span class="plan-text"><span class="plan-name">12-month membership, paid monthly</span><span class="plan-price" id="planPrice-monthly"></span><span class="plan-term" id="planTerm-monthly">12 monthly payments</span></span></label><label class="plan-card" for="plan-walkin"><input type="radio" name="planChoice" id="plan-walkin" value="walkin" onchange="choosePlan('walkin')"><span class="plan-text"><span class="plan-name">Walk-in</span><span class="plan-price" id="planPrice-walkin"></span><span class="plan-term" id="planTerm-walkin">One practice, one payment</span></span></label></div></fieldset><div id="approvalGate" hidden><h2 id="eligibilityHeading">Contact Justin before registering</h2><p id="approvalText"></p><div class="row"><button type="button" class="primary" id="requestApproval">Contact Justin & request approval</button><button type="button" id="refreshApproval">Check approval status</button></div><p id="approvalHelp">When requesting approval, use the private conversation to share your wrestler’s grade, approximate weight, and wrestling experience. Approval is for the wrestler and applies to future SWA Advance walk-ins. Walk-ins are subject to space, with members given priority.</p><section id="chat" hidden tabindex="-1" aria-label="Conversation about this approval"></section></div><div id="monthly"><label id="teamCodeField">Team code (optional)<input id="teamCode" maxlength="32" autocapitalize="characters" spellcheck="false" placeholder="Enter your team code"></label><p id="teamCodeHelp" class="muted">A team code gives a discount on the 12-month membership paid monthly. You see the discount and your total when you choose Review selection.</p><details class="included" id="included"><summary>What’s included</summary><p>Includes every scheduled practice in your program. Extra practices such as Friday Night Live aren’t included; they’re a separate purchase. <span id="membershipBilling"></span> <a href="/membership-terms" target="_blank" rel="noopener">Read the planned membership and cancellation terms</a>.</p><p>Practice times can change between semesters. Your selected program continues across schedule changes during your 12-month term.</p></details></div><div id="walkin" hidden><p class="calm">Choose a day and time from the calendar below for your single-practice walk-in.</p></div></div>
-<div class="step practice-calendar"><div class="step-head"><span class="num" aria-hidden="true">3</span><h2 id="calendarHeading">Practice calendar</h2></div><div class="cal-top"><p id="calendarHelp" class="calendar-help"></p><label class="calendar-month-input">Jump to month<select id="month"></select></label></div><div class="calendar-toolbar"><button type="button" id="prevMonth" aria-label="Previous month">←</button><h3 id="monthTitle"></h3><button type="button" id="nextMonth" aria-label="Next month">→</button></div><div class="calendar-week" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div id="practiceCalendar" class="calendar-days" role="group" aria-label="Choose a practice day"></div><p class="calendar-legend"><span></span>Practice day. Faded days have no practice.</p><p id="calendarAvailability" role="status" aria-live="polite"></p><div id="practices" class="practice-times"></div><p id="selectedPractice" class="practice-selection" role="status" aria-live="polite" hidden></p></div>
-<div class="reviewbar"><p id="price" class="price"></p><button class="primary" id="reviewButton">Review selection →</button></div></form></section>
-<section id="review" hidden tabindex="-1"><h2 id="reviewHeading">Review your selection</h2><div id="reviewDetails"></div><p id="payNotice"><strong>Not enrolled yet.</strong> Online payment for memberships isn’t open yet. Tell the academy you want this and they’ll be in touch about how to pay and when your wrestler can start.</p><fieldset class="pay-choice" id="payChoice" hidden><legend>How would you like to pay?</legend><div class="pay-options"><label class="pay-option" id="payOnlineOption" for="payWayOnline"><input type="radio" name="payWay" id="payWayOnline" value="online" onchange="choosePayWay('online')"><strong>Pay online</strong><small>Pay securely now by card.</small></label><label class="pay-option" for="payWayCash"><input type="radio" name="payWay" id="payWayCash" value="cash" onchange="choosePayWay('cash')"><strong>Pay cash at the academy</strong><small id="cashHint">Book now and pay in cash at the practice.</small></label></div></fieldset><div id="cashBox" hidden><button class="primary" id="cashButton" type="button">Book and pay cash at the academy</button><p class="small" id="cashNote">Your spot is booked as soon as you confirm. Pay in cash at the practice. You can cancel in your family account before the practice starts.</p></div><div id="cashDone" class="cash-done" hidden></div><div id="payBox" hidden><label><input type="checkbox" id="acceptTerms"><span>I have read and agree to the <a href="/membership-terms" target="_blank" rel="noopener">membership terms</a>, including cancellation and refunds.</span></label><button class="primary" id="payButton" disabled>Continue to secure checkout</button><p class="small">Payment is handled by Stripe. Your wrestler is registered once Stripe confirms the payment.</p></div><div id="interestBox" hidden><button class="primary" id="interestButton" type="button">Tell the academy I want this</button><p class="contact-line" id="contactLine">Or reach the academy at 20 Railroad St, Huntington Station, NY 11746 · <a href="mailto:savagewrestlingclub@gmail.com">savagewrestlingclub@gmail.com</a></p></div><div id="interestDone" class="interest-done" hidden></div><div class="review-actions"><button onclick="back()" id="changeButton">Change selection</button><a href="/family">Back to my family account</a></div></section>
+<section id="choices" hidden><form id="selection" class="reg"><div class="reg-steps">
+<div class="step"><div class="step-head"><span class="num" aria-hidden="true">1</span><h2>Wrestler and program</h2></div><div class="field" role="group" aria-labelledby="wrestlerLabel"><span id="wrestlerLabel">Wrestler</span><div class="swa-chips" id="wrestlerChips"></div><input type="hidden" id="wrestler" required></div><label class="field"><span>Program</span><select id="program" required></select></label><div class="about"><p id="description"></p><p id="grades" class="muted"></p></div></div>
+<div class="step"><fieldset class="plans"><legend class="step-head"><span class="num" aria-hidden="true">2</span><span class="h2">How would you like to train?</span></legend><input type="hidden" id="plan" value="monthly"><div class="swa-seg" id="planSeg" role="group" aria-label="Plan"><button type="button" id="plan-monthly" data-plan="monthly" aria-pressed="true">Monthly membership<small><span id="planPrice-monthly"></span> · <span id="planTerm-monthly">12 monthly payments</span></small></button><button type="button" id="plan-walkin" data-plan="walkin" aria-pressed="false">Walk-in<small><span id="planPrice-walkin"></span> · <span id="planTerm-walkin">One practice, one payment</span></small></button></div></fieldset><div id="approvalGate" hidden><h2 id="eligibilityHeading">Contact Justin before registering</h2><p id="approvalText"></p><div class="row"><button type="button" class="primary" id="requestApproval">Contact Justin & request approval</button><button type="button" id="refreshApproval">Check approval status</button></div><p id="approvalHelp">When requesting approval, use the private conversation to share your wrestler’s grade, approximate weight, and wrestling experience. Approval is for the wrestler and applies to future SWA Advance walk-ins. Walk-ins are subject to space, with members given priority.</p><section id="chat" hidden tabindex="-1" aria-label="Conversation about this approval"></section></div><div id="monthly"><label class="field" id="teamCodeField"><span>Team code (optional)</span><input id="teamCode" maxlength="32" autocapitalize="characters" spellcheck="false" placeholder="Enter your team code"></label><p id="teamCodeHelp" class="muted">A team code gives a discount on the 12-month membership paid monthly. You see the discount and your total when you choose Review selection.</p><details class="included" id="included"><summary>What’s included</summary><p>Includes every scheduled practice in your program. Extra practices such as Friday Night Live aren’t included; they’re a separate purchase. <span id="membershipBilling"></span> <a href="/membership-terms" target="_blank" rel="noopener">Read the planned membership and cancellation terms</a>.</p><p>Practice times can change between semesters. Your selected program continues across schedule changes during your 12-month term.</p></details></div><div id="walkin" hidden><p class="calm">Choose a day and time from the calendar below for your single-practice walk-in.</p></div></div>
+<div class="step practice-calendar"><div class="step-head"><span class="num" aria-hidden="true">3</span><h2 id="calendarHeading">Practice calendar</h2></div><div class="cal-top"><p id="calendarHelp" class="calendar-help"></p><label class="calendar-month-input">Jump to month<select id="month"></select></label></div><div class="calendar-toolbar"><button type="button" id="prevMonth" aria-label="Previous month">←</button><h3 id="monthTitle"></h3><button type="button" id="nextMonth" aria-label="Next month">→</button></div><div class="calendar-week" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div id="practiceCalendar" class="calendar-days" role="group" aria-label="Choose a practice day"></div><p class="calendar-legend"><span></span>A day with a practice. Faded days have none; today has a red dot.</p><p id="calendarAvailability" role="status" aria-live="polite"></p><div id="practices" class="practice-times"></div><p id="selectedPractice" class="practice-selection" role="status" aria-live="polite" hidden></p></div>
+</div><aside class="reg-side" aria-label="Your selection"><p class="swa-label">Your selection</p><div class="reviewbar"><p id="price" class="price"></p><button class="primary" id="reviewButton">Review selection →</button></div></aside></form></section>
+<section id="review" hidden tabindex="-1"><h2 id="reviewHeading">Review your selection</h2><div id="reviewDetails"></div><p id="payNotice" class="swa-receipt__next"><strong>Not enrolled yet.</strong> Online payment for memberships isn’t open yet. Tell the academy you want this and they’ll be in touch about how to pay and when your wrestler can start.</p><fieldset class="pay-choice" id="payChoice" hidden><legend>How would you like to pay?</legend><div class="pay-options"><label class="pay-option" id="payOnlineOption" for="payWayOnline"><input type="radio" name="payWay" id="payWayOnline" value="online" data-pay="online"><strong>Pay online</strong><small>Pay securely now by card.</small></label><label class="pay-option" for="payWayCash"><input type="radio" name="payWay" id="payWayCash" value="cash" data-pay="cash"><strong>Pay cash at the academy</strong><small id="cashHint">Book now and pay in cash at the practice.</small></label></div></fieldset><div id="cashBox" class="confirm" hidden><button class="primary" id="cashButton" type="button">Confirm booking</button><p id="cashNote">Your spot is booked as soon as you confirm. Pay in cash at the practice. You can cancel in your family account before the practice starts.</p></div><div id="cashDone" class="cash-done" hidden></div><div id="payBox" class="confirm" hidden><button class="primary" id="payButton" disabled>Confirm and pay</button><label class="swa-terms check"><input type="checkbox" id="acceptTerms"><span>I have read and agree to the <a href="/membership-terms" target="_blank" rel="noopener">membership terms</a>, including cancellation and refunds.</span></label><p class="small">Payment is handled by Stripe. Your wrestler is registered once Stripe confirms the payment.</p></div><div id="interestBox" class="confirm" hidden><button class="primary" id="interestButton" type="button">Tell the academy I want this</button><p class="contact-line" id="contactLine">Or reach the academy at 20 Railroad St, Huntington Station, NY 11746 · <a href="mailto:savagewrestlingclub@gmail.com">savagewrestlingclub@gmail.com</a></p></div><div id="interestDone" class="interest-done" hidden></div><div class="review-actions"><button type="button" class="quiet" id="changeButton">Change selection</button><a class="swa-link" href="/family">Back to my family account</a></div></section>
 <section id="notOpen" hidden aria-labelledby="notOpenHeading"><h2 id="notOpenHeading">Training opens soon</h2><p>The academy hasn’t published its programs and prices yet. As soon as it does, you can choose a membership or a walk-in here.</p><p><a class="button primary" href="/family">Back to your family account</a> <a class="button" href="/calendar">See the calendar</a></p></section><section id="empty" hidden aria-labelledby="emptyHeading"><h2 id="emptyHeading">Add your wrestler first</h2><p>Add your wrestler and their USA Wrestling card in your family account, then come back here to choose training.</p><a class="button primary" href="/family">Add a wrestler</a></section></main><script src="/approval-chat.js"></script><script>
 // Start on the program that matches the wrestler's grade (SWA Development K–6, SWA Intermediate 7–12), issue #101.
 function fitProgram(){const w=family?.data?.wrestlers?.find(w=>w.id===$('wrestler').value);if(!w)return;const want=['K','1','2','3','4','5','6'].includes(w.grade)?'Elementary':['7','8','9','10','11','12'].includes(w.grade)?'Intermediate':null;if(!want||$('program').value===want||$('program').value==='Advanced'&&want==='Intermediate')return;if([...$('program').options].some(o=>o.value===want)){$('program').value=want;selected='';selectedDate=''}}
@@ -171,6 +163,8 @@ function namedMonthOptions(key,min='2020-01',max='2100-12'){
 function setNamedMonth(control,key){control.innerHTML=namedMonthOptions(key,control.min||'2020-01');control.value=key}
 
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Short messages go to the shared toast (public/toast.js); without it (the tests' fake pages) they stay in #status.
+const toast=(text,kind)=>{if(typeof swaToast==='function'){swaToast(text,kind?{kind}:undefined);$('status').textContent=''}else $('status').textContent=text};
 let family,catalog,selected='',selectedDate='',loading=false,loadVersion=0,approvals=[],chatThread='',reviewing=false;
 const money=c=>c===null?'Price to be set by the academy':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);
 const clock=t=>{const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
@@ -182,39 +176,48 @@ const academyClock=()=>new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_Yo
 const bookable=s=>!!s&&(s.date>catalog.today||(s.date===catalog.today&&s.start>(catalog.now||academyClock())));
 const practice=()=>catalog.practices.find(p=>p.id===selected&&p.program===$('program').value&&bookable(p));
 function choosePlan(value){$('plan').value=value;$('plan').onchange()}
-// Plan cards (issue #132): name, price and term for the chosen program, from the same catalog the review uses.
-function renderPlanCards(p){const v=$('plan').value;for(const k of ['monthly','walkin']){const r=$('plan-'+k);if(r)r.checked=k===v}if(!p)return;const each=c=>c===null||c===undefined?money(null):money(c);$('planPrice-monthly').textContent=each(p.monthlyCents)+(p.monthlyCents==null?'':' a month');$('planTerm-monthly').textContent='12 monthly payments'+(p.monthlyCents==null?'':' · '+money(p.monthlyCents*12)+' total');$('planPrice-walkin').textContent=each(p.walkInCents);$('planTerm-walkin').textContent='One practice, one payment'}
-function update(){if(!catalog)return;const p=program(),walk=$('plan').value==='walkin';$('monthly').hidden=walk;$('membershipBilling').textContent='12 monthly payments cover a 12-month commitment, starting at purchase. Payments stop after the term; a new signup is required to continue.';$('walkin').hidden=!walk;renderPlanCards(p);$('description').textContent=p?.description||'';$('grades').textContent=p?.grades?'Grades / eligibility: '+p.grades:'';if(!p){$('price').textContent='Programs are being prepared.';$('reviewButton').disabled=true;$('practiceCalendar').innerHTML='';$('practices').textContent='';$('calendarAvailability').textContent='No published programs are available yet.';$('selectedPractice').hidden=true;return}$('price').textContent=money(walk?p.walkInCents:p.monthlyCents)+((walk?p.walkInCents:p.monthlyCents)===null?'':walk?' per wrestler, per practice':' per wrestler, per month × 12 payments · '+money(p.monthlyCents===null?null:p.monthlyCents*12)+' total');renderPracticeCalendar();const blocked=gate();$('reviewButton').disabled=loading||reviewing||(walk&&!practice())||blocked;}
+// The wrestler chips (issue #282): one chip per saved wrestler, the chosen one in ink, and "+ Add" to the family profile.
+const gradeLabel=g=>g==='Adult'?'Adult':g==='K'?'Kindergarten':'Grade '+g;
+function renderWrestlerChips(){const kids=family?.data?.wrestlers||[],v=$('wrestler').value;$('wrestlerChips').innerHTML=kids.map(w=>'<button type="button" class="swa-chip" data-wrestler="'+esc(w.id)+'" aria-pressed="'+(w.id===v)+'">'+esc(w.name)+'<small>'+esc(gradeLabel(w.grade))+'</small></button>').join('')+'<a class="swa-chip add" href="/family#add">+ Add</a>'}
+function chooseWrestler(id){if(!family?.data?.wrestlers?.some(w=>w.id===id))return;$('wrestler').value=id;fitProgram();update()}
+// The plan control (issue #132, a segmented control since #282): name, price and term for the chosen program, from the same catalog the review uses.
+function renderPlanCards(p){const v=$('plan').value;for(const k of ['monthly','walkin']){const r=$('plan-'+k);if(r){r.checked=k===v;if(r.setAttribute)r.setAttribute('aria-pressed',String(k===v))}}if(!p)return;const each=c=>c===null||c===undefined?money(null):money(c);$('planPrice-monthly').textContent=each(p.monthlyCents)+(p.monthlyCents==null?'':' a month');$('planTerm-monthly').textContent='12 monthly payments'+(p.monthlyCents==null?'':' · '+money(p.monthlyCents*12)+' total');$('planPrice-walkin').textContent=each(p.walkInCents);$('planTerm-walkin').textContent='One practice, one payment'}
+function update(){if(!catalog)return;const p=program(),walk=$('plan').value==='walkin';$('monthly').hidden=walk;$('membershipBilling').textContent='12 monthly payments cover a 12-month commitment, starting at purchase. Payments stop after the term; a new signup is required to continue.';$('walkin').hidden=!walk;renderPlanCards(p);renderWrestlerChips();$('description').textContent=p?.description||'';$('grades').textContent=p?.grades?'Grades / eligibility: '+p.grades:'';if(!p){$('price').textContent='Programs are being prepared.';$('reviewButton').disabled=true;$('practiceCalendar').innerHTML='';$('practices').textContent='';$('calendarAvailability').textContent='No published programs are available yet.';$('selectedPractice').hidden=true;return}$('price').textContent=money(walk?p.walkInCents:p.monthlyCents)+((walk?p.walkInCents:p.monthlyCents)===null?'':walk?' per wrestler, per practice':' per wrestler, per month × 12 payments · '+money(p.monthlyCents===null?null:p.monthlyCents*12)+' total');renderPracticeCalendar();const blocked=gate();$('reviewButton').disabled=loading||reviewing||(walk&&!practice())||blocked;}
 async function call(url){const r=await fetch(url,{cache:'no-store'}),body=await r.json();if(r.status===401){location.href='/login';throw Error('Please sign in again.')}if(!r.ok)throw Error(body.error||'Unable to load registration options.');return body}
-// Today, by the server's New York date, is underlined in red (issue #189).
+// Today, by the server's New York date, gets the red dot (issue #189); days with a practice are ink, the chosen day is red.
 function renderPracticeCalendar(){
  const p=program(),walk=$('plan').value==='walkin';
  $('calendarHeading').textContent=walk?'Choose your practice':'Your program’s practice calendar';
- $('calendarHelp').textContent=walk?'Select a highlighted day, then choose an available practice time. All times are New York time.':'Your 12-month membership includes all scheduled practices in this program. Browse the dates below; no individual reservation is needed. To attend only one practice, choose a time and switch to a walk-in.';
+ $('calendarHelp').textContent=walk?'Choose a day, then a practice time. All times are New York time.':'Your 12-month membership includes all scheduled practices in this program; no individual reservation is needed. To attend only one practice, choose a time and switch to a walk-in.';
  const [y,m]=catalog.month.split('-').map(Number),count=new Date(Date.UTC(y,m,0)).getUTCDate(),offset=new Date(Date.UTC(y,m-1,1)).getUTCDay();
  $('monthTitle').textContent=new Date(Date.UTC(y,m-1,1)).toLocaleDateString('en-US',{timeZone:'UTC',month:'long',year:'numeric'});
  $('prevMonth').disabled=loading||catalog.month<=catalog.today.slice(0,7);$('nextMonth').disabled=loading||catalog.month>='2100-12';
  if(loading){$('practiceCalendar').innerHTML='';$('calendarAvailability').textContent='Loading practices…';$('practices').textContent='';$('selectedPractice').hidden=true;return}
  const slots=catalog.practices.filter(x=>x.program===p?.id&&bookable(x)),started=catalog.practices.filter(x=>x.program===p?.id&&x.date===catalog.today&&!bookable(x));
  if(selectedDate&&!slots.some(s=>s.date===selectedDate))selectedDate='';
- $('practiceCalendar').innerHTML=Array.from({length:offset},()=>'<span aria-hidden="true"></span>').join('')+Array.from({length:count},(_,i)=>{const date=catalog.month+'-'+String(i+1).padStart(2,'0'),times=slots.filter(s=>s.date===date),available=times.length>0,today=date===catalog.today;return `<button type="button" class="calendar-day ${available?'has-practice':''}" data-day="${date}" id="day-${date}"${today?' aria-current="date"':''} aria-label="${esc((i+1)+(available?' Practice':'')+', '+(today?'today, ':'')+dateLabel(date)+(available?', '+times.length+' scheduled practice'+(times.length===1?'':'s'):', no available practice'))}" ${available?'':'disabled'} ${available?'aria-pressed="'+(selectedDate===date)+'"':''}>${today?'<span class="today-mark">'+(i+1)+'</span>':i+1}${available?'<span class="practice-dot" aria-hidden="true"></span> <small>Practice</small>':''}</button>`}).join('');
+ $('practiceCalendar').innerHTML=Array.from({length:offset},()=>'<span aria-hidden="true"></span>').join('')+Array.from({length:count},(_,i)=>{const date=catalog.month+'-'+String(i+1).padStart(2,'0'),times=slots.filter(s=>s.date===date),available=times.length>0,today=date===catalog.today;return `<button type="button" class="calendar-day ${available?'has-practice':''}" data-day="${date}" id="day-${date}"${today?' aria-current="date"':''} aria-label="${esc((i+1)+(available?' Practice':'')+', '+(today?'today, ':'')+dateLabel(date)+(available?', '+times.length+' scheduled practice'+(times.length===1?'':'s'):', no available practice'))}" ${available?'':'disabled'} ${available?'aria-pressed="'+(selectedDate===date)+'"':''}>${today?'<span class="today-mark">'+(i+1)+'</span>':i+1}${available?' <small>Practice</small>':''}</button>`}).join('');
  document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>selectPracticeDay(b.dataset.day));
  $('calendarAvailability').textContent=slots.length?`${slots.length} scheduled practice${slots.length===1?'':'s'} for ${p.name} this month.`:'No published practices are available for this program this month. Choose another month or contact the academy. Only saved, published schedules appear here.';
  const times=slots.filter(s=>s.date===selectedDate);
  // A practice already under way today is listed, greyed, as "In progress" (issue #273): it cannot be booked here.
  const inProgress=selectedDate===catalog.today?started.map(s=>`<button type="button" class="practice" disabled><strong>${clock(s.start)}–${clock(s.end)}</strong><br>${esc(p.name)}<br><small>In progress · can’t be booked here now</small></button>`).join(''):'';
- $('practices').innerHTML=times.length?`<h3>${esc(dateLabel(selectedDate))}</h3><p class="muted">${walk?'Choose a practice time:':'Scheduled times — members are included:'}</p>`+inProgress+times.map(s=>`<button type="button" class="practice" data-slot="${esc(s.id)}" aria-pressed="${walk&&selected===s.id}"><strong>${clock(s.start)}–${clock(s.end)}</strong><br>${esc(p.name)}<br><small>${walk?(selected===s.id?'✓ Selected — ':'')+money(p.walkInCents)+' · one practice':'Choose this practice as a walk-in · '+money(p.walkInCents)}</small></button>`).join(''):'<p class="muted">Select a highlighted day to see its practice times.</p>';
+ $('practices').innerHTML=times.length?`<h3>${esc(dateLabel(selectedDate))}</h3><p class="muted">${walk?'Choose a practice time:':'Scheduled times — members are included:'}</p>`+inProgress+times.map(s=>`<button type="button" class="practice" data-slot="${esc(s.id)}" aria-pressed="${walk&&selected===s.id}"><strong>${clock(s.start)}–${clock(s.end)}</strong><br>${esc(p.name)}<br><small>${walk?(selected===s.id?'✓ Selected — ':'')+money(p.walkInCents)+' · one practice':'Choose this practice as a walk-in · '+money(p.walkInCents)}</small></button>`).join(''):'<p class="muted">Choose a day to see its practice times.</p>';
  document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>selectPracticeTime(b.dataset.slot));
  const choice=practice();$('selectedPractice').hidden=!walk||!choice;$('selectedPractice').textContent=walk&&choice?'Selected: '+dateLabel(choice.date)+' · '+clock(choice.start)+'–'+clock(choice.end)+' · '+p.name+' · New York time':'';
 }
 function selectPracticeDay(date){if(loading||!catalog.practices.some(x=>x.program===$('program').value&&x.date===date&&bookable(x)))return;selectedDate=date;selected='';update();$('day-'+date)?.focus()}
-function selectPracticeTime(id){if(loading)return;const s=catalog.practices.find(x=>x.id===id&&x.program===$('program').value&&bookable(x));if(!s)return;$('plan').value='walkin';selected=id;selectedDate=s.date;update();$('status').textContent='Practice selected. Review your walk-in below.';
+function selectPracticeTime(id){if(loading)return;const s=catalog.practices.find(x=>x.id===id&&x.program===$('program').value&&bookable(x));if(!s)return;$('plan').value='walkin';selected=id;selectedDate=s.date;update();toast('Practice selected. Review your walk-in when you’re ready.');
  // The "Selected: …" line is brought above the sticky review bar (issue #273), not left under it.
  if($('selectedPractice').scrollIntoView)$('selectedPractice').scrollIntoView({behavior:'smooth',block:'nearest'})}
 async function monthChanged(){const version=++loadVersion;loading=true;selected='';selectedDate='';update();try{const next=await call('/api/registration?month='+encodeURIComponent($('month').value));if(version!==loadVersion)return;catalog=next;setNamedMonth($('month'),catalog.month);loading=false;update();$('status').textContent=''}catch(e){if(version!==loadVersion)return;$('status').textContent=e.message;$('calendarAvailability').textContent='Unable to load this month. Choose another month to retry.';$('practiceCalendar').innerHTML='';$('practices').textContent='';$('prevMonth').disabled=false;$('nextMonth').disabled=false;}}
 function movePracticeMonth(delta){const current=$('month').value||catalog.month,[y,m]=current.split('-').map(Number),d=new Date(Date.UTC(y,m-1+delta,1)),next=d.toISOString().slice(0,7);if(next<catalog.today.slice(0,7)||next>'2100-12')return;setNamedMonth($('month'),next);return monthChanged()}
 $('prevMonth').onclick=()=>movePracticeMonth(-1);$('nextMonth').onclick=()=>movePracticeMonth(1);
 $('wrestler').onchange=()=>{fitProgram();update()};$('month').onchange=monthChanged;$('program').onchange=()=>{selected='';selectedDate='';update()};$('plan').onchange=()=>{selected='';selectedDate='';update()};
+// Chips, the plan and the way to pay act through data attributes, so the page runs under the script nonce policy (issue #274).
+if(typeof document.addEventListener==='function'){
+ document.addEventListener('click',e=>{const t=e.target&&e.target.closest?e.target.closest('[data-wrestler],[data-plan]'):null;if(!t)return;if(t.dataset.wrestler)chooseWrestler(t.dataset.wrestler);else if(t.dataset.plan)choosePlan(t.dataset.plan)});
+ document.addEventListener('change',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.pay&&t.checked)choosePayWay(t.dataset.pay)});
+}
 function gate(){const p=program(),w=family?.data.wrestlers.find(w=>w.id===$('wrestler').value),needed=p?.id==='Advanced'&&['7','8','9','10','11','12'].includes(w?.grade),ineligible=!!p&&!!w&&!({Elementary:['K','1','2','3','4','5','6'],Intermediate:['7','8','9','10','11','12'],Advanced:['7','8','9','10','11','12']}[p.id]||[]).includes(w.grade),approval=approvals.find(a=>a.wrestlerId===w?.id);$('approvalGate').hidden=!needed&&!ineligible;$('eligibilityHeading').textContent=ineligible?'This program doesn’t match your wrestler’s grade':'Contact Justin before registering';$('approvalHelp').hidden=!needed;
  if(needed){const status=approval?.status||'not_requested';$('approvalText').textContent=approvalWords(status,approval,w);$('requestApproval').hidden=!!approval;$('refreshApproval').hidden=false;if(approval?.id){if(chatThread!==approval.id){chatThread=approval.id;ApprovalChat.open('chat',chatThread)}}else closeChat();return status!=='approved'}
  if(ineligible){$('approvalText').textContent=(p.id==='Elementary'?'SWA Development is for grades K–6.':p.id==='Intermediate'?'SWA Intermediate is for grades 7–12.':'SWA Advance is for grades 7–12 and requires coach approval.')+' Choose another program for this wrestler. If the saved grade is incorrect, update it in My family.';$('requestApproval').hidden=true;$('refreshApproval').hidden=true}closeChat();return ineligible;
@@ -229,11 +232,23 @@ function approvalWords(status,approval,w){
  return 'All wrestlers in grades 7–12 need coach approval for SWA Advance, including walk-ins. Send a request to start a private conversation.';
 }
 function closeChat(){if(chatThread){ApprovalChat.close();chatThread=''}$('chat').hidden=true}
-async function refreshApproval(){try{[family,{approvals}]=await Promise.all([call('/api/family'),call('/api/program-approvals')]);update();$('status').textContent='Approval status is up to date.'}catch(e){$('reviewButton').disabled=true;$('status').textContent=e.message}}
+async function refreshApproval(){try{[family,{approvals}]=await Promise.all([call('/api/family'),call('/api/program-approvals')]);update();toast('Approval status is up to date.')}catch(e){$('reviewButton').disabled=true;$('status').textContent=e.message}}
 $('refreshApproval').onclick=refreshApproval;$('requestApproval').onclick=async()=>{const w=family.data.wrestlers.find(w=>w.id===$('wrestler').value);if(!w)return;$('requestApproval').disabled=true;try{const r=await fetch('/api/program-approvals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request',wrestlerId:w.id})}),d=await r.json();if(!r.ok)throw Error(d.error||'Unable to send approval request.');await refreshApproval();$('status').textContent='Approval request saved. Send Justin a message in the private conversation below.';
  // The conversation opens right under the approval card (issue #273); bring it into view and put the focus on it.
  if(chatThread){const chat=$('chat');if(chat.scrollIntoView)chat.scrollIntoView({behavior:'smooth',block:'start'});if(chat.focus)chat.focus({preventScroll:true})}}catch(e){$('status').textContent=e.message}finally{$('requestApproval').disabled=false}};
-$('selection').onsubmit=async e=>{e.preventDefault();if(loading||reviewing||gate())return;const p=program(),w=family.data.wrestlers.find(w=>w.id===$('wrestler').value),walk=$('plan').value==='walkin',s=practice();if(!p||!w||(walk&&!s))return;const snapshot=[$('wrestler').value,$('program').value,$('plan').value,selected,$('teamCode').value.trim().toUpperCase()].join('|');reviewing=true;$('reviewButton').disabled=true;try{const r=await fetch('/api/registration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wrestlerId:w.id,program:p.id,plan:$('plan').value,date:s?.date,practiceId:s?.id,teamCode:$('plan').value==='monthly'?$('teamCode').value.trim():''})}),body=await r.json();if(!r.ok){if(body.approvalRequired)await refreshApproval();throw Error(body.error||'Unable to review registration.')}if(snapshot!==[$('wrestler').value,$('program').value,$('plan').value,selected,$('teamCode').value.trim().toUpperCase()].join('|'))return;const d=body.review,cents=d.cents,slot=d.practice;lastPurchase={source:'membership',wrestlerId:w.id,program:p.id,plan:$('plan').value,date:s?.date,practiceId:s?.id,teamCode:$('plan').value==='monthly'?$('teamCode').value.trim():''};showPay(!!body.paymentsEnabled,!!body.cashEnabled,cents);$('reviewDetails').innerHTML=`<p><strong>Wrestler:</strong> ${esc(d.wrestlerName)}</p><p><strong>Program:</strong> ${esc(d.programName)}</p><p><strong>Plan:</strong> ${walk?'Single-practice walk-in':'12-month commitment — paid monthly'}</p>${walk?`<p><strong>Practice:</strong> ${dateLabel(slot.date)}<br>${clock(slot.start)}–${clock(slot.end)} (New York time)</p>`:`<p><strong>Term:</strong> 12 months from purchase.<br><strong>Payments:</strong> 12 monthly payments on your billing anniversary.</p><p><strong>Total commitment:</strong> ${money(d.totalCents??(cents===null?null:cents*12))}</p><p>The membership ends after 12 months. Continuing requires a new signup. Friday Night Live, camps, clinics, and private lessons are separate purchases.</p><p><a href="/membership-terms" target="_blank" rel="noopener">${body.paymentsEnabled?'Read the cancellation and early-exit terms':'Read the planned cancellation and early-exit terms'}</a>.${body.paymentsEnabled?'':' They aren’t final yet; online purchase opens once they are.'}</p>`}${d.discount?`<p>Monthly price: ${money(d.baseCents)}<br>Team code <strong>${esc(d.discount.code)}</strong> · ${d.discount.percent}% off${d.discount.cents===null?'':' · −'+money(d.discount.cents)}</p>`:''}<p class="price">${money(cents)}${cents===null?'':walk?' one time':' / month × 12 payments'}</p><p>${d.discount?'Team discount verified for this review. No discounts are combined.':(body.paymentsEnabled?'The price shown is the price you pay.':'Ask the academy about any discount when you pay.')} ${d.programId==='Advanced'?'Justin has approved this wrestler for SWA Advance.':''}</p>`;$('choices').hidden=true;$('review').hidden=false;$('status').textContent=body.cashEnabled?(body.paymentsEnabled?'Check the details, then pay online or book and pay cash at the academy.':'Check the details, then book and pay cash at the academy.'):body.paymentsEnabled?'Check the details, then pay securely to register.':'Check the details, then tell the academy you want this. Your wrestler isn’t registered until you pay the academy.';$('review').focus();$('review').scrollIntoView({behavior:'smooth'})}catch(e){$('status').textContent=e.message}finally{reviewing=false;update()}};
+// The review as a receipt (issue #282): one line each for the wrestler, the program, the plan and the practice or term,
+// the price as the total, then what happens next. Prices come from the server's review, never from the page.
+const row=(k,v,small='')=>'<div class="swa-receipt__row"><span class="k">'+k+'</span><span class="v">'+v+(small?'<small>'+small+'</small>':'')+'</span></div>';
+function receipt(d,walk,slot,cents,paymentsEnabled){
+ const lines=[row('Wrestler',esc(d.wrestlerName)),row('Program',esc(d.programName)),row('Plan',walk?'Single-practice walk-in':'12-month commitment — paid monthly')];
+ if(walk)lines.push(row('Practice',esc(dateLabel(slot.date)),esc(clock(slot.start))+'–'+esc(clock(slot.end))+' · New York time'));
+ else lines.push(row('Term','12 months from purchase'),row('Payments','12 monthly payments','On your billing anniversary · '+money(d.totalCents??(cents===null?null:cents*12))+' in all'));
+ if(d.discount)lines.push(row('Team code',esc(d.discount.code),d.discount.percent+'% off the monthly price of '+money(d.baseCents)+(d.discount.cents===null?'':' · −'+money(d.discount.cents))));
+ const total='<div class="swa-receipt__total"><span class="k">'+(walk?'Total':'Each month')+'</span><span class="v">'+money(cents)+'<small>'+(cents===null?'':walk?'One payment':'× 12 payments')+'</small></span></div>';
+ const notes=[d.discount?'Team discount verified for this review. No discounts are combined.':(paymentsEnabled?'The price shown is the price you pay.':'Ask the academy about any discount when you pay.'),d.programId==='Advanced'?'Justin has approved this wrestler for SWA Advance.':'',walk?'':'The membership ends after 12 months; continuing requires a new signup. Friday Night Live, camps, clinics and private lessons are separate purchases. <a href="/membership-terms" target="_blank" rel="noopener">'+(paymentsEnabled?'Read the cancellation and early-exit terms':'Read the planned cancellation and early-exit terms')+'</a>.'+(paymentsEnabled?'':' They aren’t final yet; online purchase opens once they are.')].filter(Boolean);
+ return '<div class="swa-receipt">'+lines.join('')+total+'</div><p class="swa-terms">'+notes.join(' ')+'</p>';
+}
+$('selection').onsubmit=async e=>{e.preventDefault();if(loading||reviewing||gate())return;const p=program(),w=family.data.wrestlers.find(w=>w.id===$('wrestler').value),walk=$('plan').value==='walkin',s=practice();if(!p||!w||(walk&&!s))return;const snapshot=[$('wrestler').value,$('program').value,$('plan').value,selected,$('teamCode').value.trim().toUpperCase()].join('|');reviewing=true;$('reviewButton').disabled=true;try{const r=await fetch('/api/registration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wrestlerId:w.id,program:p.id,plan:$('plan').value,date:s?.date,practiceId:s?.id,teamCode:$('plan').value==='monthly'?$('teamCode').value.trim():''})}),body=await r.json();if(!r.ok){if(body.approvalRequired)await refreshApproval();throw Error(body.error||'Unable to review registration.')}if(snapshot!==[$('wrestler').value,$('program').value,$('plan').value,selected,$('teamCode').value.trim().toUpperCase()].join('|'))return;const d=body.review,cents=d.cents,slot=d.practice;lastPurchase={source:'membership',wrestlerId:w.id,program:p.id,plan:$('plan').value,date:s?.date,practiceId:s?.id,teamCode:$('plan').value==='monthly'?$('teamCode').value.trim():''};showPay(!!body.paymentsEnabled,!!body.cashEnabled,cents);$('reviewDetails').innerHTML=receipt(d,walk,slot,cents,!!body.paymentsEnabled);$('choices').hidden=true;$('review').hidden=false;$('status').textContent=body.cashEnabled?(body.paymentsEnabled?'Check the details, then pay online or book and pay cash at the academy.':'Check the details, then book and pay cash at the academy.'):body.paymentsEnabled?'Check the details, then pay securely to register.':'Check the details, then tell the academy you want this. Your wrestler isn’t registered until you pay the academy.';$('review').focus();$('review').scrollIntoView({behavior:'smooth'})}catch(e){$('status').textContent=e.message}finally{reviewing=false;update()}};
 
 let lastPurchase=null;
 // A walk-in (issue #248) can be paid online, when that is open, or booked now and paid in cash at the academy. The amount
@@ -247,7 +262,7 @@ function showPay(on,cash,cents){payOnline=on;payCash=!!cash;$('previewBanner').h
 // "Tell the academy I want this", with the academy's address and email under it.
 function choosePayWay(way){$('payWayOnline').checked=way==='online';$('payWayCash').checked=way==='cash';$('payBox').hidden=!(payOnline&&way==='online');$('cashBox').hidden=!(payCash&&way==='cash');$('interestBox').hidden=payOnline||payCash;if(!payOnline&&!payCash)loadContact()}
 function showCashDone(b){$('reviewHeading').textContent='You’re booked';$('payNotice').hidden=true;$('payChoice').hidden=true;$('cashBox').hidden=true;$('payBox').hidden=true;$('interestBox').hidden=true;$('changeButton').hidden=true;$('previewBanner').hidden=true;
- $('cashDone').innerHTML='<p class="cash-due">'+esc(b.label)+'</p><p><strong>'+esc(b.wrestler)+'</strong> is booked for '+esc(b.item)+', '+esc(dateLabel(b.date))+(b.start?' at '+esc(clock(b.start)):'')+' (New York time).</p><p>Bring the cash to the practice and hand it to the coach. It shows in your family account until it’s paid, and you can cancel there before the practice starts.</p><p><a class="button primary" href="/family">Go to your family account</a></p>';
+ $('cashDone').innerHTML='<div class="done-box"><p class="cash-due">'+esc(b.label)+'</p><p><strong>'+esc(b.wrestler)+'</strong> is booked for '+esc(b.item)+', '+esc(dateLabel(b.date))+(b.start?' at '+esc(clock(b.start)):'')+' (New York time).</p><p>Bring the cash to the practice and hand it to the coach. It shows in your family account until it’s paid, and you can cancel there before the practice starts.</p><p><a class="button primary" href="/family">Go to your family account</a></p></div>';
  $('cashDone').hidden=false;$('status').textContent='Booked. '+b.label+'.'}
 $('cashButton').onclick=async()=>{if(!lastPurchase||cashBusy)return;cashBusy=true;$('cashButton').disabled=true;$('status').textContent='Booking…';try{const r=await fetch('/api/cash-bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'book',...lastPurchase})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not book. Nothing was charged.');showCashDone(d.booking)}catch(e){$('status').textContent=e.message;$('cashButton').disabled=false}finally{cashBusy=false}};
 // The academy's address and email (website settings when saved, else the academy's fixed address), loaded once.
@@ -258,13 +273,14 @@ let interestBusy=false;
 $('interestButton').onclick=async()=>{if(!lastPurchase||interestBusy)return;interestBusy=true;$('interestButton').disabled=true;$('status').textContent='Sending your request…';
  try{const r=await fetch('/api/interest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'membership',wrestlerId:lastPurchase.wrestlerId,program:lastPurchase.program})}),d=await r.json();if(!r.ok)throw Error(d.error||'Your request could not be sent. Please try again.');
   const w=family.data.wrestlers.find(w=>w.id===lastPurchase.wrestlerId),p=catalog.programs.find(p=>p.id===lastPurchase.program),c=d.contact||contact;
-  $('interestBox').hidden=true;$('payNotice').hidden=true;$('interestDone').innerHTML='<p><strong>Sent.</strong> The academy has your request for '+esc(w?w.name:'your wrestler')+'’s '+esc(p?p.name:'')+' membership and will reply under Messages about how to pay and when to start.</p><p>'+(c?'Reach the academy any time at '+esc(c.address)+' · <a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>. ':'')+'<a href="/inbox">Open Messages →</a></p>';$('interestDone').hidden=false;
+  $('interestBox').hidden=true;$('payNotice').hidden=true;$('interestDone').innerHTML='<div class="done-box"><p><strong>Sent.</strong> The academy has your request for '+esc(w?w.name:'your wrestler')+'’s '+esc(p?p.name:'')+' membership and will reply under Messages about how to pay and when to start.</p><p>'+(c?'Reach the academy any time at '+esc(c.address)+' · <a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>. ':'')+'<a href="/inbox">Open Messages →</a></p></div>';$('interestDone').hidden=false;
   $('status').textContent='Request sent. The academy will be in touch.'}
  catch(e){$('status').textContent=e.message;$('interestButton').disabled=false}finally{interestBusy=false}};
 $('acceptTerms').onchange=()=>{$('payButton').disabled=!$('acceptTerms').checked};
 $('payButton').onclick=async()=>{if(!lastPurchase||!$('acceptTerms').checked)return;$('payButton').disabled=true;$('status').textContent='Opening secure checkout…';try{const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...lastPurchase,acceptTerms:true})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not start checkout. Nothing was charged.');location.assign(d.url)}catch(e){$('status').textContent=e.message;$('payButton').disabled=false}};
-function back(){$('review').hidden=true;$('choices').hidden=false;$('status').textContent='Change your choices, then choose Review selection.'}
-async function load(){try{[family,catalog,{approvals}]=await Promise.all([call('/api/family'),call('/api/registration'+(/^\d{4}-\d{2}-\d{2}$/.test(new URLSearchParams(location.search).get('date')||'')?'?month='+new URLSearchParams(location.search).get('date').slice(0,7):'')),call('/api/program-approvals')]);if(!family.data.wrestlers.length){$('empty').hidden=false;$('previewBanner').hidden=true;$('status').textContent='';return}if(!catalog.programs.length){$('notOpen').hidden=false;$('previewBanner').hidden=true;$('status').textContent='';return}$('wrestler').replaceChildren(...family.data.wrestlers.map(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.name+' · '+(w.grade==='Adult'?'Adult':'Grade '+w.grade);return o}));$('program').replaceChildren(...catalog.programs.map(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;return o}));const params=new URLSearchParams(location.search);if(['monthly','walkin'].includes(params.get('plan')))$('plan').value=params.get('plan');if(catalog.programs.some(p=>p.id===params.get('program')))$('program').value=params.get('program');if(family.data.wrestlers.some(w=>w.id===params.get('wrestler')))$('wrestler').value=params.get('wrestler');if(!catalog.programs.some(p=>p.id===params.get('program')))fitProgram();selected=catalog.practices.find(p=>p.program===$('program').value&&p.date===params.get('date'))?.id||'';selectedDate=practice()?.date||'';$('month').min=catalog.today.slice(0,7);setNamedMonth($('month'),catalog.month);$('choices').hidden=false;update();$('status').textContent='Choose your wrestler, a program and how to train, then choose Review selection.'}catch(e){$('status').textContent=e.message}}load();
+function back(){$('review').hidden=true;$('choices').hidden=false;$('status').textContent=''}
+$('changeButton').onclick=back;
+async function load(){try{[family,catalog,{approvals}]=await Promise.all([call('/api/family'),call('/api/registration'+(/^\d{4}-\d{2}-\d{2}$/.test(new URLSearchParams(location.search).get('date')||'')?'?month='+new URLSearchParams(location.search).get('date').slice(0,7):'')),call('/api/program-approvals')]);if(!family.data.wrestlers.length){$('empty').hidden=false;$('previewBanner').hidden=true;$('status').textContent='';return}if(!catalog.programs.length){$('notOpen').hidden=false;$('previewBanner').hidden=true;$('status').textContent='';return}$('wrestler').value=family.data.wrestlers[0].id;$('program').replaceChildren(...catalog.programs.map(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;return o}));const params=new URLSearchParams(location.search);if(['monthly','walkin'].includes(params.get('plan')))$('plan').value=params.get('plan');if(catalog.programs.some(p=>p.id===params.get('program')))$('program').value=params.get('program');if(family.data.wrestlers.some(w=>w.id===params.get('wrestler')))$('wrestler').value=params.get('wrestler');if(!catalog.programs.some(p=>p.id===params.get('program')))fitProgram();selected=catalog.practices.find(p=>p.program===$('program').value&&p.date===params.get('date'))?.id||'';selectedDate=practice()?.date||'';$('month').min=catalog.today.slice(0,7);setNamedMonth($('month'),catalog.month);$('choices').hidden=false;update();$('status').textContent=''}catch(e){$('status').textContent=e.message}}load();
 
 // The help link goes to the document named in the message: the Parent Consent Form or the waiver (issue #195).
 function signHelp(p,t){const a=p.querySelector('a'),consent=/Parent Consent Form/.test(t);if(a){a.href=consent?'/consent':'/waiver';a.textContent=consent?'Sign the Parent Consent Form →':'Sign the waiver →'}}

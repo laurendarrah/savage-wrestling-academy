@@ -57,14 +57,24 @@ function page(file, {fetch, search = '', hidden = []}) {
   assert.match(cards, /\$225\.50 a month/, 'cents shown when the price has them');
   assert.equal((cards.match(/needs coach approval/g) || []).length, 1, 'only SWA Advance says coach approval');
   assert.match(cards, /">Grades 7–12<\/span><h3>SWA Advance<\/h3>/, 'approval is said once, in the note');
+  // Coming up is one row in the hero (#282): the soonest session, with sessions at the same time sharing it.
   const week = el('week').innerHTML;
-  assert.match(week, /Mon, Nov 30<span>6:00 PM<\/span>[\s\S]*SWA Development practice[\s\S]*SWA Intermediate practice/, 'same-time sessions share a row');
-  assert.match(week, /Tue, Dec 1<span>3:00 PM<\/span>[\s\S]*SWA Advance practice/, 'next month is included');
-  assert.match(week, /Fri, Dec 4<span>4:00 PM[\s\S]*Friday Night Live/);
-  assert.match(week, /Sun, Dec 20[\s\S]*Winter camp \(camp\)/);
+  assert.equal(week, '<span class="lbl">Coming up</span><span class="when">Mon, Nov 30 · 6:00 PM</span><span class="what">SWA Development practice, SWA Intermediate practice</span><a href="/calendar">Full calendar →</a>');
   assert.doesNotMatch(week, /2026-1|18:00/);
-  assert.match(html, /href="\/login\?mode=signup">Join the academy/); assert.match(html, /href="\/login">Sign in/);
-  assert.match(html, /\/brand\/savage-logo-256\.png/);
+  // The rest of the list is still computed (next month included), for the row to reach into December when November is over.
+  const groups = vm.runInContext('upcoming(__s,"2026-11-30",5)', Object.assign(page('app/welcome/screen.html', {fetch: async () => json({}, false)}).ctx, {__s: [months[''], months['?month=2026-12']]}));
+  assert.equal(JSON.stringify(groups.map(g => g.date + ' ' + g.items.map(i => i.title).join('+'))), JSON.stringify(['2026-11-30 SWA Development practice+SWA Intermediate practice', '2026-12-01 SWA Advance practice', '2026-12-04 Friday Night Live', '2026-12-20 Winter camp (camp)']));
+  // One red button in the first screen: Join; Sign in is the quiet link. The mark lives in the top bar only.
+  assert.match(html, /<div class="actions"><a class="button primary" href="\/login\?mode=signup">Join the academy<\/a><a class="button quiet" href="\/login">Sign in<\/a><\/div>/);
+  assert.doesNotMatch(html, /savage-logo-256\.png/, 'no second mark in the hero');
+  assert.match(html, /<div class="hero__media" aria-hidden="true"><\/div>/, 'the photo slot for Phase 5');
+  // The programs are one comparison card with a switch on a phone; the first program shows until the switch is tapped.
+  assert.match(cards, /^<article class="program is-on" data-program="Elementary">/); assert.match(cards, /<article class="program" data-program="Intermediate">/);
+  assert.match(el('programSwitch').innerHTML, /<button type="button" data-program="Elementary" aria-pressed="true">Development<\/button><button type="button" data-program="Intermediate" aria-pressed="false">Intermediate<\/button>/);
+  assert.equal(el('programSwitch').hidden, false);
+  assert.match(cards, /<a class="button quiet" href="\/register\?program=Elementary">Choose SWA Development<\/a>/, 'a quiet Choose on each');
+  assert.doesNotMatch(cards, /primary/, 'the red button comes once, after the card');
+  assert.match(html, /<p class="compare-cta"><a class="button primary" href="\/login\?mode=signup">Start registration<\/a>/);
   assert.equal(vm.runInContext("nextMonth('2026-12')", page('app/welcome/screen.html', {fetch: async () => json({}, false)}).ctx), '2027-01');
 }
 
@@ -93,7 +103,9 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   // Only the current step carries a button; later steps are listed quietly (issue #141).
   assert.match(steps, /data-step="details"[\s\S]*Add your details<\/button>/); assert.doesNotMatch(steps, /Add a wrestler<\/button>|href="\/register">Choose training/);
   assert.match(el('startLede').textContent, /^Three steps /, 'the step count in the text matches the list');
-  for (const id of ['memberships', 'purchaseHistory', 'yourData', 'membershipsLink', 'purchasesLink']) assert.equal(el(id).hidden, true, id + ' waits until there is something to show');
+  // Nothing saved yet: no empty membership or purchase sections, and no week, doors, payments or family card either (#282).
+  for (const id of ['memberships', 'purchases', 'week', 'book', 'payments', 'contacts']) assert.equal(el(id).hidden, true, id + ' waits until there is something to show');
+  assert.match(html, /<section id="yourData" class="card" hidden/, 'the close-account card waits for the Account menu');
   assert.equal(el('nextUp').hidden, true); assert.equal(el('editor').hidden, false); assert.equal(el('status').textContent, '');
   assert.equal(el('hello').textContent, 'Welcome');
   // Account things live in one menu, not as four buttons at the top.
@@ -110,17 +122,23 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   assert.equal(el('startCount').textContent, '1 of 4 done');
   const steps = el('startSteps').innerHTML;
   assert.match(steps, /class="step done" data-step="details"/);
-  assert.match(steps, /class="step current" data-step="wrestler"[\s\S]*Sam Example needs a current USA Wrestling card[\s\S]*class="primary" onclick="startWrestler\(\)">Add the card/);
+  assert.match(steps, /class="step current" data-step="wrestler"[\s\S]*Sam Example needs a current USA Wrestling card[\s\S]*class="primary" data-action="start-wrestler">Add the card/);
   assert.match(steps, /data-step="waiver"[\s\S]*Sign the Participation waiver for Sam Example/);
   assert.doesNotMatch(steps, /href="\/waiver/, 'the waiver step gets its button once it is the current step');
   assert.match(el('startLede').textContent, /^Four steps /);
   assert.equal(el('memberships').hidden, false, 'a saved family sees its memberships');
   assert.equal((steps.match(/primary/g) || []).length, 1, 'one main button');
   assert.equal(el('hello').textContent, 'Hi, Pat');
+  // The wrestler card (#282): avatar initials, the name, grade and membership, then the card and waiver chips.
   const details = el('savedDetails').innerHTML;
-  assert.match(details, /Sam Example<\/h3><span class="muted">Kindergarten/, 'Kindergarten is stored as "K" and shown in words');
-  assert.match(details, /No USA Wrestling card[\s\S]*Waiver not signed[\s\S]*No membership/);
-  assert.match(details, /href="\/wrestler\?id=w-1">Wrestler view[\s\S]*href="\/pass\?wrestler=w-1">Entry pass/);
+  assert.match(details, /<div class="swa-avatar" aria-hidden="true">SE<\/div><div><h3>Sam Example<\/h3><p class="kid-sub">Kindergarten · No membership yet<\/p>/, 'Kindergarten is stored as "K" and shown in words');
+  assert.match(details, /<div class="chips"><span class="pill warn">No USA Wrestling card<\/span><span class="pill warn">Waiver not signed<\/span><\/div>/);
+  assert.match(details, /<ul class="status-lines"><li>Add the card number[\s\S]*Booking is blocked until this is fixed[\s\S]*<li><strong>Booking is blocked until it is signed\.<\/strong> <a href="\/waiver\?wrestler=w-1">Sign the waiver →<\/a><\/li><li>Not signed up for a membership yet/, 'what needs the family, as lines under the chips');
+  assert.match(details, /href="\/pass\?wrestler=w-1">Entry pass[\s\S]*href="\/wrestler\?id=w-1">Sam’s page/);
+  assert.equal(el('contacts').hidden, false); assert.match(el('contactRows').innerHTML, /<dt class="d">Parent<\/dt><dd class="t">Pat Example · 555-0100<\/dd>[\s\S]*<dt class="d">Address<\/dt><dd class="t"><span class="muted">Not added yet/);
+  assert.equal(el('book').hidden, false); assert.match(el('doors').innerHTML, /href="\/register\?plan=walkin"[\s\S]*Walk-in practice[\s\S]*href="\/lesson"[\s\S]*Private lesson[\s\S]*href="\/calendar#comingUp"[\s\S]*Camps &amp; events/, 'three doors');
+  assert.equal((el('doors').innerHTML.match(/primary/g) || []).length, 0, 'no red on the doors');
+  assert.equal(el('payments').hidden, false); assert.match(el('moneyLine').innerHTML, /\$0\.00<\/div><div class="lbl">due at the academy[\s\S]*>0<\/div><div class="lbl">payments on record/);
   vm.runInContext('startDetails()', ctx);
   assert.equal(el('editor').hidden, false); assert.equal(el('__focus').textContent, 'parentName');
   assert.match(el('status').textContent, /Add your name and phone number/);
@@ -137,12 +155,21 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   await settle();
   assert.equal(el('start').hidden, true, 'no guided start once everything is done');
   assert.equal(el('nextUp').hidden, false);
+  // The dark card (#282): the day, the time as the figure, the session and the wrestler, the pass button.
   const next = el('nextUpBody').innerHTML;
-  assert.match(next, /class="next-when">Mon, Nov 9 · 3:00 PM<\/p>/, 'the soonest session first, in the shared date format');
-  assert.match(next, /One-on-one lesson with Coach Dana<\/strong> · Sam Example/);
+  // (The day reads "Today" or "Tomorrow" when the test happens to run on those dates.)
+  assert.match(next, /^<p class="next-day">(?:<b class="today">Today<\/b>|Tomorrow|Mon, Nov 9)<\/p><p class="next-when swa-figure">3:00 PM<\/p>/, 'the soonest session first, time as the figure');
+  assert.match(next, /One-on-one lesson with Coach Dana<\/strong> <span>· Sam Example<\/span>/);
+  assert.match(next, /class="next-meta">Paid · ends 4:00 PM<\/p>/);
   assert.match(next, /class="button primary" href="\/pass\?wrestler=w-1">Show entry pass/);
-  assert.match(next, /Tue, Nov 10 · 6:00 PM<\/b><span>SWA Intermediate practice · Sam Example/);
-  assert.match(el('savedDetails').innerHTML, /USA Wrestling card verified[\s\S]*Waiver signed[\s\S]*Member<\/span> SWA Intermediate, 12-month membership through/);
+  assert.doesNotMatch(next, /Directions/, 'no Directions until the academy’s address is in');
+  // This week: the rest of the sessions within seven days, as rows; the link goes to the one wrestler's page.
+  assert.equal(el('week').hidden, false);
+  assert.match(el('weekRows').innerHTML, /<li><div class="d">(?:Today|Tomorrow|Tue, Nov 10)<small>6:00 PM<\/small><\/div><div class="t">SWA Intermediate practice<small>Sam Example · membership<\/small><\/div><div class="r"><\/div><\/li>/);
+  assert.equal(el('weekMore').href, '/wrestler?id=w-1'); assert.equal(el('weekMore').textContent, 'All of Sam’s sessions →');
+  assert.match(el('savedDetails').innerHTML, /SWA Intermediate member through [\s\S]*<span class="pill ok">[\s\S]*USA Wrestling card verified<\/span><span class="pill ok">[\s\S]*Waiver signed<\/span>/);
+  assert.match(el('savedDetails').innerHTML, /<li class="swa-caption">Current through [\s\S]*<li class="swa-caption"><a href="\/waiver-copy\?id=s1"/, 'what is in order stays as a caption');
+  assert.match(el('moneyLine').innerHTML, /1<\/div><div class="lbl">payment on record/);
 }
 // Set up but nothing booked in the next three weeks: say so plainly.
 {
@@ -157,10 +184,11 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
 {
   const html = readFileSync('app/register/screen.html', 'utf8'), script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   assert.doesNotMatch(html, /<select id="plan"/, 'no plan dropdown');
-  for (const k of ['monthly', 'walkin']) assert.match(html, new RegExp(`<input type="radio" name="planChoice" id="plan-${k}" value="${k}"`));
+  // A two-way segmented control since #282, over the hidden #plan value.
+  for (const k of ['monthly', 'walkin']) assert.match(html, new RegExp(`<button type="button" id="plan-${k}" data-plan="${k}" aria-pressed="(true|false)">`));
   assert.match(html, /<details class="included" id="included"><summary>What’s included<\/summary><p>Includes every scheduled practice/, 'the policy paragraph sits behind a disclosure');
   const line = start => { const i = script.indexOf(start); assert.ok(i >= 0, start); return script.slice(i, script.indexOf('\n', i)); };
-  const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {value: '', textContent: '', checked: false}); return nodes.get(id); };
+  const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {value: '', textContent: '', checked: false, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }}); return nodes.get(id); };
   const ctx = {Intl, $: el}; vm.runInNewContext(line('const money=') + '\n' + line('function choosePlan') + '\n' + line('function renderPlanCards'), ctx);
   el('plan').value = 'monthly';
   ctx.renderPlanCards({monthlyCents: 20000, walkInCents: 4000});
@@ -169,6 +197,7 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   assert.equal(el('planPrice-annual').textContent, '', 'no upfront plan card (#210)');
   assert.doesNotMatch(html, /plan-annual|paid upfront/, 'the register page offers only monthly and walk-in');
   assert.equal(el('plan-monthly').checked, true); assert.equal(el('plan-walkin').checked, false);
+  assert.equal(el('plan-monthly').attrs['aria-pressed'], 'true'); assert.equal(el('plan-walkin').attrs['aria-pressed'], 'false', 'the segment shows which is chosen');
   ctx.renderPlanCards({monthlyCents: null, walkInCents: 4000});
   assert.equal(el('planPrice-monthly').textContent, 'Price to be set by the academy'); assert.equal(el('planTerm-monthly').textContent, '12 monthly payments');
   let changed = 0; el('plan').onchange = () => changed++;

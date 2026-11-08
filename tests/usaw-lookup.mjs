@@ -421,7 +421,7 @@ function page(file, {fetch, hidden = []}) {
   assert.match(line('w4'), /The name on this USA Wrestling card doesn’t match Ash Example\. Check the number; it may belong to someone else\./);
   assert.match(line('w5'), /USA Wrestling card on file<\/span> Current through/, 'unavailable: nothing alarming');
   assert.doesNotMatch(line('w5'), /USA Wrestling (couldn|could not|has no|shows)/);
-  assert.match(line('w5'), /<button type="button" class="card-check" data-wrestler="w5" onclick="checkMyCard\(this\.dataset\.wrestler\)">Check my card<\/button>/);
+  assert.match(line('w5'), /<button type="button" class="card-check sm" data-action="check-card" data-wrestler="w5">Check my card<\/button>/, 'a listener, not an inline handler (#274)');
   assert.match(el('savedDetails').innerHTML, /Check my card/, 'the button is on the saved profile');
   await vm.runInContext("checkMyCard('w5')", ctx); await settle();
   assert.deepEqual(posted, [{wrestlerId: 'w5'}], 'only the wrestler id goes to the site');

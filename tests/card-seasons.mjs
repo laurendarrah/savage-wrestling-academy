@@ -167,7 +167,7 @@ function page(file, {fetch, hidden = [], extra = {}}) {
   const form = el('wrestlers').innerHTML;
   const block = i => form.split('<div class="athlete">')[i + 1];
   // A saved season date preselects that season; the date box stays hidden.
-  assert.match(block(0), /<select id="usawSeason0" onchange="seasonPicked\(0\)" aria-describedby="usawHint0"><option value="">Choose the season on the card<\/option><option value="2099-08-31" selected>2098–99 season · expires Aug 31, 2099<\/option><option value="2100-08-31">2099–00 season · expires Aug 31, 2100<\/option><option value="other">My card has a different expiration date<\/option><\/select>/);
+  assert.match(block(0), /<select id="usawSeason0" data-season="0" aria-describedby="usawHint0"><option value="">Choose the season on the card<\/option><option value="2099-08-31" selected>2098–99 season · expires Aug 31, 2099<\/option><option value="2100-08-31">2099–00 season · expires Aug 31, 2100<\/option><option value="other">My card has a different expiration date<\/option><\/select>/);
   assert.match(block(0), /<label id="usawExpBox0" hidden>Expiration date on the card<input id="usawExp0" type="date" value=""><\/label>/);
   // Any other saved date shows as "different date", with the date filled in.
   assert.match(block(1), /<option value="other" selected>My card has a different expiration date/);

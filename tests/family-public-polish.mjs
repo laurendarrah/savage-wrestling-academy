@@ -32,18 +32,16 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   const html = read('app/family/screen.html'), css = style(html);
   // Links that look like buttons are buttons: no separate "account-action" look.
   assert.doesNotMatch(html, /account-action/, 'button-style links use the shared .button class');
-  assert.match(html, /<a class="button" href="\/api\/my-data\?format=download" download>/);
+  // The data download and the close-account request live in the Account menu (#282); the quick nav is the tab bar now.
+  assert.match(html, /<details class="account-menu" id="accountMenu">[\s\S]*<a href="\/api\/my-data\?format=download" download id="yourDataLink">Download my family's data<\/a><button type="button" data-action="close-account">Ask to close my account<\/button>[\s\S]*<\/details>/);
+  assert.doesNotMatch(html, /class="quick"/, 'no section links under the greeting: the tab bar (lib/page-chrome.ts) is the family’s navigation');
   assert.match(html, /<a class="button" href="\/register\?plan=monthly&amp;wrestler=/); assert.match(html, /<a class="button" href="\/register\?plan=walkin&amp;wrestler=/);
-  // The quick nav wraps instead of scrolling sideways, so Memberships and Purchases stay on a phone screen.
-  const quick = css.match(/\.quick\{[^}]*\}/)[0];
-  assert.match(quick, /flex-wrap:wrap/); assert.doesNotMatch(css, /\.quick\{[^}]*overflow-x/, 'no hidden sideways scroll');
-  assert.doesNotMatch(css, /\.quick a\{[^}]*white-space:nowrap[^}]*padding:0 1\dpx/, 'no side padding that misaligns a wrapped second line');
-  // Shared tokens, not literals, for the page ground, width and the warning pill.
-  assert.match(css, /body\{background:var\(--swa-ground\)/); assert.match(css, /main\{max-width:var\(--swa-width-narrow\)/);
-  assert.match(css, /\.billing-pill\.warning\{background:var\(--swa-warn-bg\);color:var\(--swa-warn-ink\)\}/);
+  // Shared tokens, not literals, for the page ground and width; the shared pill, not a page-only one.
+  assert.match(css, /body\{background:var\(--swa-ground\)/); assert.match(css, /main\{max-width:var\(--swa-width-wide\)/);
+  assert.doesNotMatch(css, /billing-pill/, 'the shared .pill');
   assert.doesNotMatch(css, /#C4222C|#F4F5F7/i, 'red and the page ground come from tokens');
   // The pill beside Memberships starts hidden.
-  assert.match(html, /<span class="billing-pill active" id="paymentsPill" hidden>Paid<\/span>/);
+  assert.match(html, /<span class="pill ok" id="paymentsPill" hidden>Paid<\/span>/);
 }
 // The "Paid" pill shows only while a wrestler has an active membership in good standing.
 {
@@ -82,7 +80,7 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   const fieldset = html.match(/<form id="familyForm" novalidate><fieldset id="familyFields" disabled>([\s\S]*?)<\/fieldset><\/form>/);
   assert.ok(fieldset, 'the profile form starts disabled');
   for (const id of ['homeAddress', 'homeCity', 'homeState', 'homeZip', 'emergencyContactName', 'emergencyContactPhone', 'wrestlers', 'save', 'cancelEdit']) assert.match(fieldset[1], new RegExp(`id="${id}"`), id + ' is inside the disabled fieldset');
-  assert.match(fieldset[1], /name="parentName"[\s\S]*name="phone"[\s\S]*onclick="addWrestler\(\)"/, 'name, phone and + Add wrestler wait too');
+  assert.match(fieldset[1], /name="parentName"[\s\S]*name="phone"[\s\S]*data-action="add-wrestler-form"/, 'name, phone and + Add wrestler wait too');
   const held = [];
   const hold = (url, init) => new Promise(resolve => held.push({url, method: init?.method || 'GET', body: init?.body ? JSON.parse(init.body) : null,
     reply: (data, status = 200) => resolve({ok: status < 400, status, json: async () => (data === undefined ? Promise.reject(SyntaxError('Unexpected token <')) : data)})}));
@@ -194,7 +192,8 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   // Signed in, the Worker turns the page's own band into the title row (issue #280); nothing else is wrapped.
   const served = pageHead(html, '/register');
   assert.equal((served.match(/class="swa-title"/g) || []).length, 1); assert.equal((served.match(/class="swa-head"/g) || []).length, 0);
-  assert.match(style(html), /main\{max-width:var\(--swa-width-narrow\)/);
+  // Wide since #282: the steps and the sticky summary share the width on a desk; the review itself stays narrow.
+  assert.match(style(html), /main\{max-width:var\(--swa-width-wide\)/); assert.match(style(html), /section#review\{max-width:var\(--swa-width-narrow\)/);
 }
 
 // ---------- Waiver and consent: 44px "View / print" and "View copy" ----------
@@ -208,13 +207,17 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(read('app/consent/route.ts'), /import html from '\.\.\/waiver\/screen\.html\?raw'/);
 }
 
-// ---------- Calendar: the two plan buttons sit in one group with a gap ----------
+// ---------- Calendar: four doors above the grid instead of the product sections, and one red button (#282) ----------
 {
-  const schedule = {month: '2026-11', today: '2026-11-11', programs: [{id: 'Intermediate', name: 'SWA Intermediate', grades: '7–12', description: '', monthlyCents: 20000, walkInCents: 4000}], practices: [], events: [], liveClasses: [], privateFormats: []};
+  const schedule = {month: '2026-11', today: '2026-11-11', programs: [{id: 'Intermediate', name: 'SWA Intermediate', grades: '7–12', description: '', monthlyCents: 20000, walkInCents: 4000}], practices: [], events: [], liveClasses: [{id: 'fnl', name: 'Friday Night Live', date: '2026-11-13', start: '16:00', end: '17:00', memberCents: 1000, nonMemberCents: 2000}], privateFormats: []};
   const {el, html} = run('app/calendar/screen.html', {fetch: async () => json(schedule)});
   await settle();
-  assert.match(el('programCards').innerHTML, /<div class="plan-actions"><a class="button primary" href="\/register\?program=Intermediate&amp;plan=monthly" target="_top">Choose the monthly plan →<\/a><a class="button" href="\/register\?program=Intermediate&amp;plan=walkin" target="_top">Choose a walk-in →<\/a><\/div><\/article>/);
-  assert.match(style(html), /\.plan-actions\{display:flex;flex-direction:column;gap:10px;margin-top:auto\}/);
+  const body = html.slice(html.indexOf('<body>'), html.indexOf('<script>'));
+  assert.match(body, /<nav class="swa-doors four" id="doors" aria-label="Also on the site"><a class="swa-door" href="\/welcome#programs">[\s\S]*Programs[\s\S]*<a class="swa-door" href="\/lesson">[\s\S]*Private lessons[\s\S]*data-filter-door="extras"[\s\S]*Extra practices[\s\S]*href="#comingUp">[\s\S]*Camps &amp; clinics/);
+  assert.equal(el('doorPrograms').textContent, '$200.00 a month · $40.00 walk-in'); assert.equal(el('doorLive').textContent, 'Friday Night Live · Fri, Nov 13');
+  assert.doesNotMatch(body, /id="programCards"|id="liveCards"|id="lessonCards"|id="eventCards"|class="jump"/, 'the product sections and the jump links are gone');
+  assert.deepEqual([...body.matchAll(/class="button primary"/g)].length, 1, 'one red button: Join the academy');
+  assert.match(body, /<section class="join" id="join"[^>]*>[\s\S]*<a class="button primary" href="\/login\?mode=signup">Join the academy<\/a>/);
   assert.match(style(html), /\.competition\{background:var\(--swa-prog-advance\)/, 'program colors from the shared tokens');
 }
 

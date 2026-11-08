@@ -41,5 +41,7 @@ vm.runInContext("state.today='2026-11-17';week=null;pendingWeek=null;render()", 
 assert.match(list(), /Mon, Nov 23 – Sun, Nov 29/); assert.match(list(), /next week with practices/); assert.match(list(), /Nov 24, 2026/);
 vm.runInContext('thisWeek()', ctx); await settle(); assert.match(list(), /Mon, Nov 16 – Sun, Nov 22/); assert.match(list(), /Nothing is scheduled this week/);
 // Program buttons choose a plan; they don't promise online payment.
-assert.match(html, /'Choose the monthly plan →','button primary'/); assert.doesNotMatch(html, /Pay monthly for 12 months|Pay for the year upfront/);
+// One "Choose a walk-in" per day (#282), none per chip, and no promise of online payment.
+assert.match(html, /'Choose a walk-in →','choose'/); assert.doesNotMatch(html, /Choose this walk-in|Pay monthly for 12 months|Pay for the year upfront/);
+assert.equal((el('calendar').innerHTML.split('<div class="list">')[0].match(/Choose a walk-in/g) || []).length, 1, 'with today Nov 17, the grid links Nov 24 only: past days get no link');
 console.log('Calendar: one week at a time on phones, week paging across months, program filters');

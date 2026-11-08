@@ -1,53 +1,63 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><!--slot:head--><link rel="stylesheet" href="/responsive.css"><style>
-body{margin:0;background:var(--swa-ground);color:#141416}
-.hero{background:#141416;color:#fff;padding:36px 16px 44px}
+/* The welcome page (issue #196; redesign Phase 2, issue #282): the hero on the texture with a photo slot ready for
+   Phase 5, one red button in the first screen, the next session as one row in the hero, the programs as one comparison
+   card (three columns on a desk, a switch on a phone), then the steps, the team and the visit details. */
+body{margin:0;background:var(--swa-ground);color:var(--swa-ink)}
+.hero{position:relative;color:#fff;padding:var(--swa-s-48) 16px;border-bottom:2px solid var(--swa-red);overflow:hidden}
 .hero .in,main{max-width:var(--swa-width-wide);margin:0 auto}
-.hero .in{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:center}
-.hero img{width:200px;height:200px;display:block}
-.eyebrow{font-weight:700;font-size:14px;letter-spacing:2.4px;text-transform:uppercase;color:var(--swa-silver);margin:0}
-html body .hero h1{margin:8px 0 12px;color:#fff;font-size:clamp(40px,8vw,72px)}
-.hero p.lede{margin:0 0 24px;color:#D7DBE0;font-size:19px;max-width:44ch}
-.actions{display:flex;flex-wrap:wrap;gap:12px}
-html body .actions a.button{min-height:50px;padding:0 22px;display:inline-flex;align-items:center;text-decoration:none;font-size:17px;font-weight:700}
-html body .actions a.button:not(.primary){background:transparent;border-color:#fff;color:#fff}
-html body .actions a.button:not(.primary):hover{background:#26272C}
-main{padding:36px 16px 56px;display:flex;flex-direction:column;gap:40px}
-main>section{display:flex;flex-direction:column;gap:16px}
+.hero .in{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--swa-s-32);align-items:center}
+/* The photo slot (Phase 5 drops a photograph in here; until then the texture shows through) */
+.hero__media{display:none;min-height:320px;border-radius:var(--swa-r-card);background:rgba(255,255,255,.04);border:1px solid var(--swa-dark-line)}
+.hero__media.has-photo{display:block;background-size:cover;background-position:center}
+.eyebrow{color:var(--swa-silver);margin:0}
+html body .hero h1{margin:var(--swa-s-8) 0 var(--swa-s-12);color:#fff;font-size:clamp(40px,7vw,64px);overflow-wrap:anywhere;max-width:16ch}
+.hero p.lede{margin:0 0 var(--swa-s-24);color:#E4E7EB;font-size:var(--swa-t-20);max-width:44ch;line-height:1.4}
+.actions{display:flex;flex-wrap:wrap;gap:var(--swa-s-8) var(--swa-s-16);align-items:center}
+html body .actions a.button{min-height:var(--swa-h-big);padding:0 var(--swa-s-32);display:inline-flex;align-items:center;text-decoration:none}
+html body .actions a.button.quiet{color:#fff;min-height:44px;padding:0 var(--swa-s-8);text-decoration-color:rgba(255,255,255,.5)}
+html body .actions a.button.quiet:hover{color:var(--swa-silver)}
+.herolink{display:inline-flex;align-items:center;min-height:44px;margin-top:var(--swa-s-8);color:var(--swa-silver)!important;font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.4px;text-transform:uppercase;text-decoration:none}
+.herolink:hover{color:#fff!important}
+/* Coming up: one row in the hero */
+.hero__next{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--swa-s-4) var(--swa-s-12);margin:var(--swa-s-24) 0 0;padding-top:var(--swa-s-16);border-top:1px solid var(--swa-dark-line);font-size:var(--swa-t-15);color:#D7DBE0;max-width:62ch}
+.hero__next .lbl{font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px;text-transform:uppercase;color:var(--swa-silver)}
+.hero__next .when{font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+.hero__next .what{overflow-wrap:anywhere}
+.hero__next a{color:#fff;font-weight:600;white-space:nowrap}
+main{padding:var(--swa-s-32) 16px 56px;display:flex;flex-direction:column;gap:var(--swa-s-48)}
+main>section{display:flex;flex-direction:column;gap:var(--swa-s-16)}
 html body main>section.plain{background:none;border:0;border-radius:0}
 h2{margin:0}
-.programs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-.program{padding:20px;display:flex;flex-direction:column;gap:8px}
-
-.program h3{margin:0;font-size:21px}
-.program p{margin:0}
-.program .times{font-weight:700;font-size:15px;color:#141416}
-.program .times::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--swa-red);margin-right:8px;vertical-align:1px}
+/* Programs: one comparison card */
+.compare-switch{max-width:100%}
+html body .compare{display:grid;grid-template-columns:1fr;gap:0;padding:0;overflow:hidden}
+.program{padding:var(--swa-s-16);display:flex;flex-direction:column;gap:var(--swa-s-8);min-width:0}
+.program h3{margin:0;font-size:var(--swa-t-20)}
+.program p{margin:0;font-size:var(--swa-t-15);color:var(--swa-muted)}
+.program .times{font-weight:600;font-size:var(--swa-t-15);color:var(--swa-ink)}
+.program .times::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--swa-ink);margin-right:8px;vertical-align:1px}
 /* A program with no practices published yet says so, quietly (issue #231). */
 .program .times.soon{font-weight:600;color:var(--swa-muted)}
 .program .times.soon::before{background:none;box-shadow:inset 0 0 0 1.5px var(--swa-muted)}
 .grades{align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;padding:5px 10px;border-radius:999px}
-.program .price{font-weight:700}
-.program .note{border-left:3px solid var(--swa-red);padding-left:10px;font-size:15px}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));padding:0;margin:0;counter-reset:s;background:#fff;border:1px solid #E1E3E8;border-radius:6px;overflow:hidden}
-.steps li{list-style:none;padding:18px 20px;border-top:1px solid #E1E3E8;margin-top:-1px;display:flex;flex-direction:column;gap:4px;counter-increment:s}
-.steps li::before{content:counter(s);font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:32px;line-height:1;color:var(--swa-red)}
-.week{overflow:hidden}
-.week .row{display:flex;gap:16px;align-items:flex-start;padding:14px 18px;border-top:1px solid #E1E3E8}
-.week .row:first-child{border-top:0}
-.week .when{width:130px;flex:none;font-weight:700;font-variant-numeric:tabular-nums}
-.week .when span{display:block;font-weight:400;color:var(--swa-muted)}
-.week .what{flex:1;min-width:0;overflow-wrap:anywhere;display:flex;flex-direction:column;gap:4px}
-.week .item{display:flex;align-items:center;gap:10px}
-.dot{width:14px;height:14px;flex:none;border-radius:3px}
-.more{font-weight:700}
-footer{color:var(--swa-muted);font-size:15px;text-align:center;padding:0 16px 32px}
+.program .prices{display:flex;flex-direction:column;gap:2px;margin-top:auto;padding-top:var(--swa-s-8);border-top:1px solid var(--swa-line)}
+.program .price{font-weight:600;font-size:var(--swa-t-15)}
+.program .note{border-left:3px solid var(--swa-red);padding-left:10px;font-size:var(--swa-t-13)}
+html body .program a.button.quiet{align-self:flex-start;min-height:44px;padding:0;font-size:var(--swa-t-15);text-decoration-color:var(--swa-line)}
+.compare-cta{margin:0;display:flex;flex-wrap:wrap;gap:var(--swa-s-8) var(--swa-s-16);align-items:center}
+html body .compare-cta a.button{min-height:var(--swa-h-big);padding:0 var(--swa-s-32);display:inline-flex;align-items:center;text-decoration:none}
+.compare-cta span{font-size:var(--swa-t-15);color:var(--swa-muted)}
+@media (max-width:759px){html body .compare .program:not(.is-on){display:none}}
+@media (min-width:760px){.compare-switch{display:none}html body .compare{grid-template-columns:repeat(3,minmax(0,1fr))}.program{padding:var(--swa-s-24)}.program+.program{border-left:1px solid var(--swa-line)}}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));padding:0;margin:0;counter-reset:s;background:var(--swa-surface);border:1px solid var(--swa-hair);border-radius:var(--swa-r-card);overflow:hidden;box-shadow:var(--swa-shadow)}
+.steps li{list-style:none;padding:18px 20px;border-top:1px solid var(--swa-line);margin-top:-1px;display:flex;flex-direction:column;gap:4px;counter-increment:s}
+.steps li::before{content:counter(s);font-family:var(--swa-display);font-weight:800;font-size:32px;line-height:1;color:var(--swa-red)}
+.steps li span{font-size:var(--swa-t-15);color:var(--swa-muted)}
+footer{color:var(--swa-muted);font-size:var(--swa-t-15);text-align:center;padding:0 16px 32px}
 /* The owner's website content (issue #196): mission, a look at the team, visit details. */
-html body .hero h1{overflow-wrap:anywhere}
-.herolink{display:inline-flex;align-items:center;min-height:44px;margin-top:14px;color:var(--swa-silver)!important;font-weight:700;font-size:14px;letter-spacing:1.4px;text-transform:uppercase;text-decoration:none}
-.herolink:hover{color:#fff!important}
 html body main>section.mission{border-left:4px solid var(--swa-red);display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 32px;align-items:start}
 html body .mission h2{color:var(--swa-red);margin:0}
-.mission__text p{margin:0 0 12px;font-size:clamp(19px,2.4vw,23px);line-height:1.5;color:#141416;overflow-wrap:anywhere}
+.mission__text p{margin:0 0 12px;font-size:clamp(19px,2.4vw,23px);line-height:1.5;color:var(--swa-ink);overflow-wrap:anywhere}
 .mission__text p:last-child{margin:0}
 html body main>section.teaser{background:var(--swa-texture);color:#fff;border:0;border-bottom:2px solid var(--swa-red);padding:clamp(22px,4vw,36px)}
 .teaser__in{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:20px 36px;align-items:center}
@@ -56,24 +66,28 @@ html body .teaser h2{color:#fff;margin:0}
 .teaser__count{margin:6px 0 0;color:#C9CED4}
 .teaser__names{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .teaser__names li{display:flex;align-items:center;gap:10px;font-weight:700;overflow-wrap:anywhere}
-.mono{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#141416;color:#fff;border:2px solid var(--swa-red);font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:14px;letter-spacing:.5px}
-html body .teaser a.button{min-height:50px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}
+/* The team row's initials (Phase 5 swaps these for photographs: a .mono with a background-image) */
+.mono{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--swa-dark-2);color:#fff;border:2px solid var(--swa-red);font-family:var(--swa-display);font-weight:800;font-size:14px;letter-spacing:.5px;background-size:cover;background-position:center}
+html body .teaser a.button{min-height:50px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap;background:transparent;color:#fff;border-color:rgba(255,255,255,.4);box-shadow:none}
+html body .teaser a.button:hover{border-color:#fff;color:#fff}
 .visit__card{padding:18px 22px;display:flex;flex-wrap:wrap;gap:12px 40px}
 .visit__line{margin:0;display:flex;flex-direction:column;overflow-wrap:anywhere}
 .visit__label{font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--swa-muted)}
+@media (min-width:900px){.hero .in:has(.hero__media.has-photo){grid-template-columns:minmax(0,7fr) minmax(0,5fr)}.hero .in:has(.hero__media.has-photo) .hero__media{display:block}}
 @media (max-width:760px){html body main>section.mission{grid-template-columns:1fr}.teaser__in{grid-template-columns:1fr}html body .teaser a.button{width:100%}}
-@media (max-width:640px){.hero{padding:28px 16px 36px}.hero .in{grid-template-columns:1fr;gap:16px}.hero img{width:112px;height:112px;order:-1}.actions a.button{flex:1 1 auto;justify-content:center}.week .when{width:104px}.week .row{gap:12px;padding:12px 14px}}
+@media (max-width:640px){.hero{padding:var(--swa-s-32) 16px}main{gap:var(--swa-s-32)}html body .actions a.button.primary{flex:1 1 auto;justify-content:center}}
 </style></head><body>
-<div class="hero"><div class="in"><div>
+<div class="hero"><div class="in"><div class="hero__text">
 <p class="eyebrow">Huntington Station, NY</p>
 <h1><!--slot:headline--></h1>
 <p class="lede"><!--slot:intro--></p>
-<div class="actions"><a class="button primary" href="/login?mode=signup">Join the academy</a><a class="button" href="/login">Sign in</a></div>
+<div class="actions"><a class="button primary" href="/login?mode=signup">Join the academy</a><a class="button quiet" href="/login">Sign in</a></div>
 <!--slot:herolink-->
-</div><img src="/brand/savage-logo-256.png" alt="Savage Wrestling Academy logo" width="200" height="200"></div></div>
+<p class="hero__next" id="week"><span class="lbl">Coming up</span><span class="what">Loading the schedule…</span></p>
+</div><div class="hero__media" aria-hidden="true"></div></div></div>
 <main>
 <!--slot:mission-->
-<section class="plain" aria-labelledby="programsTitle"><h2 id="programsTitle">Programs</h2><div class="programs" id="programs"><p class="muted">Loading the programs…</p></div></section>
+<section class="plain" aria-labelledby="programsTitle"><h2 id="programsTitle">Programs</h2><div class="swa-seg compare-switch" id="programSwitch" role="group" aria-label="Program" hidden></div><div class="compare card" id="programs"><p class="muted">Loading the programs…</p></div><p class="compare-cta"><a class="button primary" href="/login?mode=signup">Start registration</a><span>Create your account, add your wrestler, choose a program.</span></p></section>
 <section class="plain" aria-labelledby="joinTitle"><h2 id="joinTitle">How to join</h2>
 <ol class="steps">
 <li><b>Create your account</b><span>Sign up with your email address, then confirm it from the email we send you.</span></li>
@@ -81,9 +95,8 @@ html body .teaser a.button{min-height:50px;padding:0 22px;display:inline-flex;al
 <li><b>Sign the waiver</b><span>When the academy asks for a waiver, sign it once for each wrestler, right on your phone.</span></li>
 <li><b>Choose training</b><span>Choose a membership or a single walk-in practice, then pay to confirm your spot.</span></li>
 </ol>
-<p>Every wrestler needs a current <a href="https://www.usawmembership.com" target="_blank" rel="noopener">USA Wrestling card</a> before they can book.</p>
+<p>Every wrestler needs a current <a href="https://www.usawmembership.com" target="_blank" rel="noopener">USA Wrestling card</a> before they can book. <a href="/calendar">See the full calendar →</a></p>
 </section>
-<section class="plain" aria-labelledby="weekTitle"><h2 id="weekTitle">Coming up</h2><div class="week card" id="week"><div class="row muted">Loading the schedule…</div></div><a class="more" href="/calendar">See the full calendar</a></section>
 <!--slot:team-->
 <!--slot:visit-->
 </main>
@@ -111,10 +124,16 @@ function weeklyTimes(id,schedules,today){
 }
 // One line per weekly time, or "Practice times coming soon" until the academy publishes practices (issue #231).
 function timesLines(times){return times.length?times.map(t=>'<span class="times">'+esc(t)+'</span>').join(''):'<span class="times soon">Practice times coming soon</span>'}
-function programCard(p,schedules=[],today=''){
+// One column of the comparison card (issue #282): the grade band, the name, when it practises, one sentence, the two
+// prices and a quiet Choose. The first program is the one shown on a phone until the switch is tapped.
+function programCard(p,schedules=[],today='',on=false){
  const grades=String(p.grades||GRADES[p.id]||'').replace(/\s*·\s*Coach approval required/i,'');
  const prices=[p.monthlyCents!=null?money(p.monthlyCents)+' a month for a 12-month membership':'',p.walkInCents!=null?money(p.walkInCents)+' for a single walk-in practice':''].filter(Boolean);
- return '<article class="program card">'+(grades?'<span class="grades" style="'+(swatch[p.id]||'background:var(--swa-prog-event);color:var(--swa-prog-event-ink)')+'">'+esc(grades)+'</span>':'')+'<h3>'+esc(p.name)+'</h3>'+timesLines(weeklyTimes(p.id,schedules,today))+(p.description?'<p>'+esc(p.description)+'</p>':'')+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'</article>'}
+ return '<article class="program'+(on?' is-on':'')+'" data-program="'+esc(p.id)+'">'+(grades?'<span class="grades" style="'+(swatch[p.id]||'background:var(--swa-prog-event);color:var(--swa-prog-event-ink)')+'">'+esc(grades)+'</span>':'')+'<h3>'+esc(p.name)+'</h3>'+timesLines(weeklyTimes(p.id,schedules,today))+(p.description?'<p>'+esc(p.description)+'</p>':'')+'<div class="prices">'+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+'</div>'+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'<a class="button quiet" href="/register?program='+encodeURIComponent(p.id)+'">Choose '+esc(p.name)+'</a></article>'}
+// The phone switch: one button per program; tapping one shows its column.
+function renderSwitch(programs){const sw=$('programSwitch');sw.hidden=programs.length<2;sw.innerHTML=programs.map((p,i)=>'<button type="button" data-program="'+esc(p.id)+'" aria-pressed="'+(i===0)+'">'+esc(p.name.replace(/^SWA /,''))+'</button>').join('')}
+function showProgram(id){document.querySelectorAll('#programs .program').forEach(a=>a.classList.toggle('is-on',a.dataset.program===id));document.querySelectorAll('#programSwitch button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.program===id)))}
+if(typeof document.addEventListener==='function')document.addEventListener('click',e=>{const b=e.target&&e.target.closest?e.target.closest('#programSwitch [data-program]'):null;if(b)showProgram(b.dataset.program)});
 // The next sessions from today, soonest first: practices, extra practices and the first day of each event.
 function upcoming(schedules,today,limit=6){
  const items=[],seen=new Set(),programs=schedules[0]?.programs||[];
@@ -127,17 +146,20 @@ function upcoming(schedules,today,limit=6){
  // Sessions at the same day and time share one row, so the list reaches further ahead.
  const groups=[];for(const i of items.sort((a,b)=>(a.date+(a.start||'99')).localeCompare(b.date+(b.start||'99')))){const last=groups[groups.length-1];if(last&&last.date===i.date&&last.start===i.start)last.items.push(i);else groups.push({date:i.date,start:i.start,items:[i]})}
  return groups.slice(0,limit)}
-function row(g){return '<div class="row"><span class="when">'+esc(dayLabel(g.date))+(g.start?'<span>'+esc(clock(g.start))+'</span>':g.items.some(i=>i.tba)?'<span>Time to be announced</span>':'')+'</span><span class="what">'+g.items.map(i=>'<span class="item"><span class="dot" aria-hidden="true" style="'+(i.color||'background:#55585F')+'"></span>'+esc(i.title)+'</span>').join('')+'</span></div>'}
+// Coming up, as one row in the hero: the soonest session (or sessions at the same time) and a link to the calendar.
+function nextRow(g){return '<span class="lbl">Coming up</span><span class="when">'+esc(dayLabel(g.date))+(g.start?' · '+esc(clock(g.start)):g.items.some(i=>i.tba)?' · Time to be announced':'')+'</span><span class="what">'+g.items.map(i=>esc(i.title)).join(', ')+'</span><a href="/calendar">Full calendar →</a>'}
 async function get(url){const r=await fetch(url,{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'The schedule could not be loaded. Refresh the page to try again.');return d}
 async function load(){
  try{
   const now=await get('/api/public-schedule');
   // Near the end of a month the next sessions are in next month, so read both.
   let later=null;try{later=await get('/api/public-schedule?month='+nextMonth(now.month||now.today.slice(0,7)))}catch{}
-  $('programs').innerHTML=(now.programs||[]).map(p=>programCard(p,[now,later].filter(Boolean),now.today)).join('')||'<p>The programs will be listed here soon.</p>';
-  const next=upcoming([now,later].filter(Boolean),now.today,5);
-  $('week').innerHTML=next.length?next.map(row).join(''):'<div class="row">Nothing is scheduled in the next few weeks. See the full calendar for later dates.</div>';
- }catch(e){$('programs').innerHTML='<p>'+esc(e.message)+'</p>';$('week').innerHTML='<div class="row">'+esc(e.message)+'</div>'}
+  const programs=now.programs||[];
+  $('programs').innerHTML=programs.map((p,i)=>programCard(p,[now,later].filter(Boolean),now.today,i===0)).join('')||'<p class="muted" style="padding:16px">The programs will be listed here soon.</p>';
+  renderSwitch(programs);
+  const next=upcoming([now,later].filter(Boolean),now.today,1);
+  $('week').innerHTML=next.length?nextRow(next[0]):'<span class="lbl">Coming up</span><span class="what">Nothing is scheduled in the next few weeks.</span><a href="/calendar">Full calendar →</a>';
+ }catch(e){$('programs').innerHTML='<p style="padding:16px">'+esc(e.message)+'</p>';$('week').innerHTML='<span class="what">'+esc(e.message)+'</span>'}
 }
 load();
 </script></body></html>

@@ -19,7 +19,15 @@ const page = '<!doctype html><html><head><title>X</title></head><body class="a">
 
 const out = decoratePage(page, '/register');
 assert.match(out, /<link rel="stylesheet" href="\/savage.css"><\/head>/, 'stylesheet is the last thing in head, so it wins');
-assert.match(out, /<body data-swa-page="\/register" class="a"><header class="swa-bar">/, 'top bar comes first in the body, and the body names the page');
+assert.match(out, /<body data-swa-page="\/register" class="a"><header class="swa-bar swa-bar--family">/, 'top bar comes first in the body, and the body names the page');
+// Family pages (#282): the bar carries the family's links, and the phone tab bar closes the body; other pages keep the two links.
+assert.match(out, /<nav class="swa-bar__links" aria-label="Site"><a href="\/">Home<\/a><a href="\/calendar">Calendar<\/a><a href="\/pass">Pass<\/a><a href="\/inbox">Messages<\/a><\/nav>/);
+assert.match(out, /<nav class="swa-tabs" aria-label="Family"><a href="\/">[\s\S]*Home<\/a><a href="\/calendar">[\s\S]*Calendar<\/a><a href="\/pass">[\s\S]*Pass<\/a><a href="\/inbox" id="inboxLink">[\s\S]*Messages<span class="swa-tabs__badge" id="inboxBadge" hidden><\/span><\/a><a href="\/family#account">[\s\S]*Account<\/a><\/nav><\/body>/);
+assert.match(decoratePage(page, '/family'), /<nav class="swa-tabs" aria-label="Family"><a href="\/" aria-current="page">/, 'Home is current on the family home');
+assert.match(decoratePage(page, '/inbox'), /<a href="\/inbox" aria-current="page" id="inboxLink">/);
+const coachOut = decoratePage(page, '/coach');
+assert.match(coachOut, /<header class="swa-bar"><div class="swa-bar__inner">[\s\S]*<nav class="swa-bar__links" aria-label="Site"><a href="\/calendar">Calendar<\/a><a href="\/" aria-current="page">Home<\/a><\/nav>/);
+assert.doesNotMatch(coachOut, /swa-tabs/, 'no family tab bar off the family pages');
 assert.match(out, /href="\/brand\/favicon-32.png"/);
 assert.equal(decoratePage(out, '/register'), out, 'decorating twice changes nothing');
 assert.match(topBar('/calendar'), /href="\/calendar" aria-current="page">Calendar/);

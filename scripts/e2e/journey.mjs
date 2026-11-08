@@ -104,6 +104,10 @@ const shot = async (page, name) => { if (SHOTS) await page.screenshot({path: `${
 // Pages that load in the background are used only once they have loaded, never after a fixed wait (issue #220).
 // /family turns its Save button back on when the profile is in; until then, typing is overwritten by the load.
 const familyReady = page => page.waitForSelector('#save:not([disabled])', {state: 'attached'});
+// A saved profile says so in a toast (public/toast.js), or in the status line when USA Wrestling had something to say
+// about the card (issue #282). Either counts.
+const saved = page => page.waitForFunction(() => /saved/.test((document.querySelector('#status')?.textContent || '') + (document.querySelector('#swa-toast')?.textContent || '')), null, {timeout: 20000});
+const toastText = (page, re) => waitText(page, '#swa-toast', re);
 // /cards, /waivers, /contracts and /consent-forms reload their list when the filter changes and mark it busy until the
 // latest load has drawn it. Text from the first load can match before that, and the reload then redraws the list under
 // whatever the walkthrough opened or typed.
@@ -199,14 +203,14 @@ await step('family saves a profile and wrestler without a card, and sees booking
   expect(await family.isVisible('#editor') && await family.$eval('#homeAddress', el => !el.validity.valid), 'the street address is required');
   await fillDetails(family, 'Jordan Emergency');
   await family.click('#save');
-  await waitText(family, '#status', /saved/);
+  await saved(family);
   await waitText(family, '#savedDetails', /No USA Wrestling card[\s\S]*Booking is blocked/);
   await shot(family, 'family-no-card');
 });
 await step('family is refused a walk-in without a card, with a link to fix it', async () => {
   await family.goto(BASE + '/register');
-  await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
-  await family.check('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
+  await family.waitForSelector('#wrestlerChips [data-wrestler]');
+  await family.click('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
   await family.waitForSelector('[data-day]'); await family.locator(`[data-day="${ny(1)}"]`).first().click();
   await family.waitForSelector('[data-slot]'); await family.locator('[data-slot]').first().click();
   await family.click('#reviewButton');
@@ -217,12 +221,12 @@ await step('family is refused a walk-in without a card, with a link to fix it', 
 // date uses "My card has a different expiration date", which is also how this test enters an expired card.
 const latestSeason = page => page.$$eval('#usawSeason0 option', os => os.map(o => o.value).filter(v => /^\d{4}-08-31$/.test(v)).pop());
 await step('family adds an expired card, then a current one', async () => {
-  await family.goto(BASE + '/family'); await family.click('text=Edit family profile');
+  await family.goto(BASE + '/family'); await family.click('#editProfile');
   expect(await family.isHidden('#usawExpBox0'), 'the date box waits for "different date"');
   await family.fill('#usaw0', 'ab-123456'); await family.selectOption('#usawSeason0', 'other');
   await family.fill('#usawExp0', ny(-3)); await family.click('#save');
   await waitText(family, '#savedDetails', /USA Wrestling card expired/);
-  await family.click('text=Edit family profile');
+  await family.click('#editProfile');
   expect(await family.inputValue('#usawSeason0') === 'other' && await family.inputValue('#usawExp0') === ny(-3), 'a saved special date shows as "different date" with the date filled in');
   const season = await latestSeason(family); expect(season, 'a season to choose');
   await family.selectOption('#usawSeason0', season);
@@ -231,9 +235,9 @@ await step('family adds an expired card, then a current one', async () => {
   // The site checked the number with USA Wrestling (a stand-in here), which has no card with it (issue #202).
   await waitText(family, '#savedDetails', /Check the card number[\s\S]*USA Wrestling has no card with this number/);
   await waitText(family, '#status', /Your changes are saved\. USA Wrestling has no card with the number you entered for Sam Example/);
-  await family.click('text=Edit family profile');
+  await family.click('#editProfile');
   expect(await family.inputValue('#usawSeason0') === season, 'the saved season is preselected');
-  await family.click('#save'); await waitText(family, '#status', /saved/);
+  await family.click('#save'); await saved(family);
 });
 await step('owner sees the card on /cards, marks it not valid; family is blocked with the reason', async () => {
   await owner.goto(BASE + '/cards'); await showAll(owner);
@@ -255,7 +259,7 @@ await step('owner sees the card on /cards, marks it not valid; family is blocked
   await shot(owner, 'owner-cards');
 });
 await step('family changes the card: still blocked until the owner checks it; owner verifies', async () => {
-  await family.goto(BASE + '/family'); await family.click('text=Edit family profile');
+  await family.goto(BASE + '/family'); await family.click('#editProfile');
   await family.fill('#usaw0', 'AB-123457'); await family.click('#save');
   await waitText(family, '#savedDetails', /Waiting for the academy/);
   await owner.goto(BASE + '/cards');
@@ -269,7 +273,7 @@ await step('family changes the card: still blocked until the owner checks it; ow
 const seasonEnd = (() => { const [y, m] = today.split('-').map(Number); return (m >= 9 ? y + 1 : y) + '-08-31'; })();
 await step('family enters a card USA Wrestling shows as not active, then an active one that verifies itself', async () => {
   const sent = usaw.seen.length;
-  await family.goto(BASE + '/family'); await family.click('text=Edit family profile');
+  await family.goto(BASE + '/family'); await family.click('#editProfile');
   await family.fill('#usaw0', '2222222222'); await family.selectOption('#usawSeason0', seasonEnd); await family.click('#save');
   await waitText(family, '#status', /USA Wrestling shows Sam Example’s card isn’t active/);
   await waitText(family, '#savedDetails', /USA Wrestling card not active[\s\S]*Renew it, then choose Check my card[\s\S]*Get or renew a card/);
@@ -281,7 +285,7 @@ await step('family enters a card USA Wrestling shows as not active, then an acti
   const phone = await as('family', {width: 390, height: 844});
   await phone.goto(BASE + '/family'); await waitText(phone, '#savedDetails', /USA Wrestling card not active/);
   await shot(phone, 'phone-family-card-not-active');
-  await family.click('text=Edit family profile');
+  await family.click('#editProfile');
   await family.fill('#usaw0', '1234567890'); await family.click('#save');
   await waitText(family, '#status', /Sam Example’s USA Wrestling card is verified\./);
   await waitText(family, '#savedDetails', /USA Wrestling card verified[\s\S]*Checked with USA Wrestling on/);
@@ -388,9 +392,10 @@ await step('a brand-new family sees a guided start, and lessons and booking say 
 
 // ---------- Walk-in review now passes ----------
 await step('family reviews a walk-in once card and waiver are in order', async () => {
-  await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
+  await family.goto(BASE + '/register'); await family.waitForSelector('#wrestlerChips [data-wrestler]');
   expect(await family.inputValue('#program') === 'Intermediate', 'a Grade 8 wrestler should start on SWA Intermediate');
-  await family.check('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
+  expect(await family.getAttribute('#wrestlerChips [data-wrestler]', 'aria-pressed') === 'true', 'the one wrestler is the chosen chip');
+  await family.click('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
   await family.locator(`[data-day="${ny(1)}"]`).first().click(); await family.locator('[data-slot]').first().click();
   await family.click('#reviewButton');
   await family.waitForFunction(() => /\$40\.00/.test(document.body.textContent), null, {timeout: 8000});
@@ -401,7 +406,7 @@ await step('family reviews a walk-in once card and waiver are in order', async (
 // ---------- Pay cash at the academy (issue #248) ----------
 await step('family books today\'s walk-in to pay cash; the coach sees $40 due and taps Cash received; Payments shows it', async () => {
   await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${today}`);
-  await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family.waitForFunction(() => document.querySelector('#wrestlerChips [data-wrestler]') && !document.querySelector('#reviewButton')?.disabled);
   await family.click('#reviewButton');
   await family.waitForSelector('#payChoice:not([hidden])');
   // Online checkout is closed in this walkthrough, so cash is the only way offered, and it is already chosen.
@@ -430,7 +435,7 @@ await step('family books today\'s walk-in to pay cash; the coach sees $40 due an
 // ---------- No year paid upfront; a membership paid upfront earlier still counts; roster, check-in and QR ----------
 await step('no year paid upfront anywhere; a membership paid upfront before the change still counts', async () => {
   // Families are offered the monthly membership and walk-ins only (#210).
-  await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
+  await family.goto(BASE + '/register'); await family.waitForSelector('#wrestlerChips [data-wrestler]');
   expect(!(await family.$('#plan-annual')) && !/upfront/i.test(await family.locator('main').innerText()), 'the register page offers no upfront year');
   const refused = await api(family, '/api/registration', {wrestlerId: samId, program: 'Intermediate', plan: 'annual'});
   expect(refused.status === 400 && /no longer offered/.test(refused.body.error), 'upfront year refused: ' + JSON.stringify(refused.body));
@@ -470,7 +475,10 @@ await step('family sees the pass, the wrestler view and the membership', async (
   await waitText(family, '#nextUpBody', /SWA Intermediate practice[\s\S]*Show entry pass/);
   expect(!(await family.isVisible('#start')), 'a family that is set up does not see the guided start');
   expect(await family.getAttribute('#nextUpBody a.primary', 'href') === '/pass?wrestler=' + samId, 'entry pass button');
-  await waitText(family, '#savedDetails', /USA Wrestling card verified[\s\S]*Waiver signed[\s\S]*Member/);
+  await waitText(family, '#savedDetails', /member through[\s\S]*USA Wrestling card verified[\s\S]*Waiver signed/);
+  // The week card, the three doors and the payments line (issue #282).
+  await waitText(family, '#weekRows', /SWA Intermediate practice/); expect(await family.locator('#doors .swa-door').count() === 3, 'three doors');
+  await waitText(family, '#moneyLine', /due at the academy/);
   await shot(family, 'family-home');
 });
 await step('a coach sees today\'s roster for their program only and can check in', async () => {
@@ -605,7 +613,7 @@ await step('camp fills; family 2 sees it is full, with no waitlist to join', asy
   await family2.goto(BASE + '/family'); await family2.waitForSelector('#familyForm');
   await familyReady(family2); await family2.fill('[name=parentName]', 'Riley Parent'); await family2.click('text=+ Add wrestler'); await family2.fill('#name0', 'Riley Two'); await family2.selectOption('#grade0', '8');
   await fillDetails(family2, 'Casey Emergency');
-  await family2.fill('#usaw0', 'CD-5555'); await family2.selectOption('#usawSeason0', await latestSeason(family2)); await family2.click('#save'); await waitText(family2, '#status', /saved/);
+  await family2.fill('#usaw0', 'CD-5555'); await family2.selectOption('#usawSeason0', await latestSeason(family2)); await family2.click('#save'); await saved(family2);
   const rid = await wid(family2);
   await owner.goto(BASE + '/waivers'); await showAll(owner);
   await waitText(owner, '#rows', /Riley Two/);
@@ -617,12 +625,13 @@ await step('camp fills; family 2 sees it is full, with no waitlist to join', asy
   await owner.selectOption('#family', {label: 'Pat Example · family.a@example.test'}); await owner.selectOption('#kind', 'event');
   await owner.waitForFunction(() => [...document.querySelectorAll('#event option')].some(o => o.value === 'winter-camp'));
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record'); await waitText(owner, '#status', /recorded/i);
-  await family2.goto(BASE + '/booking?type=event&id=winter-camp'); await family2.waitForSelector('#submit');
+  await family2.goto(BASE + '/booking?type=event&id=winter-camp'); await family2.waitForSelector('#wrestlerChips [data-wrestler]');
   expect(!/\d{4}-\d{2}-\d{2}/.test(await family2.locator('main').innerText()), 'camp dates should be readable, not 2026-11-15');
   await waitText(family2, '#description', /9:00 AM–12:00 PM[\s\S]*Time to be announced/);
   // The page is titled with the event and says where each wrestler stands (issue #132).
   await waitText(family2, 'h1', /Winter camp/); await waitText(family2, '#wrestlerStatus', /Riley Two is not registered yet/);
-  await family2.click('#submit'); await waitText(family2, '#status', /^This event is full\.$/);
+  // The receipt reviews itself once the wrestler is chosen (issue #282); a full event says so at once.
+  await waitText(family2, '#status', /^This event is full\.$/);
   expect(!(await family2.$('#joinWaitlist')) && !/waitlist/i.test(await family2.locator('main').innerText()), 'no waitlist on the booking page');
   await family.goto(BASE + '/booking?type=event&id=winter-camp'); await waitText(family, '#wrestlerStatus', /Sam Example is already registered/);
   await family2.goto(BASE + '/calendar'); expect(!/waitlist/i.test(await family2.locator('body').innerText()), 'no waitlist on the calendar');
@@ -634,9 +643,10 @@ await step('camp fills; family 2 sees it is full, with no waitlist to join', asy
 
 // ---------- Camps and clinics can be paid cash at the academy (#273) ----------
 await step('family books a clinic to pay cash; the seat is held; the owner sees it under Cash due and records the cash', async () => {
-  await family.goto(BASE + '/booking?type=event&id=spring-clinic'); await family.waitForSelector('#submit');
+  await family.goto(BASE + '/booking?type=event&id=spring-clinic'); await family.waitForSelector('#wrestlerChips [data-wrestler]');
   await waitText(family, 'h1', /Spring clinic/); await waitText(family, '#wrestlerStatus', /Sam Example is not registered yet/);
-  await family.click('#submit'); await family.waitForSelector('#payChoice:not([hidden])');
+  await family.waitForSelector('#payChoice:not([hidden])');
+  await at(family, '#details', /Event\s*Spring clinic[\s\S]*Wrestler\s*Sam Example[\s\S]*Total\s*\$60\.00/);
   // Online checkout is closed in this walkthrough, so cash is the one way offered, already chosen; no disabled button is left.
   expect(!(await family.isVisible('#payOnlineOption')) && await family.isVisible('#cashBox'), 'Pay cash at the academy is offered for a clinic while online payment is closed');
   expect(!(await family.$('#payPending')) && !/To book, pay the academy/.test(await family.locator('#review').innerText()), 'no "isn’t open yet" dead end on the clinic');
@@ -667,8 +677,9 @@ await step('a membership review offers "Tell the academy I want this"; the owner
   // Family 2 (Riley): Sam already holds a membership, so his review would be refused.
   const rileyId = await wid(family2);
   await family2.goto(BASE + '/register?plan=monthly&program=Intermediate');
-  await family2.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family2.waitForFunction(() => document.querySelector('#wrestlerChips [data-wrestler]') && !document.querySelector('#reviewButton')?.disabled);
   await family2.click('#reviewButton'); await family2.waitForSelector('#review:not([hidden])');
+  await at(family2, '#reviewDetails', /Each month[\s\S]*\$200\.00/);
   expect(await family2.isVisible('#interestButton') && !(await family2.$('#payPending')), 'one real action, no disabled "isn’t open yet" button');
   await at(family2, '#contactLine', /20 Railroad St, Huntington Station, NY 11746/);
   await family2.click('#interestButton'); await at(family2, '#interestDone', /Sent\.[\s\S]*Riley Two’s SWA Intermediate membership/);
@@ -746,7 +757,8 @@ await step('coach posts a small group with 4 spots; two families each book a wre
     await waitText(page, '#paths', /Join a partner or small group[\s\S]*1 group with spots/);
     await page.click('[data-path="group"]'); await waitText(page, '#times', new RegExp(`Small-group lesson[\\s\\S]*${left} spots left`));
     await page.locator('[data-opening]').first().click();
-    await waitText(page, '#summary', new RegExp(`Small-group lesson[\\s\\S]*Coach Dana[\\s\\S]*For ${name} · ${left} spots left[\\s\\S]*\\$35\\.00[\\s\\S]*per wrestler`));
+    // The receipt (issue #282): "For" is the line's label, the wrestler and the spots its value.
+    await waitText(page, '#summary', new RegExp(`Small-group lesson[\\s\\S]*Coach Dana[\\s\\S]*For\\s*${name} · ${left} spots left[\\s\\S]*\\$35\\.00[\\s\\S]*per wrestler`));
     expect(await page.isVisible('#notOpen'), 'pay at the academy while lesson checkout is closed');
     if (page === family) await shot(family, 'lesson-join-group');
     await recordLesson(page === family ? 'Pat Example · family.a@example.test' : 'Riley Parent · family.b@example.test', name, /Small-group lesson · \d of 4 spots left/);
@@ -780,7 +792,7 @@ await step('a family starts a private partner lesson; a second family joins thro
   expect(!JSON.stringify(listing.body).includes(link.split('join=')[1]) && listing.body.openings.every(o => o.date !== ny(6)), 'a private group must not be listed');
   await family2.goto(link); await family2.waitForSelector('#joinBox:not([hidden])');
   await waitText(family2, '#joinHeading', /Join Pat Example’s group/);
-  await waitText(family2, '#summary', /Partner lesson[\s\S]*For Riley Two · 1 of 2 spots left[\s\S]*\$45\.00[\s\S]*per wrestler/);
+  await waitText(family2, '#summary', /Partner lesson[\s\S]*For\s*Riley Two · 1 of 2 spots left[\s\S]*\$45\.00[\s\S]*per wrestler/);
   expect(!(await family2.isVisible('#stepType')), 'an invite link opens straight to joining');
   await shot(family2, 'lesson-invite-join');
   await recordLesson('Riley Parent · family.b@example.test', 'Riley Two', /Partner lesson, private group of Pat Example · 1 of 2 spots left, 1 kept for their wrestlers/);
@@ -816,7 +828,7 @@ await step('owner announces to SWA Intermediate; family reads it and replies; ow
   await family.fill('#body', 'Thanks, see you there.'); await family.click('#reply button'); await waitText(family, '#thread', /see you there/);
   // The newest notice opens by itself, and one button marks everything read (issue #132).
   expect(await family.locator('#notices details[open]').count() === 1 && await family.locator('#notices details').first().getAttribute('open') !== null, 'newest notice is open');
-  await family.waitForSelector('#markAll:not([hidden])'); await family.click('#markAll'); await waitText(family, '#status', /All messages are marked as read/);
+  await family.waitForSelector('#markAll:not([hidden])'); await family.click('#markAll'); await toastText(family, /All messages are marked as read/);
   expect(await family.locator('#notices .unread, #announcements .unread').count() === 0 && !(await family.isVisible('#markAll')), 'nothing left unread');
   expect(!((await api(family, '/api/inbox')).body.unread), 'server agrees nothing is unread');
   // The Messages link counts what /api/inbox says is unread: check that answer, not a fixed wait.
@@ -1145,7 +1157,7 @@ await step('payment setup, security log and family accounts load with real recor
 // Issue #188: contact and safety details. The family updates them on their profile; the owner sees them on Family
 // accounts, where the program filter narrows the list; coaches see allergies and the emergency contact on the roster.
 await step('family updates the address, emergency contact and allergies; the owner sees them on Family accounts', async () => {
-  await family.goto(BASE + '/family'); await family.click('text=Edit family profile'); await family.waitForSelector('#homeAddress');
+  await family.goto(BASE + '/family'); await family.click('#editProfile'); await family.waitForSelector('#homeAddress');
   expect(/needs these details for every family/i.test(await text(family, '#detailsWhy')), 'the form says why the academy needs the details');
   expect(await family.isChecked('#none0') && await family.isDisabled('#allergies0'), '"No allergies or medical notes" was saved');
   await family.fill('#homeState', 'ny');
@@ -1157,9 +1169,9 @@ await step('family updates the address, emergency contact and allergies; the own
   const bad = await family.evaluate(async () => { const g = await (await fetch('/api/family', {cache: 'no-store'})).json(); const r = await fetch('/api/family', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision: g.revision, data: {...g.data, homeZip: '117'}})}); return {status: r.status, body: await r.json()}; });
   expect(bad.status === 400 && /ZIP/.test(bad.body.error), 'the server refuses a bad ZIP code: ' + JSON.stringify(bad));
   await family.fill('#homeZip', '11746'); await family.click('#save');
-  await waitText(family, '#status', /saved/);
-  await waitText(family, '#savedDetails', /Huntington Station, NY 11746[\s\S]*Jordan Example · \(631\) 555-0199/);
-  expect(/Born Apr 18, 2012[\s\S]*Peanut allergy/.test(await text(family, '#savedDetails')), 'birth date and allergies on the saved profile');
+  await saved(family);
+  await waitText(family, '#contactRows', /Jordan Example · \(631\) 555-0199[\s\S]*Huntington Station, NY 11746/);
+  expect(/Peanut allergy[\s\S]*Born Apr 18, 2012/.test(await text(family, '#savedDetails')), 'the allergy leads the wrestler card, with the birth date');
   await shot(family, 'family-contact-safety');
   await owner.goto(BASE + '/accounts'); await owner.waitForSelector('#program');
   const pat = owner.locator('#families article', {hasText: 'Pat Example'});
@@ -1306,12 +1318,14 @@ await step('backup export includes payments and signed waivers', async () => {
 
 // ---------- Family data requests ----------
 await step('family downloads their data and asks to close the account; owner records how it was handled', async () => {
-  await family.goto(BASE + '/family'); await family.waitForSelector('#yourData');
-  const [dl] = await Promise.all([family.waitForEvent('download'), family.click('text=Download my family\'s data')]);
+  // The download and the close-account request live in the Account menu (issue #282).
+  await family.goto(BASE + '/family'); await family.waitForSelector('#summary:not([hidden])'); await family.click('#accountMenu summary');
+  expect(await family.$eval('#accountMenu', d => d.open), 'the Account menu opens');
+  const [dl] = await Promise.all([family.waitForEvent('download'), family.click('#accountMenu a:has-text("Download my family\'s data")')]);
   const why = await dl.failure(); expect(!why, 'download failed: ' + why + ' ' + dl.url());
   const data = JSON.parse((await import('node:fs')).readFileSync(await dl.path(), 'utf8'));
   expect(data.profile.parentName === 'Pat Example' && data.payments.length >= 3 && !JSON.stringify(data).includes('Riley'), 'export contents');
-  await family.click('summary:has-text("Ask to close my account")'); await family.fill('#closeNote', 'Moving away');
+  await family.click('#accountMenu summary'); await family.click('#accountMenu button:has-text("Ask to close my account")'); await family.waitForSelector('#yourData:not([hidden])'); await family.fill('#closeNote', 'Moving away');
   await family.click('#closeForm button'); await waitText(family, '#requestStatus', /The academy will contact you/);
   await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Data requests/);
   await owner.goto(BASE + '/data-requests'); await waitText(owner, '#list', /Pat Example[\s\S]*Moving away/);
@@ -1378,7 +1392,7 @@ await step('family pages fit a phone screen', async () => {
     if (SHOTS) await phone.screenshot({path: `${SHOTS}/phone-${path.replace(/[^a-z]/g, '') || 'home'}.png`, fullPage: true});
   }
   // The profile editor with the card season choice, and the "different date" box open (issue #131).
-  await phone.goto(BASE + '/family'); await phone.click('text=Edit family profile'); await phone.waitForSelector('#usawSeason0');
+  await phone.goto(BASE + '/family'); await phone.click('#editProfile'); await phone.waitForSelector('#usawSeason0');
   await phone.selectOption('#usawSeason0', 'other');
   const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(over <= 1, `/family editor scrolls sideways by ${over}px on a phone`);

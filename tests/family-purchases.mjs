@@ -77,9 +77,12 @@ async function openFamily({search = '', orderStatuses = ['paid']}) {
   // "Paid", not "online": a payment may have been recorded offline (issue #101). Shown only for an active membership (#231).
   assert.equal(el('paymentsPill').hidden, false, 'an active membership in good standing shows "Paid"');
   assert.match(readFileSync('app/family/screen.html', 'utf8'), /id="paymentsPill" hidden>Paid<\/span>/);
-  assert.equal(el('notEnrolledNote').hidden, true, 'no "nothing has been paid" notice for a family that has paid');
-  assert.match(el('readyNote').textContent, /pay securely online/);
-  assert.doesNotMatch(el('editorNotice').textContent, /still being connected/);
+  assert.match(el('editorNotice').textContent, /pay online/); assert.doesNotMatch(el('editorNotice').textContent, /still being connected/);
+  // The purchases table (#282): the purchase, the wrestler, the status and the amount in one row each.
+  assert.match(list, /<table class="swa-table"><thead><tr><th>Purchase<\/th><th>Wrestler<\/th><th>Status<\/th><th class="num">Amount<\/th><\/tr><\/thead>/);
+  assert.match(list, /<td><strong>Takedown Camp<\/strong><small>Dec 1, 2026 · Dec 2, 2026<\/small><small>Includes \$16\.00 discount<\/small><\/td><td data-label="Wrestler">Sam Example<\/td><td data-label="Status"><span class="pill ok">Paid<\/span>/);
+  // Payments: nothing due, four payments on record.
+  assert.match(el('moneyLine').innerHTML, /\$0\.00<\/div><div class="lbl">due at the academy<\/div><\/div><div><div class="amt">3<\/div><div class="lbl">payments on record/);
 }
 {
   const {el} = await openFamily({search: `?checkout=success&order=${uuid(11)}`, orderStatuses: ['pending', 'pending', 'paid']});
