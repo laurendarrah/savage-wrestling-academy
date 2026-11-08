@@ -92,28 +92,42 @@ coach.el('nextMonth').onclick();await coach.settle();assert.match(coach.el('cale
 assert.match(coach.el('calendar').innerHTML,/Nothing is scheduled for your programs this month/);
 coach.el('prevMonth').onclick();await coach.settle();assert.match(coach.el('calendarTitle').textContent,/December 2026/);
 coach.el('thisMonth').onclick();await coach.settle();assert.equal(await coach.run('state.month'),await coach.run('state.today.slice(0,7)'));
-// Phones (issue #223): in the month that holds today, the list starts at today and earlier days with something on fold
-// behind "Show earlier days". Other months, and the desktop grid, show every day.
+// Phones (issue #286): in the month that holds today, the list is this week (Monday to Sunday) and the other days with
+// something on fold behind "Show the whole month". Other months, and the desktop grid, show every day.
 {
  const day=(date,o={})=>({date,today:false,holidays:[],items:[],...o}),practice={kind:'practice',program:'Elementary',title:'SWA Development',start:'18:00',end:'19:30',plan:false};
- globalThis.__cal={month:'2026-11',lead:6,days:[day('2026-11-01',{items:[practice]}),day('2026-11-02'),day('2026-11-03',{holidays:['Election Day']}),day('2026-11-04',{items:[{...practice,program:'Advanced'}]}),day('2026-11-05',{today:true}),day('2026-11-06',{items:[practice]})]};
+ // Thursday Nov 5, 2026 is today: its week runs Mon Nov 2 to Sun Nov 8. Nov 1 (a Sunday) is the only other day with something on.
+ globalThis.__cal={month:'2026-11',lead:6,days:[day('2026-11-01',{items:[practice]}),day('2026-11-02'),day('2026-11-03',{holidays:['Election Day']}),day('2026-11-04',{items:[{...practice,program:'Advanced'}]}),day('2026-11-05',{today:true}),day('2026-11-06',{items:[practice]}),day('2026-11-09',{items:[practice]}),day('2026-11-10',{holidays:['Day off']})]};
  await coach.run('var cal='+JSON.stringify(globalThis.__cal));
  let html=await coach.run('calendarHtml(cal,"",false)');
- assert.match(html,/<button type="button" class="cal-earlier" data-earlier aria-expanded="false">Show earlier days \(3\)<\/button>/,'three earlier days have something on');
- assert.deepEqual([...html.matchAll(/<div class="cal-day[^"]*folded[^"]*"[^>]*><h3><span class="d-num">(\d+)/g)].map(m=>+m[1]),[1,3,4],'earlier days with something on are folded');
+ assert.match(html,/<button type="button" class="cal-earlier" data-earlier aria-expanded="false">Show the whole month \(3 more days\)<\/button>/,'three days outside this week have something on');
+ assert.deepEqual([...html.matchAll(/<div class="cal-day[^"]*folded[^"]*"[^>]*><h3><span class="d-num">(\d+)/g)].map(m=>+m[1]),[1,9,10],'days outside this week with something on are folded, before and after');
  assert.doesNotMatch(html,/class="cal-day[^"]*folded[^"]*"[^>]*aria-current/,'today is never folded');
  assert.match(html,/<div class="cal-day empty"><h3><span class="d-num">2</,'a quiet day stays a quiet day');
- assert.equal((await coach.run('earlierDays(cal,d=>d.items.filter(i=>i.program!=="Advanced"))')).length,2,'the program filter changes what folds');
+ assert.ok(html.indexOf('cal-earlier')>html.lastIndexOf('cal-day'),'the toggle comes after the week');
+ assert.equal((await coach.run('otherDays(cal,d=>d.items.filter(i=>i.program!=="Advanced"))')).length,3,'the program filter changes what folds');
+ assert.equal((await coach.run('otherDays(cal,d=>d.items.filter(i=>i.program==="Advanced"))')).length,1,'with only SWA Advance shown, just the holiday folds');
  html=await coach.run('calendarHtml(cal,"",true)');
- assert.match(html,/aria-expanded="true">Hide earlier days<\/button>/);assert.doesNotMatch(html,/folded/);
+ assert.match(html,/aria-expanded="true">Show this week only<\/button>/);assert.doesNotMatch(html,/folded/);
  await coach.run('cal.days.forEach(d=>d.today=false)');assert.doesNotMatch(await coach.run('calendarHtml(cal,"",false)'),/cal-earlier|folded/,'a month without today folds nothing');
- await coach.run('cal.days[0].today=true');assert.doesNotMatch(await coach.run('calendarHtml(cal,"",false)'),/cal-earlier|folded/,'nothing before the first day');
- // The toggle re-draws the month with the earlier days open, and back.
+ await coach.run('cal.days[0].today=true');html=await coach.run('calendarHtml(cal,"",false)');
+ assert.match(html,/<button type="button" class="cal-earlier" data-earlier aria-expanded="false">Show the whole month \(5 more days\)<\/button>/,'a Sunday today: its week ended with it, so every later day with something on folds');
+ await coach.run('cal.days[0].today=false;cal.days[6].today=true;[0,2,3].forEach(i=>{cal.days[i].items=[];cal.days[i].holidays=[]})');assert.match(await coach.run('calendarHtml(cal,"",false)'),/\(1 more day\)/,'one other day reads in the singular');
+ // The toggle re-draws the month with the other days open, and back.
  await coach.run('state.calendar=cal;cal.days.forEach(d=>d.today=d.date==="2026-11-05")');await coach.run('renderCalendar()');
- assert.match(coach.el('calendar').innerHTML,/Show earlier days/);
- coach.el('calendar').onclick({target:{closest:()=>({dataset:{earlier:''}})}});assert.match(coach.el('calendar').innerHTML,/Hide earlier days/);assert.doesNotMatch(coach.el('calendar').innerHTML,/folded/);
- coach.el('calendar').onclick({target:{closest:()=>({dataset:{earlier:''}})}});assert.match(coach.el('calendar').innerHTML,/Show earlier days/);
+ assert.match(coach.el('calendar').innerHTML,/Show the whole month/);
+ coach.el('calendar').onclick({target:{closest:()=>({dataset:{earlier:''}})}});assert.match(coach.el('calendar').innerHTML,/Show this week only/);assert.doesNotMatch(coach.el('calendar').innerHTML,/folded/);
+ coach.el('calendar').onclick({target:{closest:()=>({dataset:{earlier:''}})}});assert.match(coach.el('calendar').innerHTML,/Show the whole month/);
  coach.el('calendar').onclick({target:{closest:()=>null}});
+ // Today's shared plan opens under the calendar by itself, without taking focus (issue #286); the month and program
+ // selects stay away for a coach with one program.
+ assert.equal(coach.el('monthTools').hidden,true,'one program: no month or program selects');
+ {
+  let focused=0;coach.el('detail').focus=()=>{focused++};
+  await coach.run('state.month=state.today.slice(0,7);state.plans=[{program:"Elementary",date:state.today,published:true,revision:1,scheduled:true,updatedAt:"2026-11-05T12:00:00Z",data:{title:"Today only",objective:"",sections:[],notes:""}}];showCoachMonth(state)');
+  assert.equal(coach.el('detail').hidden,false);assert.match(coach.el('detail').innerHTML,/Today only/);assert.equal(focused,0,'drawn quietly');
+  await coach.run('state.plans=[];load("2026-12")');
+ }
  // CSS: folded days and the toggle only on phones; the shared-plan mark everywhere.
  const css=readFileSync('app/practice-plans/screen.html','utf8');
  assert.match(css,/@media\(max-width:760px\)\{\.cal\{grid-template-columns:1fr\}\.cal-dow,\.cal-blank,\.cal-day\.empty,\.cal-day\.folded\{display:none\}html body \.cal \.cal-earlier\{display:flex/);

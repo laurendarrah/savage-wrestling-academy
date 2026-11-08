@@ -171,7 +171,9 @@ console.log('Passed: check-in blocked for missing, expired, not valid, changed a
   assert.match(row('Nico Nocard'), /<p class="block-reason" id="why0-(\d+)">Nico Nocard can&#39;t be checked in: there is no USA Wrestling card on file\. Ask the family to update the card, or the owner to allow an exception\.<\/p>/);
   assert.match(row('Nico Nocard'), /<span class="badge warn">No USA Wrestling card<\/span>/, 'badge');
   const i = row('Ira Invalid').match(/id="why0-(\d+)"/)[1];
-  assert.match(row('Ira Invalid'), new RegExp(`<button class="blocked" type="button" disabled aria-describedby="why0-${i}">Can’t check in</button>`), 'the button points to its reason');
+  assert.match(row('Ira Invalid'), new RegExp(`<button class="blocked" type="button" disabled aria-describedby="why0-${i}">Hold</button>`), 'the disabled Hold points to its reason');
+  assert.match(row('Ira Invalid'), /<details class="why"><summary>Why\?<\/summary><p class="block-reason" id="why0-\d+">/, 'the reason opens behind Why? (issue #286)');
+  assert.match(row('Ira Invalid'), /^<div class="row card-problem hold"/, 'a held row is outlined');
   assert.doesNotMatch(row('Ira Invalid'), /data-checkin=/, 'no Check in button while blocked');
   assert.match(row('Lou Lapsed'), /USA Wrestling card expired/);
   assert.match(row('Vera Verified'), /Checked in/, 'already checked in');

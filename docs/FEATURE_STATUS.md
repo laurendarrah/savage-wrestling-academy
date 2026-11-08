@@ -28,7 +28,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Program transfers | Owner moves a paid membership between programs (#74) | `/transfers` | Settling price differences (#41) |
 | Scholarships | Offers, frozen terms, drawn signatures, signed copies, benefit history | `/scholarships`, `/scholarship`, `lib/scholarships.ts` | Attorney-reviewed agreement (#44) |
 | **At the door** | | | |
-| Roster and check-in | Built from paid orders and cash bookings, by hand or by scanning QR passes (#22, #71) | `/roster`, `lib/roster.ts`, `/pass` | |
+| Roster and check-in | Built from paid orders and cash bookings, by hand or by scanning QR passes (#22, #71). For coaches a dark one-thumb mat screen with a session switcher and one row per wrestler; the owner sees the same rows inside the owner shell (#286) | `/roster`, `lib/roster.ts`, `/pass` | |
 | USA Wrestling cards | Missing or expired cards block booking; only verified cards check in. Automatic lookup on USA Wrestling's verify page; owner reviews the rest and sees renewals 30 days ahead (#68, #131, #202, #210) | `/cards`, `lib/usaw.ts`, `lib/usaw-check.ts` | |
 | Waivers, Parent Consent Form, coach contracts | Owner publishes; families or coaches sign with a drawn signature; unsigned wrestlers can't book once a document is published; the owner can ask for a signature again, or carry one over to a renamed wrestler (#69, #195, #239, #271) | `/waivers`, `/consent-forms`, `/contracts`, `lib/documents.ts` | Attorney review of the wording (#44) |
 | Owner exceptions | Dated exceptions to the card, waiver and consent-form blocks (#89) | `/cards`, `/waivers`, `lib/exceptions.ts` | |

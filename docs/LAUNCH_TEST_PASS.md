@@ -80,12 +80,12 @@ Notes: ____________________________________________________________
 
 Today, with the test wrestler booked to pay cash (section 3):
 
-- [ ] **Must pass.** The coach signs in with their authenticator and opens **Roster & check-in** (`/roster`). *They see today's practices for their programs only, plus extra practices, with the test wrestler, their allergies or medical notes and emergency contact, and "Pay at the academy · $40.00 due". No family email addresses.*
+- [ ] **Must pass.** The coach signs in with their authenticator and opens **Roster & check-in** (`/roster`). *They see today's practices for their programs only, plus extra practices, with the test wrestler, their allergies or medical notes and emergency contact, and "$40.00 cash due". No family email addresses.*
 - [ ] **Must pass.** The owner marks the test card **Not valid** on `/cards` (note: "Launch test"). On the coach's roster (choose **Refresh**): *the wrestler shows **Can't check in** with "can't be checked in: the academy marked the USA Wrestling card not valid (Launch test). Ask the family to update the card, or the owner to allow an exception."* The family also gets a "Please check … USA Wrestling card" email; that's expected. Then the owner chooses **Verified** on `/cards` again.
 - [ ] **Must pass.** The coach chooses **Check in** for the wrestler. *It says they're checked in.* Try **Undo**, then **Check in** again.
 - [ ] **Must pass.** The coach taps **Cash received** and confirms. *The row says "Received by <coach name> · <time>", and "Only the owner can undo cash". The owner sees it on **Payments** with **Collected by** the coach, and **Cash due at the academy** no longer lists it.*
 - [ ] The "Payment received: …" email arrives for the family.
-- [ ] The entry pass: the family opens **Entry pass** on the family page on a phone; the owner chooses **Scan passes** on the roster and scans it. *It says already checked in.*
+- [ ] The entry pass: the family opens **Entry pass** on the family page on a phone; the owner chooses **Scan a pass** on the roster and scans it. *It says already checked in.*
 
 Notes: ____________________________________________________________
 

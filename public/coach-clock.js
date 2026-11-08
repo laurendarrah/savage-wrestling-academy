@@ -67,7 +67,8 @@ window.CoachClock = (() => {
       const a = action(b.dataset.cc, b, duty);
       if (a.error) return say(a.error);
       b.disabled = true;
-      try { await call(a.body); await refresh(); document.dispatchEvent(new Event('coachclock')); roots.forEach(r => { const s = r.querySelector('.cc-status'); if (s) s.textContent = a.done; }); }
+      // "Clocked in." or "Clocked out." is a toast (public/toast.js, issue #286); without the helper, the card says it.
+      try { await call(a.body); await refresh(); document.dispatchEvent(new Event('coachclock')); if (typeof swaToast === 'function') swaToast(a.done, {kind: 'ok'}); else roots.forEach(r => { const s = r.querySelector('.cc-status'); if (s) s.textContent = a.done; }); }
       catch (e) { b.disabled = false; say(e.message); }
     });
   }

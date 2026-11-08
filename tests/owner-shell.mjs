@@ -120,7 +120,9 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
 for (const path of ['/roster', '/practice-plans', '/coach-profile', '/security', '/coach', '/coach-time']) {
   const {status, html} = await open(path, 'coach');
   assert.equal(status, 200, path);
-  assert.doesNotMatch(html, /os-nav|os-top|data-swa-shell|owner-shell/, path + ' (coach) has no owner shell');
+  // The shell's own markup and files: a page's stylesheet may name the shell attribute to style itself inside and
+  // outside the shell (the roster, issue #286), which is not the shell.
+  assert.doesNotMatch(html, /class="os-(nav|top|side)"|data-swa-shell="|owner-shell\.(css|js)/, path + ' (coach) has no owner shell');
   assert.match(html, /class="swa-bar"/, path + ' (coach) keeps the site top bar');
 }
 for (const path of ['/family', '/security', '/register']) {
