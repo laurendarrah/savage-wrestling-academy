@@ -104,7 +104,7 @@ r = await send(cashApi, '/api/cash-bookings', walk(tomorrow));
 assert.equal(r.status, 403); assert.match(r.body.error, /Parent Consent Form/); assert.equal(r.body.waiverRequired, true, 'the Parent Consent Form, once published');
 sqlite.prepare("UPDATE waiver_versions SET retired_at='y' WHERE id='pc1'").run();
 assert.equal((await send(cashApi, '/api/cash-bookings', {...walk(tomorrow), plan: 'monthly'})).status, 400, 'memberships are not paid this way');
-assert.equal((await send(cashApi, '/api/cash-bookings', {action: 'book', source: 'booking', type: 'event', id: 'camp', wrestlerId: 'w1'})).status, 400, 'camps are not paid this way');
+assert.equal((await send(cashApi, '/api/cash-bookings', {action: 'book', source: 'booking', type: 'lesson', format: 'one-on-one', wrestlerId: 'w1'})).status, 400, 'lessons are not paid this way (camps are, since #273: tests/cash-events.mjs)');
 assert.equal((await send(cashApi, '/api/cash-bookings', walk(tomorrow), )).status, 200, 'tomorrow is fine');
 const b1t = sqlite.prepare("SELECT id FROM cash_bookings WHERE user_id='p1' AND session_date=? AND kind='walkin'").get(tomorrow).id;
 

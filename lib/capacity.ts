@@ -1,5 +1,6 @@
-// Camp, clinic and event seat limits (issue #36). A seat is taken by a paid registration, or held by a checkout
-// started within the hold window. A full-camp registration takes a seat on every day; a single day takes one day.
+// Camp, clinic and event seat limits (issue #36). A seat is taken by a paid registration, held by a checkout started
+// within the hold window, or held by a booking to pay cash at the academy that is still unpaid (#273; once the cash is
+// received, the paid order holds it instead). A full-camp registration takes a seat on every day; a single day takes one.
 import {env} from 'cloudflare:workers';
 
 export const HOLD_MINUTES = 35; // Checkout sessions expire after 30 minutes; keep a small margin.
@@ -11,12 +12,15 @@ export function eventSlots(state: any, eventId: string): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-// Order ids holding a seat on each date, oldest first.
+// Order ids (and, for events, unpaid cash booking ids) holding a seat on each date, oldest first.
 export async function seatHolders(eventId: string, dates: string[], now = Date.now(), kind: 'event' | 'lesson' = 'event') {
   const since = new Date(now - HOLD_MINUTES * 60000).toISOString();
-  const rows = (await env.DB!.prepare(
-    `SELECT id,dates FROM orders WHERE kind=? AND item_id=? AND (status='paid' OR (status='pending' AND created_at>=?)) ORDER BY created_at,id`
-  ).bind(kind, eventId, since).all<{id: string; dates: string}>()).results;
+  const rows = (await env.DB!.prepare(kind === 'event'
+    ? `SELECT id,dates,created_at FROM orders WHERE kind='event' AND item_id=?1 AND (status='paid' OR (status='pending' AND created_at>=?2))
+       UNION ALL SELECT id,CASE WHEN json_array_length(dates)>0 THEN dates ELSE json_array(session_date) END,created_at FROM cash_bookings WHERE kind='event' AND item_id=?1 AND status='due'
+       ORDER BY created_at,id`
+    : `SELECT id,dates,created_at FROM orders WHERE kind='lesson' AND item_id=?1 AND (status='paid' OR (status='pending' AND created_at>=?2)) ORDER BY created_at,id`
+  ).bind(eventId, since).all<{id: string; dates: string}>()).results;
   const byDate = new Map<string, string[]>(dates.map(d => [d, []]));
   for (const r of rows) for (const d of JSON.parse(r.dates) as string[]) byDate.get(d)?.push(r.id);
   return byDate;

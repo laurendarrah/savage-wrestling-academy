@@ -44,7 +44,7 @@ async function openScreen({paymentsEnabled, checkout = {ok: true, body: {url: 'h
 {
   const {el, calls, navigations} = await openScreen({paymentsEnabled: true});
   assert.equal(el('payBox').hidden, false);
-  assert.equal(el('payPending').hidden, true);
+  assert.equal(el('interestBox').hidden, true);
   assert.equal(el('reviewHeading').textContent, 'Review and pay');
   assert.match(el('status').textContent, /pay securely to register/, 'no review-only wording while checkout is open');
   assert.equal(el('payButton').disabled, true, 'pay is disabled until terms are accepted');

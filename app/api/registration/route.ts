@@ -13,7 +13,9 @@ export const GET = withApi(GET_); async function GET_(request:Request){
  const month=new URL(request.url).searchParams.get('month')||today.slice(0,7);
  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)||Number(month.slice(0,4))<2020||Number(month.slice(0,4))>2100)return accountReply({error:'Choose a valid month.'},400,auth.headers);
  const row=await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload:string}>();
- return accountReply(registrationCatalog(row?JSON.parse(row.payload):{},month,today),200,auth.headers);
+ // now: the New York clock time ("HH:MM"), so the page can stop offering today's practices once they have started (#273).
+ const now=new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
+ return accountReply({...registrationCatalog(row?JSON.parse(row.payload):{},month,today),now},200,auth.headers);
 }
 
 // Registration review is authorized on the server. A browser flag cannot grant approval.

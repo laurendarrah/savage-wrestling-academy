@@ -14,19 +14,24 @@ import {programOn} from './transfers';
 type Upcoming = {date: string; start: string | null; end: string | null; title: string; type: string; why: string; dueCents?: number};
 const addDays = (d: string, n: number) => new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 
-type Reads = {orders: any[]; scholarships: {program: string; accepted_at: string}[]; transfers: any[]; cash: {kind: string; program: string | null; item_id: string; session_date: string; amount_cents: number}[]; state: any};
+type CashDue = {kind: string; program: string | null; item_id: string; session_date: string; amount_cents: number; dates: string; days: string[]};
+type Reads = {orders: any[]; scholarships: {program: string; accepted_at: string}[]; transfers: any[]; cash: CashDue[]; state: any};
+// The wrestler's unpaid cash bookings touching the window. A camp booked to pay cash covers each of its days (#273), so a
+// booking whose first day has passed can still be due; `days` is that list (older rows carry only the session date).
+const cashDueSql = () => env.DB!.prepare("SELECT kind,program,item_id,session_date,amount_cents,dates FROM cash_bookings WHERE user_id=? AND wrestler_id=? AND status='due' AND session_date<=? AND (session_date>=? OR EXISTS (SELECT 1 FROM json_each(cash_bookings.dates) WHERE value>=?))");
+const cashDueRows = (rows: unknown[]): CashDue[] => (rows as any[]).map(c => { let days: string[] = []; try { days = JSON.parse(c.dates || '[]'); } catch {} return {...c, days: days.length ? days : [c.session_date]}; });
 // The wrestler's orders, scholarships, transfers, cash bookings and the academy's schedule, in one batch.
 async function readUpcoming(userId: string, wrestlerId: string, from: string, to: string): Promise<Reads> {
   const [orders, scholarships, transfers, cash, state] = await env.DB!.batch([
     env.DB!.prepare("SELECT id,kind,program,item_id,dates,term_start,term_end,pricing FROM orders WHERE user_id=? AND wrestler_id=? AND status='paid'").bind(userId, wrestlerId),
     env.DB!.prepare("SELECT program,accepted_at FROM scholarship_awards WHERE status='active' AND user_id=? AND wrestler_id=? AND accepted_at IS NOT NULL").bind(userId, wrestlerId),
     env.DB!.prepare('SELECT t.order_id,t.from_program,t.effective_date,t.created_at FROM membership_transfers t JOIN orders o ON o.id=t.order_id WHERE o.user_id=? AND o.wrestler_id=?').bind(userId, wrestlerId),
-    env.DB!.prepare("SELECT kind,program,item_id,session_date,amount_cents FROM cash_bookings WHERE user_id=? AND wrestler_id=? AND status='due' AND session_date>=? AND session_date<=?").bind(userId, wrestlerId, from, to),
+    cashDueSql().bind(userId, wrestlerId, to, from, from),
     env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'"),
   ]);
   const row = (state.results as {payload: string}[])[0];
   return {orders: (orders.results as any[]).map(o => ({...o, dates: JSON.parse(o.dates || '[]') as string[]})), scholarships: scholarships.results as Reads['scholarships'],
-    transfers: transfers.results as any[], cash: cash.results as Reads['cash'], state: row ? JSON.parse(row.payload) : {}};
+    transfers: transfers.results as any[], state: row ? JSON.parse(row.payload) : {}, cash: cashDueRows(cash.results)};
 }
 
 export function upcomingFrom(r: Reads, from: string, to: string): Upcoming[] {
@@ -45,7 +50,7 @@ export function upcomingFrom(r: Reads, from: string, to: string): Upcoming[] {
           const id = s.key.split(':')[1];
           if (orders.some(o => o.kind === s.type && o.item_id === id && o.dates.includes(d))) why = s.type === 'live' ? 'Paid' : 'Registered';
         }
-        const owed = !why && cash.find(c => c.session_date === d && (s.type === 'practice' ? c.kind === 'walkin' && c.program === s.program : s.type === 'live' && c.kind === 'live' && c.item_id === s.key.split(':')[1]));
+        const owed = !why && cash.find(c => c.days.includes(d) && (s.type === 'practice' ? c.kind === 'walkin' && c.program === s.program : c.kind === s.type && c.item_id === s.key.split(':')[1]));
         if (owed) out.push({date: d, start: s.start, end: s.end, title: s.title, type: s.type, why: 'Pay at the academy', dueCents: owed.amount_cents});
         else if (why) out.push({date: d, start: s.start, end: s.end, title: s.title, type: s.type, why});
       }
@@ -76,7 +81,7 @@ export async function wrestlerView(userId: string, wrestlerId: string) {
     env.DB!.prepare("SELECT id,kind,program,item_id,dates,term_start,term_end,pricing FROM orders WHERE user_id=? AND wrestler_id=? AND status='paid'").bind(userId, wrestlerId),
     env.DB!.prepare("SELECT program,accepted_at FROM scholarship_awards WHERE status='active' AND user_id=? AND wrestler_id=? AND accepted_at IS NOT NULL").bind(userId, wrestlerId),
     env.DB!.prepare('SELECT t.order_id,t.from_program,t.effective_date,t.created_at FROM membership_transfers t JOIN orders o ON o.id=t.order_id WHERE o.user_id=? AND o.wrestler_id=?').bind(userId, wrestlerId),
-    env.DB!.prepare("SELECT kind,program,item_id,session_date,amount_cents FROM cash_bookings WHERE user_id=? AND wrestler_id=? AND status='due' AND session_date>=? AND session_date<=?").bind(userId, wrestlerId, today, to),
+    cashDueSql().bind(userId, wrestlerId, to, today, today),
     env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'"),
     env.DB!.prepare('SELECT token FROM wrestler_passes WHERE user_id=? AND wrestler_id=? AND revoked_at IS NULL').bind(userId, wrestlerId),
   ]);
@@ -91,7 +96,7 @@ export async function wrestlerView(userId: string, wrestlerId: string) {
   const signed = (v: DocumentVersion | null) => !!v && (signatures.results as any[]).some(s => s.version_id === v.id && signatureCounts(s, {id: wrestlerId, name: w.name}, kids));
   const stateRow = (state.results as {payload: string}[])[0];
   const reads: Reads = {orders: (orders.results as any[]).map(o => ({...o, dates: JSON.parse(o.dates || '[]') as string[]})), scholarships: scholarships.results as Reads['scholarships'],
-    transfers: transfers.results as any[], cash: cash.results as Reads['cash'], state: stateRow ? JSON.parse(stateRow.payload) : {}};
+    transfers: transfers.results as any[], cash: cashDueRows(cash.results), state: stateRow ? JSON.parse(stateRow.payload) : {}};
   // The entry pass: read with the rest; only a wrestler with no pass yet goes through familyPasses(), which makes one.
   const token = (passRow.results as {token: string}[])[0]?.token;
   const pass = token ? PASS_PREFIX + token : (await familyPasses(userId)).find(p => p.wrestlerId === wrestlerId)?.code ?? null;

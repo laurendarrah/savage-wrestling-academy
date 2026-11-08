@@ -27,7 +27,8 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/family` | GET, PUT | The family profile and wrestlers, with each wrestler's card status |
 | `/api/booking-review` | POST | Review an event, Friday Night Live or lesson booking, priced by `lib/quotes.ts` |
 | `/api/checkout` | POST | Start Stripe Checkout for a reviewed purchase, only for types open in `CHECKOUT_KINDS` |
-| `/api/cash-bookings` | GET, POST | Book a walk-in or extra practice to pay cash at the academy, or cancel it before it starts |
+| `/api/cash-bookings` | GET, POST | Book a walk-in, an extra practice or a camp, clinic or event to pay cash at the academy, or cancel it before it starts |
+| `/api/interest` | GET, POST | "Tell the academy I want this": the academy's contact line, and a request for a closed membership or lesson sent to the owner's inbox, once per item per day |
 | `/api/orders` | GET | The family's own orders and cash bookings |
 | `/api/lessons` | GET, POST | Lesson formats, prices and open coach times; book, join or organise a private group |
 | `/api/program-approvals` | GET, POST | Ask for SWA Advance approval and see its status |

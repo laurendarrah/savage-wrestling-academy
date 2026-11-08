@@ -49,7 +49,7 @@ for (const online of [false, true]) {
   assert.equal(el('payChoice').hidden, false, 'how to pay is asked');
   assert.equal(el('payOnlineOption').hidden, !online, online ? 'Pay online when checkout is open' : 'no Pay online while checkout is closed');
   assert.equal(el('cashHint').textContent, 'Book now and pay $40.00 in cash at the practice.');
-  assert.equal(el('payPending').hidden, true, 'no dead "isn’t open" button: cash is always available');
+  assert.equal(el('interestBox').hidden, true, 'no "Tell the academy" action needed: cash is always available');
   if (online) {
     assert.equal(el('payWayOnline').checked, true); assert.equal(el('payBox').hidden, false); assert.equal(el('cashBox').hidden, true);
     assert.match(el('status').textContent, /pay online or book and pay cash at the academy/);
@@ -71,12 +71,12 @@ for (const online of [false, true]) {
   assert.match(html, /<strong>Pay cash at the academy<\/strong>/);
   assert.match(html, /\.pay-options\{grid-template-columns:1fr\}/, 'one column at phone width');
 }
-// A membership never offers cash.
+// A membership never offers cash: while its online payment is closed, the one action is "Tell the academy I want this" (#273).
 {
   const {el, ctx} = page('app/register/screen.html', {fetch: async () => json({data: {wrestlers: []}, programs: [], practices: [], approvals: []})});
   await settle();
   vm.runInContext('showPay(false,false,20000)', ctx);
-  assert.equal(el('payChoice').hidden, true); assert.equal(el('cashBox').hidden, true); assert.equal(el('payPending').hidden, false);
+  assert.equal(el('payChoice').hidden, true); assert.equal(el('cashBox').hidden, true); assert.equal(el('interestBox').hidden, false);
 }
 
 // ---------- Book: Friday Night Live can be paid cash at the academy too ----------
@@ -93,7 +93,7 @@ for (const online of [false, true]) {
   await settle();
   el('wrestler').value = 'w-1';
   await el('form').onsubmit({preventDefault() {}}); await settle();
-  assert.equal(el('payChoice').hidden, false); assert.equal(el('payOnlineOption').hidden, true); assert.equal(el('cashBox').hidden, false); assert.equal(el('payPending').hidden, true);
+  assert.equal(el('payChoice').hidden, false); assert.equal(el('payOnlineOption').hidden, true); assert.equal(el('cashBox').hidden, false); assert.equal(el('interestBox').hidden, true);
   assert.equal(el('reviewHeading').textContent, 'Review and book');
   assert.equal(el('cashHint').textContent, 'Book now and pay $20.00 in cash at the practice.');
   await el('cashButton').onclick(); await settle();
@@ -203,7 +203,7 @@ for (const role of ['coach', 'owner']) {
 }
 
 // ---------- Help for families, coaches and the owner ----------
-assert.match(readFileSync('app/help/screen.html', 'utf8'), /<strong>Pay cash at the academy<\/strong>: for a walk-in or an extra practice[\s\S]*Cancel it in your account, under Purchase history, any time before the practice starts/);
+assert.match(readFileSync('app/help/screen.html', 'utf8'), /<strong>Pay cash at the academy<\/strong>: for a walk-in, an extra practice or a camp[\s\S]*Cancel it in your account, under Purchase history, any time before it starts/);
 assert.match(readFileSync('app/help/coach/screen.html', 'utf8'), /Take the cash and tap <strong>Cash received<\/strong>[\s\S]*You can check them in before or after they pay/);
 assert.match(readFileSync('app/help/owner/screen.html', 'utf8'), /<strong>Cash due at the academy<\/strong>[\s\S]*<strong>Cancel booking<\/strong> to free the spot[\s\S]*<strong>Undo cash<\/strong>/);
 

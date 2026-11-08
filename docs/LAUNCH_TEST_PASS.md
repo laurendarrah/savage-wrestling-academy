@@ -63,11 +63,12 @@ Each purchase should show under **Purchases** on the family page, on **Payments*
 - [ ] From `/calendar` → **Extra practices** (or the family page's **Book an extra practice, such as Friday Night Live →**), choose the date → **Review selection →**. **Online: live** — pay with 4242…; otherwise **Book and pay cash at the academy**. *It shows on the family page, and on that day's roster.*
 
 **A camp**
-- [ ] `/calendar` → **Camps & clinics** → the camp → **Review selection →**. **Online: event** — pay with 4242…. Otherwise the owner records it: **Payments → Record an offline payment** → the family, the wrestler, **Paid for** the camp → **Check price** → **Record payment**. *The family gets "Payment received: …" and sees it under Purchases; the camp's seats go down by one.*
+- [ ] `/calendar` → **Coming up** or **Camps & clinics** → the camp → **Review selection →**. **Online: event** — pay with 4242…. Otherwise **Pay cash at the academy** → **Book and pay cash at the academy**. *You should see "Pay at the academy: $… due" with the camp's days; it shows on the family page, the camp's seats go down by one, and it is under **Cash due at the academy** on Payments. The owner taps **Cash received** there (coaches can't take camp cash). The family gets "Payment received: …" and sees it under Purchases.*
+- [ ] Cancel a cash camp booking from the family page before the camp starts. *"Booking canceled: …" arrives under Messages, and the seat is free again.*
 
 **A private lesson**
 - [ ] The coach (on coach home, `/coach`) or the owner (**Coaches → Lesson openings**) adds an open time, and the owner has a price on **Private lesson prices**.
-- [ ] `/lesson` → **Book a one-on-one** → the time. **Online: lesson** — **Pay securely** with 4242…. Otherwise the page says lesson payment isn't open yet and the owner records it on Payments (**Paid for** a lesson, then the lesson). *The family gets "Lesson booked: …" and the coach gets "New lesson: …"; the coach sees "Booked" on coach home.*
+- [ ] `/lesson` → **Book a one-on-one** → the time. **Online: lesson** — **Pay securely** with 4242…. Otherwise choose **Tell the academy I want this**. *The page says "Sent." with the academy's address and email; the owner sees "Request from the website: a one-on-one lesson with …" under **Messages**. A second tap the same day says you already told the academy.* The owner then records it on Payments (**Paid for** a lesson, then the lesson). *The family gets "Lesson booked: …" and the coach gets "New lesson: …"; the coach sees "Booked" on coach home.*
 
 **A partner lesson**
 - [ ] With a partner price set, another open time, `/lesson` → **Start a private group** → **Partner** → the time → **Ask for this private group**. *Under **Your private groups**: the lesson, 1 of 2 spots left, the wrestler "Kept for you", and an invite link with **Copy link**. The coach sees "Family-requested private group".*

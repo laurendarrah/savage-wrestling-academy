@@ -303,7 +303,9 @@ const myGroup = {id: 'pg', date: '2026-11-10', start: '09:30', end: '10:30', coa
   p.button('path', 'group').onclick(); await settle();
   assert.match(p.el('times').innerHTML, /10:00 AM–11:00 AM[\s\S]*Small-group lesson[\s\S]*2 of 4 spots left/);
   assert.doesNotMatch(p.el('times').innerHTML, /3:00 PM/, 'open times are not groups');
-  p.el('wrestler').value = 'w1'; p.button('opening', 'grp').onclick(); await settle();
+  // Two wrestlers: a group spot starts with none chosen (#273), so the family picks one.
+  assert.equal(p.el('wrestler').value, '');
+  p.el('wrestler').value = 'w1'; p.el('wrestler').onchange(); p.button('opening', 'grp').onclick(); await settle();
   const review = p.calls.find(c => c.url === '/api/booking-review');
   assert.deepEqual(review.body, {type: 'lesson', wrestlerId: 'w1', openingId: 'grp'}, 'no price or format from the browser');
   assert.match(p.el('summary').innerHTML, /Small-group lesson[\s\S]*Mon, Nov 9 · 10:00 AM–11:00 AM[\s\S]*For Sam · 2 of 4 spots left[\s\S]*\$35\.00<\/strong> per wrestler/);
@@ -315,7 +317,9 @@ const myGroup = {id: 'pg', date: '2026-11-10', start: '09:30', end: '10:30', coa
   // Start a private group: choose partner or small group, your wrestlers and an open time, then ask for it.
   p.button('path', 'request').onclick(); await settle();
   assert.equal(p.el('requestOptions').hidden, false); assert.equal(p.el('wrestlerLabel').hidden, true);
-  assert.match(p.el('ownWrestlers').innerHTML, /data-own="w1" checked[\s\S]*data-own="w2">/);
+  // With two wrestlers, none is ticked for them (#273): the family chooses who is in the group.
+  assert.match(p.el('ownWrestlers').innerHTML, /data-own="w1">[\s\S]*data-own="w2">/);
+  p.button('own', 'w1').checked = true;
   assert.match(p.el('kinds').innerHTML, /Partner[\s\S]*2 wrestlers[\s\S]*\$45\.00 per wrestler[\s\S]*Small group[\s\S]*3 to 6 wrestlers/);
   p.button('kind', 'small-group').onclick(); await settle(); assert.equal(p.el('spotsLabel').hidden, false);
   p.el('spots').value = '4';
@@ -355,6 +359,9 @@ const myGroup = {id: 'pg', date: '2026-11-10', start: '09:30', end: '10:30', coa
   assert.equal(p.el('joinBox').hidden, false); assert.equal(p.el('stepType').hidden, true, 'no other choices in the way');
   assert.equal(p.el('joinHeading').textContent, 'Join Pat Example’s group');
   assert.match(p.el('joinInfo').innerHTML, /Private partner lesson<\/strong> with Coach Dana[\s\S]*1 of 2 spots left · \$45\.00 per wrestler/);
+  // Two wrestlers: the family says which one joins before the spot is checked (#273).
+  assert.equal(p.el('joinWrestler').value, ''); assert.equal(p.calls.filter(c => c.url === '/api/booking-review').length, 0);
+  p.el('joinWrestler').value = 'w1'; p.el('joinWrestler').onchange(); await settle();
   assert.deepEqual(p.calls.find(c => c.url === '/api/booking-review').body, {type: 'lesson', wrestlerId: 'w1', openingId: 'pg', invite: 'C'.repeat(32)});
   assert.equal(p.el('reviewBox').hidden, false); assert.equal(p.el('reviewHeading').textContent, 'Review'); assert.equal(p.el('notOpen').hidden, false);
   const full = page('app/lesson/screen.html', {search: '?join=x', fetch: async url => json(url.startsWith('/api/lessons') ? {formats, openings: [], mine: [], invite: {...invite, spotsLeft: 0}} : {data: {wrestlers}})});
