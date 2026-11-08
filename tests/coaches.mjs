@@ -331,7 +331,11 @@ const ok = body => ({ok: true, status: 200, json: async () => body});
   assert.equal(p.el('signupForm').hidden, false); assert.equal(p.el('signupEmail').value, 'coach.lee@example.test');
 }
 {
-  // The owner navigation (the shell's sidebar and the dashboard's tools, issue #261) links Coach view under Coaches & lessons.
-  assert.match(readFileSync('lib/owner-nav.ts', 'utf8'), /label: 'Coaches & lessons', items: \[\n\s*\{href: '\/staff', label: 'Coaches'[^\n]*\n\s*\{href: '\/coach', label: 'Coach view'/);
+  // The owner navigation (the shell's sidebar, issue #261; folded in #283): Coaches & lessons opens /staff, and its
+  // switch carries Coach view; Coach view also sits in the folded Settings & records group, leaving the shell.
+  const navSource = readFileSync('lib/owner-nav.ts', 'utf8');
+  assert.match(navSource, /\{href: '\/staff', label: 'Coaches & lessons', also: \['\/coach-openings', '\/coach-profile', '\/lesson-settings', '\/timesheets'\], tabs: COACH_TABS\}/);
+  assert.match(navSource, /const COACH_TABS[^\n]*\{href: '\/staff', label: 'Coaches'\}[^\n]*\{href: '\/coach', label: 'Coach view'\}/);
+  assert.match(navSource, /\{href: '\/coach', label: 'Coach view', leaves: true\}/);
 }
 console.log('Passed: coach invites (owner only, 256-bit single-use tokens stored hashed, 7-day expiry, wrong email refused, renew and cancel, access granted on accept, authenticator before coach home, sign-in and confirmation return to the invite), profiles (validation, own only, owner edits, families see name and bio but no phone or email), the owner as a coach (Coach view, openings, pay settings, owner checks unchanged), removal keeps lessons, payments, pay report and audit history, and weekly repeating openings (same format and spots, clashes skipped, 12-week cap).');

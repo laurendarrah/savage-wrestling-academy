@@ -16,19 +16,20 @@ fieldset{border:0;padding:0;margin:12px 0;min-width:0}legend{font-weight:700;pad
 .warn{margin:10px 0 0;padding:8px 12px;border-left:3px solid #8a5a00;background:#fff8eb;border-radius:0 6px 6px 0}
 .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}.actions a{min-height:44px;display:inline-flex;align-items:center}.actions a.button{padding:0 18px;text-decoration:none}
 details.change{margin-top:12px}details.change summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:#c4222c}
-.removed{background:#f7f8fa}.invite-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}.invite-row p{margin:0}
+.removed{background:#f7f8fa}
+/* The owner's own row in the list (issue #283) */
+.list article.you{border-left:3px solid #c4222c}.list article.you .swa-label{margin:0 0 10px;font-size:12px}.list article.you .bio{margin-top:8px}.invite-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}.invite-row p{margin:0}
 .state{display:inline-block;padding:1px 8px;border-radius:999px;font-size:13px;font-weight:700;background:#e6f2ea;color:#1f6f3a}.state.expired{background:#fff4e5;color:#7a4b00}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <h1>Coaches</h1>
-<p>Invite coaches, choose their programs, manage their lesson openings and keep their profiles up to date. Each coach signs in with their own email, password and authenticator app. Coaches see only their own lessons, today’s roster for their programs and the practice plans you share.</p>
+<p>Invite coaches, choose their programs, manage their lesson openings and keep their profiles up to date. Each coach signs in with their own email, password and authenticator app. Coaches see only their own lessons, today’s roster for their programs and the practice plans you share. Add yourself as a coach to post lesson openings and take on programs from Coach view; you keep your owner account.</p>
+<section aria-labelledby="staffTitle"><h2 id="staffTitle">Your coaches</h2><div id="staff" class="list"><article id="self" class="you" aria-labelledby="selfTitle"><h3 id="selfTitle" class="swa-label">You as a coach</h3><div id="selfBody"><p class="muted">Loading…</p></div></article><p class="muted" id="staffLoading">Loading…</p></div></section>
 <section aria-labelledby="inviteTitle"><h2 id="inviteTitle">Invite a coach</h2><p class="muted">The coach gets a link to create their account. It works once, only for this email, and for <span id="inviteDays">7</span> days. You can always copy the link and send it yourself.</p>
 <form id="inviteForm"><div class="pair"><label>Coach’s name<input name="name" maxlength="100" required autocomplete="off"></label><label>Coach’s email<input name="email" type="email" maxlength="254" required autocomplete="off"></label></div>
 <fieldset><legend>Programs they coach</legend><div class="checks" id="invitePrograms"></div></fieldset>
 <button class="primary" id="sendInvite">Create invite link</button></form>
 <div id="inviteResult" class="result" hidden style="margin-top:16px;padding:14px 16px;border-radius:0 6px 6px 0"><p id="inviteNote" style="margin:0 0 10px;font-weight:600"></p>
 <div class="linkbox"><label>Invite link<input id="inviteLink" readonly></label><button type="button" id="copyLink">Copy link</button></div></div></section>
-<section id="self" aria-labelledby="selfTitle"><h2 id="selfTitle">You as a coach</h2><div id="selfBody"><p class="muted">Loading…</p></div></section>
-<section aria-labelledby="staffTitle"><h2 id="staffTitle">Your coaches</h2><div id="staff" class="list"><p class="muted">Loading…</p></div></section>
 <section id="invitesBox" aria-labelledby="invitesTitle" hidden><h2 id="invitesTitle">Invitations not yet accepted</h2><div id="invites" class="list"></div></section>
 <section id="removedBox" aria-labelledby="removedTitle" hidden><h2 id="removedTitle">Removed coaches</h2><p class="muted">They can’t sign in as coaches. Their past lessons, payments and pay records stay in your reports.</p><div id="removed" class="list"></div></section>
 <section id="goneBox" aria-labelledby="goneTitle" hidden><h2 id="goneTitle">Removed permanently</h2><p class="muted">Their past lessons, payments, pay records, hours, time off and signed contract are kept for <span id="retentionYears">3</span> years from the day they were removed, then deleted. Payments and approved hours stay in your reports and books under “Former coach”.</p><div id="gone" class="list"></div></section>
@@ -61,13 +62,14 @@ function inviteCard(i){const expired=i.status==='expired';return `<article data-
  <p><span class="state${expired?' expired':''}">${expired?'Expired':'Waiting'}</span> <span class="muted">${expired?'Ended':'Works until'} ${esc(shortDate(i.expiresAt))}</span></p></div>
  <div class="actions" style="margin:0"><button type="button" data-renew>New link</button>${expired?'':'<button type="button" data-cancel>Cancel invite</button>'}</div></div></article>`}
 function selfHtml(me){
- if(me&&me.active)return `<p>You coach <b>${esc(me.programs.map(programName).join(', ')||'no programs yet')}</b>. Families can book the lesson openings you post, and your lessons show in the coach pay report.</p>
-  <div class="actions"><a class="button primary" href="/coach">Open Coach view →</a><a href="/coach-openings?email=${encodeURIComponent(me.email)}">Your lesson openings →</a><a href="/coach-profile">Edit your coach profile →</a></div>
+ // The owner's own row in the coach list (issue #283): the same shape as a coach card, with Coach view as its first action.
+ if(me&&me.active)return `<div class="coach-head"><div class="avatar" aria-hidden="true">${esc(initials(me.displayName||me.name||'You'))}</div><div class="grow"><h3>${esc(me.displayName||me.name||'You')}</h3><p class="muted">You, the owner</p><p>${esc(me.programs.map(programName).join(', ')||'No programs yet')}</p></div></div>
+  <p class="bio muted">Families can book the lesson openings you post, and your lessons show in the coach pay report.</p>
   <details class="change"><summary>Change your programs</summary><div class="checks">${checks('self',me.programs)}</div><button type="button" id="selfSave">Save programs</button></details>
-  <div class="actions"><button type="button" id="selfStop">Stop coaching</button></div>`;
- return `<p>Do you coach too? Add yourself to post private lesson openings, take on programs and appear in the coach pay report. You keep your owner account and sign-in.</p>
+  <div class="actions"><a class="button" href="/coach">Open Coach view →</a><a href="/coach-openings?email=${encodeURIComponent(me.email)}">Your lesson openings →</a><a href="/coach-profile">Edit your coach profile →</a><button type="button" id="selfStop">Stop coaching</button></div>`;
+ return `<p>Do you coach too? Add yourself to post private lesson openings, take on programs and appear in the coach pay report.</p>
   <label>Name families see<input id="selfName" maxlength="100" value="${esc(me?.name||'')}" placeholder="Coach Justin"></label><fieldset><legend>Programs you coach</legend><div class="checks">${checks('self',me?.programs||[])}</div></fieldset>
-  <button type="button" class="primary" id="selfAdd">Add yourself as a coach</button>`}
+  <button type="button" id="selfAdd">Add yourself as a coach</button>`}
 async function act(body,done){try{await call(body);await load();say(done)}catch(e){say(e.message)}}
 function bind(){
  document.querySelectorAll('#staff [data-coach]').forEach(card=>{const email=card.dataset.coach;
@@ -86,7 +88,9 @@ function bind(){
 function showLink(r){$('inviteLink').value=r.link;$('inviteNote').textContent=(r.emailStatus==='sent'?'Invite emailed to '+r.invite.email+'. ':r.emailStatus==='failed'?'The email could not be sent. ':'Email isn’t set up yet, so nothing was sent. ')+'Copy the link and send it to '+r.invite.name+'. It works until '+shortDate(r.invite.expiresAt)+'.';$('inviteResult').hidden=false;$('inviteResult').scrollIntoView({behavior:'smooth',block:'nearest'})}
 async function load(){try{state=await call();$('inviteDays').textContent=state.inviteDays;
  const active=state.staff.filter(s=>s.active),removed=state.staff.filter(s=>!s.active);
- $('staff').innerHTML=active.map(coachCard).join('')||'<p class="muted">No coaches yet. Invite your first coach above.</p>';
+ // The owner's own row stays first; the coaches follow it (issue #283).
+ const list=active.map(coachCard).join('')||'<p class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17a4 4 0 0 1 8 0"/></svg><span>No coaches yet. Invite your first coach below.</span></p>',box=$('staff'),you=$('self');
+ if(you&&box.append){box.innerHTML='';box.append(you);box.insertAdjacentHTML('beforeend',list)}else box.innerHTML=list;
  $('removed').innerHTML=removed.map(removedCard).join('');$('removedBox').hidden=!removed.length;
  const gone=state.removedForGood||[];$('gone').innerHTML=gone.map(goneCard).join('');$('goneBox').hidden=!gone.length;$('retentionYears').textContent=state.retentionYears||3;
  $('invites').innerHTML=state.invites.map(inviteCard).join('');$('invitesBox').hidden=!state.invites.length;

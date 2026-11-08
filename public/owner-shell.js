@@ -64,13 +64,44 @@
     var nav = byId('swa-os-nav');
     if (!nav || w.location.pathname !== '/') return;
     var hash = String(w.location.hash || '').split('?')[0].replace(/[^\w#-]/g, '');
-    var target = (hash.length > 1 && nav.querySelector('a[href="/' + hash + '"]')) || nav.querySelector('a[href="/"]');
+    // A section without its own item (/#schedules) marks the item it sits under (issue #283).
+    var target = (hash.length > 1 && (nav.querySelector('a[href="/' + hash + '"]') || nav.querySelector('a[data-os-sections~="' + hash + '"]'))) || nav.querySelector('a[href="/"]');
     if (!target) return;
     Array.prototype.forEach.call(nav.querySelectorAll('[aria-current="page"]'), function (a) { if (a !== target) a.removeAttribute('aria-current'); });
     target.setAttribute('aria-current', 'page');
     var fold = target.closest('details'); if (fold) fold.open = true;
     var crumb = byId('swa-os-crumb'), list = target.closest('ul'), group = list && list.getAttribute('aria-labelledby');
-    if (crumb) crumb.textContent = (group && byId(group) ? byId(group).textContent + ' / ' : '') + target.textContent;
+    if (crumb) crumb.textContent = (group && byId(group) && target.getAttribute('href') !== '/' ? byId(group).textContent + ' / ' : '') + target.textContent;
+  }
+
+  // ---------- Count badges (issue #283) ----------
+  // Payments needing attention and cards waiting to be verified, beside their sidebar items, from the same answers the
+  // pages read. The counts are kept for a minute per tab, so moving between owner pages does not ask again each time.
+  function badge(href, n) {
+    var a = byId('swa-os-nav') && byId('swa-os-nav').querySelector('a[href="' + href + '"]');
+    if (!a) return;
+    var b = a.querySelector('.os-badge');
+    if (!n) { if (b) b.parentNode.removeChild(b); return; }
+    if (!b) { b = d.createElement('span'); b.className = 'os-badge'; b.setAttribute('data-os-badge', href); a.appendChild(b); }
+    b.textContent = n > 99 ? '99+' : String(n); b.setAttribute('aria-label', n + ' waiting');
+  }
+  var BADGES_KEY = 'swa-os-badges', BADGES_MAX_AGE = 60000;
+  // A page that has just read a count (the dashboard, Payments after a change) puts it on the badges and in the cache,
+  // so the sidebar never shows a stale number next to a page that knows better.
+  function setBadges(counts) {
+    var kept = store(function (s) { return JSON.parse(s.getItem(BADGES_KEY) || 'null'); }) || {};
+    var next = {at: Date.now(), payments: 'payments' in counts ? counts.payments : kept.payments || 0, cards: 'cards' in counts ? counts.cards : kept.cards || 0};
+    badge('/payments', next.payments); badge('/cards', next.cards);
+    store(function (s) { s.setItem(BADGES_KEY, JSON.stringify(next)); });
+  }
+  function countBadges() {
+    var kept = store(function (s) { return JSON.parse(s.getItem(BADGES_KEY) || 'null'); });
+    if (kept && Date.now() - kept.at < BADGES_MAX_AGE) { badge('/payments', kept.payments); badge('/cards', kept.cards); return; }
+    if (!w.fetch) return;
+    var read = function (url) { return w.fetch(url, {cache: 'no-store'}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); };
+    Promise.all([read('/api/payments?attention=1'), read('/api/usaw-cards?show=waiting&limit=1')]).then(function (got) {
+      setBadges({payments: got[0] && got[0].attention ? got[0].attention.length : 0, cards: got[1] && got[1].totals ? Number(got[1].totals.waiting) || 0 : 0});
+    });
   }
   // The first visible heading of the page's main content takes focus, so a screen reader starts at the new content.
   // The dashboard draws its heading after its data loads, so this waits for it a little while.
@@ -121,6 +152,7 @@
   w.addEventListener('hashchange', mark);
   w.addEventListener('popstate', mark);
   if (store(function (s) { var on = s.getItem('swa-os-focus'); s.removeItem('swa-os-focus'); return on; })) focusMain();
+  countBadges();
 
-  w.SwaOwnerShell = {mark: mark, focusMain: focusMain, openDrawer: openDrawer, closeDrawer: closeDrawer, closeAccount: closeAccount};
+  w.SwaOwnerShell = {mark: mark, focusMain: focusMain, openDrawer: openDrawer, closeDrawer: closeDrawer, closeAccount: closeAccount, badges: countBadges, setBadges: setBadges};
 })();

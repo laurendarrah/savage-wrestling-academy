@@ -205,7 +205,9 @@ await step('a failed monthly payment: family and owner told, "Payment needs atte
   expect((await owner.textContent('#tAttention')).trim() === '1', 'the tile counts it');
   if (SHOTS) await owner.screenshot({path: `${SHOTS}/pay-owner-payments-attention.png`, fullPage: true});
   // The dashboard tile.
-  await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Payment needs attention1Monthly payments that failed at Stripe/, 15000);
+  // On the dashboard it is a row of "Needs you" (issue #283), and a count beside Payments in the sidebar.
+  await owner.goto(BASE + '/'); await waitText(owner, '#needsNow', /1 payment needs attention[\s\S]*Monthly payments that failed at Stripe/, 15000);
+  await waitText(owner, '.os-nav a[href="/payments"] .os-badge', /^1$/, 15000);
   if (SHOTS) await owner.screenshot({path: `${SHOTS}/pay-owner-dashboard-attention.png`, fullPage: false});
   // The wrestler is still on the roster during the grace (today is inside it).
   const roster = await api(owner, '/api/roster?date=' + ny(0));

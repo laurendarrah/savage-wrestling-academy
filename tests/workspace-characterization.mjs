@@ -268,16 +268,19 @@ for (const [name, fields] of Object.entries(codeCases)) {
 reset('saves=0;'); ctx.form = form(codeCases.taken); run('saveTeamCode(0,form)');
 record('saveTeamCode.edit', json('{codes:data.teamCodes,saves}'));
 
-// The owner calendar, phone list, planner and pages, drawn from all of the above.
+// The owner calendar (the month grid and the week list, issue #283), planner and pages, drawn from all of the above.
+// The legend's hidden keys stand where the old program filter stood: everything, SWA Advance only, events only.
 reset(`calendarPlanSummaries['2026-11']={status:'ready',items:[{program:'Elementary',date:'2026-11-16',published:true},{program:'Advanced',date:'2026-11-17',published:false}]}`);
+const hidden = {'All programs': [], 'Advanced': ['Elementary', 'Intermediate', 'events'], 'Camps, clinics & events': ['Elementary', 'Intermediate', 'Advanced']};
 for (const [y, m] of [[2026, 10], [2026, 11], [2027, 1], [2027, 2]]) {
   for (const f of ['All programs', 'Advanced', 'Camps, clinics & events']) {
-    run(`year=${y};month=${m};filter=${JSON.stringify(f)}`);
+    run(`year=${y};month=${m};calHidden=new Set(${JSON.stringify(hidden[f])});openDay=null;weekStart='';calView='month'`);
     record(`calendar.${y}-${m + 1}.${f}`, run('calendar()'));
-    record(`mobile.${y}-${m + 1}.${f}`, run('mobilePracticeCalendar()'));
+    run(`calView='week'`);
+    record(`mobile.${y}-${m + 1}.${f}`, run('weekView()'));
   }
 }
-run(`year=2026;month=10;filter='All programs'`);
+run(`year=2026;month=10;calHidden=new Set();calView='month'`);
 record('calendarPlanLabel', json(`[calendarPlanLabel('Elementary','2026-11-16'),calendarPlanLabel('Advanced','2026-11-17'),calendarPlanLabel('Intermediate','2026-11-16')]`));
 for (const [m, start, end] of [['2026-11', '', ''], ['2026-11', '2026-11-01', '2026-12-31'], ['2027-03', '2027-03-01', '2027-02-01'], ['2026-12', '2026-12-10', '2027-01-10']])
   record(`holidayPlannerMarkup.${m}.${start}.${end}`, run(`plannerMonth='${m}';plannerExcluded=new Set(['2026-11-26','2026-12-25']);holidayPlannerMarkup('${start}','${end}')`));
@@ -286,12 +289,15 @@ record('schedules', run('schedules()'));
 reset();
 // Issue #261 changed one thing here on purpose: the tools card, now drawn from lib/owner-nav.ts, lists "Practice
 // calendar" (the dashboard section) where it listed "Practice plans" (/practice-plans, which sent the owner there).
-// The fixture's dashboard digest was updated for that change only.
+// Issue #283 redrew the dashboard and the calendar (the title row with the date, four tiles, the month grid of bars,
+// the week list), so their digests were frozen again; everything else is unchanged. WORKSPACE_UPDATE=1 rewrites the
+// fixture from the UTC run for a deliberate change like those.
 record('dashboard', run('dashboard()'));
 
 // ---------- Compare ----------
 const digest = v => { const s = JSON.stringify(v); return s.length > 300 ? {sha256: createHash('sha256').update(s).digest('hex'), length: s.length} : v; };
 const actual = Object.fromEntries(Object.entries(got).map(([k, v]) => [k, digest(v)]));
+if (process.env.WORKSPACE_UPDATE && process.env.TZ === 'UTC') (await import('node:fs')).writeFileSync(FIXTURE, JSON.stringify(actual, null, 1) + '\n');
 const expected = JSON.parse(readFileSync(FIXTURE, 'utf8'));
 assert.deepEqual(Object.keys(actual).sort(), Object.keys(expected).sort(), 'the same cases');
 for (const k of Object.keys(expected)) assert.deepEqual(actual[k], expected[k], k + ' (' + process.env.TZ + ')');

@@ -7,7 +7,7 @@
 // sidebar and header, so they stay still while the middle cross-fades; Speculation Rules prefetch an owner link when
 // it is hovered. Browsers without either get an ordinary page load with the same shell. public/owner-shell.js runs the
 // phone drawer, the Account menu, sign-out and focus after a move.
-import {OWNER_NAV, OWNER_SHELL_PAGES, currentOwnerHref, ownerNavPlace} from './owner-nav';
+import {OWNER_NAV, OWNER_NAV_ITEMS, OWNER_SHELL_PAGES, currentOwnerHref, ownerNavPlace, ownerNavTabs} from './owner-nav';
 
 export const OWNER_SHELL_HEADER = 'X-SWA-Owner-Shell';
 // Called by an owner route after it has checked the owner, on the headers it answers with.
@@ -56,12 +56,16 @@ const FAMILY_LINKS = '<a href="/welcome">Welcome page</a> <a href="/team">Team p
 
 // The sidebar: brand, every destination in its group (the folded group opens when it holds the current page), and on
 // phones the "What families see" links, since the header there has room only for the menu, logo and Account.
-// `badges` puts a count beside a destination (.os-badge: unread messages, cash due), by href; zero shows nothing.
+// `badges` puts a count beside a destination (.os-badge: payments needing attention, cards waiting), by href; zero
+// shows nothing, and public/owner-shell.js fills the same badges from the live counts on every page. A hidden section
+// alias (/#schedules under Programs, schedules & events, issue #283) is named on its parent's data-os-sections, so the
+// start-up script marks the parent when the dashboard opens on that section.
 export function ownerSidebar(current: string | null, badges: Record<string, number> = {}) {
-  const badge = (href: string) => badges[href] ? `<span class="os-badge" aria-label="${esc(badges[href])} waiting">${esc(badges[href] > 99 ? '99+' : badges[href])}</span>` : '';
-  const link = (href: string, label: string) => `<li><a href="${esc(href)}"${href === current ? ' aria-current="page"' : ''}>${svg(OWNER_ICONS[href] ?? '')}<span>${esc(label)}</span>${badge(href)}</a></li>`;
+  const badge = (href: string) => badges[href] ? `<span class="os-badge" data-os-badge="${esc(href)}" aria-label="${esc(badges[href])} waiting">${esc(badges[href] > 99 ? '99+' : badges[href])}</span>` : '';
+  const sections = (href: string) => { const under = OWNER_NAV_ITEMS.filter(i => i.under === href).map(i => i.href.slice(1)); return under.length ? ` data-os-sections="${esc(under.join(' '))}"` : ''; };
+  const link = (href: string, label: string) => `<li><a href="${esc(href)}"${sections(href)}${href === current ? ' aria-current="page"' : ''}>${svg(OWNER_ICONS[href] ?? '')}<span>${esc(label)}</span>${badge(href)}</a></li>`;
   const groups = OWNER_NAV.map((g, n) => {
-    const list = `<ul class="os-list">${g.items.map(i => link(i.href, i.label)).join('')}</ul>`;
+    const list = `<ul class="os-list">${g.items.filter(i => !i.under).map(i => link(i.href, i.label)).join('')}</ul>`;
     if (!g.label) return list;
     if (g.folded) return `<details class="os-fold"${g.items.some(i => i.href === current) ? ' open' : ''}><summary>${esc(g.label)}</summary>${list}</details>`;
     return `<p class="os-group" id="swa-os-g${n}">${esc(g.label)}</p>${list.replace('<ul class="os-list">', `<ul class="os-list" aria-labelledby="swa-os-g${n}">`)}`;
@@ -76,8 +80,20 @@ export function ownerSidebar(current: string | null, badges: Record<string, numb
     + '</div>';
 }
 
-// The header: the menu button and logo (phones), where the owner is, what families see, the dashboard's save status
-// and the Account menu.
+// The switch under a page's title row between the pages that share one sidebar item (issue #283): the cards page with
+// the waiver, consent form and contract pages; approvals with scholarships and transfers; the coach pages; the money
+// pages. The Worker draws it after a tool page's title row (lib/page-chrome.ts); the dashboard draws its own from the
+// same list (lib/workspace/browser.ts).
+export function ownerTabs(pathname: string, hash = '') {
+  const tabs = ownerNavTabs(pathname, hash);
+  if (!tabs.length) return '';
+  const path = pathname.replace(/\/+$/, '') || '/', here = path === '/' ? '/' + hash.split('?')[0] : path;
+  const on = (href: string) => href === here || (href === '/#practice-calendar' && path === '/practice-plans') || (href === '/staff' && /^\/coach-(openings|profile)$/.test(path));
+  return `<nav class="os-tabs" aria-label="Pages in this section">${tabs.map(t => `<a href="${esc(t.href)}"${on(t.href) ? ' aria-current="page"' : ''}>${esc(t.label)}</a>`).join('')}</nav>`;
+}
+
+// The header: the menu button and logo (phones), where the owner is, what families see and the Account menu. The
+// dashboard's save status is in its title row (app/portal.html, issue #283), so the header is the same height everywhere.
 export function ownerTopbar(pathname: string, current: string | null) {
   const dashboard = pathname === '/';
   const place = ownerNavPlace(current) ?? (pathname === '/security' ? {group: 'Account', label: 'Account security'} : null);
@@ -88,7 +104,6 @@ export function ownerTopbar(pathname: string, current: string | null) {
     + `<p class="os-crumbs"><span class="os-crumbs-home">SAVAGE /</span> <span id="swa-os-crumb">${esc(crumb)}</span></p>`
     + `<nav class="os-family os-family-top" aria-label="What families see"><span class="os-family-label">What families see:</span> ${FAMILY_LINKS}</nav>`
     + '<div class="os-tools">'
-    + (dashboard ? '<span id="syncStatus" class="os-sync" role="status" aria-live="polite">Connecting…</span>' : '')
     + '<details class="os-account" id="swa-os-account"><summary>Account</summary><div class="os-panel">'
     + (dashboard ? '<button type="button" class="os-item" onclick="closeOwnerTools();reloadAcademy()">Refresh saved data</button>' : '')
     + `<a class="os-item" href="/security"${pathname === '/security' ? ' aria-current="page"' : ''}>Account security</a><hr>`
@@ -105,9 +120,9 @@ export const SHELL_BOOT = `(function(){try{var d=document,n=d.getElementById('sw
   + `var q=function(t){if(t)[t.ready,t.finished,t.updateCallbackDone].forEach(function(p){if(p)p.catch(function(){})})};`
   + `addEventListener('pagereveal',function(e){q(e.viewTransition)});`
   + `addEventListener('pageswap',function(e){var t=e.viewTransition;q(t);if(t&&(!e.activation||(s.getAttribute('data-os-pages')||'').split(' ').indexOf(new URL(e.activation.entry.url).pathname)<0))t.skipTransition()});`
-  + `if(location.pathname==='/'){var h=location.hash.split('?')[0],a=h.length>1?n.querySelector('a[href="/'+h.replace(/[^\\w#-]/g,'')+'"]'):null;`
+  + `if(location.pathname==='/'){var h=location.hash.split('?')[0].replace(/[^\\w#-]/g,''),a=h.length>1?n.querySelector('a[href="/'+h+'"]')||n.querySelector('a[data-os-sections~="'+h+'"]'):null;`
   + `if(a&&a!==c){if(c)c.removeAttribute('aria-current');a.setAttribute('aria-current','page');c=a;var g=a.closest('details');if(g)g.open=true;var m=d.getElementById('swa-os-crumb'),l=a.closest('ul').getAttribute('aria-labelledby');`
-  + `if(m)m.textContent=(l?d.getElementById(l).textContent+' / ':'')+a.textContent}}`
+  + `if(m)m.textContent=(l&&a.getAttribute('href')!=='/'?d.getElementById(l).textContent+' / ':'')+a.textContent}}`
   + `var y=Number(sessionStorage.getItem('swa-os-scroll'));if(y)s.scrollTop=y;if(c&&(c.offsetTop<s.scrollTop||c.offsetTop+c.offsetHeight>s.scrollTop+s.clientHeight))s.scrollTop=Math.max(0,c.offsetTop-s.clientHeight/2)}catch(e){}})();`;
 
 // Prefetch an owner destination when the owner hovers it (or presses on it), so the next page is often ready before
