@@ -1,47 +1,54 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Book | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
-body{background:#F4F5F7;color:#141416;margin:0}
-main{max-width:760px;margin:auto;padding:20px 16px 56px}
-html body main>section{padding:22px;margin:18px 0}
+/* Book a camp, clinic, event or extra practice (redesign Phase 2, issue #282): the receipt first. Choosing a wrestler
+   (a chip row) reviews the booking at once, so the dates, the price, the seats left and who is registered are on the
+   screen before anything is confirmed; then one button. Cash at the academy from #276 stays. */
+body{background:var(--swa-ground);color:var(--swa-ink);margin:0}
+main{max-width:var(--swa-width-narrow);margin:auto;padding:var(--swa-s-16) 16px 56px}
+html body main>section{margin:var(--swa-s-16) 0}
 h1{margin:4px 0 8px}h2{margin:0 0 10px}
-.eyebrow{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#C4222C;margin:8px 0 0}
-#description{font-size:18px;font-weight:600;margin:0 0 6px}
-label{display:block;margin:16px 0}
-select{display:block;width:100%;margin-top:6px}
-.wrestler-status{margin:0 0 18px;padding:12px 14px;border-radius:6px;background:#EEF0F3}
-.wrestler-status.ok{background:#E6F2EA;color:#195b33}
-.wrestler-status.wait{background:#FFF3F3;color:#8E1A22}
-#submit,#payButton,#payPending{padding:0 18px}
-.notice{background:#FFF3F3;border-left:4px solid #C4222C;padding:14px 16px;border-radius:0 6px 6px 0}
-.price{font-size:22px;font-weight:700}
-.small{font-size:15px;color:#55585F}
-#status{font-weight:600}
-.after{margin:20px 0 0;display:flex;flex-wrap:wrap;gap:8px 18px}
+.eyebrow{margin:8px 0 0}
+#description{font-size:var(--swa-t-17);font-weight:600;margin:0 0 var(--swa-s-12)}
+#gradeRange{margin:0 0 var(--swa-s-8);font-size:var(--swa-t-15)}
+#offeringDescription{margin:0 0 var(--swa-s-12);font-size:var(--swa-t-15);color:var(--swa-muted)}
+.field{margin:var(--swa-s-16) 0 0}
+.field>span,.field-label{display:block;font-weight:600;font-size:var(--swa-t-15);margin:0 0 var(--swa-s-8)}
+select{display:block;width:100%}
+.wrestler-status{margin:var(--swa-s-12) 0 0;padding:10px 14px;border-radius:var(--swa-r-control);background:var(--swa-surface-2);font-size:var(--swa-t-15)}
+.wrestler-status.ok{background:var(--swa-ok-bg);color:var(--swa-ok)}
+.wrestler-status.wait{background:var(--swa-warn-bg);color:var(--swa-warn-ink)}
+#status{font-weight:600;font-size:var(--swa-t-15);color:var(--swa-muted)}
+.after{margin:var(--swa-s-16) 0 0;display:flex;flex-wrap:wrap;gap:8px 18px}
 [hidden]{display:none!important}
-/* How to pay for an extra practice (issue #248): online when open, or book now and pay cash at the academy. */
-.pay-choice{border:0;margin:16px 0 0;padding:0;min-width:0}
-.pay-choice legend{padding:0;margin:0 0 10px;font-weight:700;font-size:17px}
-.pay-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-html body .pay-option{position:relative;display:flex;flex-direction:column;gap:4px;margin:0;padding:16px 46px 16px 16px;border:1.5px solid #E1E3E8;border-radius:8px;background:#fff;cursor:pointer;font-weight:400;min-height:44px}
-html body .pay-option:has(input:checked){border-color:var(--swa-red);box-shadow:inset 0 0 0 1px var(--swa-red)}
-html body .pay-option:has(input:focus-visible){outline:3px solid #141416;outline-offset:2px}
-.pay-option input{position:absolute;top:16px;right:16px;margin:0;width:22px;height:22px}
-.pay-option small{font-size:14px;color:#55585F}
-#cashBox{margin-top:16px}
-#cashButton{padding:0 18px}
+#notice{margin:var(--swa-s-16) 0 0}
+/* How to pay (issue #248): online when open, or book now and pay cash at the academy. */
+.pay-choice{border:0;margin:var(--swa-s-16) 0 0;padding:0;min-width:0}
+.pay-choice legend{padding:0;margin:0 0 var(--swa-s-8);font-weight:600;font-size:var(--swa-t-15)}
+.pay-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--swa-s-8)}
+html body .pay-option{position:relative;display:flex;flex-direction:column;gap:2px;margin:0;padding:12px 44px 12px 16px;border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface);cursor:pointer;font-weight:400;min-height:44px}
+html body .pay-option:hover{border-color:var(--swa-ink)}
+html body .pay-option:has(input:checked){border-color:var(--swa-ink);box-shadow:inset 0 0 0 1px var(--swa-ink)}
+html body .pay-option:has(input:focus-visible){outline:3px solid var(--swa-red);outline-offset:2px}
+.pay-option input{position:absolute;top:14px;right:12px;margin:0;width:22px;height:22px}
+.pay-option strong{font-size:var(--swa-t-15)}
+.pay-option small{font-size:var(--swa-t-13);color:var(--swa-muted)}
+.confirm{margin:var(--swa-s-16) 0 0}
+html body .confirm button.primary{width:100%;min-height:var(--swa-h-big)}
+.swa-terms.check{display:flex;gap:10px;align-items:flex-start;font-size:var(--swa-t-15);color:var(--swa-ink)}
+.swa-terms.check input{flex:none;margin:2px 0 0;width:22px}
+#cashNote,#payBox .small{margin:var(--swa-s-12) 0 0;font-size:var(--swa-t-13);color:var(--swa-muted)}
 /* A lesson inquiry while lesson payment is closed online (issue #273): one real action, then the academy's contact line. */
-#interestBox{margin-top:16px}
-#interestButton{padding:0 18px}
-.contact-line{margin:12px 0 0;padding:12px 16px;background:#F7F8FA;border-radius:6px;font-size:15px;color:#3A3D44}
+.contact-line{margin:var(--swa-s-12) 0 0;font-size:var(--swa-t-13);color:var(--swa-muted)}
 .contact-line a{overflow-wrap:anywhere}
-.interest-done{margin:12px 0 0;padding:14px 16px;border-radius:8px;background:var(--swa-ok-bg);border:1px solid #9FCFAE;border-left:6px solid var(--swa-ok)}
-.interest-done p{margin:0 0 8px}.interest-done p:last-child{margin:0}
-.cash-due{display:inline-block;margin:0 0 12px;padding:10px 14px;border-radius:6px;background:var(--swa-warn-bg);border:1px solid var(--swa-warn-line);color:var(--swa-warn-ink);font-weight:700;font-size:18px}
-@media(max-width:640px){.pay-options{grid-template-columns:1fr}#cashButton,#interestButton{width:100%}}
+.interest-done,#cashDone{margin:var(--swa-s-16) 0 0}
+.done-box{padding:var(--swa-s-16);border-radius:var(--swa-r-control);background:var(--swa-ok-bg);border-left:4px solid var(--swa-ok)}
+.done-box p{margin:0 0 8px}.done-box p:last-child{margin:0}
+.cash-due{display:inline-block;margin:0 0 12px;padding:10px 14px;border-radius:var(--swa-r-control);background:var(--swa-warn-bg);border:1px solid var(--swa-warn-line);color:var(--swa-warn-ink);font-weight:700;font-size:var(--swa-t-17)}
+@media(max-width:640px){.pay-options{grid-template-columns:1fr}}
 </style></head><body><main><p class="eyebrow" id="kind"></p><h1 id="heading">Book a session</h1><p id="status" role="status" aria-live="polite">Loading…</p><p id="cardHelp" hidden><a href="/family#summary">Update the USA Wrestling card in your family account →</a></p><p id="waiverHelp" hidden><a href="/waiver">Sign the waiver →</a></p>
-<section id="choice" hidden aria-labelledby="heading"><p id="description"></p><p id="gradeRange" class="muted" hidden></p><p id="offeringDescription" style="white-space:pre-wrap;overflow-wrap:anywhere" hidden></p><form id="form"><label>Wrestler<select id="wrestler" required></select></label><p id="wrestlerStatus" class="wrestler-status" role="status" aria-live="polite" hidden></p><label id="optionLabel" hidden>Registration option<select id="option"></select></label><button class="primary" id="submit">Review selection →</button></form></section>
+<section id="choice" hidden aria-labelledby="heading"><p id="description"></p><p id="gradeRange" class="muted" hidden></p><p id="offeringDescription" style="white-space:pre-wrap;overflow-wrap:anywhere" hidden></p><form id="form"><div class="field" role="group" aria-labelledby="wrestlerLabel"><span id="wrestlerLabel">Wrestler</span><div class="swa-chips" id="wrestlerChips"></div><input type="hidden" id="wrestler" required></div><p id="wrestlerStatus" class="wrestler-status" role="status" aria-live="polite" hidden></p><label class="field" id="optionLabel" hidden><span>Registration option</span><select id="option"></select></label></form></section>
 <section id="empty" hidden aria-labelledby="emptyHeading"><h2 id="emptyHeading">Add your wrestler first</h2><p>Add your wrestler in your family account, then come back to this page to book.</p><a class="button primary" href="/family">Add a wrestler</a></section>
-<section id="review" hidden tabindex="-1" aria-labelledby="reviewHeading"><h2 id="reviewHeading">Not booked yet</h2><div id="details"></div><p class="notice" id="notice"></p><fieldset class="pay-choice" id="payChoice" hidden><legend>How would you like to pay?</legend><div class="pay-options"><label class="pay-option" id="payOnlineOption" for="payWayOnline"><input type="radio" name="payWay" id="payWayOnline" value="online" onchange="choosePayWay('online')"><strong>Pay online</strong><small>Pay securely now by card.</small></label><label class="pay-option" for="payWayCash"><input type="radio" name="payWay" id="payWayCash" value="cash" onchange="choosePayWay('cash')"><strong>Pay cash at the academy</strong><small id="cashHint">Book now and pay in cash at the practice.</small></label></div></fieldset><div id="cashBox" hidden><button class="primary" id="cashButton" type="button">Book and pay cash at the academy</button><p class="small" id="cashNote">Your spot is booked as soon as you confirm. Pay in cash at the practice. You can cancel in your family account before it starts.</p></div><div id="cashDone" hidden></div><div id="payBox" hidden><label><input type="checkbox" id="acceptTerms"> I have read and agree to the <a href="/membership-terms#camps" target="_blank" rel="noopener">refund policy</a> for this purchase.</label><button class="primary" id="payButton" disabled>Continue to secure checkout</button><p class="small">Payment is handled by Stripe. Your spot is confirmed once Stripe confirms the payment.</p></div><div id="interestBox" hidden><button class="primary" id="interestButton" type="button">Tell the academy I want this</button><p class="contact-line" id="contactLine">Or reach the academy at 20 Railroad St, Huntington Station, NY 11746 · <a href="mailto:savagewrestlingclub@gmail.com">savagewrestlingclub@gmail.com</a></p></div><div id="interestDone" class="interest-done" hidden></div><p class="after"><a href="/calendar">Back to the calendar</a><a href="/family">Your family account</a></p></section></main><script>
-const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),params=new URLSearchParams(location.search);let family,catalog,selected,busy=false;const clock=t=>{const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};const dayDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'}):String(d??'');const money=c=>c===null?'Price to be confirmed':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Refresh the page to try again.');return d}
+<section id="review" hidden tabindex="-1" aria-labelledby="reviewHeading"><h2 id="reviewHeading">Not booked yet</h2><div id="details"></div><p class="swa-receipt__next" id="notice"></p><fieldset class="pay-choice" id="payChoice" hidden><legend>How would you like to pay?</legend><div class="pay-options"><label class="pay-option" id="payOnlineOption" for="payWayOnline"><input type="radio" name="payWay" id="payWayOnline" value="online" data-pay="online"><strong>Pay online</strong><small>Pay securely now by card.</small></label><label class="pay-option" for="payWayCash"><input type="radio" name="payWay" id="payWayCash" value="cash" data-pay="cash"><strong>Pay cash at the academy</strong><small id="cashHint">Book now and pay in cash at the practice.</small></label></div></fieldset><div id="cashBox" class="confirm" hidden><button class="primary" id="cashButton" type="button">Confirm booking</button><p id="cashNote">Your spot is booked as soon as you confirm. Pay in cash at the practice. You can cancel in your family account before it starts.</p></div><div id="cashDone" hidden></div><div id="payBox" class="confirm" hidden><button class="primary" id="payButton" disabled>Confirm and pay</button><label class="swa-terms check"><input type="checkbox" id="acceptTerms"><span>I have read and agree to the <a href="/membership-terms#camps" target="_blank" rel="noopener">refund policy</a> for this purchase.</span></label><p class="small">Payment is handled by Stripe. Your spot is confirmed once Stripe confirms the payment.</p></div><div id="interestBox" class="confirm" hidden><button class="primary" id="interestButton" type="button">Tell the academy I want this</button><p class="contact-line" id="contactLine">Or reach the academy at 20 Railroad St, Huntington Station, NY 11746 · <a href="mailto:savagewrestlingclub@gmail.com">savagewrestlingclub@gmail.com</a></p></div><div id="interestDone" class="interest-done" hidden></div><p class="after"><a class="swa-link" href="/calendar">Back to the calendar</a><a class="swa-link" href="/family">Your family account</a></p></section></main><script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),params=new URLSearchParams(location.search);let family,catalog,selected,checking=0;const clock=t=>{const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};const dayDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'}):String(d??'');const money=c=>c===null?'Price to be confirmed':new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Refresh the page to try again.');return d}
 // Issue #189: each camp, clinic or event day with its own time (New York time), or "Time to be announced". Today's date says so.
 function eventDay(e,d){const t=(e&&e.schedule||[]).find(x=>x.date===d);return dayDate(d)+(catalog&&d===catalog.today?' (today)':'')+' · '+(t?clock(t.start)+'–'+clock(t.end):'Time to be announced')}
 function eventWhen(e){return (e.schedule||[]).length?e.dates.map(d=>eventDay(e,d)).join('; ')+' (New York time)':e.dates.map(d=>dayDate(d)+(catalog&&d===catalog.today?' (today)':'')).join(' · ')+' · Time to be announced'}
@@ -51,12 +58,19 @@ const academyClock=()=>new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_Yo
 const kindOf=()=>params.get('type')==='live'?'live':params.get('type')==='lesson'?'lesson':'event';
 // Where the cash is handed over: the practice, or the academy on a camp's first day (issue #273).
 const payPlace=()=>kindOf()==='live'?'the practice':'the academy on the first day';
+// The wrestler chips (issue #282): one per saved wrestler; choosing one reviews the booking for them straight away.
+function renderWrestlerChips(){const kids=family?.data?.wrestlers||[],v=$('wrestler').value;$('wrestlerChips').innerHTML=kids.map(w=>'<button type="button" class="swa-chip" data-wrestler="'+esc(w.id)+'" aria-pressed="'+(w.id===v)+'">'+esc(w.name)+'<small>'+esc(gradeLabel(w.grade))+'</small></button>').join('')}
+function chooseWrestler(id){if(!family?.data?.wrestlers?.some(w=>w.id===id))return;$('wrestler').value=id;renderWrestlerChips();showWrestlerStatus();review()}
+if(typeof document.addEventListener==='function'){
+ document.addEventListener('click',e=>{const t=e.target&&e.target.closest?e.target.closest('[data-wrestler]'):null;if(t)chooseWrestler(t.dataset.wrestler)});
+ document.addEventListener('change',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.pay&&t.checked)choosePayWay(t.dataset.pay)});
+}
 async function load(){try{[family,catalog]=await Promise.all([call('/api/family'),call('/api/public-schedule'+(params.get('type')==='live'&&/^\d{4}-\d{2}-\d{2}$/.test(params.get('date')||'')?'?month='+params.get('date').slice(0,7):''))]);const lesson=params.get('type')==='lesson',live=params.get('type')==='live';selected=live?(catalog.liveClasses||[]).find(c=>c.date===params.get('date')&&c.id===params.get('id')):lesson?catalog.privateFormats.find(p=>p.id===params.get('format')):catalog.events.find(e=>e.id===params.get('id'));if(!selected)throw Error('This session is no longer available. Choose another one from the calendar.');
  // The heading is the session's own name (issue #132); the line above it says what kind of session it is.
  $('heading').textContent=selected.name;$('kind').textContent=live?'Extra practice':lesson?'Private lesson':selected.type||'Event';
  $('description').textContent=live?dayDate(selected.date)+' · '+clock(selected.start)+'–'+clock(selected.end)+' (New York time) · '+money(selected.memberCents)+' members / '+money(selected.nonMemberCents)+' non-members. A separate purchase; not included in memberships.':lesson?selected.description+' The academy confirms the coach, date and price with you.':eventWhen(selected)+' · '+money(selected.cents);$('gradeRange').hidden=!selected.gradeRange;$('gradeRange').textContent=selected.gradeRange?'Grade range: '+selected.gradeRange:'';$('offeringDescription').hidden=lesson||!selected.description;$('offeringDescription').textContent=lesson?'':selected.description||'';if(!family.data.wrestlers.length){$('empty').hidden=false;$('status').textContent='';return}
  // An extra practice already under way today cannot be booked here (issue #273): nothing is promised that cannot be kept.
- if(live&&selected.date===catalog.today&&selected.start<=academyClock()){$('status').textContent='This practice has already started, so it can’t be booked here. Ask at the door, or choose another date from the calendar.';return}$('wrestler').replaceChildren(...family.data.wrestlers.map(w=>{const o=document.createElement('option');o.value=w.id;o.textContent=w.name+' · '+gradeLabel(w.grade);return o}));$('optionLabel').hidden=live||lesson||selected.type!=='Camp';$('option').innerHTML='<option value="full">'+(live?'Single practice':lesson?'Lesson':'Full event · '+money(selected.cents))+'</option>'+(!lesson&&selected.type==='Camp'&&selected.dayCents!==null?selected.dates.filter(d=>d>=catalog.today).map(d=>'<option value="'+d+'">'+eventDay(selected,d)+' only · '+money(selected.dayCents)+'</option>').join(''):'');$('choice').hidden=false;$('status').textContent='Choose your wrestler, then choose Review selection.';loadBookings()}catch(e){$('status').textContent=e.message}}
+ if(live&&selected.date===catalog.today&&selected.start<=academyClock()){$('status').textContent='This practice has already started, so it can’t be booked here. Ask at the door, or choose another date from the calendar.';return}const kids=family.data.wrestlers,want=params.get('wrestler');$('wrestler').value=(kids.find(w=>w.id===want)||kids[0]).id;renderWrestlerChips();$('optionLabel').hidden=live||lesson||selected.type!=='Camp';$('option').innerHTML='<option value="full">'+(live?'Single practice':lesson?'Lesson':'Full event · '+money(selected.cents))+'</option>'+(!lesson&&selected.type==='Camp'&&selected.dayCents!==null?selected.dates.filter(d=>d>=catalog.today).map(d=>'<option value="'+d+'">'+eventDay(selected,d)+' only · '+money(selected.dayCents)+'</option>').join(''):'');$('choice').hidden=false;$('status').textContent='';await loadBookings();review()}catch(e){$('status').textContent=e.message}}
 // Whether the chosen wrestler is already registered (issue #132), from the family's own orders. There are no waitlists:
 // a full camp or event is simply full (decision Q10 in #197, issue #210).
 let myOrders=[],myCash=[];
@@ -76,7 +90,8 @@ function bookingStatus(w){
  return {cls:'',text:w.name+' is not registered yet.'};
 }
 function showWrestlerStatus(){const w=(family&&family.data.wrestlers||[]).find(x=>x.id===$('wrestler').value),s=bookingStatus(w);$('wrestlerStatus').hidden=!s;if(s!==null){$('wrestlerStatus').textContent=s.text;$('wrestlerStatus').className='wrestler-status '+s.cls}}
-$('wrestler').onchange=showWrestlerStatus;
+$('wrestler').onchange=()=>{showWrestlerStatus();review()};
+$('option').onchange=()=>review();
 let lastPurchase=null;
 // An extra practice (issue #248) can be paid online, when that is open, or booked now and paid in cash at the academy.
 let payOnline=false,payCash=false,cashBusy=false;
@@ -88,7 +103,7 @@ function showPay(on,cash,cents){payOnline=on;payCash=!!cash;$('acceptTerms').che
 function choosePayWay(way){$('payWayOnline').checked=way==='online';$('payWayCash').checked=way==='cash';$('payBox').hidden=!(payOnline&&way==='online');$('cashBox').hidden=!(payCash&&way==='cash');$('interestBox').hidden=payOnline||payCash;if(!payOnline&&!payCash)loadContact()}
 function showCashDone(b){$('reviewHeading').textContent='You’re booked';$('notice').hidden=true;$('payChoice').hidden=true;$('cashBox').hidden=true;$('payBox').hidden=true;$('interestBox').hidden=true;
  const days=Array.isArray(b.dates)&&b.dates.length>1?b.dates.map(dayDate).join(', '):dayDate(b.date)+(b.start?' at '+clock(b.start):'');
- $('cashDone').innerHTML='<p class="cash-due">'+esc(b.label)+'</p><p><strong>'+esc(b.wrestler)+'</strong> is booked for '+esc(b.item)+', '+esc(days)+' (New York time).</p><p>Bring the cash to '+esc(b.kind==='live'?'the practice':'the academy on the first day')+'. It shows in your family account until it’s paid, and you can cancel there before it starts.</p>';
+ $('cashDone').innerHTML='<div class="done-box"><p class="cash-due">'+esc(b.label)+'</p><p><strong>'+esc(b.wrestler)+'</strong> is booked for '+esc(b.item)+', '+esc(days)+' (New York time).</p><p>Bring the cash to '+esc(b.kind==='live'?'the practice':'the academy on the first day')+'. It shows in your family account until it’s paid, and you can cancel there before it starts.</p></div>';
  $('cashDone').hidden=false;$('status').textContent='Booked. '+b.label+'.';myCash=myCash.concat([b])}
 // The academy's address and email (website settings when saved, else the academy's fixed address), loaded once.
 let contact=null,contactLoading=null;
@@ -96,14 +111,28 @@ function loadContact(){if(contact||contactLoading)return contactLoading;contactL
 let interestBusy=false;
 $('interestButton').onclick=async()=>{if(!lastPurchase||interestBusy)return;interestBusy=true;$('interestButton').disabled=true;$('status').textContent='Sending your request…';
  try{const d=await call('/api/interest',{kind:'lesson',wrestlerId:lastPurchase.wrestlerId,format:lastPurchase.format}),c=d.contact||contact,w=family.data.wrestlers.find(w=>w.id===lastPurchase.wrestlerId);
-  $('interestBox').hidden=true;$('notice').hidden=true;$('interestDone').innerHTML='<p><strong>Sent.</strong> The academy has your request for '+esc(w?w.name:'your wrestler')+'’s '+esc(String(selected.name||'lesson').toLowerCase())+' and will reply under Messages about the coach, the time and how to pay.</p><p>'+(c?'Reach the academy any time at '+esc(c.address)+' · <a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>. ':'')+'<a href="/inbox">Open Messages →</a></p>';$('interestDone').hidden=false;
+  $('interestBox').hidden=true;$('notice').hidden=true;$('interestDone').innerHTML='<div class="done-box"><p><strong>Sent.</strong> The academy has your request for '+esc(w?w.name:'your wrestler')+'’s '+esc(String(selected.name||'lesson').toLowerCase())+' and will reply under Messages about the coach, the time and how to pay.</p><p>'+(c?'Reach the academy any time at '+esc(c.address)+' · <a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>. ':'')+'<a href="/inbox">Open Messages →</a></p></div>';$('interestDone').hidden=false;
   $('status').textContent='Request sent. The academy will be in touch.'}
  catch(e){$('status').textContent=e.message;$('interestButton').disabled=false}finally{interestBusy=false}};
 $('cashButton').onclick=async()=>{if(!lastPurchase||cashBusy)return;cashBusy=true;$('cashButton').disabled=true;$('status').textContent='Booking…';try{const d=await call('/api/cash-bookings',{action:'book',...lastPurchase});showCashDone(d.booking)}catch(e){$('status').textContent=e.message;$('cashButton').disabled=false}finally{cashBusy=false}};
 $('acceptTerms').onchange=()=>{$('payButton').disabled=!$('acceptTerms').checked};
 $('payButton').onclick=async()=>{if(!lastPurchase||!$('acceptTerms').checked)return;$('payButton').disabled=true;$('status').textContent='Opening secure checkout…';try{const d=await call('/api/checkout',{...lastPurchase,acceptTerms:true});location.assign(d.url)}catch(e){$('status').textContent=e.message;$('payButton').disabled=false}};
-// Payment is explained once, here at the review step, in the server's own words (issue #132).
-$('form').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;$('submit').disabled=true;try{const request={type:params.get('type'),id:params.get('id'),format:params.get('format'),date:params.get('date'),wrestlerId:$('wrestler').value,option:$('option').value},d=await call('/api/booking-review',request),r=d.review;lastPurchase={source:'booking',...request};showPay(!!d.paymentsEnabled,!!d.cashEnabled,r.cents);$('details').innerHTML='<p><strong>'+esc(r.title)+'</strong></p><p>Wrestler: '+esc(r.wrestler)+'</p>'+(r.dates?'<p>'+(r.type==='event'?r.dates.map(d=>eventDay(r,d)).map(esc).join('<br>'):r.dates.map(dayDate).map(esc).join(' · '))+'</p>':'')+(r.type==='live'?'<p>'+clock(r.start)+'–'+clock(r.end)+' (New York time)</p>'+(r.cents===null||r.cents===undefined?'':'<p class="price">'+money(r.cents)+(r.memberEligible?' (member price)':' (non-member price)')+'</p>')+'<p><strong>'+money(r.memberCents)+' members · '+money(r.nonMemberCents)+' non-members</strong></p><p>A separate purchase · Not included in memberships</p>':'<p class="price">'+money(r.cents)+'</p>'+(typeof r.seatsLeft==='number'?'<p><strong>'+r.seatsLeft+(r.seatsLeft===1?' spot':' spots')+' left</strong></p>':''));$('notice').textContent=r.message;$('review').hidden=false;$('choice').hidden=true;$('status').textContent=d.cashEnabled?(d.paymentsEnabled?'Check the details, then pay online or book and pay cash at the academy.':'Check the details, then book and pay cash at the academy.'):d.paymentsEnabled?'Check the details, accept the refund policy, then pay securely to register.':'';$('review').focus()}catch(e){$('status').textContent=e.message}finally{busy=false;$('submit').disabled=false}};load();
+// The receipt (issue #282): the session, the wrestler, the days and times, the seats and the price, from the server's review.
+const row=(k,v,small='')=>'<div class="swa-receipt__row"><span class="k">'+k+'</span><span class="v">'+v+(small?'<small>'+small+'</small>':'')+'</span></div>';
+function receipt(r){
+ const lines=[row(r.type==='live'?'Extra practice':r.type==='lesson'?'Lesson':'Event',esc(r.title)),row('Wrestler',esc(r.wrestler))];
+ if(r.dates&&r.type==='event')lines.push(row(r.dates.length>1?'Days':'Day',r.dates.map(d=>eventDay(r,d)).map(esc).join('<br>')));
+ else if(r.dates&&r.dates.length)lines.push(row('When',r.dates.map(dayDate).map(esc).join(' · '),r.type==='live'?esc(clock(r.start))+'–'+esc(clock(r.end))+' · New York time':''));
+ if(typeof r.seatsLeft==='number')lines.push(row('Seats',r.seatsLeft+(r.seatsLeft===1?' spot':' spots')+' left'));
+ if(r.type==='live')lines.push(row('Price',money(r.memberCents)+' members · '+money(r.nonMemberCents)+' non-members','A separate purchase · Not included in memberships'));
+ const total=r.cents===null||r.cents===undefined?'':'<div class="swa-receipt__total"><span class="k">Total</span><span class="v">'+money(r.cents)+'<small>'+(r.type==='live'?(r.memberEligible?'Member price':'Non-member price'):'One payment')+'</small></span></div>';
+ return '<div class="swa-receipt">'+lines.join('')+total+'</div>';
+}
+// Payment is explained once, here at the review step, in the server's own words (issue #132). The review runs as soon
+// as a wrestler is chosen; a later choice supersedes an earlier answer still on its way.
+// A wrestler who is already registered or booked has nothing to review: the status line says so and the receipt stays away.
+async function review(){const ticket=++checking;const who=(family&&family.data.wrestlers||[]).find(x=>x.id===$('wrestler').value),standing=who?bookingStatus(who):null;if(standing&&standing.cls==='ok'){$('review').hidden=true;return}try{const request={type:params.get('type'),id:params.get('id'),format:params.get('format'),date:params.get('date'),wrestlerId:$('wrestler').value,option:$('option').value},d=await call('/api/booking-review',request),r=d.review;if(ticket!==checking)return;lastPurchase={source:'booking',...request};showPay(!!d.paymentsEnabled,!!d.cashEnabled,r.cents);$('details').innerHTML=receipt(r);$('notice').textContent=r.message;$('review').hidden=false;$('status').textContent=d.cashEnabled?(d.paymentsEnabled?'Check the details, then pay online or book and pay cash at the academy.':'Check the details, then book and pay cash at the academy.'):d.paymentsEnabled?'Check the details, accept the refund policy, then pay securely to register.':''}catch(e){if(ticket!==checking)return;$('review').hidden=true;$('status').textContent=e.message}}
+$('form').onsubmit=async e=>{e.preventDefault();await review()};load();
 
 // The help link goes to the document named in the message: the Parent Consent Form or the waiver (issue #195).
 function signHelp(p,t){const a=p.querySelector('a'),consent=/Parent Consent Form/.test(t);if(a){a.href=consent?'/consent':'/waiver';a.textContent=consent?'Sign the Parent Consent Form →':'Sign the waiver →'}}

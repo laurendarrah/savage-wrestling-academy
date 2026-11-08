@@ -308,7 +308,8 @@ const myGroup = {id: 'pg', date: '2026-11-10', start: '09:30', end: '10:30', coa
   p.el('wrestler').value = 'w1'; p.el('wrestler').onchange(); p.button('opening', 'grp').onclick(); await settle();
   const review = p.calls.find(c => c.url === '/api/booking-review');
   assert.deepEqual(review.body, {type: 'lesson', wrestlerId: 'w1', openingId: 'grp'}, 'no price or format from the browser');
-  assert.match(p.el('summary').innerHTML, /Small-group lesson[\s\S]*Mon, Nov 9 · 10:00 AM–11:00 AM[\s\S]*For Sam · 2 of 4 spots left[\s\S]*\$35\.00<\/strong> per wrestler/);
+  // The receipt (#282): the lesson, when, for whom, and the price per wrestler as the total.
+  assert.match(p.el('summary').innerHTML, /<div class="swa-receipt">[\s\S]*Small-group lesson[\s\S]*with Coach Dana[\s\S]*Mon, Nov 9 · 10:00 AM–11:00 AM[\s\S]*<span class="k">For<\/span><span class="v">Sam · 2 of 4 spots left[\s\S]*<span class="k">Each wrestler<\/span><span class="v">\$35\.00<small>per wrestler/);
   assert.equal(p.el('notOpen').hidden, false, 'pay at the academy while lesson checkout is closed');
   p.button('path', 'one').onclick(); await settle();
   assert.match(p.el('times').innerHTML, /3:00 PM–4:00 PM/); assert.doesNotMatch(p.el('times').innerHTML, /10:00 AM/);

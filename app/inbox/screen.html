@@ -1,32 +1,46 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Messages | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
-body{background:var(--swa-ground);color:#141416;margin:0}
-main{max-width:var(--swa-width-narrow);margin:auto;padding:20px 16px 56px}
+/* Messages (redesign Phase 2, issue #282): one list, newest first, each item a 44px summary with a chevron, the type as
+   a caption and a red dot while unread; "Mark all as read" is the quiet action in the title row; the conversation with
+   the academy follows, with the reply box inline. */
+body{background:var(--swa-ground);color:var(--swa-ink);margin:0}
+main{max-width:var(--swa-width-narrow);margin:auto;padding:var(--swa-s-16) 16px 56px}
 h1{margin:8px 0 4px}h2{margin:0 0 8px}
-html body main>section{padding:20px;margin:18px 0}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-#markAll{padding:0 16px}
-details{border-top:1px solid #E1E3E8;padding:4px 0}
+html body .swa-title__actions button.quiet{justify-content:flex-start;padding:0;text-align:left}
+html body main>.card{margin:var(--swa-s-16) 0}
+.inbox section+section{border-top:1px solid var(--swa-line);margin-top:var(--swa-s-8);padding-top:var(--swa-s-8)}
+details{border-top:1px solid var(--swa-line)}
 details:first-of-type{border-top:0}
-summary{cursor:pointer;min-height:44px;padding:10px 0 8px;overflow-wrap:anywhere}
-summary .when{display:block;font-size:15px;font-weight:400}
-summary.unread{font-weight:700}
-.body{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 10px}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--swa-red);margin-right:6px}
-.msg{border-radius:10px;padding:10px 12px;margin:8px 0;max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere}
-.msg.you{background:#141416;color:#fff;margin-left:auto}
-.msg.academy{background:#EEF0F3}
-.msg small{display:block;opacity:.8;font-size:13px}
-label{display:flex;flex-direction:column;gap:4px}
+html body details>summary{padding:var(--swa-s-8) 0;align-items:flex-start}
+html body details>summary::after{margin-top:14px}
+.sum{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;font-weight:400}
+.kind{font-size:var(--swa-t-13);color:var(--swa-muted);font-weight:600}
+.subj{font-weight:600;overflow-wrap:anywhere;line-height:1.35}
+summary.unread .subj{font-weight:700}
+.when{font-size:var(--swa-t-13);font-weight:400;color:var(--swa-muted)}
+.body{white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 var(--swa-s-12);padding:0 var(--swa-s-16) var(--swa-s-4);font-size:var(--swa-t-15);color:var(--swa-ink);border-left:2px solid var(--swa-line);margin-left:2px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--swa-red);margin-right:8px;vertical-align:2px}
+.pager{border-top:0;padding-top:0;margin-top:var(--swa-s-8)}
+.msg{border-radius:var(--swa-r-card);padding:10px 14px;margin:8px 0;max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--swa-t-15)}
+.msg.you{background:var(--swa-ink);color:#fff;margin-left:auto;border-bottom-right-radius:4px}
+.msg.academy{background:var(--swa-surface-2);border-bottom-left-radius:4px}
+.msg small{display:block;opacity:.75;font-size:var(--swa-t-13);margin-top:2px}
+#reply{margin-top:var(--swa-s-16)}
+#reply label{display:flex;flex-direction:column;gap:4px}
+#reply textarea{min-height:88px}
 #reply button{margin-top:10px;padding:0 20px}
 #status{font-weight:600;min-height:1.5em}
-.when{display:block;font-size:14px;font-weight:400;margin-top:2px}</style></head><body><main><div class="top"><h1>Messages</h1><button type="button" id="markAll" hidden>Mark all as read</button></div><p id="status" role="status" aria-live="polite">Loading…</p>
-<section id="announcementsBox" aria-labelledby="announcementsHeading"><h2 id="announcementsHeading">Announcements</h2><div id="announcements"></div><div class="pager" id="announcementsMore" hidden><button type="button" data-more="announcements">Show older announcements</button></div></section><section id="noticesBox" hidden aria-labelledby="noticesHeading"><h2 id="noticesHeading">Notices</h2><div id="notices"></div><div class="pager" id="noticesMore" hidden><button type="button" data-more="notices">Show older notices</button></div></section>
-<section aria-labelledby="threadHeading"><h2 id="threadHeading">Your conversation with the academy</h2><p id="threadMore" hidden><button type="button" class="link" data-more="thread">Show earlier messages</button></p><div id="thread"></div><form id="reply"><label>Message the academy<textarea id="body" maxlength="5000" required></textarea></label><button class="primary">Send</button></form></section></main><script>
+[hidden]{display:none!important}</style></head><body><main><div class="top"><h1>Messages</h1><button type="button" class="quiet" id="markAll" hidden>Mark all as read</button></div><p id="status" role="status" aria-live="polite">Loading…</p>
+<div class="card inbox"><section id="announcementsBox" aria-labelledby="announcementsHeading"><h2 id="announcementsHeading" class="swa-sr">Announcements</h2><div id="announcements"></div><div class="pager" id="announcementsMore" hidden><button type="button" data-more="announcements">Show older announcements</button></div></section><section id="noticesBox" hidden aria-labelledby="noticesHeading"><h2 id="noticesHeading" class="swa-sr">Notices</h2><div id="notices"></div><div class="pager" id="noticesMore" hidden><button type="button" data-more="notices">Show older notices</button></div></section></div>
+<section class="card" aria-labelledby="threadHeading"><h2 id="threadHeading" class="swa-label">Your conversation with the academy</h2><p id="threadMore" hidden><button type="button" class="link" data-more="thread">Show earlier messages</button></p><div id="thread"></div><form id="reply"><label>Message the academy<textarea id="body" maxlength="5000" required></textarea></label><button class="primary">Send</button></form></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
+// Short messages go to the shared toast (public/toast.js); without it (the tests' fake pages) they stay in #status.
+const toast=(text,kind)=>{if(typeof swaToast==='function'){swaToast(text,kind?{kind}:undefined);$('status').textContent=''}else $('status').textContent=text};
+const when=d=>{const t=new Date(d),f=o=>t.toLocaleString('en-US',{timeZone:'America/New_York',...o}).replace(/[  ]/g,' ');return f({weekday:'short',month:'short',day:'numeric'})+' · '+f({hour:'numeric',minute:'2-digit'})};
 async function call(body){const r=await fetch('/api/inbox',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login';throw Error('Sign in again.')}const d=await r.json();if(!r.ok)throw Error((d.error||'Something went wrong.')+(d.requestId?' (reference '+String(d.requestId).slice(0,8)+')':''));return d}
-// One message in a list: subject and time, opened to read the body. One item opens by itself (issue #132).
-function item(attr,subject,at,read,body,open){return `<details ${attr}${open?' open':''}><summary class="${read?'':'unread'}">${read?'':'<span class="dot" aria-label="Unread"></span>'}${esc(subject)}<span class="muted when">${esc(when(at))}</span></summary><div class="body">${esc(body)}</div></details>`}
+// One message in a list: the type as a caption, the subject (a red dot while unread) and the time, opened to read the
+// body. One item opens by itself (issue #132).
+function item(attr,kind,subject,at,read,body,open){return `<details ${attr}${open?' open':''}><summary class="${read?'':'unread'}"><span class="sum"><span class="kind">${kind}</span><span class="subj">${read?'':'<span class="dot" aria-label="Unread"></span>'}${esc(subject)}</span><span class="muted when">${esc(when(at))}</span></span></summary><div class="body">${esc(body)}</div></details>`}
 // Announcements come first, above the academy's automatic notices (issue #231). The item that opens by itself is the
 // newest unread announcement, else the newest unread notice, else the newest announcement, else the newest notice.
 function opensFirst(announcements,notices){
@@ -49,15 +63,15 @@ function render(d){
  $('noticesBox').hidden=!notices.length;
  // With no announcements, the notices lead the page instead of an empty Announcements box.
  $('announcementsBox').hidden=!announcements.length&&!!notices.length;
- $('notices').innerHTML=notices.map((n,i)=>item('data-notice="'+esc(n.id)+'"',n.subject,n.at,n.read,n.body,i===open.notice)).join('');
+ $('notices').innerHTML=notices.map((n,i)=>item('data-notice="'+esc(n.id)+'"','Notice',n.subject,n.at,n.read,n.body,i===open.notice)).join('');
  document.querySelectorAll('details[data-notice]').forEach(el=>{el.ontoggle=()=>markShown(el,{action:'read',noticeId:el.dataset.notice})});
- $('announcements').innerHTML=announcements.map((a,i)=>item('data-id="'+esc(a.id)+'"',a.subject,a.sentAt,a.read,a.body,i===open.announcement)).join('')||'<p class="muted">No announcements yet.</p>';
+ $('announcements').innerHTML=announcements.map((a,i)=>item('data-id="'+esc(a.id)+'"','Announcement',a.subject,a.sentAt,a.read,a.body,i===open.announcement)).join('')||'<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p>No announcements yet. The academy’s news shows here.</p></div>';
  document.querySelectorAll('details[data-id]').forEach(el=>{el.ontoggle=()=>markShown(el,{action:'read',announcementId:el.dataset.id})});
  $('thread').innerHTML=(d.thread||[]).map(m=>`<div class="msg ${m.from}">${esc(m.body)}<small>${m.from==='you'?'You':'Savage Wrestling Academy'} · ${esc(when(m.at))}</small></div>`).join('')||'<p class="muted">No messages yet. Questions about schedules, payments or your wrestler? Write to the academy here.</p>';
  showMarkAll(d);
 }
 document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>more(b.dataset.more));
-$('markAll').onclick=async()=>{$('markAll').disabled=true;try{render(await call({action:'read',all:true}));$('status').textContent='All messages are marked as read.'}catch(err){$('status').textContent=err.message}finally{$('markAll').disabled=false}};
-$('reply').onsubmit=async e=>{e.preventDefault();try{render(await call({action:'reply',body:$('body').value}));$('body').value='';$('status').textContent='Sent. The academy will reply here.'}catch(err){$('status').textContent=err.message}};
+$('markAll').onclick=async()=>{$('markAll').disabled=true;try{render(await call({action:'read',all:true}));toast('All messages are marked as read.','ok')}catch(err){$('status').textContent=err.message}finally{$('markAll').disabled=false}};
+$('reply').onsubmit=async e=>{e.preventDefault();try{render(await call({action:'reply',body:$('body').value}));$('body').value='';toast('Sent. The academy will reply here.','ok')}catch(err){$('status').textContent=err.message}};
 (async()=>{try{const d=await call();render(d);if(d.thread.length&&d.thread.some(m=>m.from==='academy'))showMarkAll(await call({action:'read',thread:true}));$('status').textContent=''}catch(e){$('status').textContent=e.message}})();
 </script></body></html>

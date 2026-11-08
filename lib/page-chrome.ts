@@ -13,12 +13,40 @@ export function shouldDecorate(url: URL, contentType: string | null, ownerShell 
   return !url.searchParams.has('embed') && !url.searchParams.has('embedded');
 }
 
+// The family's pages (issue #282): the top bar carries the family's links on a desk, and a phone gets the tab bar
+// (familyTabs) instead of the bar's links. Every page here is a family's own; the owner and coaches never open them.
+const FAMILY_PAGES = new Set(['/family', '/register', '/booking', '/lesson', '/inbox', '/pass', '/wrestler', '/waiver', '/consent', '/scholarship']);
+export function familyPage(pathname: string) { return FAMILY_PAGES.has(pathname); }
+const current = (pathname: string, href: string) => (href === pathname || (href === '/' && HOMES.has(pathname)) ? ' aria-current="page"' : '');
+
 export function topBar(pathname: string) {
-  const current = (href: string) => (href === pathname || (href === '/' && HOMES.has(pathname)) ? ' aria-current="page"' : '');
-  return '<header class="swa-bar"><div class="swa-bar__inner">'
+  const family = familyPage(pathname), at = (href: string) => current(pathname, href);
+  const links = family
+    ? `<a href="/"${at('/')}>Home</a><a href="/calendar"${at('/calendar')}>Calendar</a><a href="/pass"${at('/pass')}>Pass</a><a href="/inbox"${at('/inbox')}>Messages</a>`
+    : `<a href="/calendar"${at('/calendar')}>Calendar</a><a href="/"${at('/')}>Home</a>`;
+  return `<header class="swa-bar${family ? ' swa-bar--family' : ''}"><div class="swa-bar__inner">`
     + '<a class="swa-bar__home" href="/" aria-label="Savage Wrestling Academy home"><img src="/brand/savage-logo-128.png" alt="" width="40" height="40"><span class="swa-bar__word">SAVAGE</span></a>'
-    + `<nav class="swa-bar__links" aria-label="Site"><a href="/calendar"${current('/calendar')}>Calendar</a><a href="/"${current('/')}>Home</a></nav>`
+    + `<nav class="swa-bar__links" aria-label="Site">${links}</nav>`
     + '</div></header>';
+}
+
+// The phone tab bar on family pages: Home, Calendar, Pass, Messages, Account (the family home's Account menu). The
+// Messages tab carries an unread count the family home fills in (#inboxBadge). Styled in public/savage.css (.swa-tabs).
+const TAB_ICONS: Record<string, string> = {
+  home: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  pass: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M21 14v7h-7"/>',
+  messages: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  account: '<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+};
+export function familyTabs(pathname: string) {
+  const icon = (name: string) => `<svg viewBox="0 0 24 24" aria-hidden="true">${TAB_ICONS[name]}</svg>`;
+  const tab = (href: string, name: string, label: string, extra = '') => `<a href="${href}"${current(pathname, href)}${extra}>${icon(name)}${label}</a>`;
+  return '<nav class="swa-tabs" aria-label="Family">'
+    + tab('/', 'home', 'Home') + tab('/calendar', 'calendar', 'Calendar') + tab('/pass', 'pass', 'Pass')
+    + tab('/inbox', 'messages', 'Messages<span class="swa-tabs__badge" id="inboxBadge" hidden></span>', ' id="inboxLink"')
+    + tab('/family#account', 'account', 'Account')
+    + '</nav>';
 }
 
 const ICONS = '<link rel="icon" href="/brand/favicon-32.png" sizes="32x32"><link rel="icon" href="/brand/favicon-64.png" sizes="64x64">'
@@ -113,7 +141,7 @@ export function splitSentence(inner: string): [string, string] {
 }
 
 export function decoratePage(html: string, pathname: string, ownerShell = false) {
-  if (html.includes('class="swa-bar"') || html.includes('data-swa-shell=')) return html;
+  if (html.includes('class="swa-bar') || html.includes('data-swa-shell=')) return html;
   // The dashboard keeps its own styles (it never loaded savage.css) and its own title row.
   const dashboard = ownerShell && pathname === '/';
   const head = (dashboard ? ICONS : HEAD) + (ownerShell ? OWNER_SHELL_HEAD : '');
@@ -124,6 +152,7 @@ export function decoratePage(html: string, pathname: string, ownerShell = false)
   // Inside the owner shell every page opens with the title row, the owner guide under /help included.
   if (ownerShell && body) return wrapOwnerBody(dashboard ? out.replace(body[0], tagged) : pageHead(out.replace(body[0], tagged), pathname, {band: false, after: ownerTabs(pathname)}), pathname);
   out = body ? out.replace(body[0], tagged + topBar(pathname)) : topBar(pathname) + out;
+  if (familyPage(pathname)) out = out.includes('</body>') ? out.replace('</body>', familyTabs(pathname) + '</body>') : out + familyTabs(pathname);
   return pageHead(out, pathname);
 }
 

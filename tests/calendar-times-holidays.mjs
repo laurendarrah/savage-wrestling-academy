@@ -163,15 +163,18 @@ const schedule = {month: '2026-11', today: '2026-11-11', programs: [{id: 'Elemen
   assert.match(grid, /Winter camp<\/strong><span>9:00 AM–12:00 PM<\/span>/); assert.match(grid, /Winter camp<\/strong><span>Time to be announced<\/span>/);
   assert.match(grid, /Single-leg clinic<\/strong><span>Time to be announced<\/span>/); assert.doesNotMatch(all, /No practice/i);
   assert.match(list, /<article class="is-today"><h3>Nov 11, 2026<span class="today-tag">Today<\/span><\/h3><span class="holiday-tag">Veterans Day<\/span>/);
-  assert.match(el('eventCards').innerHTML, /Camp<br>Nov 11, 2026 · 9:00 AM–12:00 PM<br>Nov 12, 2026 · Time to be announced/);
+  // The grid holds one "Choose a walk-in" per day with a practice still to come, never one per chip (#282).
+  assert.match(grid, /<div class="slot elementary"><strong>SWA Development<\/strong><span>5:00 PM–6:15 PM<\/span><\/div>[\s\S]*?<a class="choose" href="\/register\?plan=walkin&amp;date=2026-11-11" target="_top">Choose a walk-in →<\/a>/);
+  assert.equal((grid.match(/Choose a walk-in/g) || []).length, 2, 'one per day with a practice (Nov 11 and Nov 12)');
   vm.runInContext('stepWeek(2)', ctx); assert.match(el('calendar').innerHTML.split('<div class="list">')[1], /<article><h3>Nov 26, 2026<\/h3><span class="holiday-tag">Thanksgiving Day<\/span><\/article><p>Nothing is scheduled this week.<\/p>/, 'holiday-only day on phones, and the week is still empty');
 }
 // Welcome page "Coming up": event times, or "Time to be announced".
 {
   const later = {...schedule, month: '2026-12', practices: [], events: [], holidays: []};
-  const {el} = page('app/welcome/screen.html', {fetch: async url => json(url.includes('month=') ? later : {...schedule, practices: [], events: [schedule.events[1], {...schedule.events[0], dates: ['2026-11-12', '2026-11-13'], schedule: [{date: '2026-11-12', start: '09:00', end: '12:00'}]}]})}); await settle();
-  assert.match(el('week').innerHTML, /Thu, Nov 12<span>9:00 AM<\/span><\/span><span class="what">[\s\S]*Winter camp \(camp\)/);
-  assert.match(el('week').innerHTML, /Sat, Nov 14<span>Time to be announced<\/span><\/span><span class="what">[\s\S]*Single-leg clinic \(clinic\)/);
+  const {el, ctx} = page('app/welcome/screen.html', {fetch: async url => json(url.includes('month=') ? later : {...schedule, practices: [], events: [schedule.events[1], {...schedule.events[0], dates: ['2026-11-12', '2026-11-13'], schedule: [{date: '2026-11-12', start: '09:00', end: '12:00'}]}]})}); await settle();
+  // One row in the hero (#282): the soonest, with its time; a day without a time would say "Time to be announced".
+  assert.match(el('week').innerHTML, /<span class="when">Thu, Nov 12 · 9:00 AM<\/span><span class="what">Winter camp \(camp\)<\/span>/);
+  assert.match(vm.runInContext("nextRow({date:'2026-11-14',start:'',items:[{title:'Single-leg clinic (clinic)',tba:true}]})", ctx), /<span class="when">Sat, Nov 14 · Time to be announced<\/span><span class="what">Single-leg clinic \(clinic\)<\/span>/);
 }
 // Booking: each day with its time; the single-day choices name today; the review lists the chosen days' times.
 {
@@ -179,7 +182,7 @@ const schedule = {month: '2026-11', today: '2026-11-11', programs: [{id: 'Elemen
   assert.equal(el('description').textContent, 'Wed, Nov 11 (today) · 9:00 AM–12:00 PM; Thu, Nov 12 · Time to be announced (New York time) · $160.00');
   assert.match(el('option').innerHTML, /<option value="2026-11-11">Wed, Nov 11 \(today\) · 9:00 AM–12:00 PM only · \$90.00<\/option><option value="2026-11-12">Thu, Nov 12 · Time to be announced only/);
   el('wrestler').value = 'w-1'; el('option').value = '2026-11-11'; await el('form').onsubmit({preventDefault() {}}); await settle();
-  assert.match(el('details').innerHTML, /<p>Wed, Nov 11 \(today\) · 9:00 AM–12:00 PM<\/p>/);
+  assert.match(el('details').innerHTML, /<span class="k">Day<\/span><span class="v">Wed, Nov 11 \(today\) · 9:00 AM–12:00 PM<\/span>/, 'the receipt names the chosen day with its time');
   assert.match(readFileSync('lib/quotes.ts', 'utf8'), /schedule: \(event\.schedule \?\? \[\]\)\.filter\(\(x: any\) => eventDates\.includes\(x\.date\)\)/, 'the review carries the chosen days’ times');
 }
 // Register practice calendar: today underlined in red.

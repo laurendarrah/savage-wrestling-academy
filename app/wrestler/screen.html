@@ -1,12 +1,30 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wrestler | Savage Wrestling Academy</title><style>*{box-sizing:border-box}body{font:16px Arial,sans-serif;line-height:1.5;background:#18191c;color:#18191c;margin:0}main{max-width:520px;margin:auto;padding:16px 16px 50px}a{color:#a92330}.top{color:#fff;display:flex;justify-content:space-between;align-items:center}.top a{color:#fff}.brand{letter-spacing:.2em;font-weight:bold;color:#f1757d;font-size:12px}h1{color:#fff;font-size:34px;line-height:1.1;margin:8px 0 2px}.sub{color:#c9cad0;margin:0 0 14px}.card{background:#fff;border-radius:14px;padding:18px;margin:14px 0}.card h2{margin:0 0 8px;font-size:18px}.qr{max-width:260px;margin:4px auto}.qr svg{width:100%;height:auto;display:block}.center{text-align:center}.muted{color:#626672}.next,html body main section.card.next{background:#C4222C;color:#fff;border:0}.next .muted{color:#fff}.next h2{color:#fff}.big{font-size:22px;font-weight:bold}.item{display:flex;gap:12px;border-top:1px solid #eee;padding:10px 0}.item:first-of-type{border-top:0}.when{min-width:92px;font-weight:bold}.tag{display:inline-block;font-size:12px;font-weight:bold;background:#eef0f3;border-radius:999px;padding:1px 8px}.alert{background:#fff1dd;color:#5c4100;border-radius:10px;padding:12px;margin:10px 0}.stat{font-size:28px;font-weight:bold}#status{color:#fff;font-weight:bold;min-height:1.2em}</style><script src="/qr-preview.js" defer></script><link rel="stylesheet" href="/responsive.css"></head><body><main><div class="top"><span class="brand">SAVAGE WRESTLING ACADEMY</span><a href="/family">Family account</a></div><h1 id="name">…</h1><p class="sub" id="grade"></p><p id="status" role="status" aria-live="polite"></p><div id="alerts"></div><div id="next"></div>
-<section class="card center" id="passCard" hidden><h2>Entry pass</h2><div class="qr" id="qr"></div><p class="muted">Show this at the door.</p></section>
-<section class="card"><h2>Coming up</h2><div id="list"></div></section>
-<section class="card"><h2>This month</h2><span class="stat" id="checkins">–</span> <span class="muted">check-ins</span></section></main><script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wrestler | Savage Wrestling Academy</title><style>
+/* One wrestler's page (issue #76; redesign Phase 2, issue #282): the dark page with the red "Next up" card, the pass,
+   "Coming up" as rows (ten at most, then a link) and this month's check-ins. */
+*{box-sizing:border-box}body{margin:0}main{max-width:520px;margin:auto;padding:var(--swa-s-16) 16px 50px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}.top a{color:#fff;font-weight:600;font-size:var(--swa-t-15)}
+h1{font-size:var(--swa-t-35);line-height:1.1;margin:8px 0 2px}.sub{margin:0 0 var(--swa-s-16)}
+html body main>section.card{margin:var(--swa-s-16) 0}
+.qr{max-width:260px;margin:4px auto}.qr svg{width:100%;height:auto;display:block}.center{text-align:center}
+.next,html body main section.card.next{background:#C4222C;color:#fff;border:0}.next .muted{color:#fff}.next h2{color:#fff}
+.big{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-35);line-height:1;text-transform:uppercase;letter-spacing:-.2px;margin:var(--swa-s-4) 0}
+.alert{background:var(--swa-warn-bg);color:var(--swa-warn-ink);border-radius:var(--swa-r-control);padding:12px;margin:10px 0}.alert a{color:var(--swa-warn-ink)}
+.stat{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-42);line-height:1}
+#status{font-weight:600;min-height:1.2em}
+html body main .swa-rows>li{border-top-color:var(--swa-dark-line)}
+html body main .swa-rows .d small,html body main .swa-rows .t small,html body main .swa-rows .r{color:var(--swa-dark-muted)}
+html body main .card.next h2.swa-label{color:#FFFFFF}
+</style><script src="/qr-preview.js" defer></script><link rel="stylesheet" href="/responsive.css"></head><body><main><div class="top"><span class="brand">SAVAGE WRESTLING ACADEMY</span><a href="/family">Family account</a></div><h1 id="name">…</h1><p class="sub" id="grade"></p><p id="status" role="status" aria-live="polite"></p><div id="alerts"></div><div id="next"></div>
+<section class="card center" id="passCard" hidden><h2 class="swa-label">Entry pass</h2><div class="qr" id="qr"></div><p class="muted">Show this at the door.</p></section>
+<section class="card"><h2 class="swa-label">Coming up</h2><div id="list"></div></section>
+<section class="card"><h2 class="swa-label">This month</h2><span class="stat" id="checkins">–</span> <span class="muted">check-ins</span></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{if(!t)return 'All day';const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
 const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 const dayName=d=>d===today()?'Today':new Date(Date.parse(today()+'T12:00:00Z')+864e5).toISOString().slice(0,10)===d?'Tomorrow':new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
 const typeLabel={practice:'Practice',live:'Extra practice',event:'Camp / event',lesson:'Private lesson'};
+// Coming up stops at ten rows (issue #282); the calendar has the rest.
+const ROWS=10;
 function render(v){
  document.title=v.name+' | Savage Wrestling Academy';$('name').textContent=v.name;$('grade').textContent=v.grade==='Adult'?'Adult':v.grade==='K'?'Kindergarten':'Grade '+v.grade;
  const alerts=[];
@@ -15,9 +33,10 @@ function render(v){
  if(v.consentNeeded)alerts.push('Parent Consent Form not signed. New sessions cannot be booked until it is. <a href="/consent?wrestler='+encodeURIComponent(v.id)+'">Sign it</a>');
  $('alerts').innerHTML=alerts.map(a=>'<div class="alert">'+a+'</div>').join('');
  const n=v.upcoming[0];
- $('next').innerHTML=n?'<section class="card next"><h2>Next up</h2><div class="big">'+esc(dayName(n.date))+' · '+esc(clock(n.start))+'</div><div>'+esc(n.title)+'</div><span class="muted">'+esc(typeLabel[n.type]||'')+'</span></section>':'';
+ $('next').innerHTML=n?'<section class="card next"><h2 class="swa-label">Next up</h2><div class="big">'+esc(dayName(n.date))+' · '+esc(clock(n.start))+'</div><div>'+esc(n.title)+'</div><span class="muted">'+esc(typeLabel[n.type]||'')+'</span></section>':'';
  if(v.pass&&window.qrSvg){$('passCard').hidden=false;$('qr').innerHTML=window.qrSvg(v.pass,'Entry pass for '+v.name)}
- $('list').innerHTML=v.upcoming.length?v.upcoming.map(u=>'<div class="item"><div class="when">'+esc(dayName(u.date))+'<br><span class="muted">'+esc(clock(u.start))+'</span></div><div>'+esc(u.title)+'<br><span class="tag">'+esc(typeLabel[u.type]||u.type)+'</span> <span class="muted">'+esc(u.why)+'</span></div></div>').join(''):'<p class="muted">Nothing booked in the next three weeks. <a href="/register">Register</a> or <a href="/calendar">see the calendar</a>.</p>';
+ const rows=v.upcoming.slice(0,ROWS),rest=v.upcoming.length-rows.length;
+ $('list').innerHTML=rows.length?'<ul class="swa-rows">'+rows.map(u=>'<li><div class="d">'+esc(dayName(u.date))+'<small>'+esc(clock(u.start))+'</small></div><div class="t">'+esc(u.title)+'<small>'+esc(u.why)+'</small></div><div class="r">'+esc(typeLabel[u.type]||u.type)+'</div></li>').join('')+'</ul>'+(rest>0?'<p class="muted"><a href="/calendar">'+rest+' more in the next three weeks: see the calendar →</a></p>':''):'<div class="empty"><p>Nothing booked in the next three weeks.</p><a class="button" href="/register">Choose training</a></div>';
  $('checkins').textContent=v.checkInsThisMonth;
 }
 async function load(){

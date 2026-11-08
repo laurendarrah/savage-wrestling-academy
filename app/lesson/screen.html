@@ -1,54 +1,55 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Book a private lesson | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
-body{background:#F4F5F7;color:#141416;margin:0}
-main{max-width:900px;margin:auto;padding:20px 16px 56px}
+/* Book a private lesson (issue #177; redesign Phase 2, issue #282): the same choice cards in Barlow, the shared
+   segmented control for list or month, and the review as a receipt above one button. */
+body{background:var(--swa-ground);color:var(--swa-ink);margin:0}
+main{max-width:900px;margin:auto;padding:var(--swa-s-16) 16px 56px}
 h1{margin:8px 0 6px}h2{margin:0 0 10px}
-html body main>section{padding:20px;margin:18px 0}
+html body main>section{margin:var(--swa-s-16) 0}
 label{display:flex;flex-direction:column;gap:4px;margin:10px 0}
 label.check{flex-direction:row;align-items:center;font-weight:600;gap:12px;min-height:44px;margin:4px 0}
 label.check input{width:22px;height:22px;margin:0;flex:none}
-.paths,.times,.kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-/* Choice cards read as plain sentences, not as button labels. */
-html body button.choice{text-align:left;border:1.5px solid #E1E3E8;border-radius:8px;padding:14px 16px;background:#fff;height:auto;min-height:44px;font-family:Barlow,'Helvetica Neue',Arial,sans-serif;font-weight:400;font-size:16px;letter-spacing:0;text-transform:none;line-height:1.4;display:flex;flex-direction:column;gap:2px}
-html body button.choice[aria-pressed="true"]{border-color:#C4222C;box-shadow:inset 0 0 0 1px #C4222C;background:#FFF7F7}
-html body button.choice:disabled{background:#F7F8FA}
-.choice b{display:block;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:21px;text-transform:uppercase;letter-spacing:.3px;line-height:1.1;color:#141416}
-.choice .price{font-weight:700;color:#141416}.choice .left{font-weight:700;color:#1F6F3A}
+.paths,.times,.kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--swa-s-8)}
+/* Choice cards read as plain sentences, not as button labels; the chosen one is ink. */
+html body button.choice{text-align:left;border:1px solid var(--swa-line);border-radius:var(--swa-r-control);padding:12px 16px;background:var(--swa-surface);height:auto;min-height:44px;font-family:var(--swa-body);font-weight:400;font-size:var(--swa-t-15);letter-spacing:0;text-transform:none;line-height:1.4;display:flex;flex-direction:column;gap:2px;box-shadow:none}
+html body button.choice:hover{border-color:var(--swa-ink)}
+html body button.choice[aria-pressed="true"]{border-color:var(--swa-ink);box-shadow:inset 0 0 0 1px var(--swa-ink);background:var(--swa-surface)}
+html body button.choice:disabled{background:var(--swa-surface-2)}
+.choice b{display:block;font-family:var(--swa-body);font-weight:700;font-size:var(--swa-t-17);line-height:1.25;color:var(--swa-ink)}
+.choice .price{font-weight:700;color:var(--swa-ink)}.choice .left{font-weight:700;color:var(--swa-ok)}
 .day{margin:14px 0 6px;font-weight:700}
-.summary{background:#F4F5F7;border-radius:8px;padding:14px 16px}.summary p{margin:0 0 6px}.summary p:last-child{margin:0}
 #status{font-weight:600;min-height:1.5em}
-html body main>section.closed{border-left:4px solid #C4222C}
+html body main>section.closed{border-left:4px solid var(--swa-red)}
 .closed h2{margin-bottom:6px}
 .go{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 html body a.button{display:inline-flex;align-items:center;justify-content:center;padding:0 18px;text-decoration:none}
-#pay,#requestGroup{padding:0 18px}
-.calm{margin:12px 0 0;padding:12px 16px;border-left:3px solid #B9C4C9;background:#F7F8FA;border-radius:0 6px 6px 0}
+/* The review: the receipt, then one button with its line beneath */
+.confirm{margin:var(--swa-s-16) 0 0}
+html body .confirm button.primary{width:100%;min-height:var(--swa-h-big)}
+.confirm label.check{margin:var(--swa-s-12) 0 0;font-weight:400;font-size:var(--swa-t-15);min-height:0;align-items:flex-start}
+.confirm label.check input{margin-top:2px}
+.calm{margin:var(--swa-s-16) 0 0;padding:12px 16px;background:var(--swa-surface-2);border-radius:var(--swa-r-control);font-size:var(--swa-t-15);color:var(--swa-muted)}
 /* While lesson payment is closed online (issue #273): one real action, then the academy's contact line. */
-#interestBox{margin:12px 0 0}
-html body #interestButton{padding:0 22px;min-height:48px}
-.contact-line{margin:12px 0 0;padding:12px 16px;background:#F7F8FA;border-radius:6px;font-size:15px;color:#3A3D44}
+#interestBox{margin:var(--swa-s-16) 0 0}
+html body #interestButton{width:100%;min-height:var(--swa-h-big)}
+.contact-line{margin:var(--swa-s-12) 0 0;font-size:var(--swa-t-13);color:var(--swa-muted)}
 .contact-line a{overflow-wrap:anywhere}
-.interest-done{margin:12px 0 0;padding:14px 16px;border-radius:8px;background:var(--swa-ok-bg);border:1px solid #9FCFAE;border-left:6px solid var(--swa-ok)}
+.interest-done{margin:var(--swa-s-16) 0 0;padding:var(--swa-s-16);border-radius:var(--swa-r-control);background:var(--swa-ok-bg);border-left:4px solid var(--swa-ok)}
 .interest-done p{margin:0 0 8px}.interest-done p:last-child{margin:0}
-@media(max-width:640px){html body #interestButton{width:100%}}
-.group{border:1.5px solid #E1E3E8;border-radius:8px;padding:16px;margin:12px 0 0}
+.group{border:1px solid var(--swa-line);border-radius:var(--swa-r-control);padding:16px;margin:12px 0 0}
 .group-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.group-head p{margin:0}
 .spots{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
 .invite{display:flex;gap:8px;margin:12px 0 0;flex-wrap:wrap;align-items:flex-end}.invite label{flex:1 1 240px;margin:0;min-width:0}.invite input{width:100%;min-width:0;font-size:15px;flex:none}
-.roster{list-style:none;padding:0;margin:12px 0 0}.roster li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;padding:8px 0;border-top:1px solid #E1E3E8}.roster li>span:first-child{font-weight:600}
-.roster .state{color:#55585F;font-size:15px;text-align:right}
+.roster{list-style:none;padding:0;margin:12px 0 0}.roster li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;padding:8px 0;border-top:1px solid var(--swa-line)}.roster li>span:first-child{font-weight:600}
+.roster .state{color:var(--swa-muted);font-size:15px;text-align:right}
 fieldset{border:0;padding:0;margin:10px 0 0;min-width:0}legend{font-weight:700;padding:0;margin:0 0 4px}
-.about{display:flex;gap:14px;align-items:flex-start;margin:4px 0 12px;padding:14px 16px;border-radius:8px;background:#F4F5F7}
-.about .avatar{flex:none;width:48px;height:48px;border-radius:50%;background:#141416;color:#fff;display:grid;place-items:center;font:800 19px/1 'Barlow Condensed','Arial Narrow',Arial,sans-serif;text-transform:uppercase;border:2px solid #C4222C}
-.about p{margin:0}.about p+p{margin-top:4px}.about .bio{white-space:pre-line}.about .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}.about .chips li{background:#fff;border:1px solid #E1E3E8;border-radius:999px;padding:1px 10px;font-size:14px;font-weight:600}
+.about{display:flex;gap:14px;align-items:flex-start;margin:4px 0 12px;padding:14px 16px;border-radius:var(--swa-r-control);background:var(--swa-surface-2)}
+.about p{margin:0}.about p+p{margin-top:4px}.about .bio{white-space:pre-line}.about .chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;padding:0;list-style:none}.about .chips li{background:var(--swa-surface);border:1px solid var(--swa-line);border-radius:999px;padding:1px 10px;font-size:14px;font-weight:600}
 [hidden]{display:none!important}
 /* List or month (issue #239). The month is the coach month calendar's grid (#214, #230) with the program color tokens:
    open times and one-on-ones in Development white, partner and small groups in Intermediate gray, the time you chose in
-   event red. Phones get a list of the days that have open times. */
+   event red. Phones get a list of the days that have open times. The toggle is the shared segmented control (issue #282). */
 .view-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin:14px 0 4px}
-.seg{display:inline-flex;border:1px solid #CDD0D6;border-radius:8px;overflow:hidden}
-html body .seg button{min-height:44px;margin:0;border:0;border-radius:0;box-shadow:none;padding:0 18px;background:var(--swa-white);color:var(--swa-ink)}
-html body .seg button+button{border-left:1px solid #CDD0D6}
-html body .seg button[aria-pressed="true"]{background:var(--swa-ink);color:#FFFFFF}
+.view-bar .swa-seg{min-width:180px}
 .view-bar .month-picker{flex:1 1 260px;max-width:360px}
 .cal-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0;font-size:14px;color:var(--swa-muted)}.cal-key span{display:inline-flex;align-items:center;gap:6px}.cal-key i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--swa-prog-development-line)}
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:12px}
@@ -74,13 +75,13 @@ html body .cal .cal-item .vh{position:absolute;width:1px;height:1px;margin:-1px;
 <div id="requestOptions" hidden><fieldset><legend>Group size</legend><div class="kinds" id="kinds"></div></fieldset><label id="spotsLabel" hidden>Number of wrestlers in the group<select id="spots"><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
 <fieldset><legend id="ownLegend">Your wrestlers in this group</legend><div id="ownWrestlers"></div><p class="muted" id="ownHelp">Their spots are kept for them. The other spots are for families you invite.</p></fieldset></div></section>
 <section id="stepTime" hidden aria-labelledby="timeHeading"><h2 id="timeHeading">3. Time</h2><label>Coach<select id="coach"><option value="">Any coach</option></select></label><div id="coachAbout" class="about" hidden></div>
-<div class="view-bar" id="viewBar" hidden><div class="seg" role="group" aria-label="Show open times as"><button type="button" id="viewList" aria-pressed="true">List</button><button type="button" id="viewMonth" aria-pressed="false">Month</button></div>
+<div class="view-bar" id="viewBar" hidden><div class="swa-seg" role="group" aria-label="Show open times as"><button type="button" id="viewList" aria-pressed="true">List</button><button type="button" id="viewMonth" aria-pressed="false">Month</button></div>
 <div class="month-picker" id="monthPicker" hidden><button type="button" class="month-step" id="monthPrev" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="monthSel"></select></label><button type="button" class="month-step" id="monthNext" aria-label="Next month">→</button></div></div>
 <div id="times"></div></section>
-<section id="reviewBox" hidden aria-labelledby="reviewHeading"><h2 id="reviewHeading">4. Review</h2><div class="summary" id="summary"></div>
-<div id="payArea"><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label><button class="primary" id="pay" disabled>Pay securely</button></div>
+<section id="reviewBox" hidden aria-labelledby="reviewHeading"><h2 id="reviewHeading">4. Review</h2><div id="summary"></div>
+<div id="payArea" class="confirm"><button class="primary" id="pay" disabled>Confirm and pay</button><label class="check"><input type="checkbox" id="acceptTerms"> <span>I have read the <a href="/membership-terms#camps" target="_blank" rel="noopener">purchase terms</a>.</span></label></div>
 <div id="notOpen" hidden><p class="calm">Online payment for lessons isn’t open yet. Tell the academy you want this spot and they’ll be in touch about how to pay. Nothing is reserved until the academy records your payment.</p><div id="interestBox"><button class="primary" id="interestButton" type="button">Tell the academy I want this</button><p class="contact-line" id="contactLine">Or reach the academy at 20 Railroad St, Huntington Station, NY 11746 · <a href="mailto:savagewrestlingclub@gmail.com">savagewrestlingclub@gmail.com</a></p></div></div><div id="interestDone" class="interest-done" hidden></div>
-<div id="requestArea" hidden><p class="calm">Nothing is charged now. You get an invite link to send to the families you want in the group. Each family pays the academy for their own wrestler, and each spot is confirmed once the academy records that payment.</p><button class="primary" id="requestGroup">Ask for this private group</button></div></section>
+<div id="requestArea" class="confirm" hidden><button class="primary" id="requestGroup">Ask for this private group</button><p class="calm">Nothing is charged now. You get an invite link to send to the families you want in the group. Each family pays the academy for their own wrestler, and each spot is confirmed once the academy records that payment.</p></div></section>
 </main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100);
@@ -209,19 +210,21 @@ function renderWrestlerChoice(){
 // About the coach (issue #190): their name, bio and specialties from their profile, for the chosen coach or time.
 function aboutCoach(key){const p=key&&data&&data.coaches?data.coaches[key]:null,box=$('coachAbout');if(!box)return;box.hidden=!p;if(!p)return;
  const initials=String(p.name||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('');
- box.innerHTML=`<div class="avatar" aria-hidden="true">${esc(initials)}</div><div><p><b>About ${esc(p.name)}</b></p>${p.bio?`<p class="bio">${esc(p.bio)}</p>`:''}${(p.specialties||[]).length?`<ul class="chips" aria-label="Specialties">${p.specialties.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`}
+ box.innerHTML=`<div class="swa-avatar" aria-hidden="true">${esc(initials)}</div><div><p><b>About ${esc(p.name)}</b></p>${p.bio?`<p class="bio">${esc(p.bio)}</p>`:''}${(p.specialties||[]).length?`<ul class="chips" aria-label="Specialties">${p.specialties.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`}
 function defaultKind(){return ['partner','small-group'].find(priced)||''}
 function ownChosen(){return [...document.querySelectorAll('[data-own]')].filter(i=>i.checked).map(i=>i.dataset.own)}
+// The review as a receipt (issue #282): the lesson, when, who, and the price per wrestler as the total.
+const line=(k,v,small='')=>'<div class="swa-receipt__row"><span class="k">'+k+'</span><span class="v">'+v+(small?'<small>'+small+'</small>':'')+'</span></div>';
 function renderReview(){
  const show=!!review;$('reviewBox').hidden=!show;if(!show)return;
  $('reviewHeading').textContent=path==='join'?'Review':'4. Review';
  $('requestArea').hidden=review.kind!=='request';
  if(review.kind==='request'){
-  $('summary').innerHTML=`<p><strong>Private ${esc(nameOf(review.format).toLowerCase())}</strong> with ${esc(review.coach)}</p><p>${esc(day(review.date))} · ${esc(clock(review.start))}–${esc(clock(review.end))}</p><p>${review.capacity} spots: ${esc(review.names.join(' and '))}${review.capacity>review.names.length?' and '+(review.capacity-review.names.length)+' for families you invite':''}</p><p><strong>${money(review.cents)} per wrestler</strong>${review.names.length>1?' · '+money(review.cents*review.names.length)+' for your '+review.names.length+' wrestlers':''}</p>`;
+  $('summary').innerHTML='<div class="swa-receipt">'+line('Lesson',`<strong>Private ${esc(nameOf(review.format).toLowerCase())}</strong>`,`with ${esc(review.coach)}`)+line('When',`${esc(day(review.date))} · ${esc(clock(review.start))}–${esc(clock(review.end))}`)+line('Spots',`${review.capacity} spots: ${esc(review.names.join(' and '))}${review.capacity>review.names.length?' and '+(review.capacity-review.names.length)+' for families you invite':''}`)+`<div class="swa-receipt__total"><span class="k">Each wrestler</span><span class="v">${money(review.cents)} per wrestler${review.names.length>1?'<small>'+money(review.cents*review.names.length)+' for your '+review.names.length+' wrestlers</small>':''}</span></div></div>`;
   $('payArea').hidden=true;$('notOpen').hidden=true;return;
  }
  const group=review.capacity>1;
- $('summary').innerHTML=`<p><strong>${esc(review.title)}</strong> with ${esc(review.coach)}</p><p>${esc(day(review.dates[0]))} · ${esc(clock(review.start))}–${esc(clock(review.end))}</p><p>For ${esc(review.wrestler)}${group?' · '+spotsText(review.spotsLeft,review.capacity):''}</p><p><strong>${money(review.cents)}</strong>${group?' per wrestler':''}</p>${review.message?`<p class="muted">${esc(review.message)}</p>`:''}`;
+ $('summary').innerHTML='<div class="swa-receipt">'+line('Lesson',`<strong>${esc(review.title)}</strong>`,`with ${esc(review.coach)}`)+line('When',`${esc(day(review.dates[0]))} · ${esc(clock(review.start))}–${esc(clock(review.end))}`)+line('For',`${esc(review.wrestler)}${group?' · '+spotsText(review.spotsLeft,review.capacity):''}`)+`<div class="swa-receipt__total"><span class="k">${group?'Each wrestler':'Total'}</span><span class="v">${money(review.cents)}${group?'<small>per wrestler</small>':''}</span></div></div>${review.message?`<p class="swa-receipt__next">${esc(review.message)}</p>`:''}`;
  $('payArea').hidden=!review.paymentsEnabled;$('notOpen').hidden=!!review.paymentsEnabled;$('pay').disabled=!$('acceptTerms').checked;
  // While lesson payment is closed online, the one action is "Tell the academy I want this" (issue #273).
  if(!review.paymentsEnabled){$('interestDone').hidden=true;$('interestButton').disabled=false;loadContact()}

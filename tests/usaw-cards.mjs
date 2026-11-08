@@ -203,10 +203,10 @@ assert.equal(entry.name, 'Sam'); assert.equal(entry.card, 'expired'); assert.equ
   // "Renew soon" uses the server's renewal window (CARD_RENEWAL_DAYS, #210), sent with the family account.
   assert.doesNotMatch(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(10)}), /Renew soon/, 'no window until the server sends it');
   ctx.setRenewalDays(30);
-  assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(10)}), /warning.*Renew soon/);
-  assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(30)}), /warning.*Renew soon/, 'day 30 is inside the window');
+  assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(10)}), /pill warn".*Renew soon/);
+  assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(30)}), /pill warn".*Renew soon/, 'day 30 is inside the window');
   assert.doesNotMatch(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(31)}), /Renew soon/, 'day 31 is not');
-  assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(200)}), /active">USA Wrestling card on file/);
+  assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(200)}), /pill ok">[\s\S]*USA Wrestling card on file/);
   ctx.setCards({a: {state: 'invalid', number: 'AB12', expires: ny(200), note: 'Number not found'}});
   assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB12', usawExpires: ny(200)}), /Card not verified.*Number not found/);
   assert.match(ctx.cardLine({id: 'a', usawNumber: 'AB13', usawExpires: ny(200)}), /card on file/, 'an unsaved edit is judged locally');

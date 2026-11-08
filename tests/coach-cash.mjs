@@ -330,7 +330,7 @@ const day = '2026-11-13';
   await settle(60);
   const list = el('purchaseList').innerHTML;
   assert.match(list, /Paid in cash at the academy on Nov 13, 2026/);
-  assert.match(list, /<p class="muted">Paid Nov 13, 2026<\/p>/, 'other payments read as before');
+  assert.match(list, /<small class="muted">Paid Nov 13, 2026<\/small>/, 'other payments read as before');
   assert.doesNotMatch(list, /Coach|Received by|Collected by/);
 }
 

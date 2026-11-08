@@ -82,8 +82,8 @@ await step('a test key that Stripe reports for another account is refused, and t
   expect(sql("SELECT encrypted FROM integration_secrets WHERE id='stripe-test'")[0].encrypted === before, 'the saved key is unchanged');
 });
 await step('family pays for a walk-in: checkout opens a Stripe session', async () => {
-  await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
-  await family.check('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
+  await family.goto(BASE + '/register'); await family.waitForSelector('#wrestlerChips [data-wrestler]');
+  await family.click('#plan-walkin'); await family.selectOption('#program', 'Intermediate');
   await family.locator(`[data-day="${ny(1)}"]`).first().click(); await family.locator('[data-slot]').first().click();
   await family.click('#reviewButton'); await family.waitForSelector('#acceptTerms', {state: 'visible'});
   await family.check('#acceptTerms');
@@ -154,15 +154,15 @@ await step('a refund in Stripe marks the walk-in refunded and takes Sam off that
   expect(!roster.body.sessions.some(s => s.entries.some(e => e.name === 'Sam Example')), 'still on roster after refund');
 });
 await step('a year paid upfront is refused at checkout and nothing is created (#210)', async () => {
-  await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
+  await family.goto(BASE + '/register'); await family.waitForSelector('#wrestlerChips [data-wrestler]');
   expect(!(await family.$('#plan-annual')), 'no upfront plan on the register page');
   const r = await api(family, '/api/checkout', {source: 'membership', wrestlerId: 'w-sam', program: 'Intermediate', plan: 'annual', acceptTerms: true});
   expect(r.status === 400 && /no longer offered/.test(r.body?.error), 'upfront checkout ' + JSON.stringify(r));
   expect(sql("SELECT count(*) n FROM orders WHERE kind='annual'")[0].n === 0, 'no upfront order');
 });
 await step('family starts a 12-month membership paid monthly: a Stripe subscription checkout', async () => {
-  await family.goto(BASE + '/register'); await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0);
-  await family.check('#plan-monthly'); await family.selectOption('#program', 'Intermediate');
+  await family.goto(BASE + '/register'); await family.waitForSelector('#wrestlerChips [data-wrestler]');
+  await family.click('#plan-monthly'); await family.selectOption('#program', 'Intermediate');
   await family.click('#reviewButton'); await family.waitForSelector('#acceptTerms', {state: 'visible'}); await family.check('#acceptTerms');
   if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-review-monthly.png`, fullPage: true});
   await Promise.all([family.waitForURL(/checkout\.stripe\.com/, {timeout: 15000}), family.click('#payButton')]);
@@ -302,7 +302,7 @@ await step('card fees for a monthly membership ask Stripe for its invoices; a ru
 // Issue #272: Sam's monthly membership covers SWA Intermediate practices, so a walk-in review is refused in plain words.
 await step('a member reviewing a walk-in their membership covers is told there is nothing to pay (#272)', async () => {
   await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${ny(3)}`);
-  await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family.waitForFunction(() => document.querySelector('#wrestlerChips [data-wrestler]') && !document.querySelector('#reviewButton')?.disabled);
   await family.click('#reviewButton'); await waitText(family, '#status', /membership already covers SWA Intermediate practices on .*, so there is nothing to pay for this walk-in/);
   expect(!sql("SELECT id FROM orders WHERE kind='walkin' AND status='pending'").length, 'no walk-in order was started');
   // The rest of the rehearsal buys walk-ins, so the membership is ended here.
@@ -311,7 +311,7 @@ await step('a member reviewing a walk-in their membership covers is told there i
 // Pay cash at the academy (issue #248): offered beside online payment, and the two never overlap.
 await step('with online payment open, a family can still book a walk-in to pay cash; checkout then refuses it; the owner records the cash', async () => {
   await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${ny(3)}`);
-  await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family.waitForFunction(() => document.querySelector('#wrestlerChips [data-wrestler]') && !document.querySelector('#reviewButton')?.disabled);
   await family.click('#reviewButton'); await family.waitForSelector('#payChoice:not([hidden])');
   expect(await family.isVisible('#payOnlineOption') && await family.isChecked('#payWayOnline') && await family.isVisible('#acceptTerms'), 'Pay online is offered and chosen first');
   await family.check('#payWayCash'); await family.waitForSelector('#cashBox:not([hidden])');

@@ -70,7 +70,7 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
 {
   const tpl = readFileSync('app/welcome/screen.html', 'utf8'), teamTpl = readFileSync('app/team/screen.html', 'utf8');
   let html = W.renderWelcome(tpl, W.DEFAULT_WEBSITE, [], ORIGIN);
-  assert.match(html, /<h1>Savage Wrestling Academy<\/h1>/, 'unsaved: the standard heading');
+  assert.match(html, /<h1[^>]*>Savage Wrestling Academy<\/h1>/, 'unsaved: the standard heading');
   assert.match(html, /<title>Savage Wrestling Academy \| Wrestling in Huntington Station, NY<\/title>/);
   assert.match(html, /<meta name="description" content="Wrestling for kindergarten through 12th grade/);
   assert.match(html, new RegExp(`<link rel="canonical" href="${ORIGIN}/welcome"><meta property="og:type" content="website">`));
@@ -151,7 +151,7 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
 
   // Before anything is saved, the public pages read as before and no coach is listed.
   let w = await page(welcome);
-  assert.equal(w.status, 200); assert.match(w.html, /<h1>Savage Wrestling Academy<\/h1>/);
+  assert.equal(w.status, 200); assert.match(w.html, /<h1[^>]*>Savage Wrestling Academy<\/h1>/);
   assert.match(w.headers.get('Content-Security-Policy'), /img-src 'self'/, 'no images from other sites');
   assert.match(w.headers.get('Content-Security-Policy'), /frame-ancestors 'self'/);
   let tp = await page(team);
@@ -197,7 +197,7 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
 
   // A damaged saved record (for example from an old backup) falls back to the standard wording instead of breaking.
   sqlite.prepare("UPDATE academy_settings SET payload='{\"headline\":\"\"}' WHERE id='website'").run();
-  w = await page(welcome); assert.equal(w.status, 200); assert.match(w.html, /<h1>Savage Wrestling Academy<\/h1>/);
+  w = await page(welcome); assert.equal(w.status, 200); assert.match(w.html, /<h1[^>]*>Savage Wrestling Academy<\/h1>/);
 }
 
 // ---------- The editor page's script ----------

@@ -78,7 +78,7 @@ const PAGES = {
 };
 // Pages that still use inline event handlers (onclick="…"), so they cannot carry the nonce policy yet. Each is a
 // follow-up: move its handlers to listeners, as /website, /roster, /practice-plans, /coach and /coach-pay did in #274.
-const PENDING = ['/', '/family', '/cards', '/register', '/booking'];
+const PENDING = ['/', '/cards'];
 const withNonce = [], without = [];
 for (const [who, paths] of Object.entries(PAGES)) {
   for (const path of paths) {

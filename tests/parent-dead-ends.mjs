@@ -239,9 +239,9 @@ const contact = {address: '1 Mat Way, Melville, NY 11747', email: 'hello@swa.tes
   }});
   await settle(60);
   // Saved view: the red warning. Editor: a plain hint while the card is typed.
-  assert.match(el('savedDetails').innerHTML, /<span class="billing-pill warning">No USA Wrestling card<\/span>/, 'the saved view says what blocks booking');
+  assert.match(el('savedDetails').innerHTML, /<span class="pill warn">No USA Wrestling card<\/span>/, 'the saved view says what blocks booking');
   vm.runInContext('editProfile()', ctx);
-  assert.doesNotMatch(el('wrestlers').innerHTML, /billing-pill warning|Booking is blocked/, 'no red warning inside the editor');
+  assert.doesNotMatch(el('wrestlers').innerHTML, /pill warn|Booking is blocked/, 'no red warning inside the editor');
   assert.match(el('wrestlers').innerHTML, /<p class="muted card-line">Add the card number and choose its season\. Booking needs a current card\.<\/p>/);
   assert.match(vm.runInContext("editorCardLine({id:'x',usawNumber:'AB12',usawExpires:'2020-08-31'})", ctx), /USA Wrestling card expired/, 'an expired card is still named in the editor');
   // Saving with the address missing: the browser's own check fails, the status says what is missing and the field is
@@ -286,21 +286,21 @@ const contact = {address: '1 Mat Way, Melville, NY 11747', email: 'hello@swa.tes
   await settle();
   assert.equal(el('comingUp').hidden, false);
   const soon = el('soonList').innerHTML;
-  assert.match(soon, /^<li><span class="when">Fri, Nov 13 · 4:00 PM<\/span><a class="" href="\/booking\?type=live&amp;id=fnl&amp;date=2026-11-13" target="_top">Friday Night Live<\/a><span class="meta">Extra practice · \$10\.00 members · \$20\.00 non-members<\/span><\/li>/, 'soonest first');
-  assert.match(soon, /<span class="when">Sun, Nov 15<\/span><a class="" href="\/booking\?type=event&amp;id=clinic" target="_top">Spring clinic<\/a><span class="meta">Clinic · \$60\.00 · Full<\/span>/, 'a day without a time has none; a full clinic says so');
-  assert.match(soon, /<span class="when">Fri, Nov 20 · 9:00 AM<\/span><a class="" href="\/booking\?type=event&amp;id=camp" target="_top">Winter camp<\/a><span class="meta">Camp · 2 days · \$160\.00<\/span>/, 'the camp links to its booking page');
-  assert.match(el('eventCards').innerHTML, /<h3><a class="" href="\/booking\?type=event&amp;id=camp" target="_top">Winter camp<\/a><\/h3>/, 'camp titles are links');
-  assert.match(html, /<nav class="jump" id="jump" aria-label="Sections of this page"><a href="#schedule">Practice calendar<\/a><a href="#programs">Programs<\/a><a href="#lessons">Private lessons<\/a><a href="#live">Extra practices<\/a><a href="#events">Camps &amp; clinics<\/a><\/nav>/);
-  assert.match(html, /\.jump a\{[^}]*min-height:44px/, 'jump links are 44px tall');
-  assert.match(html, /@media\(max-width:760px\)\{section\{scroll-margin-top:72px\}\.jump\{position:sticky;top:0;z-index:6;[^}]*overflow-x:auto/, 'the bar sticks to the top on phones and scrolls sideways');
-  assert.doesNotMatch(html, /<header id="heading">[\s\S]*<div class="bar"><a href="#schedule">/, 'the jump links are out of the header, so they can stick');
-  // Nothing coming up: the section stays hidden. Embedded: hidden too.
+  // Rows (#282): the day and time, the session with its details, and the link to its booking page.
+  assert.match(soon, /^<li><div class="d">Fri, Nov 13<small>4:00 PM<\/small><\/div><div class="t">Friday Night Live<small>Extra practice · \$10\.00 members · \$20\.00 non-members<\/small><\/div><div class="r"><a class="" href="\/booking\?type=live&amp;id=fnl&amp;date=2026-11-13" target="_top">Details →<\/a><\/div><\/li>/, 'soonest first');
+  assert.match(soon, /<div class="d">Sun, Nov 15<\/div><div class="t">Spring clinic<small>Clinic · \$60\.00 · Full<\/small><\/div><div class="r"><a class="" href="\/booking\?type=event&amp;id=clinic" target="_top">/, 'a day without a time has none; a full clinic says so');
+  assert.match(soon, /<div class="d">Fri, Nov 20<small>9:00 AM<\/small><\/div><div class="t">Winter camp<small>Camp · 2 days · \$160\.00<\/small><\/div><div class="r"><a class="" href="\/booking\?type=event&amp;id=camp" target="_top">/, 'the camp links to its booking page');
+  // The camps door counts what is coming up and leads to this list (#282); the grid's camp chips still open the booking page.
+  assert.equal(el('doorEvents').textContent, '2 coming up');
+  assert.match(el('calendar').innerHTML, /<a class="slot special" href="\/booking\?type=event&amp;id=camp" target="_top"><strong>Winter camp<\/strong><span>9:00 AM–12:00 PM<\/span><span>Camp<\/span><\/a>/);
+  assert.doesNotMatch(html, /class="jump"/, 'no jump links: the doors above the grid take their place');
+  // Nothing coming up: the section stays hidden. Embedded: hidden too, with the doors and the join band.
   const quiet = page('app/calendar/screen.html', {fetch: async () => json({...state, events: [], liveClasses: []})});
   await settle();
   assert.equal(quiet.el('comingUp').hidden, true);
   const embedded = page('app/calendar/screen.html', {search: '?embed=1', fetch: async () => json(state)});
   await settle();
-  assert.equal(embedded.el('comingUp').hidden, true); assert.equal(embedded.el('jump').hidden, true);
+  assert.equal(embedded.el('comingUp').hidden, true); assert.equal(embedded.el('doors').hidden, true); assert.equal(embedded.el('join').hidden, true);
 }
 
 console.log('Passed: the parent dead ends are gone on the pages: started practices read In progress, the approval chat sits under its card, the sticky bar has room, closed memberships and lessons offer "Tell the academy I want this", camps can be paid cash on the Book page, group lessons do not pick a wrestler, the family editor keeps its card hint plain and names what a save is missing, purchase history says why Cancel is gone, and the calendar’s jump links stick with camps under Coming up.');

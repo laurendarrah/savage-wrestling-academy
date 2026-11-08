@@ -180,7 +180,7 @@ export function renderWelcome(template: string, site: Website, coaches: PublicCo
   if (hasTeam(site, coaches)) {
     const parts = [coaches.length ? `${coaches.length} coach${coaches.length === 1 ? '' : 'es'}` : '', site.achievements.length ? `${site.achievements.length} wrestler achievement${site.achievements.length === 1 ? '' : 's'}` : '', site.alumni.length ? alums(site.alumni.length) : ''].filter(Boolean);
     const names = coaches.slice(0, 4).map(c => `<li><span class="mono" aria-hidden="true">${esc(initials(c.name))}</span>${esc(c.name)}</li>`).join('');
-    team = `<section class="teaser" aria-labelledby="teamTitle"><div class="teaser__in"><div><p class="eyebrow">The team</p><h2 id="teamTitle">${coaches.length ? 'Meet the coaches' : 'Our wrestlers'}</h2><p class="teaser__count">${esc(joinWords(parts))}</p></div>${names ? `<ul class="teaser__names">${names}</ul>` : ''}<a class="button primary" href="/team">Meet the team</a></div></section>`;
+    team = `<section class="teaser" aria-labelledby="teamTitle"><div class="teaser__in"><div><p class="eyebrow">The team</p><h2 id="teamTitle">${coaches.length ? 'Meet the coaches' : 'Our wrestlers'}</h2><p class="teaser__count">${esc(joinWords(parts))}</p></div>${names ? `<ul class="teaser__names">${names}</ul>` : ''}<a class="button" href="/team">Meet the team</a></div></section>`;
   }
   return fill(template, {
     head: seoHead(title, clip(site.intro), '/welcome', origin),

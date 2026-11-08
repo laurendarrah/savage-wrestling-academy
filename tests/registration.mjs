@@ -61,8 +61,8 @@ await el('selection').onsubmit({preventDefault(){}});
 assert.equal(sent.plan,'monthly');
 assert.equal(sent.teamCode,'TEAM10');
 assert.match(el('reviewDetails').innerHTML,/12-month commitment — paid monthly/);
-assert.match(el('reviewDetails').innerHTML,/12 monthly payments on your billing anniversary/);
-assert.match(el('reviewDetails').innerHTML,/<strong>Total commitment:<\/strong> \$2,400\.00/);
-assert.match(el('reviewDetails').innerHTML,/\$200\.00 \/ month × 12 payments/);
+// The receipt (#282): the term and payments as lines, the monthly price as the total, with the 12-payment total beside it.
+assert.match(el('reviewDetails').innerHTML,/<span class="k">Payments<\/span><span class="v">12 monthly payments<small>On your billing anniversary · \$2,400\.00 in all<\/small>/);
+assert.match(el('reviewDetails').innerHTML,/<div class="swa-receipt__total"><span class="k">Each month<\/span><span class="v">\$200\.00<small>× 12 payments<\/small>/);
 assert.doesNotMatch(el('reviewDetails').innerHTML,/upfront/);
 console.log('Passed: monthly membership selection, 12-payment total, team code sent, and no upfront year.');

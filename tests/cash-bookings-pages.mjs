@@ -120,7 +120,7 @@ for (const online of [false, true]) {
   }});
   await settle(60);
   const list = el('purchaseList').innerHTML;
-  assert.match(list, /<span class="billing-pill warning">Pay at the academy<\/span><\/div><strong class="due">\$40\.00 due<\/strong>/);
+  assert.match(list, /<td data-label="Status"><span class="pill warn">Pay at the academy<\/span>[\s\S]*?<td class="num"><strong class="due">\$40\.00 due<\/strong>/);
   assert.match(list, /Pay at the academy: \$40\.00 due\. Bring the cash to the practice\. You can cancel until it starts; nothing is charged\./);
   assert.match(list, /data-cash-cancel="cb-1">Cancel booking<\/button>/);
   assert.doesNotMatch(list, /data-cash-cancel="cb-old"/, 'no Cancel once the practice has started');

@@ -230,6 +230,9 @@ html body .swa-head.top{display:flex;align-items:center;justify-content:space-be
 html body .swa-head.top h1{margin:0}
 html body .swa-head .bar a{color:#FFFFFF}
 html body .hero{background:var(--swa-texture)}
+/* On the welcome page the mark is the bar's, at 56px (issue #282): the hero itself carries no second mark */
+html body[data-swa-page="/welcome"] .swa-bar__home img{width:56px;height:56px}
+html body[data-swa-page="/welcome"] .swa-bar__inner{min-height:68px}
 /* The team page's own hero loses its watermark too: the mark appears once per page, in the bar. */
 html body[data-swa-page="/team"] .hero::after{content:none}
 @media (max-width:640px){html body .swa-head{padding:var(--swa-s-24) 0;margin-bottom:var(--swa-s-16)}}
@@ -298,7 +301,101 @@ html body[data-swa-page="/pass"] .how>summary:hover,html body[data-swa-page="/pa
 html body[data-swa-page="/pass"] main>a:first-child,html body[data-swa-page="/pass"] .swa-title__text>a{color:var(--swa-dark-muted)}
 html body[data-swa-page="/pass"] .pass{color:var(--swa-ink);border:0;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
 html body[data-swa-page="/pass"] .pass .brand{color:var(--swa-muted);font-family:var(--swa-body);font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px}
-html body[data-swa-page="/pass"] .pass h2{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-35);text-transform:uppercase;letter-spacing:-.3px;line-height:1;margin:var(--swa-s-4) 0 0}
+html body[data-swa-page="/pass"] .pass h2{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-42);text-transform:uppercase;letter-spacing:-.3px;line-height:1;margin:var(--swa-s-4) 0 0}
+/* The wrestler's dark page: the muted text and the card labels take the dark set (issue #282) */
+html body[data-swa-page="/wrestler"] main>section.card:not(.next):not(#passCard) h2.swa-label{color:var(--swa-dark-muted)}
+html body[data-swa-page="/wrestler"] .card.next h2.swa-label{color:#FFFFFF}
+html body[data-swa-page="/wrestler"] .empty{color:var(--swa-dark-muted)}
+
+/* ---------- Phase 2 (issue #282): the parent journey's pieces ----------
+   Row lists, a section label with its action, choice chips, the segmented control, doors, the avatar, the receipt and
+   the phone tab bar. Each is generic: the coach and owner phases may use them as they are. */
+/* Rows: a date or label column, the thing itself, and a quiet note on the right (This week, Family, a receipt's lines) */
+html body .swa-rows{list-style:none;margin:0;padding:0}
+html body .swa-rows>li,html body .swa-rows>div{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:var(--swa-s-4) var(--swa-s-12);align-items:center;padding:var(--swa-s-12) 0;border-top:1px solid var(--swa-line);font-size:var(--swa-t-15);min-width:0}
+html body .swa-rows>:first-child{border-top:0}
+html body .swa-rows .d{font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+html body .swa-rows .d small,html body .swa-rows .t small{display:block;font-weight:400;color:var(--swa-muted);font-size:var(--swa-t-13);line-height:1.35}
+html body .swa-rows .t{min-width:0;overflow-wrap:anywhere;line-height:1.3}
+html body .swa-rows .r{color:var(--swa-muted);font-size:var(--swa-t-13);text-align:right;white-space:nowrap}
+html body .swa-rows .r:empty{display:none}
+@media (min-width:900px){html body .swa-rows>li,html body .swa-rows>div{grid-template-columns:132px minmax(0,1fr) auto}}
+/* A card whose heading is its section label: h2.swa-label keeps the 13px caps (the h2 rule above would make it 20px) */
+html body[data-swa-page] h2.swa-label,html body[data-swa-page] h3.swa-label,html body h2.swa-label,html body h3.swa-label{font-family:var(--swa-body);font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px;text-transform:uppercase;line-height:1.3;color:var(--swa-muted);margin:0 0 var(--swa-s-12)}
+html body .card.dark h2.swa-label,html body .card.dark .empty{color:var(--swa-dark-muted)}
+/* A card's label line with its one quiet action on the right ("This week · Calendar", "Family · Edit") */
+html body .swa-section{display:flex;align-items:center;justify-content:space-between;gap:var(--swa-s-12);margin:0 0 var(--swa-s-12);min-height:28px}
+html body .swa-section>.swa-label,html body .swa-section>h2,html body .swa-section>h3{margin:0}
+html body .swa-section>a,html body .swa-section>button.quiet,html body .swa-section>.button.quiet{min-height:28px;padding:0;font-size:var(--swa-t-15);font-weight:600;color:var(--swa-ink)}
+html body .swa-section>a{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--swa-line)}
+html body .swa-section>a:hover{color:var(--swa-red);text-decoration-color:var(--swa-red)}
+html body .swa-link{display:inline-flex;align-items:center;min-height:44px;font-weight:600;font-size:var(--swa-t-15);color:var(--swa-ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--swa-line)}
+html body .swa-link:hover{color:var(--swa-red);text-decoration-color:var(--swa-red)}
+/* Choice chips: one of a few named things (which wrestler). The chosen one is ink; "+ Add" is a dashed chip. */
+html body .swa-chips{display:flex;flex-wrap:wrap;gap:var(--swa-s-8);margin:0;padding:0;list-style:none}
+html body .swa-chip,html body a.swa-chip,html body button.swa-chip{display:inline-flex;align-items:center;gap:var(--swa-s-8);min-height:44px;padding:0 var(--swa-s-16);border-radius:var(--swa-r-chip);border:1px solid #CDD0D6;background:var(--swa-surface);color:var(--swa-ink);font-family:var(--swa-body);font-weight:600;font-size:var(--swa-t-15);letter-spacing:0;text-transform:none;text-decoration:none;box-shadow:var(--swa-shadow-sm);cursor:pointer;transition:background-color .15s,border-color .15s,color .15s}
+html body .swa-chip:hover,html body button.swa-chip:hover{border-color:var(--swa-ink);color:var(--swa-ink)}
+html body .swa-chip[aria-pressed=true],html body button.swa-chip[aria-pressed=true]{background:var(--swa-ink);border-color:var(--swa-ink);color:#FFFFFF}
+html body .swa-chip.add,html body a.swa-chip.add{border-style:dashed;background:transparent;box-shadow:none;color:var(--swa-muted)}
+html body .swa-chip small{font-weight:400;font-size:var(--swa-t-13);opacity:.8}
+/* The segmented control: two to four equal choices in one outline; the chosen one is ink */
+html body .swa-seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid #CDD0D6;border-radius:var(--swa-r-control);overflow:hidden;background:var(--swa-surface);box-shadow:var(--swa-shadow-sm)}
+html body .swa-seg>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--swa-h-control);margin:0;padding:var(--swa-s-8) var(--swa-s-12);border:0;border-radius:0;box-shadow:none;background:transparent;color:var(--swa-ink);font-family:var(--swa-body);font-weight:600;font-size:var(--swa-t-15);letter-spacing:0;text-transform:none;line-height:1.2;text-align:center;min-width:0}
+html body .swa-seg>button+button{border-left:1px solid #CDD0D6}
+html body .swa-seg>button:hover{background:var(--swa-surface-2);color:var(--swa-ink)}
+html body .swa-seg>button[aria-pressed=true]{background:var(--swa-ink);color:#FFFFFF}
+html body .swa-seg>button[aria-pressed=true]:hover{background:var(--swa-ink-2)}
+html body .swa-seg>button small{display:block;font-weight:400;font-size:var(--swa-t-13);opacity:.8;overflow-wrap:anywhere}
+html body .swa-seg>button:focus-visible{outline-offset:-3px}
+/* Doors: equal ways in, no red. Three across; .four is four across on a desk and two by two on a phone. */
+html body .swa-doors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--swa-s-8)}
+html body .swa-doors.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:640px){html body .swa-doors.four{grid-template-columns:repeat(4,minmax(0,1fr))}}
+html body .swa-door,html body a.swa-door{display:flex;flex-direction:column;gap:var(--swa-s-8);align-items:flex-start;padding:var(--swa-s-12);min-height:104px;min-width:0;border-radius:var(--swa-r-control);border:1px solid var(--swa-line);background:var(--swa-surface-2);text-decoration:none;color:var(--swa-ink);font-weight:600;font-size:var(--swa-t-15);line-height:1.25;overflow-wrap:anywhere;transition:border-color .15s,background-color .15s}
+html body .swa-door:hover,html body a.swa-door:hover{border-color:var(--swa-ink);color:var(--swa-ink);background:var(--swa-surface)}
+html body .swa-door>svg{width:22px;height:22px;flex:none;stroke:var(--swa-ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+html body .swa-door small{display:block;font-weight:400;color:var(--swa-muted);font-size:var(--swa-t-13);line-height:1.35}
+/* The avatar: initials on ink */
+html body .swa-avatar{flex:none;width:48px;height:48px;border-radius:50%;background:var(--swa-ink);color:#FFFFFF;display:grid;place-items:center;font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-20);line-height:1;text-transform:uppercase;letter-spacing:.3px}
+/* The receipt: what is being bought, line by line, the total as a figure, and what happens next */
+html body .swa-receipt{margin:0}
+html body .swa-receipt__row{display:flex;justify-content:space-between;align-items:baseline;gap:var(--swa-s-16);padding:var(--swa-s-12) 0;border-top:1px solid var(--swa-line);font-size:var(--swa-t-15);min-width:0}
+html body .swa-receipt__row:first-child{border-top:0;padding-top:0}
+html body .swa-receipt__row dt,html body .swa-receipt__row .k{flex:none;color:var(--swa-muted);font-weight:600}
+html body .swa-receipt__row dd,html body .swa-receipt__row .v{margin:0;text-align:right;font-weight:600;min-width:0;overflow-wrap:anywhere}
+html body .swa-receipt__row .v small,html body .swa-receipt__row dd small{display:block;font-weight:400;color:var(--swa-muted);font-size:var(--swa-t-13)}
+html body .swa-receipt__total{display:flex;justify-content:space-between;align-items:baseline;gap:var(--swa-s-16);padding:var(--swa-s-16) 0 0;border-top:2px solid var(--swa-ink);margin-top:var(--swa-s-4)}
+html body .swa-receipt__total .k{font-weight:700;font-size:var(--swa-t-15)}
+html body .swa-receipt__total .v{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-35);line-height:1;letter-spacing:-.3px;font-variant-numeric:tabular-nums;text-align:right}
+html body .swa-receipt__total .v small{display:block;font-family:var(--swa-body);font-weight:400;font-size:var(--swa-t-13);color:var(--swa-muted);letter-spacing:0;margin-top:var(--swa-s-4)}
+html body .swa-receipt__next{margin:var(--swa-s-16) 0 0;padding:var(--swa-s-12) var(--swa-s-16);border-radius:var(--swa-r-control);background:var(--swa-surface-2);font-size:var(--swa-t-15);color:var(--swa-ink)}
+html body .swa-receipt__next b{color:var(--swa-ink)}
+html body .swa-terms{margin:var(--swa-s-12) 0 0;font-size:var(--swa-t-13);color:var(--swa-muted);line-height:1.45}
+/* Text for screen readers only */
+html body .swa-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* A quiet dot: red for unread or today, ink for "has something" */
+html body .swa-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--swa-red);vertical-align:middle;flex:none}
+html body .swa-dot.ink{background:var(--swa-ink)}
+/* The phone tab bar on family pages (lib/page-chrome.ts familyTabs): Home, Calendar, Pass, Messages, Account. It is
+   the family's navigation on a phone; on a desk the top bar's links do that job and the bar is gone. */
+:root{--swa-tabs-space:0px}
+html body .swa-tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(5,1fr);background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--swa-line);padding:6px 0 max(8px,env(safe-area-inset-bottom,0px))}
+html body .swa-tabs a{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;text-decoration:none;color:var(--swa-muted);font-family:var(--swa-body);font-weight:600;font-size:11px;line-height:1;letter-spacing:.3px}
+html body .swa-tabs a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+html body .swa-tabs a[aria-current]{color:var(--swa-ink)}
+html body .swa-tabs a[aria-current] svg{stroke:var(--swa-red)}
+html body .swa-tabs__badge{position:absolute;top:2px;left:calc(50% + 4px);min-width:16px;height:16px;padding:0 4px;border-radius:var(--swa-r-chip);background:var(--swa-red);color:#FFFFFF;font-size:11px;font-weight:700;line-height:16px;text-align:center}
+html body[data-swa-page="/wrestler"] .swa-tabs,html body[data-swa-page="/pass"] .swa-tabs{background:rgba(23,24,27,.94);border-top-color:var(--swa-dark-line)}
+html body[data-swa-page="/wrestler"] .swa-tabs a,html body[data-swa-page="/pass"] .swa-tabs a{color:var(--swa-dark-muted)}
+html body[data-swa-page="/wrestler"] .swa-tabs a[aria-current],html body[data-swa-page="/pass"] .swa-tabs a[aria-current]{color:#FFFFFF}
+@media (max-width:899px){
+  html body:has(.swa-tabs){--swa-tabs-space:72px}
+  html body:has(.swa-tabs) main{padding-bottom:calc(var(--swa-s-32) + var(--swa-tabs-space) + env(safe-area-inset-bottom,0px))}
+  html body:has(.swa-tabs) #swa-toast{bottom:calc(var(--swa-tabs-space) + var(--swa-s-16) + env(safe-area-inset-bottom,0px))}
+  .swa-bar--family .swa-bar__links{display:none}
+}
+@media (min-width:900px){html body .swa-tabs{display:none}}
+@media print{html body .swa-tabs{display:none}}
 
 /* ---------- The top bar on every page ---------- */
 .swa-bar{position:sticky;top:0;z-index:50;background:#0D0D0F;border-bottom:1px solid rgba(255,255,255,.06);color:#FFFFFF;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
