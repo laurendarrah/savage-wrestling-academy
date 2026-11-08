@@ -49,6 +49,8 @@ function load(file) {
 const api = load('lib/api.ts'), auth = load('lib/account-auth.ts');
 const req = (p, session = '', ip = '203.0.113.1') => new Request('https://academy.test' + p, {headers: {cookie: session ? 'test-session=' + session : '', 'cf-connecting-ip': ip}});
 const rows = () => sqlite.prepare('SELECT * FROM error_log ORDER BY at, id').all();
+// Rows written in the same millisecond share `at`, so a row is found by the request id the response carried, never by position.
+const rowFor = async r => sqlite.prepare('SELECT * FROM error_log WHERE request_id=?').get((await r.clone().json()).requestId);
 
 // --- redact(): emails, quoted text, ids, tokens and long numbers leave the message; the shape stays ---
 assert.equal(api.redact("D1_ERROR: UNIQUE constraint failed: orders.dedupe_key for pat@example.test value 'Sam Smith' id 3f2a1b4c-1111-2222-3333-444455556666 card 123456789 token abcdef0123456789abcdef0123456789"),
@@ -64,16 +66,16 @@ assert.equal(r.status, 500); assert.equal(r.headers.get('Cache-Control'), 'no-st
 let body = await r.json();
 assert.equal(body.error, 'Something went wrong. Try again.'); assert.match(body.requestId, /^[0-9a-f-]{36}$/);
 assert.equal(r.headers.get('X-Request-Id'), body.requestId); assert.equal(r.headers.get('X-SWA-Error-Recorded'), '1', 'tells the Worker it is already recorded');
-let row = rows().at(-1);
-assert.equal(row.request_id, body.requestId); assert.equal(row.path, '/api/roster', 'the area, never the query string'); assert.equal(row.status, 500); assert.equal(row.role, 'family');
+let row = sqlite.prepare('SELECT * FROM error_log WHERE request_id=?').get(body.requestId);
+assert.ok(row, 'recorded under the request id the page was given'); assert.equal(row.path, '/api/roster', 'the area, never the query string'); assert.equal(row.status, 500); assert.equal(row.role, 'family');
 assert.match(row.message, /^Error: D1_ERROR: no such column: <email>$/, 'emails are redacted'); assert.ok(!JSON.stringify(row).includes('secret'));
 // The role comes from the verified identity: the owner, a coach (from staff_access), or anonymous.
-r = await boom(req('/api/payments', 'owner')); assert.equal(rows().at(-1).role, 'owner');
+r = await boom(req('/api/payments', 'owner')); assert.equal((await rowFor(r)).role, 'owner');
 sqlite.prepare("INSERT INTO staff_access VALUES ('coach@example.test','Coach','[\"Intermediate\"]',1,'x')").run();
-r = await boom(req('/api/coach', 'coach')); assert.equal(rows().at(-1).role, 'coach');
-r = await boom(req('/api/coach')); assert.equal(rows().at(-1).role, 'anon');
+r = await boom(req('/api/coach', 'coach')); assert.equal((await rowFor(r)).role, 'coach');
+r = await boom(req('/api/coach')); assert.equal((await rowFor(r)).role, 'anon');
 // A cookie that names an account nobody verified counts as anonymous.
-r = await api.withApi(async () => { throw new Error('before any check'); })(req('/api/x', 'owner')); assert.equal(rows().at(-1).role, 'anon', 'no verified identity, no role from the cookie');
+r = await api.withApi(async () => { throw new Error('before any check'); })(req('/api/x', 'owner')); assert.equal((await rowFor(r)).role, 'anon', 'no verified identity, no role from the cookie');
 // A handler that answers normally is untouched.
 r = await api.withApi(async () => Response.json({ok: true}, {status: 201}))(req('/api/x')); assert.equal(r.status, 201); assert.equal((await r.json()).ok, true);
 assert.equal(rows().length, 5);
@@ -84,7 +86,7 @@ for (const failure of [{status: 0, name: 'AuthRetryableFetchError', message: 'fe
   r = await api.withApi(async request => { const a = await auth.strongAccount(request); return Response.json({user: a.user}); })(req('/api/family', 'fam'));
   assert.equal(r.status, 503, JSON.stringify(failure)); body = await r.json();
   assert.match(body.error, /Sign-in is temporarily unavailable/); assert.ok(body.requestId);
-  row = rows().at(-1); assert.equal(row.status, 503); assert.match(row.message, /^SignInUnavailable: /); assert.equal(row.role, 'anon');
+  row = sqlite.prepare('SELECT * FROM error_log WHERE request_id=?').get(body.requestId); assert.equal(row.status, 503); assert.match(row.message, /^SignInUnavailable: /); assert.equal(row.role, 'anon');
 }
 outage = null;
 // "No session" is still just signed out: the route's own 401, not an outage.
@@ -137,7 +139,7 @@ assert.equal(rows().length, 1, 'recorded once, by the wrapper'); assert.equal(al
 // A 500 from anywhere else is still recorded by the Worker, as before.
 handlerResult = new Response('boom', {status: 500, statusText: 'Internal Server Error'});
 pending.length = 0; await worker.fetch(req('/family'), {DB}, ctx); await Promise.all(pending);
-assert.equal(rows().length, 2); assert.equal(rows().at(-1).request_id, null);
+assert.equal(rows().length, 2); assert.equal(rows().filter(x => x.request_id === null).length, 1, 'the Worker-recorded row has no request id');
 
 // --- Every API route is wrapped, and only the wrapped handlers are exported ---
 const routes = readdirSync('app/api').map(d => `app/api/${d}/route.ts`);
