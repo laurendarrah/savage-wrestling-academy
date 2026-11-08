@@ -150,7 +150,10 @@ html body[data-swa-page="/roster"] #swa-toast{bottom:calc(92px + env(safe-area-i
   body[data-swa-page="/roster"] .row .actions{flex-direction:row;align-items:center;justify-content:flex-end;min-width:0}
   body[data-swa-page="/roster"] .row .actions button.primary{min-width:160px}
   body[data-swa-page="/roster"] .dock{display:none}
-  html body[data-swa-page="/roster"] #swa-toast{bottom:auto}
+  /* Bottom right on a desktop, so a toast never sits over the session tabs under the bar. */
+  html body[data-swa-page="/roster"] #swa-toast{top:auto;bottom:var(--swa-s-24)}
+  html body[data-swa-page="/roster"] .swa-toast,html body[data-swa-page="/roster"] .swa-toast.hide{transform:translateY(8px)}
+  html body[data-swa-page="/roster"] .swa-toast.show{transform:none}
 }
 @media (min-width:901px){body[data-swa-page][data-swa-shell] .os-work>main{padding-left:32px;padding-right:32px}}
 @media print{body[data-swa-page="/roster"]{background:#fff;color:#000}.mat-bar,.sessions,.tools,.dock,#scanner,button,.swa-bar{display:none!important}body[data-swa-page="/roster"] .session{display:block!important;break-inside:avoid}body[data-swa-page="/roster"] .row{border:1px solid #ccc;background:#fff;color:#000}body[data-swa-page="/roster"] .row .name,body[data-swa-page="/roster"] .row .state>*{color:#000}}

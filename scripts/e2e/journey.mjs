@@ -951,7 +951,8 @@ await step('a coach clocks in and out of today\'s practice from coach home on a 
   const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(over <= 1, `coach home scrolls sideways by ${over}px on a phone`);
   await phone.click('#clockCard [data-cc="in"]'); await at(phone, '#clockCard .cc-status', /Choose Head coach or Assistant coach first/);
-  await phone.click('#clockCard [data-duty="head"]'); await phone.click('#clockCard [data-cc="in"]');
+  // The practice's own button: the card offers the session running or next first, which before 3 PM is Friday Night Live.
+  await phone.click('#clockCard [data-duty="head"]'); await phone.click('#clockCard [data-cc="in"][data-session^="practice:Intermediate:"]');
   await at(phone, '#clockCard', /On the clock[\s\S]*SWA Intermediate[\s\S]*Head coach/);
   const big = await phone.locator('#clockCard [data-cc="out"]').boundingBox();
   expect(big && big.height >= 70 && big.width >= 300, 'a big clock-out button on a phone: ' + JSON.stringify(big));
