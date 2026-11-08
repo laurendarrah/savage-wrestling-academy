@@ -13,7 +13,7 @@ export async function GET(request:Request){
  // Openings made before issue #70 have no coach email, and ones the owner added may not have this account yet: link both.
  await claimOpenings(me);
  const profile=await profileView(staff.email,staff.name);
- return accountReply({name:profile.displayName||staff.name,programs:staff.programs,owner:staff.owner,profileSaved:profile.saved,maxWeeks:MAX_WEEKS,openings:await coachSchedule(me)},200,auth.headers);
+ return accountReply({name:profile.displayName||staff.name,programs:staff.programs,owner:staff.owner,profileSaved:profile.saved,maxWeeks:MAX_WEEKS,openings:await coachSchedule(me,'',staff.owner)},200,auth.headers);
 }
 export async function POST(request:Request){
  const {auth,staff,me}=await coach(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!staff||!me)return reply({error:'Coach access and authenticator verification required.'},403);

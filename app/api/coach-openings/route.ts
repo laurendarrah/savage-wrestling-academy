@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   if (!s) return accountReply({error: 'Coach not found. Only coaches with access on Coaches have lesson openings.'}, 404, auth.headers);
   const today = academyToday(), coach = await refOf(s, auth.user!.id);
   return accountReply({coach: {email: s.email, name: coach.name, programs: JSON.parse(s.programs), you: s.email === OWNER_EMAIL}, today, maxWeeks: MAX_WEEKS, groupSpots: GROUP_SPOTS,
-    openings: await coachSchedule(coach, today)}, 200, auth.headers);
+    openings: await coachSchedule(coach, today, true)}, 200, auth.headers);
 }
 
 export async function POST(request: Request) {

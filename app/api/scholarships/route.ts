@@ -1,8 +1,9 @@
 import {env} from 'cloudflare:workers';
-import {ownerIdentity,accountReply,sameOrigin} from '../../../lib/account-auth';
+import {ownerIdentity,accountReply,sameOrigin,appOrigin} from '../../../lib/account-auth';
 import {registrationCatalog} from '../../../lib/registration-catalog';
 import {scholarshipDraft,scholarshipView,newInviteToken,inviteHash,type Scholarship} from '../../../lib/scholarships';
 import {securityEvent} from '../../../lib/security-events';
+// Invite links are built from appOrigin() (issue #274), like every other emailed link, never from the request's host.
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const auth=await ownerIdentity(request);
@@ -29,7 +30,7 @@ export async function POST(request:Request){
    .bind(id,await inviteHash(token),email,input.wrestlerName.trim(),p.id,p.monthlyCents,scholarshipDraft,expires,at,auth.owner.userId).first<Scholarship>();
   // Issue #272: offers and revocations are in the security log (the id, program and monthly value; never the email).
   await securityEvent(auth.owner.userId,'scholarship_offered',`${id} ${p.id} ${p.monthlyCents}`);
-  return reply({award:scholarshipView(award!),inviteUrl:new URL('/scholarship#token='+token,request.url).href});
+  return reply({award:scholarshipView(award!),inviteUrl:appOrigin()+'/scholarship#token='+token});
  }
  if(!input||typeof input.id!=='string'||!Number.isInteger(input.revision))return reply({error:'Refresh the scholarship list before editing.'},400);
  const award=await env.DB!.prepare('SELECT * FROM scholarship_awards WHERE id=?').bind(input.id).first<Scholarship>();
@@ -46,7 +47,7 @@ export async function POST(request:Request){
   if(award.status!=='offered')return reply({error:'Only an unaccepted offer can have a new invitation link.'},409);
   const token=newInviteToken();
   updated=await env.DB!.prepare("UPDATE scholarship_awards SET token_hash=?,expires_at=?,revision=revision+1 WHERE id=? AND revision=? AND status='offered' RETURNING *").bind(await inviteHash(token),new Date(now.getTime()+30*86400000).toISOString(),award.id,input.revision).first<Scholarship>();
-  return updated?reply({award:scholarshipView(updated),inviteUrl:new URL('/scholarship#token='+token,request.url).href}):reply({error:'Award changed. Refresh before editing.'},409);
+  return updated?reply({award:scholarshipView(updated),inviteUrl:appOrigin()+'/scholarship#token='+token}):reply({error:'Award changed. Refresh before editing.'},409);
  }else return reply({error:'Choose a valid scholarship action.'},400);
  return updated?reply({award:scholarshipView(updated)}):reply({error:'Award changed or is no longer editable. Refresh the list.'},409);
 }

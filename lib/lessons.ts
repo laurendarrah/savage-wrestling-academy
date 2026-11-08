@@ -320,7 +320,9 @@ export async function updateOpening(coach: CoachRef, input: any, who: Who = {}) 
 // A coach's openings with each lesson's roster, for the coach page: the wrestlers with their parent's name and phone,
 // spots left, and whether the coach posted it or a family asked for it as a private group.
 // from: only lessons on or after this date (the owner's view of a coach lists what is still to come).
-export async function coachSchedule(coach: CoachRef, from = '') {
+// withEmail: the family's sign-in email on each roster line is for the owner only (issue #274); a coach gets the
+// parent's name and phone, as on the practice roster.
+export async function coachSchedule(coach: CoachRef, from = '', withEmail = false) {
   const rows = (await env.DB!.prepare(
     `SELECT o.id,o.date,o.start,o.end,o.format,o.capacity,o.closed,o.organizer_id,o.organizer_wrestlers,f.payload AS organizer FROM coach_openings o
      LEFT JOIN family_accounts f ON f.user_id=o.organizer_id WHERE (o.coach_email=? OR o.user_id=?) AND o.date>=? ORDER BY o.date,o.start`
@@ -336,7 +338,7 @@ export async function coachSchedule(coach: CoachRef, from = '') {
     return {id: r.id, date: r.date, start: r.start, end: r.end, format, formatName: format ? names.get(format) ?? old?.formatName ?? '' : '',
       capacity: o.capacity, spotsLeft: spotsLeft(o, list), hosted: o.closed ? 'family' : o.format && o.capacity > 1 ? 'coach' : null,
       organizer: o.closed ? org?.parentName || 'A family' : null, partners: old?.partners ?? '',
-      roster: [...list.map(h => ({wrestler: h.wrestler, parent: fam(h).parentName ?? '', phone: fam(h).phone ?? '', email: h.email, status: h.status === 'paid' ? 'paid' : 'paying'})),
+      roster: [...list.map(h => ({wrestler: h.wrestler, parent: fam(h).parentName ?? '', phone: fam(h).phone ?? '', email: withEmail ? h.email : '', status: h.status === 'paid' ? 'paid' : 'paying'})),
         ...keptWrestlers(o, list, org).map(k => ({wrestler: k.name, parent: org?.parentName ?? '', phone: org?.phone ?? '', email: '', status: 'kept'}))]};
   });
 }
