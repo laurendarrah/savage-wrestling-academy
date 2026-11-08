@@ -465,12 +465,14 @@ await step('a coach sees today\'s roster for their program only and can check in
 
 // ---------- Coaches collect cash for extra practices too, and the site shows who received it (issue #250) ----------
 await step('a coach records Friday Night Live cash; the owner sees Collected by Coach Dana; the family sees paid in cash', async () => {
-  // Friday Night Live runs today for this step only; it goes back to its usual date at the end.
-  const saveFnl = async dates => {
+  // Friday Night Live runs today as well for this step. Once Sam has paid for it, today's date can no longer be taken
+  // away (issue #272): the owner's save is refused and names the session, so the extra date stays.
+  const saveFnl = async (dates, expected = 200) => {
     const got = await api(owner, '/api/academy');
     const data = {...got.body.data, extraPractices: got.body.data.extraPractices.map(x => x.id === 'fnl' ? {...x, dates} : x)};
     const r = await owner.evaluate(async ([s, rev]) => { const x = await fetch('/api/academy', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({revision: rev, data: s})}); return {status: x.status, body: await x.json()}; }, [data, got.body.revision]);
-    expect(r.status === 200, 'saving Friday Night Live: ' + JSON.stringify(r.body));
+    expect(r.status === expected, 'saving Friday Night Live: ' + JSON.stringify(r.body));
+    return r;
   };
   await saveFnl([today, ny(2)]);
   try {
@@ -502,8 +504,11 @@ await step('a coach records Friday Night Live cash; the owner sees Collected by 
     // The family sees it was paid in cash at the academy, not who took it.
     await family.goto(BASE + '/family'); await at(family, '#purchaseList', /Friday Night Live[\s\S]*Paid in cash at the academy on/);
     expect(!/Coach Dana/.test(await text(family, '#purchaseList')), 'the family is not told which coach took the cash');
+    const refused = await saveFnl([ny(2)], 409);
+    expect(refused.body.blocked.length === 1 && /^Friday Night Live on .* has 1 paid booking$/.test(refused.body.blocked[0]), 'removing a paid date is refused in plain words: ' + JSON.stringify(refused.body));
+    await owner.goto(BASE + '/security-log'); await at(owner, 'main', /Academy settings saved[\s\S]*extra practice added: Friday Night Live|Friday Night Live: dates changed/);
   } finally {
-    await saveFnl([ny(2)]);
+    await saveFnl([today, ny(2)]);
   }
 });
 

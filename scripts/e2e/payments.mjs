@@ -241,6 +241,15 @@ await step('card fees for a monthly membership ask Stripe for its invoices; a ru
   const r = await api(owner, '/api/financials', {action: 'fees'});
   expect(r.status === 200 && !r.body.error && r.body.failed === 0 && r.body.checked >= 0, 'fee run ' + JSON.stringify(r.body));
 });
+// Issue #272: Sam's monthly membership covers SWA Intermediate practices, so a walk-in review is refused in plain words.
+await step('a member reviewing a walk-in their membership covers is told there is nothing to pay (#272)', async () => {
+  await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${ny(3)}`);
+  await family.waitForFunction(() => document.querySelectorAll('#wrestler option').length > 0 && !document.querySelector('#reviewButton')?.disabled);
+  await family.click('#reviewButton'); await waitText(family, '#status', /membership already covers SWA Intermediate practices on .*, so there is nothing to pay for this walk-in/);
+  expect(!sql("SELECT id FROM orders WHERE kind='walkin' AND status='pending'").length, 'no walk-in order was started');
+  // The rest of the rehearsal buys walk-ins, so the membership is ended here.
+  sql(`UPDATE orders SET term_end='${ny(-1)}' WHERE kind='monthly'`);
+});
 // Pay cash at the academy (issue #248): offered beside online payment, and the two never overlap.
 await step('with online payment open, a family can still book a walk-in to pay cash; checkout then refuses it; the owner records the cash', async () => {
   await family.goto(BASE + `/register?plan=walkin&program=Intermediate&date=${ny(3)}`);
