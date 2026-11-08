@@ -205,7 +205,8 @@ await step('a failed monthly payment: family and owner told, "Payment needs atte
   expect((await owner.textContent('#tAttention')).trim() === '1', 'the tile counts it');
   if (SHOTS) await owner.screenshot({path: `${SHOTS}/pay-owner-payments-attention.png`, fullPage: true});
   // The dashboard tile.
-  await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Payment needs attention[\s\S]*?>1</, 15000);
+  await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Payment needs attention1Monthly payments that failed at Stripe/, 15000);
+  if (SHOTS) await owner.screenshot({path: `${SHOTS}/pay-owner-dashboard-attention.png`, fullPage: false});
   // The wrestler is still on the roster during the grace (today is inside it).
   const roster = await api(owner, '/api/roster?date=' + ny(0));
   expect(roster.body.sessions.some(x => x.entries.some(e => e.name === 'Sam Example' && e.sources.includes('Member'))), 'Sam dropped off the roster during the grace');
@@ -217,7 +218,7 @@ await step('a monthly payment for a different amount counts for what Stripe coll
   expect(r.status === 200 && r.body.outcome === 'installment-3-of-12', 'invoice.paid ' + JSON.stringify(r.body));
   const s = sql("SELECT status,payments_made FROM subscriptions")[0];
   expect(s.status === 'active' && s.payments_made === 3, 'counted ' + JSON.stringify(s));
-  const p = sql("SELECT invoice_id,payment_number,amount_cents,expected_cents FROM installment_payments ORDER BY payment_number")[0];
+  const p = sql("SELECT invoice_id,payment_number,amount_cents,expected_cents FROM installment_payments WHERE payment_number=3")[0];
   expect(p && p.invoice_id === 'in_rehearsal_4' && p.payment_number === 3 && p.amount_cents === 15000 && p.expected_cents === 20000, 'stored ' + JSON.stringify(p));
   expect(sql("SELECT target FROM security_events WHERE action='installment_amount_mismatch'").length === 1, 'flagged in the security log');
   expect(sql("SELECT kind FROM notifications WHERE kind='installment_mismatch_owner'").length === 1, 'the owner is told');

@@ -48,8 +48,9 @@ export function outcomeWords(outcome: string | null | undefined, status: string)
 // The attempt's state in one or two words, for a badge.
 export function attemptState(outcome: string | null | undefined, status: string): 'paid' | 'refunded' | 'rejected' | 'failed' | 'open' | 'closed' {
   if (outcome?.startsWith('rejected:')) return 'rejected';
+  // A paid membership whose latest monthly payment failed shows as failed, so the owner sees it needs attention.
+  if (outcome === 'payment-failed' || outcome === 'installment-failed') return 'failed';
   if (status === 'paid') return 'paid';
   if (status === 'refunded') return 'refunded';
-  if (outcome === 'payment-failed' || outcome === 'installment-failed') return 'failed';
   return status === 'pending' ? 'open' : 'closed';
 }
