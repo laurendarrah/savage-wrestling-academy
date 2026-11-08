@@ -124,6 +124,14 @@ const openRecord = async page => {
   await page.waitForFunction(() => document.activeElement?.id === 'familySearch', null, {timeout: 5000}).catch(() => {});
   expect(await page.evaluate(() => document.activeElement?.id) === 'familySearch', 'the record panel opens on the family search');
 };
+// /financials keeps its entry form in a sheet (issue #283): Add an expense in the title row opens it on the amount
+// field. Typing starts only once that focus has landed; a focus that arrived later took the typing from the note
+// field, and the form refused the amount (issue #292).
+const openEntry = async page => {
+  await page.click('#openEntry'); await page.waitForSelector('#entrySection:not([hidden])');
+  await page.waitForFunction(() => document.activeElement?.id === 'amount', null, {timeout: 5000}).catch(() => {});
+  expect(await page.evaluate(() => document.activeElement?.id) === 'amount', 'the entry sheet opens on the amount field');
+};
 
 // The roster shows one session at a time behind its session tabs (issue #286): pick the session before acting on a
 // row in it. Rows of the other sessions are in the page (textContent checks still see them) but not on screen.
@@ -1326,6 +1334,8 @@ await step('owner moves through the owner shell with the sidebar: dashboard, Pay
     if (phone) { expect(await page.locator('.week .wk-day').count() === 7, 'phones open on the week list'); await page.click('.view-switch button:has-text("Month")'); }
     await page.waitForSelector('.cal .day:not(.blank)');
     await page.locator('.cal .day[aria-label*="SWA Intermediate"]').first().click(); await page.waitForSelector('.day-panel');
+    // The page moves focus as it draws the panel (issue #292); the wait only covers the browser reporting it.
+    await page.waitForFunction(() => document.activeElement?.matches('.day-panel h2'), null, {timeout: 5000}).catch(() => {});
     expect(await page.evaluate(() => document.activeElement?.matches('.day-panel h2')), `${tag}: focus moves to the day panel`);
     await at(page, '.day-panel', /SWA Intermediate[\s\S]*(Add plan|View plan)/);
     // Escape closes the panel; the close button does too.
@@ -1449,9 +1459,13 @@ await step('owner sees payments in the books and adds an expense', async () => {
   expect(before.status === 200 && before.body.totals.incomeCents > 0, 'offline payments recorded earlier are income: ' + JSON.stringify(before.body?.totals));
   expect(before.body.lines.filter(l => l.source !== 'owner').every(l => /^(payment|installment|refund):/.test(l.id)), 'automatic lines come from payments');
   // The form is in a sheet (issue #283): Add an expense in the title row opens it, and it closes once the entry is in.
-  await owner.click('#openEntry'); await owner.waitForSelector('#entrySection:not([hidden])');
+  await openEntry(owner);
   await owner.check('input[name=kind][value=expense]'); await owner.fill('#amount', '1,250.00'); await owner.fill('#category', 'Rent'); await owner.fill('#note', 'Mat room rent');
-  await owner.click('#saveEntry'); await waitText(owner, '#status', /Entry added/); await waitText(owner, '#lines', /Mat room rent/);
+  await owner.click('#saveEntry');
+  // An entry the form refuses says why in #formError and never reaches #status: fail on the reason, not on a wait.
+  await owner.waitForFunction(() => /Entry added/.test(document.querySelector('#status')?.textContent || '') || document.querySelector('#formError')?.textContent, null, {timeout: 20000}).catch(() => {});
+  const refused = (await text(owner, '#formError')).trim(); expect(!refused, 'the entry was refused: ' + refused);
+  await waitText(owner, '#status', /Entry added/); await waitText(owner, '#lines', /Mat room rent/);
   await owner.waitForSelector('#entrySection', {state: 'hidden'});
   // Editing opens the sheet on the entry; Cancel closes it.
   await owner.click('#lines [data-edit]'); await owner.waitForSelector('#entrySection:not([hidden])'); await waitText(owner, '#formHeading', /Edit entry/);

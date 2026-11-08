@@ -3,7 +3,8 @@
 // as one red bar with the name, a week list (the phone's default) and a legend whose entries toggle what is shown.
 import {readFileSync} from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import {portalCode as code} from './fixtures/portal-script.mjs';
 const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',value:'',style:{},focus(){nodes.focused=id}});return nodes.get(id)};
-const ctx=vm.createContext({structuredClone,crypto,Intl,Date,JSON,URLSearchParams,Set,FormData,console,location:{hash:'',href:''},document:{querySelector:node,addEventListener(){}},window:{addEventListener(){}},setTimeout(f){f()},confirm:()=>true});vm.runInContext(code,ctx);const run=s=>vm.runInContext(s,ctx);
+// Timers never run here: focus has to move as the panel is drawn, not in a setTimeout that a busy browser fires late (issue #292).
+const ctx=vm.createContext({structuredClone,crypto,Intl,Date,JSON,URLSearchParams,Set,FormData,console,location:{hash:'',href:''},document:{querySelector:node,addEventListener(){}},window:{addEventListener(){}},setTimeout(){},confirm:()=>true});vm.runInContext(code,ctx);const run=s=>vm.runInContext(s,ctx);
 run(`hydratePrograms();page='Calendar';year=2026;month=11;calView='month';calHidden=new Set();openDay=null;weekStart='';academyToday=()=>'2026-12-09';render=()=>{};data.seasons=[{program:'Elementary',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Monday',start:'18:00',end:'19:30'}],excludedDates:['2026-12-28']}];calendarPlanSummaries['2026-12']={status:'ready',items:[{program:'Elementary',date:'2026-12-07',published:true,title:'Leg attacks'},{program:'Elementary',date:'2026-12-14',published:false,title:'Draft practice'}]}`);
 
 // ---------- The month grid ----------
@@ -29,7 +30,7 @@ run("openCalendarDay('2026-12-07')");cal=run('calendar()');
 assert.match(cal,/<div class="cal-layout open">/);
 assert.match(cal,/class="day is-open" aria-label="Monday, December 7, 2026: SWA Development, plan shared" aria-expanded="true"/);
 assert.match(cal,/<section class="day-panel" aria-label="Monday, December 7, 2026"><button type="button" class="close" aria-label="Close day" onclick="closeCalendarDay\(\)">×<\/button><h2 tabindex="-1">Monday, December 7, 2026<\/h2><div class="dp-row cal-elementary"><i aria-hidden="true"><\/i><div><b>SWA Development<\/b><small><span class="event-time">6:00 PM–7:30 PM<\/span> · <span class="plan-state">Plan shared · Leg attacks<\/span><\/small><\/div><button type="button" onclick="calendarPractice\('Elementary','2026-12-07'\)">View plan<\/button><\/div><\/section>/);
-assert.equal(nodes.focused,'.day-panel h2','focus moves to the panel');
+assert.equal(nodes.focused,'.day-panel h2','focus moves to the panel as it is drawn');
 run("openCalendarDay('2026-12-14')");assert.match(run('calendar()'),/Draft plan · Draft practice<\/span><\/small><\/div><button type="button" onclick="calendarPractice\('Elementary','2026-12-14'\)">View plan<\/button>/);
 run("openCalendarDay('2026-12-21')");assert.match(run('calendar()'),/No plan yet<\/span><\/small><\/div><button type="button" onclick="calendarPractice\('Elementary','2026-12-21'\)">Add plan<\/button>/);
 run("openCalendarDay('2026-12-28')");assert.match(run('calendar()'),/<h2 tabindex="-1">Monday, December 28, 2026<\/h2><p class="empty-line">No practices or events on this day\.<\/p>/,'a day off is an empty panel');
