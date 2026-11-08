@@ -1,6 +1,8 @@
 <!-- Comparison of Justin's ChatGPT Sites versions 71–131 with main (issue #187). Batches: D #188, A #189, B #190, C #191, E #192, F #193, G #194, H #195, I #196. Decisions: #197. -->
 # Justin's Sites work (versions 71 to 131) compared with the main site
 
+> **Historical.** Every batch below has been built or closed (#188 to #196, the leftovers in #239) and Justin's answers are recorded in #197 and #210. This page is kept as the record of where each Sites change went; for what the site does today see [FEATURE_STATUS](FEATURE_STATUS.md).
+
 Prepared November 6, 2026. Compares the 63 entries in Justin's change log (Sites versions 71 to 131, branch `sites/v131`, commit `32c39b2`) with `origin/main` at `4dca2eb` (#186, partner and small-group lessons).
 
 ## Summary for Lauren

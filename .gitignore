@@ -1,7 +1,4 @@
-# Reconstructed 2026-11-05. The original .gitignore was dropped by the Drive upload.
-# Replace with Justin's original if it differs.
-
-# Dependencies and package-manager state
+# Dependencies and the pnpm store (pnpm-workspace.yaml keeps the store in .sites-runtime/pnpm-store)
 node_modules/
 .sites-runtime/
 
@@ -9,9 +6,13 @@ node_modules/
 dist/
 .next/
 .vinext/
-.wrangler/
 next-env.d.ts
 *.tsbuildinfo
+coverage/
+
+# Local Wrangler state: pnpm start's database (.wrangler/state), the walkthrough's and payment rehearsal's databases
+# and server logs (.wrangler/e2e*), and the restore drill's local copy (.wrangler/restore-drill)
+.wrangler/
 
 # Secrets. Never commit real credentials.
 .env
@@ -20,10 +21,14 @@ next-env.d.ts
 .dev.vars
 .dev.vars.*
 
+# Backup files hold real family records. Only the test fixtures, made from test data, belong in the repository.
+*.savage
+!tests/fixtures/backups/*.savage
+
 # OS and editor noise
 .DS_Store
 *.log
-!handoff/**/*.log
+!docs/archive/**/*.log
 
 # Browser walkthrough output (pnpm e2e): screenshots, screenshots of failed steps, and the log CI keeps
 e2e-screenshots/

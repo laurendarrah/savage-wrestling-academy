@@ -21,33 +21,33 @@ Since issue #221 the export is streamed from the Worker as lines of JSON, a batc
 
 Restores validate project identity and record shapes, check for concurrent changes, preserve current data in a recovery snapshot, and apply the restore in a single D1 batch transaction. A large file is uploaded in checked parts to the `restore_staging` table first (bound to the owner session that started it, removed when the restore ends, and by the daily job after a day); the final batch reads those parts inside D1, so it is still all or nothing. Matching records are replaced; records absent from a backup are retained. Prior revisions are incremented so stale browser saves are rejected. The last ten pre-restore snapshots are kept in D1. They are not independent disaster-recovery copies.
 
-Downloads are manual. There is no scheduled off-site backup service yet. Store encrypted exports separately and retain the passphrase privately. Recovery has been tested using an isolated SQLite database; no production restore was performed.
+Downloads are manual. Separately, the Deploy workflow exports the whole live database and encrypts it with `BACKUP_PASSPHRASE` before each publish, kept 30 days as a workflow artifact. There is no scheduled off-site backup service. Store encrypted exports separately and retain the passphrase privately. Recovery is tested on isolated SQLite databases and, with `pnpm restore:drill`, on a local copy of the site ([docs/RESTORE_DRILL.md](docs/RESTORE_DRILL.md)); no production restore was performed.
 
 ## Tests
 
 - `node tests/security-hardening.mjs`: owner and family MFA enforcement, no ChatGPT bypass, coach assignment/revocation and isolation, backup encryption/tamper checks, recovery snapshot, transactional restore and concurrent-change rollback.
 - `node tests/owner-workspace.mjs`: settings and scheduling validation, durable saving, stale-write rejection and save queues.
 - `pnpm audit --prod --json`: installed production dependency advisories; this is not a penetration test. It does not see vinext, `@vitejs/plugin-rsc` or `react-server-dom-webpack`, which are dev dependencies but partly bundled into the Worker. The full audit, what was fixed and what remains are in `docs/DEPENDENCY_ADVISORIES.md`.
-- `tsc --noEmit` and the Sites production build.
+- `pnpm typecheck` and `pnpm build`.
 
 ## Remaining launch work
 
-Production authentication email delivery and the end-to-end reset flow still need verification. Supabase's leaked-password protection is not enabled on the Free project. Coach availability is not yet synchronized into paid customer booking. Payments, entry QR verification, message delivery, and customer-facing enrollment remain unfinished. An independent review, operational monitoring, data-retention policy, and off-site recovery process remain needed before handling sensitive customer information at production scale.
+Updated November 7, 2026 (#267). Open launch work is on the [Launch board (#246)](https://github.com/laurendarrah/savage-wrestling-academy/issues/246): switching the staff authenticator back on (#27), the restore drill (#25), the launch test pass (#24), live Stripe (#26) and the attorney review (#44). Sign-in email delivery needs a custom email sender, and leaked-password protection is a setting on the academy's Supabase project ([docs/GO_LIVE.md](docs/GO_LIVE.md) section 6). The data retention policy is a draft ([docs/policies](docs/policies/README.md)). There has been no independent penetration test. The November 5 review's findings and where each went are in [docs/ISSUES.md](docs/ISSUES.md).
 
 
 ## Competition program approvals and conversations
 
-Every SWA Advance wrestler (grades 7–12) requires an owner approval decision before monthly or walk-in registration review. Approval records use the verified parent account, wrestler ID, name, and grade; edited identity fields require renewed approval. Owner decisions require MFA and reject stale requests. Approval alone never grants a paid membership. Future checkout and payment activation must reuse the server approval check; no checkout is active yet.
+Every SWA Advance wrestler (grades 7–12) requires an owner approval decision before monthly or walk-in registration review. Approval records use the verified parent account, wrestler ID, name, and grade; edited identity fields require renewed approval. Owner decisions require MFA and reject stale requests. Approval alone never grants a paid membership. Registration review and Stripe checkout both price and check eligibility through `lib/quotes.ts`, which reuses the server approval check.
 
-Each approval conversation is accessible only to its verified parent account and the owner with MFA. Server-side sender roles, text-only rendering, bounded messages, CSRF checks, and rate limits protect the thread. Conversations are stored in D1; email/SMS notifications are not connected. The current manual backup export/restore covers academy settings, family profiles, and coach openings only; it does not yet include approval decisions or chat messages. Approval grants must not be restored through family-controlled backup content.
+Each approval conversation is accessible only to its verified parent account and the owner with MFA. Server-side sender roles, text-only rendering, bounded messages, CSRF checks, and rate limits protect the thread. Conversations are stored in D1; email notifications follow the family notices (#105) once email is on (#35). Backups include approval decisions and chat messages (#78); approval grants must not be restored through family-controlled backup content.
 
 
 ## Practice plans
 
-Practice plans are owner-authored, revision-checked D1 records keyed to a scheduled date and program. Owner and coach access requires MFA. Only the owner may write or share a plan; active coaches may read only published plans in their currently assigned programs that still have a scheduled practice. Family accounts have no access. Deleted schedules and days off hide a plan from coaches while preserving the owner record. Plan content is rendered as text. Past plans remain available by month. Current manual encrypted backups do not yet include practice plans; individual plans can be printed or saved as PDF from the owner or assigned coach view.
+Practice plans are owner-authored, revision-checked D1 records keyed to a scheduled date and program. Owner and coach access requires MFA. Only the owner may write or share a plan; active coaches may read only published plans in their currently assigned programs that still have a scheduled practice. Family accounts have no access. Deleted schedules and days off hide a plan from coaches while preserving the owner record. Plan content is rendered as text. Past plans remain available by month. Encrypted backups include practice plans (#78); individual plans can also be printed or saved as PDF from the owner or assigned coach view.
 
 
-Reusable curricula are owner-only revision-checked D1 records. Applying one copies its ordered sections into a daily draft; later curriculum edits never modify existing daily plans or publish content automatically. Curriculum records, like practice plans, are not yet included in the manual encrypted backup tool.
+Reusable curricula are owner-only revision-checked D1 records. Applying one copies its ordered sections into a daily draft; later curriculum edits never modify existing daily plans or publish content automatically. Curriculum records, like practice plans, are included in the encrypted backup (#78).
 
 
 Program curricula now group owner-only lessons under a fixed program. Lesson names are unique within a curriculum; curriculum names are unique within a program. Program changes do not move existing curricula or lessons. Daily selection filters by the scheduled practice's program, then copies the lesson into the daily draft for explicit save/share. Earlier unfiled plans remain intact and can be explicitly copied into a selected curriculum. The curriculum builder does not require a scheduled practice.

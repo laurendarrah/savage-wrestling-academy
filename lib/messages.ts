@@ -10,7 +10,6 @@ import {familyNotices, markNoticeRead} from './notify';
 import {jsonChunks, keysetPage, type SortCol} from './paging';
 import {familyMatch} from './family-search';
 
-export type Audience = {type: 'all'} | {type: 'program'; program: string} | {type: 'event'; eventId: string};
 const at = () => new Date().toISOString();
 export const footer = () => `\n\n—\nSavage Wrestling Academy\nRead and reply in your family account: ${appOrigin()}/inbox`;
 // A private message is emailed as a notice with a link; the message itself stays in the account.

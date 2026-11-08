@@ -1,0 +1,58 @@
+# What the site does today
+
+One line per feature, with where it lives and what still waits. Checked against the code on November 7, 2026 (#267). This page replaces both the November 5 handoff's feature matrix, which described the ChatGPT Sites version and its sample workspace (in [the archive](archive/handoff-2026-11-05/README.md)), and the feature table that used to be in the README.
+
+**Built** means the code, tests and the walkthrough cover it. **Waits** names the decision or setting it still needs. Nothing on this page is sample data: the owner workspace has no sample screens (#147).
+
+| Area | Status | Where | Waits on |
+|---|---|---|---|
+| **Public** | | | |
+| Welcome page, team page and calendar | Built. The owner edits the welcome and team pages on `/website` (#196); the calendar shows practices, days off, holidays, events and named practices | `/welcome`, `/team`, `/calendar`, `lib/public-schedule.ts`, `lib/website.ts` | Custom domain (#43) |
+| Programs on a new site | No programs are public until the owner publishes them from the launch checklist; the defaults in `hydratePrograms()` are not public until saved | `app/portal.html`, `lib/workspace/` | Owner set-up (#16) |
+| Help pages | Built for families, coaches and the owner (#109) | `/help`, `/help/coach`, `/help/owner` | |
+| **Accounts** | | | |
+| Sign-up, sign-in, password reset | Built on Supabase Auth; email links use `APP_ORIGIN` | `/login`, `/auth/confirm`, `lib/account-auth.ts` | A custom email sender in Supabase before families join (GO_LIVE) |
+| Authenticator (MFA) | Required for the owner and coaches, optional for families. Temporarily off for staff with `STAFF_MFA=off` | `/security`, `lib/mfa-policy.ts` | Switch back on before families join (#27) |
+| Family profiles and wrestlers | Built, with contact, safety and medical details shown to staff on the roster (#188) | `/family`, `lib/family-records.ts` | |
+| Family data requests | Download everything; ask to close the account; owner handles requests (#113) and can delete a test family (#259) | `/family`, `/data-requests`, `/accounts`, `lib/family-deletion.ts` | Data retention policy (draft) |
+| **Programs and booking** | | | |
+| Program rules and SWA Advance approvals | Built. Development K–6, Intermediate 7–12, Advance 7–12 with coach approval for every wrestler, with private chat | `lib/program-approval.ts`, `/approvals` | |
+| Registration and booking review | Built; prices from `lib/quotes.ts`, including team codes, member pricing and scholarships | `/register`, `/booking` | |
+| Online payment | Built: Stripe Checkout, signed webhook, refunds, card fees. Each purchase type stays closed until `CHECKOUT_KINDS` lists it | `lib/checkout.ts`, `lib/stripe-webhook.ts`, `/payment-setup` | Stripe account and webhook (#26), refund policy (#3) |
+| Monthly memberships | Built: 12 monthly payments that stop on their own. A year paid upfront is not offered (#210) | `lib/membership-term.ts`, `subscriptions` | Membership terms (#2, #20) |
+| Pay cash at the academy | Built for walk-ins and extra practices; coaches or the owner tap **Cash received** (#248, #250) | `/booking`, `/roster`, `lib/cash-bookings.ts` | |
+| Offline payments | Owner records cash or check, voids mistakes, exports CSV | `/payments`, `lib/offline-payments.ts` | |
+| Camps and events | Built, with per-day times and seat limits. A full event is full: waitlists were removed (#210) | `app/portal.html`, `lib/capacity.ts` | |
+| Private lessons | One-on-one, partner and small-group, priced per wrestler; coaches post times; families book and invite (#70, #177, #239) | `/lesson`, `/coach-openings`, `lib/lessons.ts` | Lesson refund policy before online payment (#80, #3) |
+| Program transfers | Owner moves a paid membership between programs (#74) | `/transfers` | Settling price differences (#41) |
+| Scholarships | Offers, frozen terms, drawn signatures, signed copies, benefit history | `/scholarships`, `/scholarship`, `lib/scholarships.ts` | Attorney-reviewed agreement (#44) |
+| **At the door** | | | |
+| Roster and check-in | Built from paid orders and cash bookings, by hand or by scanning QR passes (#22, #71) | `/roster`, `lib/roster.ts`, `/pass` | |
+| USA Wrestling cards | Missing or expired cards block booking; only verified cards check in. Automatic lookup on USA Wrestling's verify page; owner reviews the rest and sees renewals 30 days ahead (#68, #131, #202, #210) | `/cards`, `lib/usaw.ts`, `lib/usaw-check.ts` | |
+| Waivers, Parent Consent Form, coach contracts | Owner publishes; families or coaches sign with a drawn signature; unsigned wrestlers can't book once a document is published; the owner can ask for a signature again (#69, #195, #239) | `/waivers`, `/consent-forms`, `/contracts`, `lib/documents.ts` | Attorney review of the wording (#44) |
+| Owner exceptions | Dated exceptions to the card, waiver and consent-form blocks (#89) | `/cards`, `/waivers`, `lib/exceptions.ts` | |
+| Wrestler view | Entry pass, what is coming up, what blocks booking (#76) | `/wrestler` | |
+| **Messages** | | | |
+| Announcements and private messages | Built, in-app; emails that didn't send are listed with the reason, to send again (#72, #35) | `/messages`, `/inbox`, `lib/messages.ts` | Resend set up (#35) |
+| Automatic notices | Card expiring or expired, waiver to sign, approval decision, payment recorded, lesson booked, transfer (#105). Daily reminders run on a schedule | `lib/notify.ts` | Email (#35) |
+| **Coaches** | | | |
+| Coach accounts and profiles | Owner invites by link; coaches set up an authenticator and keep a profile families see (#190) | `/staff`, `/coach-join`, `/coach-profile` | |
+| Coach home and calendar | Tonight first, month calendar of practices and events, published practice plans (#133, #191) | `/coach`, `/practice-plans` | |
+| Practice plans and curricula | Owner writes and publishes plans; reusable curricula | `/practice-plans`, `/curricula` | |
+| Coach hours and time off | Clock in and out, corrections, owner approval, monthly file; time off tells same-program coaches (#193) | `/coach-time`, `/timesheets` | Employee or contractor (#197 Q6) |
+| Coach pay from lessons | Totals per coach at the owner's share, CSV (#75) | `/coach-pay` | |
+| Removed coaches | Records kept 3 years, then deleted or anonymized by the daily job (#212) | `lib/coach-retention.ts` | |
+| **Running the academy** | | | |
+| Owner dashboard and shell | Opens on the launch checklist and today's numbers; every tool page keeps the same sidebar and header (#123, #261) | `/`, `app/portal.html`, `lib/owner-nav.ts` | |
+| Income and expenses | Card, monthly, refund and offline payments appear on their own; owner adds expenses (#194, #42) | `/financials`, `lib/financials.ts` | Checking against Stripe's totals (#42) |
+| Backups and restore | Owner downloads an encrypted backup of every business record and restores from one; Deploy backs up before each publish; restore drill (#25, #221) | `/backups`, `lib/backup-records.ts`, `pnpm restore:drill` | First backup off the platform (#17), restore drill (#25) |
+| Site health and alerts | Server errors, alerts to the owner (at most hourly), emails that didn't send, test alert (#107, #47, #263) | `/site-health`, `lib/owner-alerts.ts` | Uptime monitor on `/api/health` (#47) |
+| Security log | Sensitive actions, 100 a page | `/security-log`, `lib/security-log.ts` | |
+
+## Not built, on purpose or not yet
+
+- **Custom domain and moving the old website** (#43): after launch. Only `APP_ORIGIN` and the Supabase redirect list change.
+- **Paying coaches** stays outside the app; the books are a simple record, not an accounting system.
+- **Photos** of coaches or wrestlers: not offered (#197, question 22).
+- **No-show fees or blocking** for unpaid cash bookings: not decided.
+- **A second owner login**: only one email can manage the academy (`OWNER_EMAIL` in `lib/account-auth.ts`).
