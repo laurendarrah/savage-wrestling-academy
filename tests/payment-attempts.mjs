@@ -99,7 +99,9 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
   assert.ok(script.includes("call('/api/payments?attention=1')") && script.includes("'/api/payments?attempts=1'"), 'the page loads both lists');
   // UX 12: every owner table on /payments and /cards stacks into cards on a phone, each cell labeled.
   for (const label of ['Paid on', 'Wrestler', 'For', 'Via', 'Collected by', 'Amount', 'Status']) assert.ok(script.includes(`data-label="${label}"`), 'payments: ' + label);
-  assert.equal((html.match(/<div class="table stack"/g) || []).length, 5, 'every table on /payments stacks');
+  // Issue #283: the tables are the shared .swa-table, whose rows become two lines on a phone (public/savage.css).
+  assert.equal((html.match(/<div class="table" role="region"[^>]*>\s*<table class="swa-table">/g) || []).length, 5, 'every table on /payments is the shared table');
+  assert.doesNotMatch(html, /class="table stack"/, 'none keeps the old stacked cards');
   const cards = readFileSync('app/cards/screen.html', 'utf8');
   for (const label of ['Wrestler', 'Family', 'Card', 'Status', 'Review']) assert.ok(cards.includes(`data-label="${label}"`), 'cards: ' + label);
   assert.match(cards, /<div class="table stack" role="region" aria-label="Wrestlers and their cards"/);

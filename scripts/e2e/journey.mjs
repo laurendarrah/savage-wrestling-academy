@@ -109,10 +109,16 @@ const familyReady = page => page.waitForSelector('#save:not([disabled])', {state
 // whatever the walkthrough opened or typed.
 const showAll = async page => { await page.selectOption('#show', 'all'); await page.waitForSelector('#rows:not([aria-busy])', {state: 'attached'}); };
 // /payments has loaded when the payments table is filled and Check price is on. Earlier, the page is still loading
-// and clears the status line when it finishes, which could hide "Payment recorded".
+// and clears the status line when it finishes, which could hide "Payment recorded". The record form lives in a side
+// panel (issue #283): Record a payment in the title row opens it.
 const openPayments = async page => {
   await page.goto(BASE + '/payments');
   await page.waitForFunction(() => !/Loading/.test(document.querySelector('#rows')?.textContent ?? 'Loading') && !document.querySelector('#preview')?.disabled);
+};
+const openRecord = async page => {
+  await page.click('#openRecord'); await page.waitForSelector('#recordSheet:not([hidden])');
+  await page.waitForFunction(() => document.activeElement?.id === 'familySearch', null, {timeout: 5000}).catch(() => {});
+  expect(await page.evaluate(() => document.activeElement?.id) === 'familySearch', 'the record panel opens on the family search');
 };
 
 // The roster shows one session at a time behind its session tabs (issue #286): pick the session before acting on a
@@ -441,7 +447,10 @@ await step('no year paid upfront anywhere; a membership paid upfront before the 
   const start = ny(-20);
   sql(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
     VALUES ('e2e-upfront-sam','e2e-family-a','family.a@example.test','${samId}','Sam Example','annual','Intermediate','Intermediate','SWA Intermediate: 12-month membership, paid upfront','[]',240000,0,240000,'usd','{"method":"check","note":"Check 1042","recordedBy":"e2e-owner"}','{"offline":true}','paid','e2e-upfront-sam',0,'${start}T12:00:00.000Z','${start}T12:00:00.000Z','${start}T12:00:00.000Z','${start}','${ny(344)}','offline')`);
-  await owner.goto(BASE + '/payments'); await waitText(owner, '#rows', /Sam Example[\s\S]*12-month membership, paid upfront[\s\S]*\$2,400\.00/);
+  // The table opens on this month (issue #283); the membership was paid 20 days ago, so the chip comes off first.
+  await owner.goto(BASE + '/payments'); await owner.waitForSelector('#thisMonth[aria-pressed="true"]'); await owner.click('#thisMonth');
+  await owner.waitForSelector('#thisMonth[aria-pressed="false"]');
+  await waitText(owner, '#rows', /Sam Example[\s\S]*12-month membership, paid upfront[\s\S]*\$2,400\.00/);
 });
 await step('Sam is on today\'s roster; owner checks in, undoes, then a QR scan checks in once', async () => {
   await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Sam Example/);
@@ -508,10 +517,12 @@ await step('a coach records Friday Night Live cash; the owner sees Collected by 
     const undo = await api(coach, '/api/roster', {action: 'cash-undo', date: today, orderId: paid.orderId});
     expect(undo.status === 403, 'only the owner can undo cash: ' + JSON.stringify(undo.body));
     // The owner sees who collected it: the Payments list, the per-coach total for today, the filter and the spreadsheet.
-    await openPayments(owner);
+    await openPayments(owner); await openRecord(owner); await owner.keyboard.press('Escape'); await owner.waitForSelector('#recordSheet', {state: 'hidden'});
+    expect(await owner.evaluate(() => document.activeElement?.id) === 'openRecord', 'Escape closes the record panel and returns focus to the button');
     await at(owner, '#rows', /Sam Example[\s\S]*Friday Night Live[\s\S]*Cash[\s\S]*Coach Dana/);
-    await owner.click('#today'); await at(owner, '#byCollector', /Coach Dana[\s\S]*\$50\.00 cash · 2 payments/);
-    await owner.selectOption('#fCollector', {label: 'Coach Dana'});
+    // The Today chip sets the dates; the detailed filters sit behind "More filters" (issue #283).
+    await owner.click('#today'); await owner.waitForSelector('#today[aria-pressed="true"]'); await at(owner, '#byCollector', /Coach Dana[\s\S]*\$50\.00 cash · 2 payments/);
+    await owner.click('details.filters summary'); await owner.selectOption('#fCollector', {label: 'Coach Dana'});
     await owner.waitForFunction(() => [...document.querySelectorAll('#rows tr')].every(tr => /Coach Dana/.test(tr.textContent)) && document.querySelectorAll('#rows tr').length === 2);
     await at(owner, '#tOffline', /\$50\.00/);
     await at(owner, '#collectedRows', /Sam Example[\s\S]*Friday Night Live[\s\S]*Coach Dana/);
@@ -546,7 +557,7 @@ await step('coach adds an opening; owner sets prices; family reviews a lesson; o
   expect(await family.isVisible('#notOpen'), 'lesson payment should say not open yet');
   const body = await family.content(); expect(!body.includes('coach.dana@example.test'), 'coach email leaked to family page');
   await shot(family, 'lesson-review');
-  await openPayments(owner); await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
+  await openPayments(owner); await openRecord(owner); await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
   await owner.selectOption('#family', {label: 'Pat Example · family.a@example.test'}); await owner.selectOption('#kind', 'lesson');
   await owner.waitForFunction(() => [...document.querySelectorAll('#opening option')].some(o => o.value));
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record');
@@ -613,7 +624,7 @@ await step('camp fills; family 2 sees it is full, with no waitlist to join', asy
   await owner.locator('[data-exc-until]').first().fill(ny(30)); await owner.locator('[data-exc-reason]').first().fill('Paper waiver at the door');
   await owner.locator('[data-exc-grant]').first().click(); await waitText(owner, '#status', /Exception saved/);
   // Sam takes the only camp seat.
-  await openPayments(owner); await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
+  await openPayments(owner); await openRecord(owner); await owner.waitForFunction(() => [...document.querySelectorAll('#family option')].some(o => /Pat Example/.test(o.textContent)));
   await owner.selectOption('#family', {label: 'Pat Example · family.a@example.test'}); await owner.selectOption('#kind', 'event');
   await owner.waitForFunction(() => [...document.querySelectorAll('#event option')].some(o => o.value === 'winter-camp'));
   await owner.click('#preview'); await owner.waitForSelector('#previewBox:not([hidden])'); await owner.click('#record'); await waitText(owner, '#status', /recorded/i);
@@ -715,7 +726,7 @@ await step('a wrestler whose card is not verified can\'t be checked in; the rost
 // ---------- Partner and small-group lessons (issue #177) ----------
 // The owner records a lesson payment for a family's wrestler in the lesson whose label matches.
 async function recordLesson(familyLabel, wrestler, lesson) {
-  await openPayments(owner); await owner.waitForFunction(l => [...document.querySelectorAll('#family option')].some(o => o.textContent === l), familyLabel);
+  await openPayments(owner); await openRecord(owner); await owner.waitForFunction(l => [...document.querySelectorAll('#family option')].some(o => o.textContent === l), familyLabel);
   await owner.selectOption('#family', {label: familyLabel});
   await owner.selectOption('#wrestler', {label: (await owner.$$eval('#wrestler option', (os, w) => os.map(o => o.textContent).find(t => t.startsWith(w)), wrestler))});
   await owner.selectOption('#kind', 'lesson');
@@ -891,7 +902,10 @@ await step('the owner adds himself as a coach, opens Coach view and posts an ope
   await owner.goto(BASE + '/staff'); await owner.waitForSelector('#selfAdd');
   await owner.fill('#selfName', 'Justin'); await owner.check('#self [name=self][value=Advanced]'); await owner.click('#selfAdd');
   await waitText(owner, '#status', /You are now a coach too/);
-  await owner.goto(BASE + '/'); await owner.click('a.toollink[href="/coach"]'); await owner.waitForURL(/\/coach$/);
+  // The owner's own row on Coaches opens Coach view (issue #283); it is also a tab of Coaches & lessons.
+  await owner.goto(BASE + '/staff'); await owner.waitForSelector('#self a[href="/coach"]');
+  expect(await owner.isVisible('.os-tabs a[href="/coach"]'), 'Coach view is a tab of Coaches & lessons');
+  await owner.click('#self a[href="/coach"]'); await owner.waitForURL(/\/coach$/);
   await waitText(owner, '#heading', /Justin/); expect(await owner.isVisible('#ownerNote'), 'owner note in Coach view');
   await openOpening(owner);
   await owner.fill('#opening [name=date]', ny(10)); await owner.fill('#opening [name=start]', '08:00'); await owner.fill('#opening [name=end]', '09:00');
@@ -905,7 +919,7 @@ await step('owner edits the public website; a visitor sees the headline, mission
   let visitor = await phoneAs(null);
   await visitor.goto(BASE + '/team'); await at(visitor, '.hero', /listed here soon/);
   expect(!(await visitor.isVisible('#coaches')), 'no coach is listed until the owner chooses them');
-  await owner.goto(BASE + '/'); await owner.click('a.toollink[href="/website"]'); await owner.waitForURL(/\/website$/);
+  await owner.goto(BASE + '/'); await owner.click('.os-nav a[href="/website"]'); await owner.waitForURL(/\/website$/);
   // The editor is disabled until the published site is in, so nothing typed is overwritten by the load (issue #220).
   await owner.waitForSelector('#editor:not([disabled])'); await at(owner, '#achList', /No achievements yet/); await at(owner, '#alumList', /No alumni yet/);
   await owner.fill('#headline', 'Built on the mat'); await owner.fill('#intro', 'Wrestling for kindergarten through 12th grade in Huntington Station.');
@@ -1198,9 +1212,17 @@ await step('owner downloads an encrypted backup and previews and restores it fro
 
 // ---------- Owner dashboard and backups ----------
 await step('owner dashboard shows today\'s real numbers', async () => {
-  await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Sessions today/);
-  await waitText(owner, '#todayTiles', /Collected this month/);
-  await waitText(owner, '#todayTiles', /Site errors, last 24 hours/);
+  // The dashboard is today (issue #283): the date, the facts, four tiles, tonight's sessions, what needs the owner.
+  await owner.goto(BASE + '/'); await waitText(owner, 'main h1', /^[A-Z][a-z]+day, [A-Z][a-z]{2} \d{1,2}$/);
+  await waitText(owner, '#todayFacts', /\d sessions? tonight · \d coach(es)? clocked in/);
+  await waitText(owner, '#todayTiles', /Checked in today/); await waitText(owner, '#todayTiles', /Cash due at the door/);
+  await waitText(owner, '#todayTiles', /Collected in [A-Z][a-z]+/); await waitText(owner, '#todayTiles', /Families/);
+  expect(await owner.locator('#todayTiles a.tile').count() === 4, 'four tiles, each a link');
+  await waitText(owner, '#tonightBody', /SWA Intermediate/); await at(owner, '#tonightBody', /Open check-in/);
+  expect(!/Site errors/.test(await text(owner, '#launch')), 'site health is not on the home while nothing is wrong');
+  await waitText(owner, '#monthBody', /Owed to coaches/); await waitText(owner, '#comingBody', /Winter camp/);
+  expect(await owner.locator('main .primary, main .button.primary').count() === 1, 'one red button on the dashboard: Open check-in');
+  expect(await owner.locator('.os-nav a[href="/cards"] .os-badge').count() === 0 || /^\d+$/.test(await text(owner, '.os-nav a[href="/cards"] .os-badge')), 'the cards badge is a count or nothing');
   // Launch checklist: by now the walkthrough has set programs, schedules, website, waiver, coach and lesson prices.
   await waitText(owner, '#launchCount', /\d+ of \d+ ready|Everything is set up/);
   for (const k of ['programs', 'schedule', 'website', 'waiver', 'coaches', 'lessons', 'address', 'signin'])
@@ -1209,7 +1231,7 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   await at(owner, '[data-launch="events"]', /1 camp and 1 clinic coming up/); await at(owner, '[data-launch="live"]', /Switch to live when you’re ready/);
   const h = await owner.request.get(BASE + '/api/health'); expect(h.status() === 200 && (await h.json()).ok === true, 'health check');
   expect(!(await owner.isVisible('.sample-notice')) && !(await owner.isVisible('#previewMenu')), 'the dashboard has no sample notices or previews');
-  const bg = await owner.locator('a.button.primary').first().evaluate(el => getComputedStyle(el).backgroundColor);
+  const bg = await owner.locator('#tonightBody a.button.primary').first().evaluate(el => getComputedStyle(el).backgroundColor);
   expect(bg !== 'rgb(255, 255, 255)' && bg !== 'rgba(0, 0, 0, 0)', 'primary button is invisible: ' + bg);
   await shot(owner, 'owner-dashboard');
   await owner.goto(BASE + '/site-health'); await waitText(owner, '#now', /Site and database are answering/);
@@ -1228,7 +1250,8 @@ const shellState = page => page.evaluate(() => {
   return {sides: document.querySelectorAll('.os-side').length, tops: document.querySelectorAll('.os-top').length, side: box(side), top: box(top),
     current: [...document.querySelectorAll('.os-nav [aria-current="page"]')].map(a => a.getAttribute('href')).join(' '), crumb: document.querySelector('#swa-os-crumb')?.textContent,
     h1: document.querySelector('main h1')?.textContent.trim(), focused: document.activeElement?.tagName, open: document.body.classList.contains('os-open'),
-    names: getComputedStyle(side).viewTransitionName + ' ' + getComputedStyle(top).viewTransitionName, links: side.querySelector('.os-nav').innerHTML.replace(/ aria-current="page"/g, ''),
+    // The count badges (issue #283) are filled by the page after it loads, so they are left out of the comparison.
+    names: getComputedStyle(side).viewTransitionName + ' ' + getComputedStyle(top).viewTransitionName, links: side.querySelector('.os-nav').innerHTML.replace(/ aria-current="page"/g, '').replace(/<span class="os-badge"[^>]*>[^<]*<\/span>/g, ''),
     stayed: window.__swaStayed === true, over: document.documentElement.scrollWidth - innerWidth};
 });
 await step('owner moves through the owner shell with the sidebar: dashboard, Payments, Income and expenses, a dashboard section', async () => {
@@ -1239,7 +1262,7 @@ await step('owner moves through the owner shell with the sidebar: dashboard, Pay
       window.__swaTransition = !!e.viewTransition; window.__swaSettled = !e.viewTransition;
       e.viewTransition?.finished.catch(() => {}).finally(() => { window.__swaSettled = true; });
     }));
-    await page.goto(BASE + '/'); await waitText(page, 'main h1', /KEEP THE ACADEMY MOVING/);
+    await page.goto(BASE + '/'); await waitText(page, 'main h1', /^[A-Z][a-z]+day, [A-Z][a-z]{2} \d{1,2}$/);
     const first = await shellState(page);
     expect(first.sides === 1 && first.tops === 1 && first.current === '/', `${tag}: the dashboard has one shell with Dashboard marked: ` + JSON.stringify(first).slice(0, 200));
     expect(first.names === 'swa-owner-side swa-owner-top', `${tag}: the sidebar and header are named for View Transitions: ${first.names}`);
@@ -1276,11 +1299,27 @@ await step('owner moves through the owner shell with the sidebar: dashboard, Pay
       await page.waitForFunction(() => window.__swaSettled !== false && getComputedStyle(document.querySelector('.os-side')).visibility === (innerWidth > 900 ? 'visible' : 'hidden'));
       await shot(page, `shell-${tag}-${href.replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '') || 'dashboard'}`);
     };
-    await open('/payments', /\/payments$/, /^Payments$/, 'Every day / Payments');
-    await open('/financials', /\/financials$/, /^Income and expenses$/, 'Money / Income & expenses', false, !phone);
-    await open('/#programs', /\/#programs$/, /PROGRAMS & PRICING/, 'Schedule & programs / Programs & pricing');
-    await open('/#events', /\/#events$/, /CAMPS & CLINICS/, 'Schedule & programs / Camps & events', true);
-    await open('/', /\/$/, /KEEP THE ACADEMY MOVING/, 'Dashboard', true);
+    await open('/payments', /\/payments$/, /^Payments$/, 'Today / Payments');
+    await open('/financials', /\/financials$/, /^Income and expenses$/, 'Academy / Money', false, !phone);
+    // Money's switch (issue #283): Coach pay is a sister page under the same sidebar item.
+    expect(await page.locator('.os-tabs a[href="/coach-pay"]').count() === 1 && await page.getAttribute('.os-tabs a[href="/financials"]', 'aria-current') === 'page', `${tag}: the money switch marks Income & expenses`);
+    await open('/#programs', /\/#programs$/, /PROGRAMS & PRICING/, 'Academy / Programs, schedules & events');
+    // Camps & events has no sidebar item of its own: the section's switch opens it, and the sidebar keeps marking its parent.
+    await page.click('.os-tabs a[href="/#events"]'); await page.waitForURL(/\/#events$/); await waitText(page, 'main h1', /CAMPS & CLINICS/);
+    await page.waitForFunction(() => document.querySelector('.os-nav [aria-current="page"]')?.getAttribute('href') === '/#programs');
+    expect((await shellState(page)).crumb === 'Academy / Programs, schedules & events', `${tag}: /#events keeps its parent in the breadcrumb`);
+    expect(await page.getAttribute('.os-tabs a[href="/#events"]', 'aria-current') === 'page', `${tag}: the section switch marks Camps & events`);
+    await open('/#practice-calendar', /\/#practice-calendar/, /PLAN FROM YOUR CALENDAR/, 'Academy / Calendar & plans', true);
+    // The calendar (issue #283): a month grid of bars on a desktop, the week list on a phone; a day opens its panel.
+    if (phone) { expect(await page.locator('.week .wk-day').count() === 7, 'phones open on the week list'); await page.click('.view-switch button:has-text("Month")'); }
+    await page.waitForSelector('.cal .day:not(.blank)');
+    await page.locator('.cal .day[aria-label*="SWA Intermediate"]').first().click(); await page.waitForSelector('.day-panel');
+    expect(await page.evaluate(() => document.activeElement?.matches('.day-panel h2')), `${tag}: focus moves to the day panel`);
+    await at(page, '.day-panel', /SWA Intermediate[\s\S]*(Add plan|View plan)/);
+    // Escape closes the panel; the close button does too.
+    await page.keyboard.press('Escape'); await page.waitForSelector('.day-panel', {state: 'detached'});
+    await page.locator('.cal .day[aria-label*="SWA Intermediate"]').first().click(); await page.click('.day-panel .close'); await page.waitForSelector('.day-panel', {state: 'detached'});
+    await open('/', /\/$/, /^[A-Z][a-z]+day, [A-Z][a-z]{2} \d{1,2}$/, 'Dashboard', true);
     if (phone) {
       // Escape closes the drawer and puts focus back on Menu.
       await page.click('#swa-os-menu'); await page.waitForFunction(() => document.body.classList.contains('os-open'));
@@ -1313,7 +1352,7 @@ await step('family downloads their data and asks to close the account; owner rec
   expect(data.profile.parentName === 'Pat Example' && data.payments.length >= 3 && !JSON.stringify(data).includes('Riley'), 'export contents');
   await family.click('summary:has-text("Ask to close my account")'); await family.fill('#closeNote', 'Moving away');
   await family.click('#closeForm button'); await waitText(family, '#requestStatus', /The academy will contact you/);
-  await owner.goto(BASE + '/'); await waitText(owner, '#todayTiles', /Data requests/);
+  await owner.goto(BASE + '/'); await waitText(owner, '#needsNow', /1 data request/);
   await owner.goto(BASE + '/data-requests'); await waitText(owner, '#list', /Pat Example[\s\S]*Moving away/);
   await owner.fill('#list textarea', 'Kept payment records; family is staying after all.'); await owner.click('#list form button');
   await waitText(owner, '#list', /Handled/);
@@ -1354,7 +1393,7 @@ await step('owner deletes a test family account; a family with a lesson still to
 await step('each role has a guide linked from its home page; guides are role-only', async () => {
   await family.goto(BASE + '/family'); await family.click('#accountMenu summary'); await family.click('#accountMenu a:has-text("Help")'); await waitText(family, 'h1', /Help for families/);
   await coach.goto(BASE + '/coach'); await coach.click('text=Coach help'); await waitText(coach, 'h1', /Help for coaches/);
-  await owner.goto(BASE + '/'); await owner.click('.toolmore summary'); await owner.click('.toolmore a:has-text("Owner guide")'); await waitText(owner, 'h1', /Owner guide/);
+  await owner.goto(BASE + '/'); await owner.click('.os-fold summary'); await owner.click('.os-nav a[href="/help/owner"]'); await waitText(owner, 'h1', /Owner guide/);
   const fc = await family.request.get(BASE + '/help/coach', {maxRedirects: 0}); expect(fc.status() !== 200, 'family opened the coach guide');
   const fo = await family.request.get(BASE + '/help/owner', {maxRedirects: 0}); expect(fo.status() !== 200, 'family opened the owner guide');
 });
@@ -1392,8 +1431,14 @@ await step('owner sees payments in the books and adds an expense', async () => {
   const before = await api(owner, '/api/financials');
   expect(before.status === 200 && before.body.totals.incomeCents > 0, 'offline payments recorded earlier are income: ' + JSON.stringify(before.body?.totals));
   expect(before.body.lines.filter(l => l.source !== 'owner').every(l => /^(payment|installment|refund):/.test(l.id)), 'automatic lines come from payments');
+  // The form is in a sheet (issue #283): Add an expense in the title row opens it, and it closes once the entry is in.
+  await owner.click('#openEntry'); await owner.waitForSelector('#entrySection:not([hidden])');
   await owner.check('input[name=kind][value=expense]'); await owner.fill('#amount', '1,250.00'); await owner.fill('#category', 'Rent'); await owner.fill('#note', 'Mat room rent');
   await owner.click('#saveEntry'); await waitText(owner, '#status', /Entry added/); await waitText(owner, '#lines', /Mat room rent/);
+  await owner.waitForSelector('#entrySection', {state: 'hidden'});
+  // Editing opens the sheet on the entry; Cancel closes it.
+  await owner.click('#lines [data-edit]'); await owner.waitForSelector('#entrySection:not([hidden])'); await waitText(owner, '#formHeading', /Edit entry/);
+  await owner.click('#stopEditing'); await owner.waitForSelector('#entrySection', {state: 'hidden'});
   const after = await api(owner, '/api/financials');
   expect(after.body.totals.expensesCents === before.body.totals.expensesCents + 125000, 'the expense is counted once in cents: ' + JSON.stringify(after.body.totals));
   expect(after.body.totals.incomeCents === before.body.totals.incomeCents, 'income unchanged');
@@ -1495,6 +1540,28 @@ await step('every button and link on every page responds', async () => {
   console.log(`  swept ${clicks.n} button clicks and ${linkSeen.size} links`);
   if (dead.length) console.log('  buttons with no visible effect:\n   ' + dead.join('\n   '));
   expect(!broken.length, `${broken.length} broken link(s):\n` + broken.join('\n'));
+});
+
+// ---------- Screenshots of the owner's screens (only with a screenshot folder): a desktop and a 2x phone of each ----------
+if (SHOTS) await step('owner screens at 1280 and 390 for the design record', async () => {
+  const screens = {dashboard: '/', calendar: '/#practice-calendar', programs: '/#programs', schedules: '/#schedules', events: '/#events', payments: '/payments', financials: '/financials',
+    messages: '/messages', staff: '/staff', timesheets: `/timesheets?month=${today.slice(0, 7)}`, 'coach-pay': '/coach-pay', cards: '/cards', accounts: '/accounts', waivers: '/waivers', 'consent-forms': '/consent-forms', contracts: '/contracts'};
+  for (const [tag, viewport] of [['1280', {width: 1280, height: 860}], ['390', {width: 390, height: 844}]]) {
+    const page = await as('owner', viewport);
+    for (const [name, path] of Object.entries(screens)) {
+      await page.goto(BASE + path, {waitUntil: 'load'}); await page.waitForTimeout(path === '/' ? 1500 : 700);
+      if (path === '/') { await page.waitForSelector('#tonightBody a.button.primary'); await page.waitForTimeout(400); }
+      await page.screenshot({path: `${SHOTS}/owner-${name}-${tag}.png`, fullPage: true});
+    }
+    // The dashboard's calendar day panel, and Payments with its record panel open.
+    await page.goto(BASE + '/#practice-calendar', {waitUntil: 'load'}); await page.waitForTimeout(700);
+    if (viewport.width < 500) await page.click('.view-switch button:has-text("Month")');
+    await page.locator('.cal .day[aria-label*="SWA"]').first().click(); await page.waitForSelector('.day-panel'); await page.waitForTimeout(300);
+    await page.screenshot({path: `${SHOTS}/owner-calendar-day-panel-${tag}.png`, fullPage: viewport.width >= 500});
+    await page.goto(BASE + '/payments#record', {waitUntil: 'load'}); await page.waitForSelector('#recordSheet:not([hidden])'); await page.waitForTimeout(500);
+    await page.screenshot({path: `${SHOTS}/owner-payments-record-${tag}.png`, fullPage: false});
+    await page.context().close();
+  }
 });
 
 await browser.close(); auth.close(); usaw.close();

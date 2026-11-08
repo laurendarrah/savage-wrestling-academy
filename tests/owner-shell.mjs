@@ -48,7 +48,7 @@ function load(file) {
 }
 const {decorateResponse, applyScriptNonce} = load('lib/page-chrome.ts');
 const {OWNER_SHELL_HEADER, SHELL_BOOT, OWNER_SHELL_HEAD} = load('lib/owner-shell.ts');
-const {currentOwnerHref, OWNER_NAV_ITEMS, OWNER_SHELL_PAGES} = load('lib/owner-nav.ts');
+const {currentOwnerHref, ownerNavTabs, OWNER_NAV_ITEMS, OWNER_SHELL_PAGES} = load('lib/owner-nav.ts');
 
 async function open(path, who = 'owner') {
   as = who;
@@ -61,15 +61,23 @@ async function open(path, who = 'owner') {
 const count = (s, part) => s.split(part).length - 1;
 
 // ---------- Every owner route: one shell, the current item marked ----------
+// Issue #283 folded the sidebar: a page that merged into another item marks that item (the waiver pages mark Cards &
+// documents, scholarships and transfers mark Approvals & scholarships, the coach pages mark Coaches & lessons, coach pay
+// marks Money, curricula and the plan editor mark Calendar & plans) and gets the item's switch under its title row.
 const ownerRoutes = {
   '/': '/', '/roster': '/roster', '/payments': '/payments', '/messages': '/messages', '/cards': '/cards',
-  '/accounts': '/accounts', '/account-setup': '/accounts', '/approvals': '/approvals', '/scholarships': '/scholarships', '/waivers': '/waivers',
-  '/consent-forms': '/consent-forms', '/transfers': '/transfers', '/practice-plans?date=2026-11-09&program=Elementary': '/#practice-calendar',
-  '/curricula': '/curricula', '/website': '/website', '/staff': '/staff', '/coach-openings?email=coach%40example.test': '/staff',
-  '/coach-profile?email=coach%40example.test': '/staff', '/contracts': '/contracts', '/lesson-settings': '/lesson-settings', '/timesheets': '/timesheets',
-  '/financials': '/financials', '/coach-pay': '/coach-pay', '/payment-setup': '/payment-setup', '/backups': '/backups', '/site-health': '/site-health',
+  '/accounts': '/accounts', '/account-setup': '/accounts', '/approvals': '/approvals', '/scholarships': '/approvals', '/waivers': '/cards',
+  '/consent-forms': '/cards', '/transfers': '/approvals', '/practice-plans?date=2026-11-09&program=Elementary': '/#practice-calendar',
+  '/curricula': '/#practice-calendar', '/website': '/website', '/staff': '/staff', '/coach-openings?email=coach%40example.test': '/staff',
+  '/coach-profile?email=coach%40example.test': '/staff', '/contracts': '/cards', '/lesson-settings': '/staff', '/timesheets': '/staff',
+  '/financials': '/financials', '/coach-pay': '/financials', '/payment-setup': '/payment-setup', '/backups': '/backups', '/site-health': '/site-health',
   '/data-requests': '/data-requests', '/security-log': '/security-log', '/help/owner': '/help/owner', '/security': null,
 };
+// The pages that share an item get its switch, with this page marked (the plan editor counts as the calendar, a
+// coach's pages as Coaches); pages without sisters get none.
+const tabsOf = pathname => JSON.parse(JSON.stringify(ownerNavTabs(pathname).map(t => t.href)));
+const markedTab = {'/practice-plans': '/#practice-calendar', '/coach-openings': '/staff', '/coach-profile': '/staff'};
+assert.deepEqual(tabsOf('/waivers'), ['/cards', '/waivers', '/consent-forms', '/contracts']); assert.deepEqual(tabsOf('/payments'), []);
 // Every destination in the navigation that is an owner page is covered (Coach view is the coach home, not an owner page).
 for (const i of OWNER_NAV_ITEMS) if (!i.section && !i.leaves) assert.ok(Object.keys(ownerRoutes).some(r => r.split('?')[0] === i.href), i.href + ' is checked');
 // The pages the browser treats as inside the shell (View Transitions) are exactly the routes that draw it.
@@ -95,8 +103,16 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
   if (!current) assert.match(html, /<a class="os-item" href="\/security" aria-current="page">Account security<\/a>/, 'Account security is marked in the Account menu');
   // The page's own heading opens the main area, with no back link to the dashboard.
   assert.doesNotMatch(html, /← Owner dashboard|← Owner workspace/, path);
-  const sync = count(html, 'id="syncStatus"');
-  assert.equal(sync, path === '/' ? 1 : 0, path + ': the save status only on the dashboard');
+  assert.equal(count(html.match(/<header class="os-top"[\s\S]*?<\/header>/)[0], 'syncStatus'), 0, path + ': the header never holds the save status (the dashboard draws it in its title row, issue #283)');
+  // The switch between sister pages sits under the title row, with this page marked; pages without sisters have none.
+  const pathname = path.split('?')[0], tabs = html.match(/<nav class="os-tabs" aria-label="Pages in this section">([\s\S]*?)<\/nav>/);
+  if (tabsOf(pathname).length) {
+    assert.ok(tabs, path + ': has the switch');
+    assert.deepEqual([...tabs[1].matchAll(/href="([^"]+)"/g)].map(m => m[1]), tabsOf(pathname), path);
+    assert.match(tabs[1], new RegExp(`<a href="${(markedTab[pathname] || pathname).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}" aria-current="page">`), path + ': marked in the switch');
+    assert.equal((tabs[1].match(/aria-current/g) || []).length, 1, path + ': one page marked');
+    assert.ok(html.indexOf('<div class="swa-title">') < html.indexOf('<nav class="os-tabs"'), path + ': the switch follows the title row');
+  } else if (pathname !== '/') assert.equal(tabs, null, path + ': no switch');
   assert.ok(html.indexOf('<nav class="os-nav"') < html.indexOf('<header class="os-top"') && html.indexOf('<header class="os-top"') < html.indexOf('<main'), path + ': sidebar, header, then the page');
   assert.equal(count(html, `<script${nonce ? ` nonce="${nonce}"` : ''}>${SHELL_BOOT}</script>`), 1, path + ': the start-up script runs before the page is drawn');
 }
@@ -111,7 +127,8 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
 // "How this works" (issue #280). No owner page carries the black band.
 {
   const {html} = await open('/payments');
-  assert.match(html, /<main id="swa-main"><div class="swa-title"><div class="swa-title__text"><h1>Payments<\/h1><p class="muted">Every payment, online and offline\.<\/p><\/div><\/div><details class="how"><summary>How this works<\/summary><p>Offline payments count/);
+  // The page's one red button, Record a payment, opens the page beside the title (issue #283); the rest of the intro folds away.
+  assert.match(html, /<main id="swa-main"><div class="swa-title"><div class="swa-title__text"><h1>Payments<\/h1><p class="muted">Every payment, online and offline\.<\/p><\/div><div class="swa-title__actions"><a href="#record" class="button primary" id="openRecord">Record a payment<\/a><\/div><\/div><details class="how"><summary>How this works<\/summary><p>Offline payments count/);
   for (const path of Object.keys(ownerRoutes)) assert.doesNotMatch((await open(path)).html, /class="swa-head"/, path + ' has no band');
   assert.match(html, /href="\/savage\.css"><link rel="stylesheet" href="\/owner-shell\.css">/, 'the shell styles load after savage.css');
 }
@@ -159,13 +176,15 @@ function fakeShell(hash, pathname = '/') {
   const list = (label, items) => {
     const ul = el('ul', label ? {'aria-labelledby': 'g-' + label} : {}, nav);
     if (label) el('p', {id: 'g-' + label, text: label}, nav);
-    for (const [href, text, top] of items) links.push(el('a', {href, text, top}, el('li', {}, ul)));
+    for (const [href, text, top, sections] of items) links.push(el('a', {href, text, top, ...(sections ? {'data-os-sections': sections} : {})}, el('li', {}, ul)));
   };
-  list('', [['/', 'Dashboard', 0]]);
-  list('Schedule & programs', [['/#practice-calendar', 'Practice calendar', 300], ['/#programs', 'Programs & pricing', 900]]);
+  list('Today', [['/', 'Dashboard', 0]]);
+  list('Academy', [['/#practice-calendar', 'Calendar & plans', 300], ['/#programs', 'Programs, schedules & events', 900, '#schedules #events']]);
   links[0].setAttribute('aria-current', 'page');
   el('span', {id: 'swa-os-crumb', text: 'Dashboard'});
-  nav.querySelector = sel => { const m = sel.match(/^a\[href="([^"]+)"\]$/); return m ? links.find(a => a.attrs.href === m[1]) || null : sel === '[aria-current="page"]' ? links.find(a => a.attrs['aria-current']) || null : null; };
+  nav.querySelector = sel => { let m = sel.match(/^a\[href="([^"]+)"\]$/); if (m) return links.find(a => a.attrs.href === m[1]) || null;
+    m = sel.match(/^a\[data-os-sections~="([^"]+)"\]$/); if (m) return links.find(a => (a.attrs['data-os-sections'] || '').split(' ').includes(m[1])) || null;
+    return sel === '[aria-current="page"]' ? links.find(a => a.attrs['aria-current']) || null : null; };
   const store = new Map();
   const on = {};
   const ctx = {document: {getElementById: id => els[id] || null}, location: {pathname, hash}, sessionStorage: {getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, v)}, Number, Math, URL,
@@ -175,9 +194,15 @@ function fakeShell(hash, pathname = '/') {
 {
   const page = fakeShell('#programs');
   vm.runInNewContext(SHELL_BOOT, page.ctx);
-  assert.deepEqual(page.links.map(a => a.attrs['aria-current'] || ''), ['', '', 'page'], '/#programs marks Programs & pricing');
-  assert.equal(page.els['swa-os-crumb'].textContent, 'Schedule & programs / Programs & pricing');
+  assert.deepEqual(page.links.map(a => a.attrs['aria-current'] || ''), ['', '', 'page'], '/#programs marks Programs, schedules & events');
+  assert.equal(page.els['swa-os-crumb'].textContent, 'Academy / Programs, schedules & events');
   assert.equal(page.side.scrollTop, 900 - 200, 'the current item is scrolled into view');
+}
+for (const hash of ['#schedules', '#events?x=1']) { // A section without its own item marks the item it sits under (issue #283).
+  const page = fakeShell(hash);
+  vm.runInNewContext(SHELL_BOOT, page.ctx);
+  assert.deepEqual(page.links.map(a => a.attrs['aria-current'] || ''), ['', '', 'page'], hash + ' marks Programs, schedules & events');
+  assert.equal(page.els['swa-os-crumb'].textContent, 'Academy / Programs, schedules & events');
 }
 {
   const page = fakeShell('#practice-calendar?month=2027-02');
@@ -242,7 +267,7 @@ console.log('Owner shell start-up: deep links mark their section and breadcrumb;
   assert.equal(run('page'), 'Dashboard'); assert.ok(calls.includes('push /'), 'the address becomes / again'); assert.ok(calls.includes('mark') && calls.includes('focus'));
   // A launch checklist item names its section; a page name opens the page.
   calls.length = 0; run("go('Camps & events')"); assert.equal(location.hash, '#events'); assert.equal(run('page'), 'Camps & events');
-  run("go('Income & expenses')"); assert.equal(location.href, '/financials');
+  run("go('Money')"); assert.equal(location.href, '/financials');
   assert.equal(run('closeOwnerTools()'), true, 'Refresh saved data closes the shell’s Account menu');
 }
 console.log('Dashboard deep links: /#programs, /#events, /#schedules and /#practice-calendar?month= open their section, on load and on change');
@@ -326,7 +351,9 @@ function fakeDom({pathname = '/payments', hash = '', flag = null} = {}) {
   p.account.open = true; p.click(p.h1); assert.equal(p.account.open, false);
   // Sign out posts to /api/auth and goes to sign-in.
   p.click(p.signout); await new Promise(r => setTimeout(r, 0));
-  assert.deepEqual(p.fetched.map(([u, o]) => [u, o.method, o.body]), [['/api/auth', 'POST', '{"action":"logout"}']]); assert.equal(p.win.location.href, '/login');
+  assert.deepEqual(p.fetched.filter(([u]) => u === '/api/auth').map(([u, o]) => [u, o.method, o.body]), [['/api/auth', 'POST', '{"action":"logout"}']]); assert.equal(p.win.location.href, '/login');
+  // The count badges (issue #283): payments needing attention and cards waiting, asked for once a minute per tab.
+  assert.deepEqual(p.fetched.filter(([u]) => u !== '/api/auth').map(([u]) => u), ['/api/payments?attention=1', '/api/usaw-cards?show=waiting&limit=1']);
   // Leaving the page remembers where the sidebar was scrolled.
   p.side.scrollTop = 240; p.listeners.win.pagehide(); assert.equal(p.store.get('swa-os-scroll'), '240');
 }
@@ -335,6 +362,18 @@ function fakeDom({pathname = '/payments', hash = '', flag = null} = {}) {
   assert.equal(p.doc.activeElement, p.h1); assert.equal(p.h1.attrs.tabindex, '-1'); assert.equal(p.store.get('swa-os-focus'), undefined, 'only once');
   const q = fakeDom();
   assert.notEqual(q.doc.activeElement, q.h1, 'an ordinary load leaves focus alone');
+}
+{ // The badges are filled from the answers, kept for a minute, and removed again when a count drops to zero.
+  const answers = {'/api/payments?attention=1': {attention: [{}, {}]}, '/api/usaw-cards?show=waiting&limit=1': {totals: {waiting: 3}}};
+  const p = fakeDom();
+  p.win.fetch = async url => ({ok: true, json: async () => answers[url]});
+  p.pay.appendChild = el => { p.pay.children.push(el); el.parent = p.pay; };
+  const span = {tag: 'span', textContent: '', attrs: {}, setAttribute(n, v) { this.attrs[n] = v; }, className: '', children: [], matches: () => false};
+  p.doc.createElement = () => span;
+  vm.runInNewContext(readFileSync('public/owner-shell.js', 'utf8'), {document: p.doc, window: p.win, setTimeout, Array, String, JSON, Promise, Date, Number});
+  await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  assert.equal(span.textContent, '2', 'the Payments badge says 2'); assert.equal(span.attrs['aria-label'], '2 waiting'); assert.equal(span.className, 'os-badge');
+  const kept = JSON.parse(p.store.get('swa-os-badges')); assert.equal(kept.payments, 2); assert.equal(kept.cards, 3);
 }
 { // On the dashboard, the current item and breadcrumb follow the #section.
   const p = fakeDom({pathname: '/', hash: '#programs'});

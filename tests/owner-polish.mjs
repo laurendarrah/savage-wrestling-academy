@@ -75,7 +75,9 @@ for (const href of ['/welcome', '/team', '/calendar']) assert.ok(!ownerSidebar('
 const phone = shellCss.match(/@media \(max-width:900px\)\{([\s\S]*?)\n\}/)[1];
 assert.match(phone, /html body \.os-menu\{display:inline-flex;align-items:center;gap:8px;min-height:44px;/);
 assert.match(phone, /html body \.os-crumbs,html body \.os-family-top\{display:none\}/); assert.match(phone, /html body \.os-family-drawer\{display:block;/);
-assert.match(portal, /\.toollink\{display:flex;align-items:center;min-height:44px;/, 'tool links are full-size targets');
+// Issue #283: the tools card is gone (the sidebar is the map); the dashboard's rows and tiles are full-size targets instead.
+assert.match(portal, /\.todo li\{display:grid;grid-template-columns:28px minmax\(0,1fr\) auto;gap:12px;align-items:center;padding:12px 0;/, 'to-do rows are full-size targets');
+assert.match(portal, /main \.todo button,main \.todo a\.button,[^{]*\{min-height:40px;/, 'row buttons keep a 40px height');
 
 // ---------- No back link inside the owner shell (issue #261; one back link each before, issue #232) ----------
 const ownerPages = ['app/financials/screen.html', 'app/site-health/screen.html', 'app/messages/screen.html', 'app/cards/screen.html', 'app/payments/screen.html',
@@ -127,7 +129,7 @@ const payments = read('app/payments/screen.html');
 assert.match(payments, /<select id="family" aria-label="Family">/, 'the family list has a name');
 assert.match(payments, /<a class="button" id="csv"/);
 // On phones the payments and cards tables stack into cards instead (.stack, public/responsive.css, issue #271).
-for (const [f, label, cls] of [['app/payments/screen.html', 'All payments', 'table stack'], ['app/cards/screen.html', 'Wrestlers and their cards', 'table stack'], ['app/site-health/screen.html', 'Site errors in the last 7 days', 'table'], ['app/coach-pay/screen.html', '${esc(c.coach)}: paid lessons', 'table']])
+for (const [f, label, cls] of [['app/payments/screen.html', 'All payments', 'table'], ['app/cards/screen.html', 'Wrestlers and their cards', 'table stack'], ['app/site-health/screen.html', 'Site errors in the last 7 days', 'table'], ['app/coach-pay/screen.html', '${esc(c.coach)}: paid lessons', 'table']])
   assert.ok(read(f).includes(`<div class="${cls}" role="region" aria-label="${label}" tabindex="0">`), f + ': a wide table scrolls with the keyboard and says what it is');
 const messages = read('app/messages/screen.html');
 assert.match(messages, /html body button\.fam\{font-family:var\(--swa-body\);[^}]*text-transform:none/, 'family names in the body font');

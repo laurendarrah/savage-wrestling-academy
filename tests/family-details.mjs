@@ -115,7 +115,8 @@ const cardOf = (page, email) => '<article ' + page.split('<article ').find(s => 
 const card = cardOf(html, 'bob@example.test');
 assert.match(card, /data-programs="Intermediate Elementary"/);
 assert.match(card, /Riley Two · Grade 10<\/span><span class="pill">SWA Intermediate<\/span><span class="pill alert">Medical note<\/span>/);
-assert.match(card, /Kit Two · Kindergarten<\/span><span class="pill">SWA Development<\/span><\/li>/, '"None" is not a medical note');
+// Each wrestler row ends with its links to approvals and transfers (issue #283).
+assert.match(card, /Kit Two · Kindergarten<\/span><span class="pill">SWA Development<\/span><span class="kid-links"><a href="\/approvals">Approvals<\/a><a href="\/transfers">Transfer<\/a><\/span><\/li>/, '"None" is not a medical note');
 assert.doesNotMatch(card, /Details missing/);
 assert.match(card, /<details class="family-details"><summary>Contact and safety details<\/summary>/);
 assert.doesNotMatch(card, /<details[^>]* open/, 'medical notes are folded away by default');

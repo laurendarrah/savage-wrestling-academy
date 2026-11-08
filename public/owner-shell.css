@@ -62,6 +62,16 @@ html body .os-foot{margin:auto 0 0;padding:24px 12px 0;color:#A6A9B0;font-size:1
 html body .os-foot b{color:#fff}
 html body .os-close{display:none}
 
+/* ---------- The switch between sister pages (issue #283) ----------
+   Under the title row: one segmented row of links for the pages that share a sidebar item (cards and documents,
+   approvals, coaches, money, the dashboard's academy sections). The current page is ink on white. */
+html body .os-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 24px;padding:4px;border-radius:10px;background:#E9EBEF;width:max-content;max-width:100%}
+html body .os-tabs a{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:7px;color:var(--os-muted);font:600 15px/1 var(--os-body);text-decoration:none;letter-spacing:0;text-transform:none;white-space:nowrap}
+html body .os-tabs a:hover{color:var(--os-ink)}
+html body .os-tabs a[aria-current=page]{background:#fff;color:var(--os-ink);box-shadow:0 1px 2px rgba(17,17,19,.1)}
+html body .swa-title+.how+.os-tabs,html body .swa-title+.os-tabs{margin-top:-8px}
+@media (max-width:640px){html body .os-tabs{width:auto;margin-bottom:16px}html body .os-tabs a{flex:1 1 auto;justify-content:center;padding:0 10px;font-size:14px}}
+
 /* ---------- Header ---------- */
 html body .os-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px 22px;min-height:64px;padding:10px 32px;background:#fff;border-bottom:1px solid var(--os-line);
   color:var(--os-ink);font:15px/1.4 var(--os-body)}
@@ -73,8 +83,8 @@ html body .os-family-label{color:var(--os-muted);font-size:13px}
 html body .os-family-top a{display:inline-flex;align-items:center;min-height:44px;color:var(--os-ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 html body .os-family-top a:hover{color:var(--os-red)}
 html body .os-tools{display:flex;flex:0 1 auto;min-width:0;align-items:center;gap:14px;margin-left:auto}
-/* The header is the same height on every owner page, so it keeps still between them: a long save message wraps inside. */
-html body .os-sync{min-width:0;max-width:280px;font-size:13px;font-weight:600;line-height:1.25}
+/* The header is the same height on every owner page, so it keeps still between them (the dashboard's save status is in
+   its title row, issue #283). */
 html body .os-account{flex:none}
 html body .os-account{position:relative;margin:0}
 html body .os-account summary{list-style:none;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 14px;border:1px solid #CDD0D6;border-radius:8px;background:#fff;
@@ -118,10 +128,6 @@ html body .os-panel hr{width:auto;border:0;border-top:1px solid var(--os-line);m
   html body .os-account summary{background:transparent;color:#fff;border-color:rgba(255,255,255,.35);box-shadow:none}
   html body .os-account[open] summary{border-color:#fff}
   html body .os-panel{min-width:min(280px,calc(100vw - 32px))}
-  /* The dashboard's save status sits in a strip under the header, so the header itself keeps one height everywhere. */
-  html body .os-sync{position:absolute;left:0;right:0;top:100%;max-width:none;margin:0;padding:5px 16px;background:#fff;border-bottom:1px solid var(--os-line);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  html body[data-swa-page="/"] .os-work>main{margin-top:28px}
   html body .os-top :focus-visible{outline:3px solid #E25C63;outline-offset:2px}
 }
 @media (max-width:900px) and (prefers-reduced-motion:reduce){html body .os-side,html body.os-open .os-side{transition:none}}

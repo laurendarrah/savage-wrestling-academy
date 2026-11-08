@@ -44,7 +44,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Coach pay from lessons | Totals per coach at the owner's share, CSV (#75) | `/coach-pay` | |
 | Removed coaches | Records kept 3 years, then deleted or anonymized by the daily job (#212) | `lib/coach-retention.ts` | |
 | **Running the academy** | | | |
-| Owner dashboard and shell | Opens on the launch checklist and today's numbers; every tool page keeps the same sidebar and header (#123, #261) | `/`, `app/portal.html`, `lib/owner-nav.ts` | |
+| Owner dashboard and shell | Opens on today: four tiles, tonight's sessions, what needs the owner (the launch checklist's open items among them), what is coming up and this month's money; a four-group sidebar of about fourteen items keeps the same header on every tool page (#123, #261, #283) | `/`, `app/portal.html`, `lib/owner-nav.ts` | |
 | Income and expenses | Card, monthly, refund and offline payments appear on their own; owner adds expenses (#194, #42) | `/financials`, `lib/financials.ts` | Checking against Stripe's totals (#42) |
 | Backups and restore | Owner downloads an encrypted backup of every business record and restores from one; Deploy backs up before each publish; restore drill (#25, #221) | `/backups`, `lib/backup-records.ts`, `pnpm restore:drill` | First backup off the platform (#17), restore drill (#25) |
 | Site health and alerts | Server errors, alerts to the owner (at most hourly), emails that didn't send, test alert (#107, #47, #263) | `/site-health`, `lib/owner-alerts.ts` | Uptime monitor on `/api/health` (#47) |

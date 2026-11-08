@@ -88,22 +88,28 @@ assert.deepEqual([second.start, second.end], [null, null]);
 console.log('Passed: event times are validated and published, holidays match the planner and never change practices, roster times.');
 
 // ---------- Owner workspace ----------
-run("hydratePrograms();save=()=>{};render=()=>{};academyToday=()=>'2026-11-11';page='Calendar';year=2026;month=10;filter='All programs';calendarPlanSummaries['2026-11']={status:'ready',items:[]}");
+run("hydratePrograms();save=()=>{};render=()=>{};academyToday=()=>'2026-11-11';page='Calendar';year=2026;month=10;calView='month';calHidden=new Set();openDay=null;weekStart='';calendarPlanSummaries['2026-11']={status:'ready',items:[]}");
 run(`data.seasons=${JSON.stringify(state.seasons)};data.events=${JSON.stringify(state.events)}`);
 const cal = run('calendar()');
-assert.match(cal, /<div class="day is-today" aria-current="date">11<span class="today-tag">Today<\/span><span class="holiday-tag">Veterans Day<\/span>/, 'today ringed, with its holiday');
-assert.match(cal, /26<span class="holiday-tag">Thanksgiving Day<\/span><button class="event cal-elementary"/, 'Thanksgiving still has its practice');
-// Card lines are blocks; a time keeps "9:00 AM" together and may wrap only after the dash (issue #232).
-assert.match(cal, /Winter camp<\/strong><span class="event-time">9:00\u00a0AM–12:00\u00a0PM<\/span><span>Camp<\/span>/); assert.match(cal, /Winter camp<\/strong><span class="event-time">Time to be announced<\/span><span>Camp<\/span>/);
+assert.match(cal, /<button type="button" class="day is-today" aria-current="date" aria-label="Today, Wednesday, November 11, 2026: SWA Development, Winter camp"[^>]*><span class="n">11<span class="today-tag">Today<\/span><\/span><span class="holiday-tag">Veterans Day<\/span><span class="bar cal-elementary"><i><\/i><\/span><span class="evbar">Winter camp<\/span><\/button>/, 'today ringed, with its holiday, its practice and the camp');
+assert.match(cal, /<span class="n">26<\/span><span class="holiday-tag">Thanksgiving Day<\/span><span class="bar cal-elementary">/, 'Thanksgiving still has its practice');
 assert.doesNotMatch(cal, />\s*No practice\s*</i, 'no "No practice" cards');
 assert.equal((cal.match(/class="day is-today"/g) || []).length, 1, 'one day is today');
-run("filter='Advanced'");
-let phone = run('mobilePracticeCalendar()');
-assert.match(phone, /No practices or events scheduled/, 'still says nothing is scheduled for this filter');
-assert.match(phone, /<section class="mobile-calendar-day is-today" aria-current="date"><h3>Wednesday, November 11<span class="today-tag">Today<\/span><\/h3><span class="holiday-tag">Veterans Day<\/span><\/section>/, 'today and its holiday, nothing else');
-assert.match(phone, /Thursday, November 26<\/h3><span class="holiday-tag">Thanksgiving Day<\/span><\/section>/, 'a holiday with no practice shows just its label');
-run("filter='All programs'"); phone = run('mobilePracticeCalendar()');
-assert.doesNotMatch(phone, /No practices or events scheduled/); assert.match(phone, /<span class="event-time">9:00\u00a0AM–12:00\u00a0PM<\/span><span>Camp<\/span>/);
+// The day panel: a time keeps "9:00 AM" together and may wrap only after the dash (issue #232); a day without times says so.
+run("openCalendarDay('2026-11-11')");
+assert.match(run('calendar()'), /<b>Winter camp<\/b><small><span class="event-time">9:00 AM–12:00 PM<\/span> · Camp<\/small>/);
+run("openCalendarDay('2026-11-12')");
+assert.match(run('calendar()'), /<b>Winter camp<\/b><small><span class="event-time">Time to be announced<\/span> · Camp<\/small>/);
+run('closeCalendarDay()');
+// The week list: a holiday is a label on its day; a day with nothing says so quietly.
+run("calView='week';weekStart='';calHidden=new Set(['Elementary','Intermediate','events'])");
+let phone = run('calendar()');
+assert.match(phone, /<section class="wk-day is-today" aria-current="date"><h3>Wednesday, November 11<span class="today-tag">Today<\/span><\/h3><span class="holiday-tag">Veterans Day<\/span><p class="quiet-line">Nothing scheduled\.<\/p><\/section>/, 'today and its holiday, nothing else');
+run("calHidden=new Set();weekStart='2026-11-23'"); phone = run('calendar()');
+assert.match(phone, /<h3>Thursday, November 26<\/h3><span class="holiday-tag">Thanksgiving Day<\/span><div class="dp-row cal-elementary">/, 'a holiday with its practice');
+run("weekStart=''"); phone = run('calendar()');
+assert.match(phone, /<span class="event-time">9:00 AM–12:00 PM<\/span> · Camp<\/small>/);
+run("calView='month'");
 
 // Camps & events: the editor saves a time for each day, both or neither; the card lists them.
 run('data.events=[]');

@@ -3,7 +3,7 @@
 // own copy. "/" sends each person to their own home (owner dashboard, coach home, family home or the welcome page).
 // Left alone: printable documents and pages shown inside other pages. Owner pages get the owner shell instead of the
 // top bar (issue #261, lib/owner-shell.ts), including the owner dashboard at "/".
-import {OWNER_SHELL_HEADER, OWNER_SHELL_HEAD, wrapOwnerBody} from './owner-shell';
+import {OWNER_SHELL_HEADER, OWNER_SHELL_HEAD, ownerTabs, wrapOwnerBody} from './owner-shell';
 const SKIP = new Set(['/', '/scholarship-agreement', '/waiver-copy']);
 const HOMES = new Set(['/family', '/coach']);
 
@@ -44,8 +44,10 @@ const HAND_WRITTEN_HEAD = /<div class="swa-head">([\s\S]*?)<\/div>/;
 // paragraph again, so the whole intro goes behind the disclosure and the page opens with its controls.
 export const INTRO_MAX = 140;
 
-export function pageHead(html: string, pathname = '', opts: {band?: boolean} = {}) {
+export function pageHead(html: string, pathname = '', opts: {band?: boolean; after?: string} = {}) {
   const band = opts.band ?? bandPage(pathname);
+  // What follows the title row (the owner shell's switch between sister pages, issue #283).
+  const titleRow = (opening: string, page: string) => titleRow_(opening, page) + (opts.after ?? '');
   if (/class="[^"]*\b(?:fam-hero|hero)\b/.test(html)) return html;
   if (/class="[^"]*\bswa-head\b/.test(html)) {
     // A page that writes the band itself (Choose training) keeps it only when it is public; otherwise it becomes the
@@ -76,7 +78,8 @@ export function pageHead(html: string, pathname = '', opts: {band?: boolean} = {
 // longer than INTRO_MAX goes behind it too, whole. An intro a page's script fills in (its id appears in the page
 // again) is left whole, since the script replaces it anyway, and so is the intro of a page that already folds its
 // explanation into its own details.howto (USA Wrestling cards).
-export function titleRow(opening: string, page = '') {
+export function titleRow(opening: string, page = '') { return titleRow_(opening, page); }
+function titleRow_(opening: string, page = '') {
   const m = opening.match(/^([\s\S]*?<\/h1>)([\s\S]*)$/);
   if (!m) return '<div class="swa-title"><div class="swa-title__text">' + opening + '</div></div>';
   const head = m[1];
@@ -119,7 +122,7 @@ export function decoratePage(html: string, pathname: string, ownerShell = false)
   // data-swa-page lets the shared stylesheet give a page its own treatment (the sign-in page, for one).
   const tagged = body ? body[0].replace(/^<body/i, `<body data-swa-page="${pathname.replace(/[^\w/-]/g, '')}"${ownerShell ? ' data-swa-shell="owner"' : ''}`) : '';
   // Inside the owner shell every page opens with the title row, the owner guide under /help included.
-  if (ownerShell && body) return wrapOwnerBody(dashboard ? out.replace(body[0], tagged) : pageHead(out.replace(body[0], tagged), pathname, {band: false}), pathname);
+  if (ownerShell && body) return wrapOwnerBody(dashboard ? out.replace(body[0], tagged) : pageHead(out.replace(body[0], tagged), pathname, {band: false, after: ownerTabs(pathname)}), pathname);
   out = body ? out.replace(body[0], tagged + topBar(pathname)) : topBar(pathname) + out;
   return pageHead(out, pathname);
 }

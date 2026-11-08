@@ -543,12 +543,12 @@
   "length": 2911
  },
  "events.active": {
-  "sha256": "447964df99d0bf0d1fdcd05669a90f5530d324095822d9d9e6882882566ff56f",
-  "length": 2629
+  "sha256": "b650998e9b6d0b1b16971e0535b7be57827a76892eca148a206f37f267aec8ee",
+  "length": 2717
  },
  "events.archived": {
-  "sha256": "2b27693bd1f6b2c2e3e989f04dcf64d46cc1df7d11596f7493b177ab88e1f651",
-  "length": 2008
+  "sha256": "d351ea7d8c653202858d40fd5c020dc5c74c988455b6ef0ffe8a93c5d71b4f70",
+  "length": 2096
  },
  "extraPracticeCalendar": {
   "sha256": "c6a47145109da426076acbe98536180c9940e13b1a12abc7518a0bd9dfa257dd",
@@ -739,12 +739,12 @@
   "10000.00"
  ],
  "ownerPrograms": {
-  "sha256": "0f9cf970da4b49feabca893d2a34effc2e57925a3fef5b962519cc4bd281f94d",
-  "length": 6394
+  "sha256": "068d000d91b6962a0d1cdf8fe0974438f6e3cdfdcb10a158c3e739590c2bc203",
+  "length": 6482
  },
  "ownerPrograms.unpublished": {
-  "sha256": "1ca3365f63b3942c1cfd0cda8e107286079ebd7c8b190a5ae24c1ef9a1f2bc44",
-  "length": 6778
+  "sha256": "4ab77e2920396df0cafed9595d5b471b03e2b11e4e0889344548d9f3e5715a00",
+  "length": 6866
  },
  "saveProgram.ok": {
   "sha256": "6fcb2e7b86ecdcd162a09cbbdc2ad00d169ad3ca9e78562268d1a1ea8613d19b",
@@ -862,98 +862,101 @@
   "saves": 1
  },
  "calendar.2026-11.All programs": {
-  "sha256": "0078cb48e051c43cb103eb4e945cc1588804ff3a96d1ee4ec3d8d674c37131b0",
-  "length": 22572
+  "sha256": "dbad6ceef4736e506a165f68ea5aef798b1d31083328dc5d63b2a1d6f26b433a",
+  "length": 12189
  },
  "mobile.2026-11.All programs": {
-  "sha256": "1e95735cb4878f1920571bd911fa69d0da49cf0f8f778bb0413ac06f9bd0fcc8",
-  "length": 10826
+  "sha256": "2ca15935248ce569efb968a95e2a8ce2a0206b7f09bd78b5adc1cafd47bf5437",
+  "length": 3442
  },
  "calendar.2026-11.Advanced": {
-  "sha256": "5edc8b9b3327420dc5068a13de7e5777a9e941d01da7b2f3d48e7837869ccf29",
-  "length": 11351
+  "sha256": "f00381ee410f6bfe33b2934f4ad2c097f3aa0553e5e08f805c4c3cfdf950f824",
+  "length": 10636
  },
  "mobile.2026-11.Advanced": {
-  "sha256": "77dd7c6480765fd09314b60801240b133e577f73c625d47c09b78b1225cd724f",
-  "length": 4365
+  "sha256": "a6cf32528f7f8e2fa5b01cb55973fe962a1a1b63f91ce66729fe1d8bbd782eb9",
+  "length": 2023
  },
  "calendar.2026-11.Camps, clinics & events": {
-  "sha256": "2c8f936be69be9a4c86cb8a3e6db862d9ddd804d31074436a5db58e1b08a532e",
-  "length": 6483
+  "sha256": "2319d92bd4ead19bd56f9ba1dd8f58d262434c91ae0bbcd58640904adee97d98",
+  "length": 10010
  },
  "mobile.2026-11.Camps, clinics & events": {
-  "sha256": "e5a873c6d23913470b7799880937a23da79f36863c251b8929f55a2fa7ba4c8b",
-  "length": 1357
+  "sha256": "f88d37ed47160ef3326b87a181140456fc3a00efb402f2fbd61b69d307f3285a",
+  "length": 1493
  },
  "calendar.2026-12.All programs": {
-  "sha256": "ab4495a9e2e308be9e54bf443091b2c583036fae9d0e2d7fecff1b58ec7e0297",
-  "length": 18599
+  "sha256": "6a1513a446a20eb515c1c4b429fd9d5f908509493bd6625b0ba39780b2e3db46",
+  "length": 11418
  },
  "mobile.2026-12.All programs": {
-  "sha256": "e1cdf6c003720fb3cbd5c8c72fe5118dcf7bec13fc1f748ef7242fdd1b58d5a2",
-  "length": 8762
+  "sha256": "b6b6d840e57a05bc61ae336c6ebe6d2eec98b821571cf91a7a1cb1591bd0c9b3",
+  "length": 3292
  },
  "calendar.2026-12.Advanced": {
-  "sha256": "9841a7669e4bdd3e715161c11ad14f70e71381f386c76c9ccb09bcd8c9c74488",
-  "length": 10528
+  "sha256": "3660a611cdc1a2ac44953a8059fccd92873578ca37f75ee70bdef9efd2012f2e",
+  "length": 10342
  },
  "mobile.2026-12.Advanced": {
-  "sha256": "1aaf51cf586eb7ce950e20c74d574844afaf183a999bec16d2c65f8bed5342df",
-  "length": 4016
+  "sha256": "3a9b0a834137eae153af12f1581c6698dc54e7d5d64b4e3c5a90129de56069bf",
+  "length": 1912
  },
  "calendar.2026-12.Camps, clinics & events": {
-  "sha256": "d5ebbc6676920411459cc33e35fb0cf7c8ab6fbb904acdcf1bc0d100a4f4b57f",
-  "length": 6226
+  "sha256": "099a2d6b9e874088133e6ecedf791a56fa7a262113a102b0b8b7ef477962815b",
+  "length": 9894
  },
  "mobile.2026-12.Camps, clinics & events": {
-  "sha256": "6e4c5f2e190a513307ca55e439a5cf76ecc30dbb8dca9e0e3d43222a11528bed",
-  "length": 1353
+  "sha256": "15c7a0ec2ffe0dcdbd07aa00594a3949ab502657bcc4422ec5e4a3656f416c13",
+  "length": 1373
  },
  "calendar.2027-2.All programs": {
-  "sha256": "5d9dc6b161ab7c7af40146d691d646c9213ae41a24e521b61f5904d5118fc8b5",
-  "length": 14618
+  "sha256": "e13e25e57ccdb1fa3f5892fad48abda4e8f504093b8b030a37584f7c75176110",
+  "length": 10274
  },
  "mobile.2027-2.All programs": {
-  "sha256": "a7a270f2164e944da2012bb07e5d1fb05b97de5325853a88b13ef5ee0a183451",
-  "length": 6549
+  "sha256": "dce9c546836034e4d424bc02044db1e73ac085798836b368d9029735e47d7070",
+  "length": 2453
  },
  "calendar.2027-2.Advanced": {
-  "sha256": "4d3ec44273eb80581a68b9db1413eeae4ad2e60952c5c067c93eebba9f9a874f",
-  "length": 10410
+  "sha256": "0867d6fd84b91e811c0c50abd9d438ab3cb4ceb9ba83beff9a9b5b8d81b74ad1",
+  "length": 9749
  },
  "mobile.2027-2.Advanced": {
-  "sha256": "5ad3a95d7fb9f114852000c30c0701adedb2506aa7b92034e1ef55d47e74544d",
-  "length": 4025
+  "sha256": "58cbaf30fcc443a1b76ac40f7d668776909ab3368bc8e7989cfff6cddeaf2d0d",
+  "length": 1910
  },
  "calendar.2027-2.Camps, clinics & events": {
-  "sha256": "9cf154ec3ed557d6f7b79a54f4f85d96f509f8e62cbd2dd81b9d57c7385e4995",
-  "length": 4343
+  "sha256": "81b37a1fd44c59ed7728327312318edc271e5aa94d7eea452d33b0bbc29fd645",
+  "length": 9029
  },
  "mobile.2027-2.Camps, clinics & events": {
-  "sha256": "5d3f950e3975f4f1f91f214ac2a4cf7bbffa79df950f684d4e2e00bdd0da9768",
-  "length": 378
+  "sha256": "5c7d6dae1ebecb2cd76e94476b4035fe57954a485a56cb7a7e8f231e28a7983b",
+  "length": 1122
  },
  "calendar.2027-3.All programs": {
-  "sha256": "2d1e21b526e062a2b04b003e1dc51da6d95cfb0ac7cce02cfef9f237dcafc7a6",
-  "length": 13112
+  "sha256": "0bf6ca1064a22029b7710f8b080a5690fd761b3682ca6c3ad5f3ff0acbe3615d",
+  "length": 10543
  },
  "mobile.2027-3.All programs": {
-  "sha256": "d9da3ce339f60feaef183650d2558ff9e2491a39ab32441f1ee13b047ee94a76",
-  "length": 5429
+  "sha256": "cb4090e04af81a547ad611101d36a51a3e56077bf934c88e6a0f815971353789",
+  "length": 2208
  },
  "calendar.2027-3.Advanced": {
-  "sha256": "bdd4d359dd43591e721c0572538a5b5342c187d7d61c91f24386769c4946363a",
-  "length": 10777
+  "sha256": "d3373a398dd896aa61ab113012101aa9c45b2c78563caa5b5be30256c0e548ac",
+  "length": 10201
  },
  "mobile.2027-3.Advanced": {
-  "sha256": "00c213bc9c653460371cab2407ab6c656925dc973fe4a35b82d994f86980929a",
-  "length": 4169
+  "sha256": "2a945ee34694d08c7af3fcddd2576ee20ad31d96b16d2020155ea30f12eb0860",
+  "length": 1886
  },
  "calendar.2027-3.Camps, clinics & events": {
-  "sha256": "0d87f8e09896617a44640a7b7a2a2250904f039a7aaa6bab1af7ad46faf0ace1",
-  "length": 4232
+  "sha256": "8457e9c5d754876d694ae77375d934db85960ca193c1ccfc5d5bb42822defae5",
+  "length": 9421
  },
- "mobile.2027-3.Camps, clinics & events": "<div class=\"mobile-calendar\" aria-label=\"Scheduled practices and events this month\"><section class=\"mobile-calendar-day\"><h3>No practices or events scheduled.</h3><p>No practices or events match this month and filter.</p></section></div>",
+ "mobile.2027-3.Camps, clinics & events": {
+  "sha256": "bcb3e81c1a8c85e6b1c24d3828db7eb6647d7f0cc7cf25804db6e5e531315e1e",
+  "length": 1098
+ },
  "calendarPlanLabel": [
   "Plan shared ✓",
   "Draft plan",
@@ -976,11 +979,11 @@
   "length": 7357
  },
  "schedules": {
-  "sha256": "973dcaa189b383984cfb75f8fcc46f995228aaca57d4f0f8ca1c5a81e548ba0f",
-  "length": 23371
+  "sha256": "60ee47920a1d33979ecd5c35f746f5a1587a2583dbf26756082ab0734684069e",
+  "length": 23459
  },
  "dashboard": {
-  "sha256": "2581f43a4d093876fef8d3bca964d8d9c382dcea775ad6d04a4b601e374aa571",
-  "length": 3588
+  "sha256": "1cf156062b14f256a59b01bb4a13e6db05e0f0617d61d0d671338e59e8a82c58",
+  "length": 1503
  }
 }
