@@ -224,8 +224,8 @@ await step('a monthly payment for a different amount counts for what Stripe coll
   expect(sql("SELECT kind FROM notifications WHERE kind='installment_mismatch_owner'").length === 1, 'the owner is told');
   const books = await api(owner, '/api/financials');
   expect(books.body.lines.some(l => l.id === 'installment:' + `evt_rehearsal_${evt}` && l.amountCents === 15000), 'the books show $150.00 for payment 3');
-  await owner.goto(BASE + '/payments'); await waitText(owner, '#attentionSummary', /^$|needs attention/);
-  expect((await owner.textContent('#tAttention')).trim() === '0', 'paid up again: ' + await owner.textContent('#tAttention'));
+  await owner.goto(BASE + '/payments'); await waitText(owner, '#tAttention', /^0$/);
+  expect(await owner.isHidden('#attention'), 'paid up again: the attention list is gone');
   await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /Monthly payment for a different amount[\s\S]*Stripe collected \$150\.00, the price is \$200\.00/);
 });
 // Issue #271 (audit O3): every online checkout and Stripe's last word about it, in plain words, on /payments.

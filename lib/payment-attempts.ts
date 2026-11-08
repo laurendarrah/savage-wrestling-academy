@@ -23,7 +23,7 @@ export async function paymentAttempts(opts: {q?: unknown; days?: number; limit?:
       json_extract(f.payload,'$.parentName') AS parent,
       e.received_at AS event_at,e.type AS event_type,e.outcome
     FROM orders o LEFT JOIN family_accounts f ON f.user_id=o.user_id
-    LEFT JOIN stripe_events e ON e.id=(SELECT id FROM stripe_events WHERE order_id=o.id ORDER BY received_at DESC, id DESC LIMIT 1)
+    LEFT JOIN stripe_events e ON e.id=(SELECT id FROM stripe_events WHERE order_id=o.id ORDER BY received_at DESC, rowid DESC LIMIT 1)
     WHERE o.source='stripe' AND o.created_at>=? ${q ? "AND (lower(o.wrestler_name) LIKE ? OR lower(o.email) LIKE ? OR lower(COALESCE(json_extract(f.payload,'$.parentName'),'')) LIKE ?)" : ''}
     ORDER BY o.created_at DESC, o.id DESC LIMIT ?`).bind(...[since, ...(q ? [`%${q}%`, `%${q}%`, `%${q}%`] : []), limit + 1]).all<any>()).results;
   const attempts = rows.slice(0, limit).map(r => ({id: r.id, at: r.created_at, status: r.status, state: attemptState(r.outcome, r.status), kind: r.kind, item: r.item_label, amountCents: r.amount_cents, livemode: !!r.livemode,

@@ -22,11 +22,13 @@ const family = (...wrestlers) => sqlite.prepare('INSERT OR REPLACE INTO family_a
 family({id: 'k1', name: 'Kai Kim', grade: '8', ...card});
 const all = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: '18:00', end: '19:30'}));
 sqlite.prepare("INSERT OR REPLACE INTO academy_state(id,payload,revision,updated_by,updated_at) VALUES ('academy',?,1,'owner',?)").run(JSON.stringify({programNamingVersion: 2,
-  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}], seasons: [{program: 'Intermediate', start: ny(-30), end: ny(60), weekly: all, excludedDates: []}]}), now);
+  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}], seasons: [{program: 'Intermediate', start: ny(-30), end: ny(60), weekly: all, excludedDates: []}],
+  // An extra practice to book: a member's walk-in is covered by the membership below (issue #275), so it is not a booking.
+  extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [ny(3)], enabled: true, start: '17:00', end: '18:00', memberCents: 1000, nonMemberCents: 2000}]}), now);
 // A membership, so the roster lists Kai today.
 sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end)
   VALUES ('m-kai','kim-uuid','kim@example.test','k1','Kai Kim','monthly','Intermediate','Intermediate','label','[]',20000,0,20000,'usd','{}','{}','paid','m-kai',0,?,?,?,?,?)`).run(now, now, now, ny(-10), ny(300));
-const book = (id, name) => quotes.quoteMembership('kim-uuid', {wrestlerId: id, program: 'Intermediate', plan: 'walkin', date: ny(1), practiceId: `Intermediate:${ny(1)}:18:00`}).then(q => q.ok ? null : q.error);
+const book = id => quotes.quoteBooking('kim-uuid', {type: 'live', wrestlerId: id, id: 'fnl', date: ny(3)}).then(q => q.ok ? null : q.error);
 const version = () => sqlite.prepare("SELECT id FROM waiver_versions WHERE kind='waiver' AND retired_at IS NULL").get()?.id;
 const sign = (wrestlerId, extra = {}) => post(familyApi, '/api/waiver', {versionId: version(), wrestlerId, signer: 'Robin Kim', accepted: true, electronicConsent: true, signature: {method: 'drawn', strokes}, ...extra}, 'kim');
 const ownerRow = async id => (await get(ownerApi, '/api/waivers?show=all', 'owner')).body.wrestlers.find(w => w.wrestlerId === id);
