@@ -123,12 +123,14 @@ const toastText = (page, re) => waitText(page, '#swa-toast', re);
 // latest load has drawn it. Text from the first load can match before that, and the reload then redraws the list under
 // whatever the walkthrough opened or typed.
 const showAll = async page => { await page.selectOption('#show', 'all'); await page.waitForSelector('#rows:not([aria-busy])', {state: 'attached'}); };
-// /payments has loaded when the payments table is filled and Check price is on. Earlier, the page is still loading
-// and clears the status line when it finishes, which could hide "Payment recorded". The record form lives in a side
-// panel (issue #283): Record a payment in the title row opens it.
+// /payments has loaded when the payments table is filled, Check price is on and the page's start-up has drawn its last
+// list, the payment attempts: right after that it clears the status line, which would hide a "Payment recorded" or
+// "Cash received" written in the meantime (#287). The record form lives in a side panel (issue #283): Record a payment
+// in the title row opens it.
 const openPayments = async page => {
   await page.goto(BASE + '/payments');
-  await page.waitForFunction(() => !/Loading/.test(document.querySelector('#rows')?.textContent ?? 'Loading') && !document.querySelector('#preview')?.disabled);
+  await page.waitForFunction(() => !/Loading/.test(document.querySelector('#rows')?.textContent ?? 'Loading') && !document.querySelector('#preview')?.disabled
+    && !/Loading/.test(document.querySelector('#attemptsSummary')?.textContent ?? 'Loading'));
 };
 const openRecord = async page => {
   await page.click('#openRecord'); await page.waitForSelector('#recordSheet:not([hidden])');
