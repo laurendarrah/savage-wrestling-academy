@@ -191,7 +191,9 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(html, /<main>\n<div class="swa-head"><p class="eyebrow">Savage Wrestling Academy<\/p><h1>Choose training<\/h1><p class="lede">/);
   assert.doesNotMatch(html, /reg-hero/, 'no page-only header band');
   const {pageHead} = load('lib/page-chrome.ts');
-  assert.equal((pageHead(html).match(/class="swa-head"/g) || []).length, 1, 'the Worker leaves the band as it is');
+  // Signed in, the Worker turns the page's own band into the title row (issue #280); nothing else is wrapped.
+  const served = pageHead(html, '/register');
+  assert.equal((served.match(/class="swa-title"/g) || []).length, 1); assert.equal((served.match(/class="swa-head"/g) || []).length, 0);
   assert.match(style(html), /main\{max-width:var\(--swa-width-narrow\)/);
 }
 

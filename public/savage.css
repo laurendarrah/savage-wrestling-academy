@@ -1,8 +1,20 @@
-/* Savage Wrestling Academy: one look for every page (issue #129).
+/* Savage Wrestling Academy: one look for every page (issue #129; the system from the redesign's Phase 1, issue #280).
    Loaded after each page's own styles by the Worker (lib/page-chrome.ts), so it evens out fonts, colors, buttons,
    forms, cards and spacing without touching each page. Brand: black, white and the logo's silver; red is the pop
-   (the main action on a page, events, and anything that needs attention). Fonts: Barlow and Barlow Condensed,
-   self-hosted under the SIL Open Font License (fonts/OFL-LICENSE.txt). */
+   (the one main action on a page, events, and anything happening now). Fonts: Barlow and Barlow Condensed,
+   self-hosted under the SIL Open Font License (fonts/OFL-LICENSE.txt).
+
+   The system, in one place:
+   - Type: one scale, ratio 1.2 from 15px (--swa-t-13 … --swa-t-50). Barlow Condensed caps are for h1, big figures
+     (.swa-figure, .tile b) and the primary button only. h2 is Barlow 700 sentence case; section labels (.eyebrow,
+     .swa-label) are 13px letter-spaced caps; body 17, secondary 15, captions 13.
+   - Space: 4/8/12/16/24/32/48 (--swa-s-4 … --swa-s-48). Inside a card is smaller than between cards.
+   - Buttons: primary (.primary, red), secondary (plain button and .button, white), quiet (.quiet, underlined text),
+     danger (.danger, red outline). Heights share one scale with inputs: 36 (.sm), 48, 56 (.big).
+   - Components: .card (and .card.dark), .pill with ok/warn/bad/neutral tints, .swa-table, .empty, #swa-toast
+     (public/toast.js, swaToast(text)), details > summary with a chevron, .skeleton.
+   - Chrome: the public pages keep the black band (.swa-head); signed-in pages get a title row (.swa-title) with the
+     intro's first sentence and the rest behind "How this works" (details.how). */
 @font-face{font-family:Barlow;src:url(/fonts/barlow-latin-400-normal.woff2) format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:Barlow;src:url(/fonts/barlow-latin-600-normal.woff2) format('woff2');font-weight:500 600;font-style:normal;font-display:swap}
 @font-face{font-family:Barlow;src:url(/fonts/barlow-latin-700-normal.woff2) format('woff2');font-weight:700 900;font-style:normal;font-display:swap}
@@ -26,39 +38,84 @@
   --swa-warn-bg:#FFF7E6; --swa-warn-line:#F0D49C; --swa-warn-ink:#5C3B00;
   /* Content widths for a page's main column: wide for lists and dashboards, narrow for reading and forms */
   --swa-width-wide:1000px; --swa-width-narrow:760px;
+
+  /* ---- Phase 1 additions (issue #280) ---- */
+  /* Surfaces: the page ground, white cards, and a second, quieter surface inside a card */
+  --swa-surface:#FFFFFF; --swa-surface-2:#F8F9FA; --swa-muted-2:#80848E;
+  /* State tints. Red is the brand pop; the soft red is for a flagged row or a danger button's hover. */
+  --swa-red-soft:#FBEDEE; --swa-bad:#8E1A22; --swa-bad-bg:#FDECEC; --swa-warn:#8A5A00;
+  /* The dark set: the wrestler view, the entry pass page, the owner sidebar and the "now" cards. Depth comes from
+     lighter layers (0 furthest back), text is off-white, lines are translucent white. */
+  --swa-dark-0:#0D0D0F; --swa-dark-1:#17181B; --swa-dark-2:#222327; --swa-dark-3:#2C2D32;
+  --swa-dark-line:rgba(255,255,255,.08); --swa-dark-text:#ECEDEF; --swa-dark-muted:#A6A9B0;
+  /* Type scale: ratio 1.2 from 15px */
+  --swa-t-13:13px; --swa-t-15:15px; --swa-t-17:17px; --swa-t-20:20px; --swa-t-24:24px; --swa-t-29:29px; --swa-t-35:35px; --swa-t-42:42px; --swa-t-50:50px;
+  /* Space scale */
+  --swa-s-4:4px; --swa-s-8:8px; --swa-s-12:12px; --swa-s-16:16px; --swa-s-24:24px; --swa-s-32:32px; --swa-s-48:48px;
+  /* Shape: one card radius, one control radius, round chips; nested things use the smaller radius */
+  --swa-r-card:12px; --swa-r-control:8px; --swa-r-chip:999px;
+  --swa-shadow-sm:0 1px 2px rgba(17,17,19,.06);
+  /* Control heights: buttons and fields share them */
+  --swa-h-small:36px; --swa-h-control:48px; --swa-h-big:56px;
 }
 
-/* The page ground. Zero specificity, so a page that sets its own body background (the dark wrestler page) keeps it. */
+/* The page ground. Zero specificity, so a page that sets its own body background keeps it. */
 :where(body){background:var(--swa-ground)}
 
-/* Premium pass (issue #146): tighter condensed headings, soft cards, athletic buttons, textured black bands. */
+/* ---------- Type ---------- */
 html{overflow-x:clip}
-html body{font-family:var(--swa-body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-html body h1{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:-.4px;line-height:.98;font-size:clamp(38px,7.4vw,64px);text-wrap:balance}
-html body h2{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:.1px;line-height:1.04;font-size:clamp(23px,4.2vw,30px);text-wrap:balance}
-html body h3{font-family:var(--swa-body);font-weight:700;line-height:1.25;letter-spacing:-.1px}
+html body{font-family:var(--swa-body);font-size:var(--swa-t-17);line-height:1.55;color:var(--swa-ink);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+html body h1{font-family:var(--swa-display);font-weight:800;text-transform:uppercase;letter-spacing:-.3px;line-height:1;font-size:var(--swa-t-35);text-wrap:balance}
+html body h2{font-family:var(--swa-body);font-weight:700;text-transform:none;letter-spacing:-.2px;line-height:1.2;font-size:var(--swa-t-20);text-wrap:balance}
+html body h3{font-family:var(--swa-body);font-weight:700;line-height:1.3;letter-spacing:-.1px;font-size:var(--swa-t-17)}
+/* The same h2 with one more point of weight, so a page's own "html body .step-head h2" cannot bring condensed caps
+   back (Choose training's step heads use a span.h2 inside a legend as well). */
+html body[data-swa-page] h2,html body[data-swa-page] .step-head .h2{font-family:var(--swa-body);font-weight:700;text-transform:none;letter-spacing:-.2px;line-height:1.2;font-size:var(--swa-t-20)}
+@media (min-width:900px){html body h1{font-size:var(--swa-t-42)}html body h2,html body[data-swa-page] h2,html body[data-swa-page] .step-head .h2{font-size:var(--swa-t-24)}}
 html body .muted{color:var(--swa-muted)}
+html body .swa-secondary{font-size:var(--swa-t-15)}
+html body .swa-caption{font-size:var(--swa-t-13);color:var(--swa-muted)}
 html body a{color:var(--swa-red);text-underline-offset:3px;text-decoration-thickness:1px}
 html body a:hover{color:var(--swa-red-dark)}
 html body :focus-visible{outline:3px solid var(--swa-red);outline-offset:2px}
-html body .eyebrow{font-family:var(--swa-body);font-weight:700;font-size:13px;letter-spacing:2.4px;text-transform:uppercase}
+/* Section labels: small letter-spaced caps in Barlow, the only caps outside h1, figures and the primary button */
+html body .eyebrow,html body .swa-label{font-family:var(--swa-body);font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px;text-transform:uppercase;line-height:1.3}
+html body .swa-label{color:var(--swa-muted);margin:0 0 var(--swa-s-12)}
+/* Big figures: the time of the next session, a tile's number, a count at the mat */
+html body .swa-figure{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-42);line-height:1;letter-spacing:-.3px;text-transform:uppercase;font-variant-numeric:tabular-nums}
+@media (min-width:900px){html body .swa-figure{font-size:var(--swa-t-50)}}
 html body table{border-collapse:collapse}
-html body th{font-family:var(--swa-body);font-weight:700;letter-spacing:1.4px;text-transform:uppercase;font-size:12px;color:var(--swa-muted);border-bottom:1px solid var(--swa-line)}
-html body td{border-bottom:1px solid #EEF0F2}
+html body th{font-family:var(--swa-body);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;font-size:12px;color:var(--swa-muted);border-bottom:1px solid var(--swa-line)}
+html body td{border-bottom:1px solid var(--swa-line)}
 html body td,html body th{font-variant-numeric:tabular-nums}
 html body ::selection{background:rgba(196,34,44,.18)}
 
-/* Cards: white, fine edge, soft shadow, more room */
-html body main>section,html body main section.card,html body .card{background:var(--swa-white);border:1px solid var(--swa-hair);border-radius:12px;box-shadow:var(--swa-shadow)}
-html body main>section,html body main>details.card{padding:clamp(18px,3.4vw,30px)}
+/* ---------- Cards: white, hairline, 12px radius, 16px inside on a phone and 24px on a desktop ---------- */
+html body main>section,html body main section.card,html body .card{background:var(--swa-surface);border:1px solid var(--swa-hair);border-radius:var(--swa-r-card);box-shadow:var(--swa-shadow)}
+html body main>section,html body main>details.card,html body .card{padding:var(--swa-s-16)}
+@media (min-width:900px){html body main>section,html body main>details.card,html body .card{padding:var(--swa-s-24)}}
 html body main>section.plain{background:none;border:0;box-shadow:none;padding-left:0;padding-right:0}
+/* The dark card: what is happening now (next up for a family, tonight for the owner) */
+html body .card.dark,html body main>section.dark{background:linear-gradient(180deg,var(--swa-dark-1),var(--swa-dark-0));color:var(--swa-dark-text);border-color:var(--swa-dark-line);box-shadow:none}
+html body .card.dark h2,html body .card.dark h3,html body .card.dark .swa-figure,html body main>section.dark h2{color:#FFFFFF}
+html body .card.dark .muted,html body .card.dark .swa-label,html body .card.dark .eyebrow,html body main>section.dark .muted{color:var(--swa-dark-muted)}
+html body .card.dark a,html body main>section.dark a{color:#FFFFFF}
+html body .card.dark button:not(.primary),html body .card.dark .button:not(.primary),html body main>section.dark button:not(.primary),html body main>section.dark .button:not(.primary){background:transparent;color:#FFFFFF;border-color:rgba(255,255,255,.3);box-shadow:none}
 
-/* Buttons: condensed uppercase labels; plain ones are quiet, the page's main action is red. */
-html body button,html body .button,html body a.button{font-family:var(--swa-display);font-weight:700;font-size:17px;letter-spacing:.7px;text-transform:uppercase;min-height:46px;border-radius:8px;border:1px solid #CDD0D6;background:var(--swa-white);color:var(--swa-ink);cursor:pointer;box-shadow:0 1px 2px rgba(17,17,19,.06);transition:border-color .15s,background-color .15s,box-shadow .15s,transform .05s}
+/* ---------- Buttons: three, and danger ----------
+   Secondary is the default: white, hairline, Barlow 17/600 sentence case. The page's one main action is .primary:
+   red, condensed caps. .quiet is underlined text. .danger is the red outline. .sm and .big change the height. */
+html body button,html body .button,html body a.button{font-family:var(--swa-body);font-weight:600;font-size:var(--swa-t-17);letter-spacing:0;text-transform:none;min-height:var(--swa-h-control);border-radius:var(--swa-r-control);border:1px solid #CDD0D6;background:var(--swa-surface);color:var(--swa-ink);cursor:pointer;box-shadow:var(--swa-shadow-sm);transition:border-color .15s,background-color .15s,box-shadow .15s,transform .05s}
 html body button:hover,html body .button:hover,html body a.button:hover{border-color:var(--swa-ink);color:var(--swa-ink)}
 html body button:active,html body .button:active{transform:translateY(1px)}
-html body button.primary,html body .primary,html body a.button.primary,html body button[type=submit].primary{background:var(--swa-red);border-color:var(--swa-red);color:#FFFFFF;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 8px 18px -8px rgba(196,34,44,.7)}
+html body button.primary,html body .primary,html body a.button.primary,html body button[type=submit].primary{font-family:var(--swa-display);font-weight:700;font-size:var(--swa-t-20);letter-spacing:.8px;text-transform:uppercase;background:var(--swa-red);border-color:var(--swa-red);color:#FFFFFF;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 8px 18px -8px rgba(196,34,44,.7)}
 html body button.primary:hover,html body .primary:hover,html body a.button.primary:hover{background:var(--swa-red-dark);border-color:var(--swa-red-dark);color:#FFFFFF}
+html body button.quiet,html body .button.quiet,html body a.button.quiet{min-height:44px;border-color:transparent;background:transparent;box-shadow:none;color:var(--swa-ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+html body button.quiet:hover,html body .button.quiet:hover,html body a.button.quiet:hover{color:var(--swa-red);border-color:transparent}
+html body button.danger,html body .button.danger,html body a.button.danger{background:var(--swa-surface);color:var(--swa-red-dark);border-color:var(--swa-red)}
+html body button.danger:hover,html body .button.danger:hover,html body a.button.danger:hover{background:var(--swa-red-soft);border-color:var(--swa-red-dark);color:var(--swa-red-dark)}
+html body button.big,html body .button.big{min-height:var(--swa-h-big)}
+html body button.sm,html body .button.sm{min-height:var(--swa-h-small);font-size:var(--swa-t-15);padding:4px 12px}
 html body button:disabled,html body button[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
 /* Room inside a button that sets no padding of its own (browsers default to 1px 6px). Zero specificity, so any padding
    a page gives its buttons, and button.link below, still wins. */
@@ -66,67 +123,194 @@ html body button:disabled,html body button[disabled]{opacity:.5;cursor:not-allow
 :where(a.button){text-decoration:none}
 html body button.link{min-height:44px;border:0;background:none;box-shadow:none;color:var(--swa-red);text-decoration:underline;padding:0;font-family:var(--swa-body);font-size:16px;letter-spacing:0;text-transform:none}
 
-/* Forms: taller fields, soft fill, red focus ring */
-html body input:not([type=checkbox]):not([type=radio]):not([type=file]),html body select,html body textarea{font-family:var(--swa-body);font-size:17px;min-height:50px;border:1px solid #D3D6DC;border-radius:8px;background:#FBFBFC;color:var(--swa-ink);box-shadow:inset 0 1px 2px rgba(17,17,19,.04);transition:border-color .15s,box-shadow .15s,background-color .15s}
+/* ---------- Forms: fields the height of a button, soft fill, red focus ring ---------- */
+html body input:not([type=checkbox]):not([type=radio]):not([type=file]),html body select,html body textarea{font-family:var(--swa-body);font-size:var(--swa-t-17);min-height:var(--swa-h-control);border:1px solid #CDD0D6;border-radius:var(--swa-r-control);background:#FBFBFC;color:var(--swa-ink);box-shadow:inset 0 1px 2px rgba(17,17,19,.04);transition:border-color .15s,box-shadow .15s,background-color .15s}
 /* Room inside fields that set no padding of their own (browsers default to 0 to 2px). Zero specificity, as for buttons. */
 :where(input:not([type=checkbox],[type=radio],[type=file],[type=range],[type=color]),select,textarea){padding:10px 14px}
 /* Focus: a solid red edge and a clear halo, so the field being typed in is obvious */
 html body input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,html body select:focus,html body textarea:focus{outline:none;border-color:var(--swa-red);background:#FFFFFF;box-shadow:0 0 0 1px var(--swa-red),0 0 0 5px rgba(196,34,44,.22)}
 html body textarea{min-height:120px}
-html body label{font-weight:600;font-size:15px}
+html body label{font-weight:600;font-size:var(--swa-t-15)}
 html body input[type=checkbox],html body input[type=radio]{width:22px;height:22px;accent-color:var(--swa-red)}
 
-/* Notes, badges and status */
-html body .notice,html body .note{border-radius:8px}
-html body .badge,html body .pill,html body .tag,html body .billing-pill{font-family:var(--swa-body);font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;border-radius:999px;padding:4px 10px}
+/* ---------- Notes, pills and status ---------- */
+html body .notice,html body .note{border-radius:var(--swa-r-control)}
+/* One pill: 13px sentence case with a state tint. Pages' older class names (badge, tag, billing-pill and their
+   state words) map onto the same four tints: ok, warn, bad, neutral. */
+html body .badge,html body .pill,html body .tag,html body .billing-pill{display:inline-flex;align-items:center;gap:6px;min-height:26px;padding:0 10px;border-radius:var(--swa-r-chip);font-family:var(--swa-body);font-weight:600;font-size:var(--swa-t-13);letter-spacing:0;text-transform:none;line-height:1.2;background:var(--swa-surface-2);border:1px solid var(--swa-line);color:var(--swa-ink);vertical-align:middle}
+html body :is(.badge,.pill,.tag,.billing-pill):is(.ok,.paid,.verified,.active,.approved,.won,.current,.done,.green,.today){background:var(--swa-ok-bg);border-color:transparent;color:var(--swa-ok)}
+html body :is(.badge,.pill,.tag,.billing-pill):is(.warn,.warning,.due,.soon,.open,.amber,.recheck,.submitted,.not-submitted,.waiting){background:var(--swa-warn-bg);border-color:transparent;color:var(--swa-warn-ink)}
+html body :is(.badge,.pill,.tag,.billing-pill):is(.bad,.voided,.refunded,.disputed,.rejected,.failed,.attn,.past,.expired,.invalid,.missing,.red){background:var(--swa-bad-bg);border-color:transparent;color:var(--swa-bad)}
+html body :is(.badge,.pill,.tag,.billing-pill):is(.neutral,.closed){background:var(--swa-surface-2);border-color:var(--swa-line);color:var(--swa-muted)}
 html body #status:empty{display:none}
 
-/* Number tiles (payments, cards and others): big condensed figures over a small-caps label */
-html body .tile{background:var(--swa-white);border:1px solid var(--swa-hair);border-radius:12px;box-shadow:var(--swa-shadow);padding:16px 18px;font-size:13px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--swa-muted)}
-html body .tile b{display:block;margin-top:6px;font-family:var(--swa-display);font-weight:800;font-size:34px;line-height:1;letter-spacing:0;text-transform:none;color:var(--swa-ink)}
+/* Number tiles (payments, cards and others): a big condensed figure under a small-caps label */
+html body .tile{background:var(--swa-surface);border:1px solid var(--swa-hair);border-radius:var(--swa-r-card);box-shadow:var(--swa-shadow);padding:var(--swa-s-16);font-size:var(--swa-t-13);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--swa-muted)}
+html body .tile b{display:block;margin-top:var(--swa-s-8);font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-35);line-height:1;letter-spacing:-.3px;text-transform:none;color:var(--swa-ink);font-variant-numeric:tabular-nums}
 
-/* Sign-in and sign-up: the card floats on the textured black, with the logo above it */
+/* ---------- Tables: 12px caps headers, and two-line rows on a phone ----------
+   <table class="swa-table">: on a desktop an ordinary table. Under 600px each row becomes two lines: the first cell
+   as the title with the last cell on its right, and the cells between as a caption line (a cell's data-label, when
+   it has one, names the value). Tables inside a .stack wrapper (public/responsive.css) keep that card layout. */
+html body .swa-table{width:100%;border-collapse:collapse;font-size:var(--swa-t-15)}
+html body .swa-table th,html body .swa-table td{text-align:left;padding:var(--swa-s-12) var(--swa-s-8);vertical-align:top}
+html body .swa-table th{padding-top:0}
+html body .swa-table th.right,html body .swa-table td.right,html body .swa-table th.num,html body .swa-table td.num{text-align:right}
+html body .swa-table tbody tr:hover{background:var(--swa-surface-2)}
+@media (max-width:600px){
+  html body :not(.stack)>.swa-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  html body :not(.stack)>.swa-table,html body :not(.stack)>.swa-table tbody{display:block}
+  html body :not(.stack)>.swa-table tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px var(--swa-s-12);padding:var(--swa-s-12) 0;border-bottom:1px solid var(--swa-line)}
+  html body :not(.stack)>.swa-table tbody tr:hover{background:none}
+  html body :not(.stack)>.swa-table td{display:block;border:0;padding:0;text-align:left;overflow-wrap:anywhere}
+  html body :not(.stack)>.swa-table td:first-child{grid-column:1;grid-row:1;font-weight:600;font-size:var(--swa-t-17)}
+  html body :not(.stack)>.swa-table td:last-child:not(:first-child){grid-column:2;grid-row:1;text-align:right;font-weight:600;white-space:nowrap}
+  html body :not(.stack)>.swa-table td:not(:first-child):not(:last-child){grid-column:1;font-size:var(--swa-t-13);color:var(--swa-muted)}
+  html body :not(.stack)>.swa-table td[data-label]:not(:first-child):not(:last-child)::before{content:attr(data-label) ": "}
+  html body :not(.stack)>.swa-table td:empty{display:none}
+}
+
+/* ---------- Empty state: an icon, one line, one action ---------- */
+html body .empty{display:flex;flex-direction:column;align-items:flex-start;gap:var(--swa-s-8);margin:0;padding:var(--swa-s-16) 0;color:var(--swa-muted);font-size:var(--swa-t-15);font-style:normal;line-height:1.45}
+html body .empty>svg,html body .empty>.icon{width:28px;height:28px;color:var(--swa-silver);stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+html body .empty>p{margin:0}
+html body .empty>.button,html body .empty>button{margin-top:var(--swa-s-4)}
+
+/* ---------- Disclosure: a 44px summary with a chevron instead of the native triangle ---------- */
+html body details>summary{list-style:none;display:flex;align-items:center;gap:var(--swa-s-8);min-height:44px;cursor:pointer;font-weight:600}
+html body details>summary::-webkit-details-marker{display:none}
+html body details>summary::after{content:"";flex:none;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s}
+html body details[open]>summary::after{transform:rotate(-135deg) translateY(-1px)}
+html body details>summary>h2,html body details>summary>h3{margin:0}
+
+/* ---------- Skeleton rows while a list loads (a shimmer, linear on purpose) ---------- */
+html body .skeleton{display:block;height:16px;border-radius:6px;background:linear-gradient(90deg,var(--swa-line) 25%,var(--swa-surface-2) 50%,var(--swa-line) 75%);background-size:200% 100%;animation:swa-shimmer 1.4s linear infinite;color:transparent;user-select:none}
+html body .skeleton.row{height:56px;border-radius:var(--swa-r-card)}
+html body .skeleton+.skeleton{margin-top:var(--swa-s-8)}
+@keyframes swa-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+
+/* ---------- Toast: one region, bottom on a phone and top-right on a desktop (public/toast.js) ---------- */
+html body #swa-toast{position:fixed;z-index:90;left:var(--swa-s-16);right:var(--swa-s-16);bottom:max(var(--swa-s-16),env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:var(--swa-s-8);pointer-events:none}
+html body #swa-toast:empty{display:none}
+html body .swa-toast{pointer-events:auto;margin:0;padding:var(--swa-s-12) var(--swa-s-16);border-radius:var(--swa-r-control);background:var(--swa-dark-1);color:var(--swa-dark-text);border:1px solid var(--swa-dark-line);box-shadow:0 12px 32px -12px rgba(0,0,0,.5);font-size:var(--swa-t-15);font-weight:600;line-height:1.4;opacity:0;transform:translateY(8px);transition:opacity .18s ease-out,transform .18s ease-out}
+html body .swa-toast.show{opacity:1;transform:none}
+html body .swa-toast.hide{opacity:0;transform:translateY(8px);transition:opacity .15s ease-in,transform .15s ease-in}
+html body .swa-toast.ok{border-left:3px solid #8FD3A4}
+html body .swa-toast.bad{border-left:3px solid #FF7B82}
+@media (min-width:900px){html body #swa-toast{left:auto;bottom:auto;top:calc(64px + var(--swa-s-16));right:var(--swa-s-24);width:min(360px,calc(100vw - 48px))}html body .swa-toast{transform:translateY(-8px)}html body .swa-toast.hide{transform:translateY(-8px)}}
+
+/* ---------- Sign-in and sign-up: the card floats on the textured black, with the logo above it ---------- */
 /* Every texture layer is fixed to the screen. The "fixed" keyword in the background shorthand only fixed the last
    layer, so the others repeated down a tall page and left a seam (issue #222). /coach-join uses the same backdrop. */
 html body[data-swa-page="/login"],html body[data-swa-page="/coach-join"]{background:var(--swa-texture);background-attachment:fixed;background-color:#0D0D0F}
 html body[data-swa-page="/login"] main::before{content:"";display:block;width:96px;height:96px;margin:8px auto 18px;background:url(/brand/savage-logo-256.png) center/contain no-repeat}
-html body[data-swa-page="/login"] main>section.card{border:0;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+/* The card keeps the page's own 26px, which the shared card padding would otherwise outrank: at 64px the heading fits
+   on one line only with it. */
+html body[data-swa-page="/login"] main>section.card{border:0;box-shadow:0 30px 80px -30px rgba(0,0,0,.8);padding:26px}
+html body[data-swa-page="/login"] h1,html body[data-swa-page="/coach-join"] h1{font-size:clamp(38px,7.4vw,64px);letter-spacing:-.4px}
 html body[data-swa-page="/login"] main>p,html body[data-swa-page="/login"] main>footer,html body[data-swa-page="/login"] main>footer *{color:#B9C4C9}
 html body[data-swa-page="/login"] main>p a,html body[data-swa-page="/login"] main>footer a{color:#FFFFFF}
 
-/* Black page header band. The Worker moves a page's opening back link, heading and intro into .swa-head
-   (lib/page-chrome.ts); the family and welcome headers share the same texture and logo watermark. */
-html body .swa-head{position:relative;isolation:isolate;color:#FFFFFF;padding:40px 0 34px;margin:0 0 28px}
-html body .swa-head::before,html body .fam-hero::before{content:"";position:absolute;z-index:-2;top:-140px;bottom:0;left:50%;width:100vw;transform:translateX(-50%);background:var(--swa-texture);border-bottom:2px solid var(--swa-red)}
-html body .swa-head::after,html body .fam-hero::after{content:"";position:absolute;z-index:-1;right:0;top:14px;bottom:14px;aspect-ratio:1;max-width:38vw;background:url(/brand/savage-logo-256.png) center/contain no-repeat;opacity:.09;pointer-events:none}
-html body .fam-hero{position:relative;isolation:isolate;background:none;box-shadow:none;clip-path:none}
-html body .swa-head h1{color:#FFFFFF;margin:0 0 12px;max-width:24ch}
-html body .swa-head>p,html body .swa-head .muted{color:#C9CED4;font-size:18px;max-width:62ch;margin:0}
-html body .swa-head>p+p{margin-top:8px}
+/* ---------- The public header band (.swa-head) ----------
+   Only the public pages open with the textured black band: /welcome, /team, /calendar, /login, /coach-join and
+   /help (lib/page-chrome.ts). The logo watermark is gone from it; the mark lives in the top bar. */
+html body .swa-head{position:relative;isolation:isolate;color:#FFFFFF;padding:var(--swa-s-32) 0;margin:0 0 var(--swa-s-24)}
+html body .swa-head::before{content:"";position:absolute;z-index:-2;top:-140px;bottom:0;left:50%;width:100vw;transform:translateX(-50%);background:var(--swa-texture);border-bottom:2px solid var(--swa-red)}
+html body .swa-head h1{color:#FFFFFF;margin:0 0 var(--swa-s-12);max-width:24ch;font-size:clamp(var(--swa-t-35),5vw,var(--swa-t-50))}
+html body .swa-head>p,html body .swa-head .muted{color:#C9CED4;font-size:var(--swa-t-17);max-width:62ch;margin:0}
+html body .swa-head>p+p{margin-top:var(--swa-s-8)}
 html body .swa-head a{color:#FFFFFF}
-html body .swa-head>a:first-child,html body .swa-head>.swa-back{display:inline-flex;align-items:center;min-height:36px;margin:0 0 10px;color:var(--swa-silver);font-size:13px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;text-decoration:none}
+html body .swa-head>a:first-child,html body .swa-head>.swa-back{display:inline-flex;align-items:center;min-height:44px;margin:0 0 var(--swa-s-4);color:var(--swa-silver);font-size:var(--swa-t-15);font-weight:600;text-decoration:none}
 html body .swa-head>a:first-child:hover{color:#FFFFFF}
-html body .swa-head .eyebrow{color:var(--swa-silver);margin:0 0 10px}
+html body .swa-head .eyebrow{color:var(--swa-silver);margin:0 0 var(--swa-s-8)}
 html body .swa-head>p.eyebrow{font-size:13px;max-width:none}
 html body .swa-head button:not(.primary),html body .swa-head .button:not(.primary){background:transparent;color:#FFFFFF;border-color:rgba(255,255,255,.4);box-shadow:none}
 html body .swa-head button:not(.primary):hover,html body .swa-head .button:not(.primary):hover{border-color:#FFFFFF;color:#FFFFFF}
-html body .swa-head.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+html body .swa-head.top{display:flex;align-items:center;justify-content:space-between;gap:var(--swa-s-12);flex-wrap:wrap}
 html body .swa-head.top h1{margin:0}
 html body .swa-head .bar a{color:#FFFFFF}
 html body .hero{background:var(--swa-texture)}
-@media (max-width:640px){html body .swa-head{padding:28px 0 26px;margin-bottom:20px}html body .swa-head::after,html body .fam-hero::after{right:0;opacity:.07}}
+/* The team page's own hero loses its watermark too: the mark appears once per page, in the bar. */
+html body[data-swa-page="/team"] .hero::after{content:none}
+@media (max-width:640px){html body .swa-head{padding:var(--swa-s-24) 0;margin-bottom:var(--swa-s-16)}}
 
-/* The top bar on every page */
+/* ---------- The title row (.swa-title) on signed-in pages ----------
+   The Worker wraps a page's opening (back link, eyebrow, h1, the intro's first sentence) in .swa-title__text, and
+   any buttons or links that opened the page beside it in .swa-title__actions. The rest of the intro follows as
+   details.how, "How this works". */
+html body .swa-title{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--swa-s-12) var(--swa-s-24);margin:0 0 var(--swa-s-24)}
+html body .swa-title__text{flex:1 1 320px;min-width:0}
+html body .swa-title h1{margin:0;color:var(--swa-ink)}
+html body .swa-title__text>p{margin:var(--swa-s-8) 0 0;color:var(--swa-muted);font-size:var(--swa-t-17);max-width:62ch}
+html body .swa-title__text>p.eyebrow{margin:0 0 var(--swa-s-8);color:var(--swa-muted);max-width:none}
+html body .swa-title__text>a,html body .swa-title__text>.swa-back{display:inline-flex;align-items:center;min-height:44px;margin:0 0 var(--swa-s-4);color:var(--swa-muted);font-size:var(--swa-t-15);font-weight:600;text-decoration:none}
+html body .swa-title__text>a:hover{color:var(--swa-red)}
+html body .swa-title__actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--swa-s-8);flex:none;max-width:100%}
+/* A link that opened the page (Family accounts' "SWA Advance approvals →") reads as a quiet action beside the title. */
+html body .swa-title__actions>a:not(.button){display:inline-flex;align-items:center;min-height:44px;font-size:var(--swa-t-15);font-weight:600;color:var(--swa-ink);text-decoration-color:var(--swa-line)}
+html body .swa-title__actions>a:not(.button):hover{color:var(--swa-red);text-decoration-color:var(--swa-red)}
+/* An actions slot whose only button is hidden (Inbox before there is anything to mark) takes no room. */
+html body .swa-title__actions:not(:has(:not([hidden]))){display:none}
+html body .swa-title:has(+.how) .swa-title__text>h1:last-child{margin-bottom:0}
+html body .swa-title+.how{margin-top:calc(-1 * var(--swa-s-16))}
+html body .how{margin:0 0 var(--swa-s-24)}
+html body .how>summary{display:inline-flex;min-height:44px;color:var(--swa-muted);font-size:var(--swa-t-15);font-weight:600}
+html body .how>summary:hover{color:var(--swa-ink)}
+html body .how>p{margin:0 0 var(--swa-s-8);color:var(--swa-muted);font-size:var(--swa-t-15);line-height:1.5;max-width:70ch}
+html body .how>p:last-child{margin-bottom:0}
+@media (max-width:640px){html body .swa-title{margin-bottom:var(--swa-s-16)}html body .swa-title__actions{width:100%}html body .swa-title__actions>*{flex:1 1 auto}}
+
+/* The family home's hand-written band (.fam-hero, app/family/screen.html) is a title row now: on the ground, in ink,
+   with the Account menu as a secondary button and the section links as quiet underlined links. */
+html body .fam-hero{position:static;isolation:auto;background:none;box-shadow:none;clip-path:none;color:var(--swa-ink);padding:var(--swa-s-8) 0 0;margin:0 0 var(--swa-s-8)}
+html body .fam-hero::before,html body .fam-hero::after{content:none}
+html body .fam-hero .eyebrow{color:var(--swa-muted);letter-spacing:1.6px}
+html body .fam-hero h1{color:var(--swa-ink);font-size:var(--swa-t-35);margin:var(--swa-s-4) 0;line-height:1}
+html body .fam-hero .lede{color:var(--swa-muted);font-size:var(--swa-t-17);margin:0}
+html body .fam-hero .account-menu summary{border:1px solid #CDD0D6;border-radius:var(--swa-r-control);background:var(--swa-surface);color:var(--swa-ink);box-shadow:var(--swa-shadow-sm)}
+html body .fam-hero .account-menu summary:hover,html body .fam-hero .account-menu[open] summary{border-color:var(--swa-ink);color:var(--swa-ink)}
+html body .fam-hero .account-menu .menu{border-radius:var(--swa-r-card);box-shadow:var(--swa-shadow)}
+html body .fam-hero .quick{gap:0 var(--swa-s-16);margin-top:var(--swa-s-8)}
+html body .fam-hero .quick a{font-family:var(--swa-body);font-weight:600;font-size:var(--swa-t-15);letter-spacing:0;text-transform:none;color:var(--swa-ink);min-height:44px;box-shadow:inset 0 -2px 0 var(--swa-line)}
+html body .fam-hero .quick a:hover,html body .fam-hero .quick a:focus-visible{color:var(--swa-red);box-shadow:inset 0 -2px 0 var(--swa-red)}
+@media (min-width:900px){html body .fam-hero h1{font-size:var(--swa-t-42)}html body .fam-hero{padding-top:var(--swa-s-16)}}
+
+/* ---------- Dark pages: the wrestler view and the entry pass, on the dark set ---------- */
+html body[data-swa-page="/wrestler"]{background:var(--swa-dark-0);color:var(--swa-dark-text)}
+html body[data-swa-page="/wrestler"] h1,html body[data-swa-page="/wrestler"] .top a{color:var(--swa-dark-text)}
+html body[data-swa-page="/wrestler"] .top{min-height:44px}
+html body[data-swa-page="/wrestler"] .brand{color:var(--swa-silver);font-family:var(--swa-body);font-size:var(--swa-t-13);letter-spacing:1.6px}
+html body[data-swa-page="/wrestler"] .sub,html body[data-swa-page="/wrestler"] #status{color:var(--swa-dark-muted)}
+html body[data-swa-page="/wrestler"] main>section.card:not(.next):not(#passCard){background:var(--swa-dark-1);color:var(--swa-dark-text);border-color:var(--swa-dark-line);box-shadow:none}
+html body[data-swa-page="/wrestler"] main>section.card:not(.next):not(#passCard) h2{color:#FFFFFF}
+html body[data-swa-page="/wrestler"] main>section.card:not(.next):not(#passCard) .muted{color:var(--swa-dark-muted)}
+html body[data-swa-page="/wrestler"] main>section.card:not(.next):not(#passCard) a{color:#FFFFFF}
+html body[data-swa-page="/wrestler"] .item{border-top-color:var(--swa-dark-line)}
+html body[data-swa-page="/wrestler"] .tag{background:var(--swa-dark-2);border-color:transparent;color:var(--swa-dark-text)}
+html body[data-swa-page="/wrestler"] .stat{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-42);line-height:1}
+html body[data-swa-page="/wrestler"] main>section.card.next{background:var(--swa-red);border-color:var(--swa-red);box-shadow:none}
+html body[data-swa-page="/wrestler"] .next .big{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-29);line-height:1;text-transform:uppercase;letter-spacing:-.2px}
+html body[data-swa-page="/wrestler"] #passCard{background:var(--swa-surface);color:var(--swa-ink)}
+html body[data-swa-page="/pass"]{background:var(--swa-dark-0);color:var(--swa-dark-text)}
+html body[data-swa-page="/pass"] .swa-title h1{color:var(--swa-dark-text)}
+html body[data-swa-page="/pass"] .swa-title__text>p,html body[data-swa-page="/pass"] .how>summary,html body[data-swa-page="/pass"] .how>p,html body[data-swa-page="/pass"] #status{color:var(--swa-dark-muted)}
+html body[data-swa-page="/pass"] .how>summary:hover,html body[data-swa-page="/pass"] main>p a{color:#FFFFFF}
+html body[data-swa-page="/pass"] main>a:first-child,html body[data-swa-page="/pass"] .swa-title__text>a{color:var(--swa-dark-muted)}
+html body[data-swa-page="/pass"] .pass{color:var(--swa-ink);border:0;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+html body[data-swa-page="/pass"] .pass .brand{color:var(--swa-muted);font-family:var(--swa-body);font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px}
+html body[data-swa-page="/pass"] .pass h2{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-35);text-transform:uppercase;letter-spacing:-.3px;line-height:1;margin:var(--swa-s-4) 0 0}
+
+/* ---------- The top bar on every page ---------- */
 .swa-bar{position:sticky;top:0;z-index:50;background:#0D0D0F;border-bottom:1px solid rgba(255,255,255,.06);color:#FFFFFF;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
 .swa-bar__inner{max-width:1180px;margin:0 auto;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .swa-bar a{color:#FFFFFF;text-decoration:none}
-.swa-bar__home{display:flex;align-items:center;gap:10px;min-height:44px}
-.swa-bar__home img{width:42px;height:42px;display:block}
-.swa-bar__word{font-family:var(--swa-display);font-style:italic;font-weight:900;font-size:26px;letter-spacing:-.3px;line-height:1}
+.swa-bar__home{display:flex;align-items:center;gap:8px;min-height:44px}
+.swa-bar__home img{width:40px;height:40px;display:block}
+.swa-bar__word{font-family:var(--swa-display);font-style:italic;font-weight:900;font-size:24px;letter-spacing:-.3px;line-height:1}
 .swa-bar__links{display:flex;align-items:center;gap:4px}
-.swa-bar__links a{font-family:var(--swa-display);font-weight:700;font-size:18px;letter-spacing:.6px;text-transform:uppercase;min-height:44px;display:flex;align-items:center;padding:0 12px;border-radius:6px}
-.swa-bar__links a:hover{background:#26272C}
-.swa-bar__links a[aria-current=page]{box-shadow:inset 0 -3px 0 var(--swa-red)}
+.swa-bar__links a{font-family:var(--swa-body);font-weight:700;font-size:15px;letter-spacing:0;text-transform:none;color:#C9CED4;min-height:44px;display:flex;align-items:center;padding:0 12px;border-radius:6px}
+.swa-bar__links a:hover{background:#26272C;color:#FFFFFF}
+.swa-bar__links a[aria-current=page]{color:#FFFFFF;box-shadow:inset 0 -3px 0 var(--swa-red)}
 
 /* Calendars and date grids (issue #189). Today gets a red ring (big day cells) or a red underline (small date buttons)
    and a small "Today" tag, using the New York date. A holiday is a quiet label on its day: it never adds or removes a
@@ -140,11 +324,11 @@ html body .tba{color:var(--swa-muted);font-style:italic}
 
 /* Paging (issue #46). Long lists come a page at a time: a line saying how many are shown out of how many match, and a
    button or links for the next page. On a phone the controls stack and the buttons fill the width. */
-html body .pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--swa-line)}
-html body .pager>p{margin:0;color:var(--swa-muted);font-size:15px;font-weight:600}
-html body .pager .pager-links{display:flex;flex-wrap:wrap;gap:10px}
+html body .pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--swa-s-12) var(--swa-s-16);margin:var(--swa-s-16) 0 0;padding-top:var(--swa-s-12);border-top:1px solid var(--swa-line)}
+html body .pager>p{margin:0;color:var(--swa-muted);font-size:var(--swa-t-15);font-weight:600}
+html body .pager .pager-links{display:flex;flex-wrap:wrap;gap:var(--swa-s-8)}
 html body .pager button,html body .pager a.button{display:inline-flex;align-items:center;justify-content:center;min-width:180px;padding:0 18px;text-decoration:none}
-html body .pager-note{margin:10px 0 0;padding:10px 14px;border-left:3px solid var(--swa-red);background:#FBF3F3;border-radius:0 8px 8px 0;font-size:15px}
+html body .pager-note{margin:var(--swa-s-12) 0 0;padding:var(--swa-s-12) var(--swa-s-16);border-left:3px solid var(--swa-red);background:var(--swa-red-soft);border-radius:0 8px 8px 0;font-size:var(--swa-t-15)}
 @media (max-width:640px){
   html body .pager{flex-direction:column;align-items:stretch}
   html body .pager .pager-links{flex-direction:column}
@@ -159,5 +343,5 @@ html body .pager-note{margin:10px 0 0;padding:10px 14px;border-left:3px solid va
   html body .swa-head>a:first-child,html body .swa-head>.swa-back{min-height:44px}
   html body{font-size:17px}
 }
-@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-@media print{.swa-bar{display:none}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}html body .swa-toast{opacity:1;transform:none}html body .swa-toast.hide{opacity:0}}
+@media print{.swa-bar,#swa-toast{display:none}}
