@@ -36,7 +36,7 @@ async function as(name, viewport = {width: 1200, height: 900}) {
   await ctx.addCookies([{name: c.name, value: c.value, url: BASE}]);
   const page = await ctx.newPage(); labels.set(page, name + (viewport.width < 500 ? '-phone' : ''));
   page.on('dialog', d => d.accept().catch(() => {}));
-  page.on('pageerror', e => { problems.push(`[${current}] page error on ${page.url()}: ${e.message}`); if (process.env.E2E_SWEEP_LOG) console.log('    ERROR', e.message, (e.stack || '').split('\n')[1]); });
+  page.on('pageerror', e => { if (browserNoise(e.message)) return; problems.push(`[${current}] page error on ${page.url()}: ${e.message}`); if (process.env.E2E_SWEEP_LOG) console.log('    ERROR', e.message, (e.stack || '').split('\n')[1]); });
   page.on('console', m => { if (m.type() === 'error' && !/favicon|Failed to load resource: the server responded with a status of 4\d\d/.test(m.text())) problems.push(`[${current}] console error on ${page.url()}: ${m.text().slice(0, 200)}`); });
   page.on('response', r => { if (r.status() >= 500) problems.push(`[${current}] HTTP ${r.status()} ${r.request().method()} ${r.url()}`); });
   return page;
@@ -72,6 +72,10 @@ async function failureShots(name) {
     catch (e) { console.log(`    no screenshot of ${page.url()}: ${e.message.split('\n')[0]}`); }
   }
 }
+// Chromium reports a cross-document View Transition it cancelled itself (a move out of the owner shell to a page that
+// has not opted in, or a second click mid-fade) as a page error. The shell swallows the transition's promises and skips
+// it on pageswap, so the owner sees nothing; it is browser noise, not a site error (issue #269).
+const browserNoise = message => /Transition was aborted|ViewTransition opt-in|skipTransition/i.test(message || '');
 const expect = (cond, msg) => { if (!cond) throw new Error(msg); };
 const text = async (page, sel) => (await page.locator(sel).first().textContent({timeout: 20000})) ?? '';
 // Waits until the first element matching sel has text matching re. When it does not, the error names what it waited
@@ -316,7 +320,7 @@ await step('owner publishes a waiver; family is blocked until they sign it on /w
 // ---------- Visitors and brand-new families (issue #132) ----------
 const phoneAs = async name => { const ctx = await browser.newContext({viewport: {width: 390, height: 844}, deviceScaleFactor: SHOTS ? 3 : 1, isMobile: true, hasTouch: true});
   if (name) { const c = sessionCookie(name, AUTH); await ctx.addCookies([{name: c.name, value: c.value, url: BASE}]); }
-  const p = await ctx.newPage(); p.on('pageerror', e => problems.push(`[${current}] page error on ${p.url()}: ${e.message}`)); return p; };
+  const p = await ctx.newPage(); p.on('pageerror', e => { if (!browserNoise(e.message)) problems.push(`[${current}] page error on ${p.url()}: ${e.message}`); }); return p; };
 await step('a signed-out visitor lands on the welcome page with programs, steps and what is coming up', async () => {
   const visitor = await phoneAs(null);
   await visitor.goto(BASE + '/'); expect(new URL(visitor.url()).pathname === '/welcome', 'signed-out home should be /welcome, got ' + visitor.url());
