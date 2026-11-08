@@ -16,7 +16,9 @@ export async function POST(request: Request) {
   try { input = JSON.parse(raw); } catch { return accountReply({error: 'Invalid request.'}, 400); }
   const token = input?.token === undefined || input?.token === null || input?.token === '' ? null : input.token;
   if (token !== null && !validToken(token)) return accountReply({error: 'This invite link isn’t complete. Copy the whole link from the academy.'}, 404);
-  if (await rateLimited(request, 'coach-invite:' + (token ?? 'mine'), 20)) return accountReply({error: 'Too many tries. Please wait a minute.'}, 429);
+  // Without a link, the counter is the signed-in person's own (issue #274), never one shared by everyone on the site.
+  const mine = async () => { const {user} = await verifiedAccount(request); return user ? 'user:' + user.id : 'ip:' + (request.headers.get('cf-connecting-ip') ?? 'unknown'); };
+  if (await rateLimited(request, 'coach-invite:' + (token ?? await mine()), 20)) return accountReply({error: 'Too many tries. Please wait a minute.'}, 429);
   if (input?.action === 'check') {
     const auth = await verifiedAccount(request), user = auth.user?.email_confirmed_at ? auth.user : null;
     const row = await findInvite(token, user?.email ?? null);

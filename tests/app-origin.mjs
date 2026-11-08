@@ -10,7 +10,7 @@ function loadAuth(env){
   const module={exports:{}};
   const source=ts.transpileModule(readFileSync('lib/account-auth.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
   const policy={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync('lib/mfa-policy.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module:policy,exports:policy.exports,String});
-  const deps={'./mfa-policy':policy.exports,'cloudflare:workers':{env},'@supabase/ssr':{createServerClient(){},parseCookieHeader(){return []},serializeCookieHeader(){return ''}}};
+  const deps={'./mfa-policy':policy.exports,'./net':{timedFetch:()=>fetch,SUPABASE_TIMEOUT_MS:8000},'cloudflare:workers':{env},'@supabase/ssr':{createServerClient(){},parseCookieHeader(){return []},serializeCookieHeader(){return ''}}};
   vm.runInNewContext(source,{module,exports:module.exports,URL,Headers,Response,require:name=>{if(name in deps)return deps[name];throw Error('unexpected import '+name)}});
   return module.exports;
 }
@@ -32,6 +32,21 @@ assert.equal(loadAuth({APP_ORIGIN:'http://localhost:5173/'}).appOrigin(),'http:/
 assert.throws(()=>loadAuth({APP_ORIGIN:'http://register.savagewrestling.example'}).appOrigin(),/https/);
 assert.throws(()=>loadAuth({APP_ORIGIN:'register.savagewrestling.example'}).appOrigin(),/absolute URL/);
 assert.throws(()=>loadAuth({APP_ORIGIN:'javascript:alert(1)'}).appOrigin(),/https/);
+
+// Issue #274: SUPABASE_URL is checked the same way. The sign-in client talks only to an https project, or a local
+// stand-in on loopback (the walkthrough's fake Supabase).
+{
+  const {supabaseUrl}=loadAuth({});
+  assert.equal(supabaseUrl('https://abcdefgh.supabase.co'),'https://abcdefgh.supabase.co');
+  assert.equal(supabaseUrl('https://abcdefgh.supabase.co/'),'https://abcdefgh.supabase.co');
+  assert.equal(supabaseUrl('http://127.0.0.1:54321'),'http://127.0.0.1:54321','the walkthrough stand-in');
+  assert.equal(supabaseUrl('http://localhost:54321'),'http://localhost:54321');
+  assert.throws(()=>supabaseUrl('http://abcdefgh.supabase.co'),/https/,'plain http to a real host is refused');
+  assert.throws(()=>supabaseUrl('http://10.0.0.5:8000'),/https/);
+  assert.throws(()=>supabaseUrl('abcdefgh.supabase.co'),/absolute URL/);
+  assert.throws(()=>supabaseUrl(''),/not configured/);
+  assert.throws(()=>supabaseUrl(undefined),/not configured/);
+}
 
 // No source file may reintroduce the retired hostname or a hard-coded origin constant.
 function* files(dir){for(const name of readdirSync(dir)){const p=join(dir,name);if(statSync(p).isDirectory())yield* files(p);else if(/\.(ts|tsx|html|js|mjs)$/.test(name))yield p}}
