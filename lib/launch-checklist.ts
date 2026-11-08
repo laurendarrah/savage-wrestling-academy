@@ -18,28 +18,57 @@ const json = (v: unknown) => { try { return typeof v === 'string' ? JSON.parse(v
 const andList = (names: string[]) => names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
+// Every record the checklist reads, in one D1 batch (issue #274; it used to be 13 queries in a row). Each statement
+// returns at most one row; a statement that fails (a table missing on a half-migrated database) reads as "nothing".
+const READS = {
+  academy: "SELECT payload FROM academy_state WHERE id='academy'",
+  waiver: "SELECT title,retired_at FROM waiver_versions WHERE kind='waiver' ORDER BY published_at DESC, id DESC LIMIT 1",
+  consent: "SELECT title,retired_at FROM waiver_versions WHERE kind='parent_consent' ORDER BY published_at DESC, id DESC LIMIT 1",
+  contract: "SELECT title,retired_at FROM waiver_versions WHERE kind='coach_contract' ORDER BY published_at DESC, id DESC LIMIT 1",
+  coaches: 'SELECT COUNT(*) AS n FROM staff_access WHERE active=1',
+  invites: 'SELECT COUNT(*) AS n, COALESCE(SUM(CASE WHEN expires_at<=? THEN 1 ELSE 0 END),0) AS expired FROM coach_invites WHERE used_at IS NULL AND revoked_at IS NULL',
+  lessons: "SELECT payload FROM academy_settings WHERE id='lessons'",
+  website: "SELECT payload FROM academy_settings WHERE id='website'",
+  stripeKey: "SELECT updated_at FROM integration_secrets WHERE id='stripe-test'",
+  liveKey: "SELECT updated_at FROM integration_secrets WHERE id='stripe-live'",
+  backup: "SELECT created_at FROM security_events WHERE action='backup_exported' ORDER BY created_at DESC LIMIT 1",
+  errors: 'SELECT COUNT(*) AS n FROM error_log WHERE at>=?',
+  families: 'SELECT COUNT(*) AS n FROM family_accounts',
+} as const;
+type Reads = Record<keyof typeof READS, any>;
+async function readAll(db: D1Database, nowIso: string, dayAgo: string): Promise<Reads> {
+  const keys = Object.keys(READS) as (keyof typeof READS)[];
+  const args: Record<string, unknown[]> = {invites: [nowIso], errors: [dayAgo]};
+  const out = {} as Reads;
+  try {
+    const results = await db.batch(keys.map(k => db.prepare(READS[k]).bind(...(args[k] ?? []))));
+    keys.forEach((k, i) => { out[k] = (results[i]?.results as any[] | undefined)?.[0] ?? null; });
+  } catch {
+    // One statement failing fails the batch; fall back to one query each, so the checklist still shows what it can.
+    for (const k of keys) { try { out[k] = await db.prepare(READS[k]).bind(...(args[k] ?? [])).first(); } catch { out[k] = null; } }
+  }
+  return out;
+}
+
 // `authenticators` is how many verified authenticators the signed-in owner has (issue #167); left out, the item is skipped.
 export async function launchChecklist(db: D1Database, settings: Settings, today: string, now = Date.now(), authenticators?: number): Promise<{items: Item[]; ready: number; total: number}> {
-  const first = async <T>(sql: string, ...args: unknown[]) => { try { return await db.prepare(sql).bind(...args).first<T>(); } catch { return null; } };
-  const academy = json((await first<{payload: string}>("SELECT payload FROM academy_state WHERE id='academy'"))?.payload) ?? {};
+  const weekAgo = new Date(now - 7 * 86400000).toISOString(), dayAgo = new Date(now - 86400000).toISOString();
+  const r = await readAll(db, new Date(now).toISOString(), dayAgo);
+  const academy = json(r.academy?.payload) ?? {};
   const programs: any[] = Array.isArray(academy.programs) ? academy.programs : [];
   const seasons: any[] = Array.isArray(academy.seasons) ? academy.seasons : [];
-  const latest = (kind: string) => first<{title: string; retired_at: string | null}>('SELECT title,retired_at FROM waiver_versions WHERE kind=? ORDER BY published_at DESC, id DESC LIMIT 1', kind);
-  const waiver = await latest('waiver'), consent = await latest('parent_consent'), contract = await latest('coach_contract');
-  const coaches = Number((await first<{n: number}>('SELECT COUNT(*) AS n FROM staff_access WHERE active=1'))?.n ?? 0);
+  const waiver = r.waiver as {title: string; retired_at: string | null} | null, consent = r.consent as typeof waiver, contract = r.contract as typeof waiver;
+  const coaches = Number(r.coaches?.n ?? 0);
   // Invites the owner sent from Coaches (#207) that are neither used nor canceled, as Coaches lists them.
-  const invites = await first<{n: number; expired: number}>('SELECT COUNT(*) AS n, COALESCE(SUM(CASE WHEN expires_at<=? THEN 1 ELSE 0 END),0) AS expired FROM coach_invites WHERE used_at IS NULL AND revoked_at IS NULL', new Date(now).toISOString());
-  const pendingInvites = Number(invites?.n ?? 0), expiredInvites = Number(invites?.expired ?? 0);
-  const lessons = json((await first<{payload: string}>("SELECT payload FROM academy_settings WHERE id='lessons'"))?.payload) ?? {};
+  const pendingInvites = Number(r.invites?.n ?? 0), expiredInvites = Number(r.invites?.expired ?? 0);
+  const lessons = json(r.lessons?.payload) ?? {};
   // The owner's public website content (#215). Until it is saved, the welcome page shows the defaults.
-  const website = json((await first<{payload: string}>("SELECT payload FROM academy_settings WHERE id='website'"))?.payload);
+  const website = json(r.website?.payload);
   const headline = typeof website?.headline === 'string' ? website.headline.trim() : '';
-  const stripeKey = await first<{updated_at: string}>("SELECT updated_at FROM integration_secrets WHERE id='stripe-test'");
-  const liveKey = await first<{updated_at: string}>("SELECT updated_at FROM integration_secrets WHERE id='stripe-live'");
-  const weekAgo = new Date(now - 7 * 86400000).toISOString(), dayAgo = new Date(now - 86400000).toISOString();
-  const backup = await first<{created_at: string}>("SELECT created_at FROM security_events WHERE action='backup_exported' ORDER BY created_at DESC LIMIT 1");
-  const errors = Number((await first<{n: number}>('SELECT COUNT(*) AS n FROM error_log WHERE at>=?', dayAgo))?.n ?? 0);
-  const families = Number((await first<{n: number}>('SELECT COUNT(*) AS n FROM family_accounts'))?.n ?? 0);
+  const stripeKey = r.stripeKey as {updated_at: string} | null, liveKey = r.liveKey as {updated_at: string} | null;
+  const backup = r.backup as {created_at: string} | null;
+  const errors = Number(r.errors?.n ?? 0);
+  const families = Number(r.families?.n ?? 0);
 
   // The programs families see on the welcome page and calendar (the same three the registration catalog lists).
   const listed = programs.filter(p => ['Elementary', 'Intermediate', 'Advanced'].includes(p?.id));
