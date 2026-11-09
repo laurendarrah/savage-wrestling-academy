@@ -7,9 +7,10 @@
   --os-side:264px;--os-body:Barlow,'Helvetica Neue',Arial,sans-serif;--os-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif}
 
 /* Moving between owner pages: the sidebar and header keep still while the middle cross-fades. Browsers without
-   cross-document View Transitions, and anyone who asks for less motion, get an ordinary page load. */
+   cross-document View Transitions, and anyone who asks for less motion, get an ordinary page load. The opt-in itself,
+   @view-transition{navigation:auto}, is written inline in each owner page's head (VIEW_TRANSITION_OPT_IN in
+   lib/owner-shell.ts), so it is there before this file loads (issue #296). */
 @media (prefers-reduced-motion:no-preference){
-  @view-transition{navigation:auto}
   ::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
 }
 html body .os-side{view-transition-name:swa-owner-side}

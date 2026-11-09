@@ -47,7 +47,7 @@ function load(file) {
   return module.exports;
 }
 const {decorateResponse, applyScriptNonce} = load('lib/page-chrome.ts');
-const {OWNER_SHELL_HEADER, SHELL_BOOT, OWNER_SHELL_HEAD} = load('lib/owner-shell.ts');
+const {OWNER_SHELL_HEADER, SHELL_BOOT, OWNER_SHELL_HEAD, VIEW_TRANSITION_OPT_IN} = load('lib/owner-shell.ts');
 const {currentOwnerHref, ownerNavTabs, OWNER_NAV_ITEMS, OWNER_SHELL_PAGES} = load('lib/owner-nav.ts');
 
 async function open(path, who = 'owner') {
@@ -130,7 +130,7 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
   // The page's one red button, Record a payment, opens the page beside the title (issue #283); the rest of the intro folds away.
   assert.match(html, /<main id="swa-main"><div class="swa-title"><div class="swa-title__text"><h1>Payments<\/h1><p class="muted">Every payment, online and offline\.<\/p><\/div><div class="swa-title__actions"><a href="#record" class="button primary" id="openRecord">Record a payment<\/a><\/div><\/div><details class="how"><summary>How this works<\/summary><p>Offline payments count/);
   for (const path of Object.keys(ownerRoutes)) assert.doesNotMatch((await open(path)).html, /class="swa-head"/, path + ' has no band');
-  assert.match(html, /href="\/savage\.css"><link rel="stylesheet" href="\/owner-shell\.css">/, 'the shell styles load after savage.css');
+  assert.match(html, /href="\/savage\.css"><style>@media \(prefers-reduced-motion:no-preference\)\{@view-transition\{navigation:auto\}\}<\/style><link rel="stylesheet" href="\/owner-shell\.css">/, 'the shell styles load after savage.css, with the View Transition opt-in ahead of them');
 }
 
 // ---------- Coaches and families never get the shell; the owner checks are unchanged ----------
@@ -388,7 +388,12 @@ console.log('Owner shell script: drawer with focus trap and Escape, Account menu
 
 // ---------- Seamless moves: View Transitions, prefetching, motion and the CSP ----------
 const css = readFileSync('public/owner-shell.css', 'utf8');
-assert.match(css, /@media \(prefers-reduced-motion:no-preference\)\{\s*@view-transition\{navigation:auto\}/, 'cross-document View Transitions, unless less motion is asked for');
+// The opt-in is inline in the head, ahead of the stylesheet, so a page whose stylesheet is still loading has already
+// opted in and Chromium does not abort the transition into it (issue #296). The stylesheet only times the cross-fade.
+assert.equal(VIEW_TRANSITION_OPT_IN, '<style>@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}}</style>', 'cross-document View Transitions, unless less motion is asked for');
+assert.ok(OWNER_SHELL_HEAD.startsWith(VIEW_TRANSITION_OPT_IN + '<link rel="stylesheet" href="/owner-shell.css">'), 'the opt-in comes before the shell stylesheet');
+assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /@view-transition/, 'the stylesheet does not decide the opt-in');
+assert.match(css, /@media \(prefers-reduced-motion:no-preference\)\{\s*::view-transition-old\(root\),::view-transition-new\(root\)\{animation-duration:\.18s\}/);
 assert.match(css, /html body \.os-side\{view-transition-name:swa-owner-side\}/); assert.match(css, /html body \.os-top\{view-transition-name:swa-owner-top\}/);
 assert.match(css, /prefers-reduced-motion:reduce\)\{html body \.os-side,html body\.os-open \.os-side\{transition:none\}/, 'the drawer does not slide for less motion');
 assert.match(css, /@media \(max-width:900px\)\{/, 'the drawer from 900px down');
