@@ -18,6 +18,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/security` | GET, POST | Signed in | Authenticator setup and challenge |
 | `/api/coach-invite` | POST | Public, then signed in | Check a coach invite, and accept it for the invited email |
 | `/api/health` | GET | Public | Uptime check used by the Deploy workflow and the uptime monitor: `ok`, `database`, `build`, `lastCronRun` and `configured` (email, supabase, stripeWebhook as yes/no). Reveals nothing private |
+| `/api/setup-status` | GET | Public | The owner's setup progress for whoever maintains the site (#298): each launch-checklist step as `true` or `false` (programs, schedule, website, waiver, consent, coaches, contract, lessons, email, stripe, checkout, live, backup), whether the Stripe test and live keys and webhook secrets are saved, the Stripe mode and which purchase types are open. No names, dates, counts or values, and nothing about sign-in safety |
 | `/api/stripe-webhook` | POST | Stripe | The only place an order becomes paid. Verifies the signature for the event's own mode, stores each event id once, handles late and out-of-order events; records refunds and card disputes |
 
 ### Families
