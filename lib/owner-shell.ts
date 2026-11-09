@@ -129,7 +129,14 @@ export const SHELL_BOOT = `(function(){try{var d=document,n=d.getElementById('sw
 // the click lands. On pages with a nonce script policy (issue #274, lib/page-chrome.ts) the Worker gives this block,
 // the start-up script below and the page's own scripts the response's nonce, so the policy allows them.
 const SPECULATION = '{"prefetch":[{"source":"document","where":{"selector_matches":".os-nav a, .os-top a, .os-family a"},"eagerness":"moderate"}]}';
-export const OWNER_SHELL_HEAD = '<link rel="stylesheet" href="/owner-shell.css"><script src="/owner-shell.js" defer></script>'
+// The cross-document View Transition opt-in is written into the page itself, not only in owner-shell.css (issue #296).
+// Chromium decides whether the new page opted in as soon as it arrives. If the stylesheet is still loading (a cold
+// cache, a slow network), it sees no opt-in and aborts the transition on the new page with "Transition was aborted
+// because of invalid state. ViewTransition opt-in disabled", an error that page cannot catch, and the owner gets no
+// cross-fade. Written inline, the opt-in is there from the first byte, and the browser waits for the stylesheet
+// (render-blocking) before it reveals the page. Anyone who asks for less motion still gets an ordinary page load.
+export const VIEW_TRANSITION_OPT_IN = '<style>@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}}</style>';
+export const OWNER_SHELL_HEAD = VIEW_TRANSITION_OPT_IN + '<link rel="stylesheet" href="/owner-shell.css"><script src="/owner-shell.js" defer></script>'
   + `<script type="speculationrules">${SPECULATION}</script>`;
 
 // Puts a page's body inside the shell: a skip link, the sidebar, then the header above the page's own content, which
