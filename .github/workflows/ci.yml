@@ -48,7 +48,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        # Ubuntu's package servers are sometimes unreachable from GitHub's machines (Nov 11). The runner image already has
+        # what Chromium needs, so fall back to installing the browser alone rather than failing every check and deploy.
+        run: pnpm exec playwright install --with-deps chromium || pnpm exec playwright install chromium
       - name: Walkthrough and accessibility check
         id: walkthrough
         # bash here also sets pipefail, so a failed walkthrough still fails the step through tee.
