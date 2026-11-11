@@ -4,6 +4,7 @@ import {checkoutKinds,stripeMode,webhookSecret} from '../../../lib/checkout-conf
 import {kindList} from '../../../lib/purchase-kinds';
 import {validTestKey,stripeTestClient,sealStripeKey,testKeyConfigured,validKeyFor,stripeClientFor,sealStripeKeyFor,keyConfiguredFor,expectedStripeAccount,recordedStripeAccount,settingStripeAccount,sealStripeAccount,stripeAccountName,ACCOUNT_ID,type StripeAccountInfo} from '../../../lib/stripe-test';
 import {rateLimited} from '../../../lib/rate-limit';
+import {stripeSetupError} from '../../../lib/stripe-setup-errors';
 import {securityEvent} from '../../../lib/security-events';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
@@ -43,7 +44,7 @@ async function saveTestKey(request:Request,ownerId:string,data:any,reply:Reply){
   await securityEvent(ownerId,'stripe_test_key_saved');
   if(recorded?.id!==found.id)await securityEvent(ownerId,'stripe_account_recorded',found.id);
   return reply({configured:true,mode:'test',account:{...found,source:expected?.source??'recorded'},checkoutEnabled:false,message:`Connected to ${named(found)}. Your test key is saved securely. Online payment stays off until a purchase type is opened, so nothing is charged.`});
- }catch{return reply({error:'The test connection could not be verified or saved. Check that the key is active and permits reading account details. No key details are returned.'},502)}
+ }catch(err){return reply({error:stripeSetupError(err,'test')},502)}
 }
 
 // Live key (issue #26). Accepted only when STRIPE_MODE is "live", only as a restricted rk_live_ key, and only for the
@@ -62,7 +63,7 @@ async function saveLiveKey(request:Request,ownerId:string,liveKey:unknown,reply:
   await upsert('stripe-live',encrypted,ownerId,now).run();
   await securityEvent(ownerId,'stripe_live_key_saved');
   return reply({configured:true,mode:'live',account:expected,checkoutEnabled:checkoutKinds().size>0,message:'Your live key is saved securely. Real cards are now charged for every purchase type that is open for online payment.'});
- }catch{return reply({error:'The live connection could not be verified or saved. Check that the key is active, belongs to the academy account, and permits reading account details. No key details are returned.'},502)}
+ }catch(err){return reply({error:stripeSetupError(err,'live')},502)}
 }
 
 // "Connect a different Stripe account" (issue #255). The page asks the owner to confirm first. Clears the saved test key
