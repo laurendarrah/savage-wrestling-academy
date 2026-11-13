@@ -5,6 +5,7 @@ import {kindList} from '../../../lib/purchase-kinds';
 import {validTestKey,stripeTestClient,sealStripeKey,testKeyConfigured,validKeyFor,stripeClientFor,sealStripeKeyFor,keyConfiguredFor,expectedStripeAccount,recordedStripeAccount,settingStripeAccount,sealStripeAccount,stripeAccountName,ACCOUNT_ID,type StripeAccountInfo} from '../../../lib/stripe-test';
 import {rateLimited} from '../../../lib/rate-limit';
 import {stripeSetupError} from '../../../lib/stripe-setup-errors';
+import {keyAccount,NEEDS_ACCOUNT_SETTING} from '../../../lib/stripe-key-account';
 import {securityEvent} from '../../../lib/security-events';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
@@ -32,9 +33,9 @@ async function saveTestKey(request:Request,ownerId:string,data:any,reply:Reply){
  try{
   const expected=await expectedStripeAccount(),recorded=await recordedStripeAccount();
   if(expected==='invalid')return reply({error:SETTING_INVALID},400);
-  const account=await stripeTestClient(data.testKey).accounts.retrieve(null);
-  if(typeof account?.id!=='string'||!ACCOUNT_ID.test(account.id))throw Error('Unexpected account.');
-  const found={id:account.id,name:stripeAccountName(account)};
+  // Issue #308: a key Stripe won't let read the account still works; the account then comes from Stripe's refusal or the setting.
+  const found=await keyAccount(stripeTestClient(data.testKey),expected?.source==='setting'?expected.id:null);
+  if(found==='needs-setting')return reply({error:NEEDS_ACCOUNT_SETTING},400);
   if(expected&&found.id!==expected.id)return reply({error:expected.source==='setting'
    ?`This key belongs to a different Stripe account, ${named(found)}. The site is set to use the academy’s account ${expected.id}. Use a test key from that account.`
    :`This key belongs to a different Stripe account, ${named(found)}. The site is connected to ${named(expected)}. Use a test key from that account, or choose Connect a different Stripe account first.`},400);
@@ -57,8 +58,9 @@ async function saveLiveKey(request:Request,ownerId:string,liveKey:unknown,reply:
   const expected=await expectedStripeAccount();
   if(expected==='invalid')return reply({error:SETTING_INVALID},400);
   if(!expected)return reply({error:'Save your test key first so the site knows your Stripe account.'},400);
-  const account=await stripeClientFor('live',liveKey).accounts.retrieve(null);
-  if(account?.id!==expected.id)return reply({error:`This key belongs to a different Stripe account. Use the live key of ${named(expected)}.`},400);
+  const account=await keyAccount(stripeClientFor('live',liveKey),expected.source==='setting'?expected.id:null);
+  if(account==='needs-setting')return reply({error:NEEDS_ACCOUNT_SETTING},400);
+  if(account.id!==expected.id)return reply({error:`This key belongs to a different Stripe account. Use the live key of ${named(expected)}.`},400);
   const encrypted=await sealStripeKeyFor('live',liveKey),now=new Date().toISOString();
   await upsert('stripe-live',encrypted,ownerId,now).run();
   await securityEvent(ownerId,'stripe_live_key_saved');
