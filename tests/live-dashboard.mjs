@@ -24,7 +24,11 @@ const responses = {
 };
 let fetched = [];
 const location = {hash: '', href: ''};
-const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date, JSON, Set, FormData, Promise, location,
+// The page reads the clock to mark a session "Now". Run it at 10 AM New York today, before any session, so the test
+// passes at any hour (it failed during practice time on Nov 13, issue #304).
+const fixedNow = Date.parse(today + 'T15:00:00Z');
+class FixedDate extends Date { constructor(...a) { super(...(a.length ? a : [fixedNow])); } static now() { return fixedNow; } }
+const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date: FixedDate, JSON, Set, FormData, Promise, location,
   document: {querySelector: node, getElementById: id => node('#' + id), addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {}, confirm: () => true,
   fetch: async url => { fetched.push(url); const key = Object.keys(responses).find(k => url === k);
     if (key) return {ok: true, json: async () => responses[key]};
