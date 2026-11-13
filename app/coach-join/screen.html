@@ -24,7 +24,7 @@ html body[data-swa-page="/coach-join"] .switch button.link{font-family:var(--swa
 <div class="who" id="details" hidden></div>
 <div id="acceptBox" hidden><p>You’re signed in as <b id="signedAs"></b>. Accept to add coach access to this account.</p><button class="primary" id="acceptInvite" type="button">Accept and continue</button></div>
 <div id="otherBox" class="notice" hidden><p>You’re signed in as <b id="otherEmail"></b>, but this invitation is for <b id="otherFor"></b>.</p><button type="button" id="switchAccount">Sign out and use the invited email</button></div>
-<form id="signupForm" hidden><p>Create a password for your coach account. You’ll confirm your email next, then set up an authenticator app.</p>
+<form id="signupForm" hidden><p>Create a password for your coach account. You’ll confirm your email next.</p>
 <label>Email<input id="signupEmail" type="email" readonly autocomplete="username"></label>
 <label>Password<input id="signupPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
 <p class="muted">Use 12 to 128 characters. A long passphrase works well.</p>
@@ -68,7 +68,7 @@ $('toSignup').onclick=()=>{show('signupForm');say('');$('signupPassword').focus(
 $('signupForm').onsubmit=async e=>{e.preventDefault();if($('signupPassword').value!==$('signupConfirm').value){say('The passwords do not match.');return}
  $('signupButton').disabled=true;say('Please wait…');
  try{await post('/api/auth',{action:'signup',email:invite.email,password:$('signupPassword').value});$('signupPassword').value=$('signupConfirm').value='';show('');steps(2);
-  say('Check '+invite.email+' for a confirmation link. Opening it brings you back here to finish: then you set up your authenticator app and land on coach home.')}
+  say('Check '+invite.email+' for a confirmation link. Opening it brings you back here to finish, and then you land on coach home.')}
  catch(err){say(err.message)}finally{$('signupButton').disabled=false}};
 $('signinForm').onsubmit=async e=>{e.preventDefault();$('signinButton').disabled=true;say('Please wait…');
  try{await post('/api/auth',{action:'login',email:invite.email,password:$('signinPassword').value});$('signinPassword').value='';await acceptAndGo()}

@@ -65,7 +65,7 @@ Logins do not move: the new Supabase project starts empty (#139). Families and t
 
 - [ ] Supabase → Authentication → URL Configuration: set the Site URL to the new address, and add `https://<new address>/auth/confirm` and `https://<new address>/auth/confirm?next=change` to the redirect URLs.
 - [ ] Supabase → Authentication → Sign In / Providers → Email: keep **Confirm email** on.
-- [ ] Supabase → Authentication → Multi-Factor: keep **Authenticator app (TOTP)** on. The owner and coaches cannot sign in without it.
+- [ ] Supabase → Authentication → Multi-Factor: keep **Authenticator app (TOTP)** on, so anyone who wants an authenticator can add one. Staff don't need one (#306).
 - [ ] Supabase → Authentication → Emails → Templates: paste the Savage-branded emails from `docs/email-templates/` (steps in its README).
 - [ ] Leaked-password protection, if the Supabase plan allows it.
 - [ ] **Email sender.** Supabase's built-in sender delivers only to members of the Supabase project team, a few emails an hour. Testing with Lauren's and Justin's addresses works; families get no confirmation emails until a custom email sender (SMTP) is set under Authentication → Emails. This waits on the email decision (#87).
@@ -81,7 +81,7 @@ Logins do not move: the new Supabase project starts empty (#139). Families and t
 
 ## 7. Check everything on the Cloudflare address
 
-Signed in as the owner, with the authenticator:
+Signed in as the owner:
 - [ ] `/` shows the **Launch checklist** and the Today panel. Work through anything the checklist marks as to do; `/site-health` says the site and database are answering
 - [ ] `/welcome` lists SWA Development, SWA Intermediate and SWA Advance. If the checklist offers **Publish the programs**, choose it, then check the practice days and times under Schedules
 - [ ] `/roster`, `/payments`, `/cards`, `/waivers`, `/messages`, `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load with the moved data

@@ -270,12 +270,11 @@ Sign-in, sign-up, confirmation and password emails, and authenticators all run o
 
 ### The authenticator switch (STAFF_MFA)
 
-Normally the owner and coaches need an authenticator code at every sign-in. Lauren turned that off on Nov 6 (#204) because the email limit was blocking the first sign-ins and nobody had set up an authenticator yet.
+The owner and coaches sign in with email and password only. Lauren and Justin decided this on Nov 13 (#306), replacing the earlier plan to require an authenticator before families join (#27).
 
-- **How to tell:** the owner's launch checklist shows a red Safety item, "Authenticator sign-in is turned off".
-- **While it's off** (`STAFF_MFA=off` on the Worker): an owner or coach with no authenticator can sign in with only their password. Anyone who has set one up still uses it.
-- **It must be turned back on before families join:** **Cloudflare → Workers & Pages → savage-wrestling-academy → Settings → Variables and Secrets → delete `STAFF_MFA`**. The owner and coaches are then asked to set up an authenticator at their next sign-in. No code change is needed.
-- Turning it off again is a decision for Lauren and the owner, not a fix for a single lost phone (see the next section). If it is ever needed, add it as a **Secret**, not a plain variable.
+- **Default:** no `STAFF_MFA` setting means no authenticator is required. A deploy can't change that.
+- **Someone is still asked for a code:** they set up an authenticator at some point, and it stays in use. In **Supabase → Authentication → Users**, open their account and delete its **MFA factors**. They then sign in with their password only.
+- **To require authenticators again:** add `STAFF_MFA` with the value `on` in Cloudflare (**Workers & Pages → savage-wrestling-academy → Settings → Variables and Secrets**), as a **Secret**. The owner and coaches are then asked to set one up at their next sign-in.
 
 ### Someone lost the phone with their authenticator
 

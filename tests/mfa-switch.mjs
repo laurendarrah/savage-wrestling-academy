@@ -1,12 +1,13 @@
-// Issue #204: STAFF_MFA=off lets accounts without an authenticator sign in until launch, and the owner sees it in red.
+// Issues #204 and #306: staff sign in without an authenticator unless STAFF_MFA=on. Off is the default, so a deploy that
+// drops the setting can't bring the requirement back.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 const load = f => { const module = {exports: {}}; vm.runInNewContext(ts.transpileModule(readFileSync(f, 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText, {module, exports: module.exports, String}); return module.exports; };
 const {fullySignedIn, mfaSwitchedOff} = load('lib/mfa-policy.ts');
-assert.equal(mfaSwitchedOff('off'), true); assert.equal(mfaSwitchedOff(' OFF '), true);
-for (const v of [undefined, '', 'on', 'false', '0', 'no']) assert.equal(mfaSwitchedOff(v), false, String(v));
+for (const v of [undefined, '', 'off', ' OFF ', 'false', '0', 'no']) assert.equal(mfaSwitchedOff(v), true, String(v));
+assert.equal(mfaSwitchedOff('on'), false); assert.equal(mfaSwitchedOff(' ON '), false, 'only "on" requires an authenticator');
 const base = {emailConfirmed: true, aal2: false, hasVerifiedFactor: false, mfaOff: false};
 assert.equal(fullySignedIn(base), false, 'normally an authenticator code is required');
 assert.equal(fullySignedIn({...base, mfaOff: true}), true, 'switched off: no authenticator needed');
@@ -20,7 +21,7 @@ assert.match(auth, /strong=fullySignedIn\(\{emailConfirmed:true,aal2:id\.aal2,ha
 // Issue #274: the authenticator level is read once per request from the session token; there is no second check.
 assert.equal((auth.match(/getAuthenticatorAssuranceLevel|currentLevel/g) || []).length, 0, 'no second authenticator check in account-auth');
 assert.equal((auth.match(/fullySignedIn\(/g) || []).length, 1, 'the policy is applied in one place');
-// The launch checklist shows it in red while it's off.
+// No red warning any more (#306): a password-only sign-in is the decided policy.
 const cl = readFileSync('lib/launch-checklist.ts', 'utf8');
-assert.match(cl, /key: 'mfa-off', group: 'Safety', label: 'Authenticator sign-in is turned off', status: 'todo'/);
+assert.doesNotMatch(cl, /mfa-off/);
 console.log('mfa-switch ok');

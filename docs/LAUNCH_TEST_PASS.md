@@ -8,11 +8,11 @@ Write problems in the Notes column at the end of each section, then post the res
 
 ## Before you start
 
-- [ ] Signed in as the owner (`savagewrestlingclub@gmail.com`) with the authenticator. The dashboard (`/`) shows the **Launch checklist**.
+- [ ] Signed in as the owner (`savagewrestlingclub@gmail.com`) with the password. The dashboard (`/`) shows the **Launch checklist**.
 - [ ] **Online payment setup** (`/payment-setup`) says **Test mode only · No live charges** and **Connected to** the academy's Stripe account. If it says online payment stays closed until the webhook secret is added, finish `docs/GO_LIVE.md` step 6 first.
 - [ ] Email works: **Site health → Alerts and email** says email is set up (Resend, #35), and Supabase sends sign-up emails through Resend (`docs/RUNBOOK.md`, "Sign-up or reset emails blocked by the email limit"). Without both, the email steps below can't pass.
 - [ ] Online steps need their purchase type open in `CHECKOUT_KINDS` on the Worker. Each type opens only once its refund policy is decided (#3; memberships #2) and Justin approves it (`docs/GO_LIVE.md`, "Opening online payment later"). Steps marked **Online** run only for types that are open; do the rest now and the online ones when they open. The pass isn't finished until every online step for an open type has passed.
-- [ ] A coach account that has accepted its invite and set up an authenticator (**Coaches**), for the practice steps.
+- [ ] A coach account that has accepted its invite (**Coaches**), for the practice steps.
 - [ ] Today has an SWA Intermediate practice (or a practice in the test wrestler's program), Friday Night Live has a date, and a camp is on **Camps & events**.
 - [ ] Two browsers or devices: one for the owner, one (or a private window) for the test family. A phone helps for the entry pass.
 - [ ] A test email address you can read that isn't the owner's, for example a plus address like `yourname+swatest@gmail.com`.
@@ -80,7 +80,7 @@ Notes: ____________________________________________________________
 
 Today, with the test wrestler booked to pay cash (section 3):
 
-- [ ] **Must pass.** The coach signs in with their authenticator and opens **Roster & check-in** (`/roster`). *They see today's practices for their programs only, plus extra practices, with the test wrestler, their allergies or medical notes and emergency contact, and "$40.00 cash due". No family email addresses.*
+- [ ] **Must pass.** The coach signs in with their password and opens **Roster & check-in** (`/roster`). *They see today's practices for their programs only, plus extra practices, with the test wrestler, their allergies or medical notes and emergency contact, and "$40.00 cash due". No family email addresses.*
 - [ ] **Must pass.** The owner marks the test card **Not valid** on `/cards` (note: "Launch test"). On the coach's roster (choose **Refresh**): *the wrestler shows **Can't check in** with "can't be checked in: the academy marked the USA Wrestling card not valid (Launch test). Ask the family to update the card, or the owner to allow an exception."* The family also gets a "Please check … USA Wrestling card" email; that's expected. Then the owner chooses **Verified** on `/cards` again.
 - [ ] **Must pass.** The coach chooses **Check in** for the wrestler. *It says they're checked in.* Try **Undo**, then **Check in** again.
 - [ ] **Must pass.** The coach taps **Cash received** and confirms. *The row says "Received by <coach name> · <time>", and "Only the owner can undo cash". The owner sees it on **Payments** with **Collected by** the coach, and **Cash due at the academy** no longer lists it.*

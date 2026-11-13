@@ -10,7 +10,9 @@ assert.equal((await api.GET(request('/api/security'))).status,401);
 assert.equal((await api.POST(request('/api/security','POST',{action:'enroll'},'ownerWeak'))).status,403);
 assert.equal((await api.POST(request('/api/security','POST',{action:'verify',factorId:'factor-owner',code:'123456'},'alice'))).status,400);
 const enrollment=await api.POST(request('/api/security','POST',{action:'enroll'},'ownerNew'));assert.equal(enrollment.status,200);const enrolled=await enrollment.json();
-assert.equal((await academy.GET(request('/api/academy','GET',null,'ownerNew'))).status,403);
+// #306: the owner signs in with a password only, so an owner who never set up an authenticator is let in
+// (tests/mfa-switch.mjs and tests/api-errors.mjs cover STAFF_MFA=on).
+assert.equal((await academy.GET(request('/api/academy','GET',null,'ownerNew'))).status,200);
 assert.equal((await api.POST(request('/api/security','POST',{action:'verify',factorId:enrolled.factorId,code:'000000'},'ownerNew'))).status,400);
 assert.equal((await api.POST(request('/api/security','POST',{action:'verify',factorId:enrolled.factorId,code:'123456'},'ownerNew'))).status,200);
 assert.equal((await academy.GET(request('/api/academy','GET',null,'ownerNew'))).status,200);

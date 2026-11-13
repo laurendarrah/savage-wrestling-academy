@@ -57,7 +57,7 @@ Known issues and priorities are in `docs/ISSUES.md` and `docs/LAUNCH_PLAN.md`.
 
 ## Sign-in
 
-- `STAFF_MFA=off` on the Worker temporarily lets the owner and coaches sign in without an authenticator (#204). It must be deleted before families join (#27); the owner's launch checklist shows it in red while it's set.
+- The owner and coaches sign in with email and password only, by decision of Lauren and Justin on Nov 13 (#306). No authenticator is required unless `STAFF_MFA=on` is set on the Worker. Don't reintroduce a required authenticator or a warning about it without a new decision. Anyone who set one up still uses it until its factors are deleted in Supabase.
 
 ## Domain rules
 

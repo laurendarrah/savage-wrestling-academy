@@ -184,17 +184,18 @@ for (const [o, ok] of [['http://register.savagewrestling.example', false], ['htt
 
 // Backup authenticator (issue #167): to do with one, done with two, left out when the caller doesn't say.
 {
-  const one = by(await launchChecklist(DB, settings, today, now, 1)).authenticator;
+  const on = {...settings, STAFF_MFA: 'on'};
+  const one = by(await launchChecklist(DB, on, today, now, 1)).authenticator;
   assert.equal(one.status, 'todo'); assert.equal(one.href, '/security'); assert.match(one.detail, /lost phone/);
-  assert.equal(by(await launchChecklist(DB, settings, today, now, 2)).authenticator.status, 'done');
-  assert.equal(by(await launchChecklist(DB, settings, today, now)).authenticator, undefined);
+  assert.equal(by(await launchChecklist(DB, on, today, now, 2)).authenticator.status, 'done');
+  assert.equal(by(await launchChecklist(DB, on, today, now)).authenticator, undefined);
+  assert.equal(by(await launchChecklist(DB, settings, today, now, 1)).authenticator, undefined, 'no backup-authenticator item while staff sign in with a password only (#306)');
 }
 const routeText = readFileSync('app/api/launch-checklist/route.ts', 'utf8');
 assert.match(routeText, /factors \?\? \[\]\)\.filter\(f => f\.status === 'verified'\)/, 'counts only verified authenticators');
 
-// Issue #204: a red Safety item while STAFF_MFA=off; nothing otherwise.
-assert.equal(by(await launchChecklist(DB, {...settings, STAFF_MFA: 'off'}, today, now))['mfa-off'].status, 'todo');
-assert.equal(by(await launchChecklist(DB, settings, today, now))['mfa-off'], undefined);
+// Issue #306: no red Safety item about the authenticator, whatever STAFF_MFA says.
+for (const v of [undefined, 'off', 'on']) assert.equal(by(await launchChecklist(DB, {...settings, STAFF_MFA: v}, today, now))['mfa-off'], undefined, String(v));
 
 // The page is owner-only and the dashboard shows it.
 const route = readFileSync('app/api/launch-checklist/route.ts', 'utf8');
