@@ -1,6 +1,7 @@
 // Stripe Checkout for one-time purchases (issue #18).
 // Orders are created as 'pending' here and only become 'paid' through a verified webhook (lib/stripe-webhook.ts).
 import {env} from 'cloudflare:workers';
+import {stripeReason} from './stripe-key-check';
 import {storedStripeKeyFor, stripeClientFor, stripeMode} from './stripe-test';
 import {academyToday} from './public-schedule';
 import type {Charge} from './quotes';
@@ -11,7 +12,8 @@ export const MIN_CHARGE_CENTS = 50;
 const SESSION_MINUTES = 30;
 
 export class CheckoutError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  // `reason` is for the owner's Site health page only (issue #315); the family sees `message`.
+  constructor(public status: number, message: string, public reason = '') { super(message); }
 }
 
 type Buyer = {id: string; email: string};
@@ -64,9 +66,9 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
       : {...common, mode: 'payment', line_items: [{quantity: 1, price_data: {currency: 'usd', unit_amount: charge.amountCents, product_data: product}}],
          payment_intent_data: {metadata: {order_id: id}}},
       {idempotencyKey: `order-${id}`});
-  } catch {
+  } catch (err) {
     await env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE id=? AND status='pending'").bind(now(), id).run();
-    throw new CheckoutError(502, 'Could not start secure checkout. Nothing was charged. Please try again.');
+    throw new CheckoutError(502, 'Could not start secure checkout. Nothing was charged. Please try again.', stripeReason(err));
   }
   if (!session.url) throw new CheckoutError(502, 'Could not start secure checkout. Nothing was charged.');
   await env.DB!.prepare('UPDATE orders SET stripe_session_id=?,livemode=?,updated_at=? WHERE id=?').bind(session.id, session.livemode ? 1 : 0, now(), id).run();

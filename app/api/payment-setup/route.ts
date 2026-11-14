@@ -6,6 +6,8 @@ import {validTestKey,stripeTestClient,sealStripeKey,testKeyConfigured,validKeyFo
 import {rateLimited} from '../../../lib/rate-limit';
 import {stripeSetupError} from '../../../lib/stripe-setup-errors';
 import {keyAccount,NEEDS_ACCOUNT_SETTING} from '../../../lib/stripe-key-account';
+import {checkKey,keyCheckSummary} from '../../../lib/stripe-key-check';
+import {storedStripeKeyFor} from '../../../lib/stripe-test';
 import {securityEvent} from '../../../lib/security-events';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
@@ -20,6 +22,7 @@ export const GET = withApi(GET_); async function GET_(request:Request){const aut
  return accountReply({...config,account,accountSettingInvalid,canChangeAccount:mode==='test'&&settingStripeAccount()===null,mode,liveConfigured:live.configured,liveUpdatedAt:live.updatedAt,webhookConfigured:!!webhookSecret(mode),checkoutEnabled:checkoutKinds().size>0,checkoutKinds:[...checkoutKinds()],checkoutNames:kindList(checkoutKinds()),message:checkoutKinds().size?'Test checkout is open for '+kindList(checkoutKinds())+'.':'Online payment is off. Each purchase type opens only after its terms and refund policy are decided and whoever maintains the site turns it on.'},200,auth.headers)}
 
 export const POST = withApi(POST_); async function POST_(request:Request){const auth=await ownerIdentity(request),reply:Reply=(b,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Sign in as the owner and enter your authenticator code to continue.'},403);if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);const raw=await request.text();if(raw.length>4096)return reply({error:'Request too large.'},413);let data;try{data=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}
+ if(data&&typeof data==='object'&&data.checkKey===true)return checkSavedKey(request,auth.owner.userId,reply);
  if(data&&typeof data==='object'&&'resetAccount' in data)return resetAccount(request,auth.owner.userId,data.resetAccount,reply);
  if(data&&typeof data==='object'&&'liveKey' in data)return saveLiveKey(request,auth.owner.userId,data.liveKey,reply);
  return saveTestKey(request,auth.owner.userId,data,reply)}
@@ -46,6 +49,19 @@ async function saveTestKey(request:Request,ownerId:string,data:any,reply:Reply){
   if(recorded?.id!==found.id)await securityEvent(ownerId,'stripe_account_recorded',found.id);
   return reply({configured:true,mode:'test',account:{...found,source:expected?.source??'recorded'},checkoutEnabled:false,message:`Connected to ${named(found)}. Your test key is saved securely. Online payment stays off until a purchase type is opened, so nothing is charged.`});
  }catch(err){return reply({error:stripeSetupError(err,'test')},502)}
+}
+
+// Check this key (issue #315): try each thing the site needs with the saved key for the current mode, and say what
+// works and which Stripe permission is missing. Nothing is saved, and nothing can be charged: the one Checkout
+// Session it creates is expired at once.
+async function checkSavedKey(request:Request,ownerId:string,reply:Reply){
+ if(await rateLimited(request,'stripe-check:'+ownerId,5))return reply({error:'Too many attempts. Please wait a minute.'},429);
+ const mode=stripeMode();
+ let key:string|null=null;
+ try{key=await storedStripeKeyFor(mode)}catch(err){return reply({error:stripeSetupError(err,mode)},502)}
+ if(!key)return reply({error:mode==='live'?'Save the live key first, then check it.':'Save a test key first, then check it.'},400);
+ const checks=await checkKey(stripeClientFor(mode,key) as never,new URL(request.url).origin);
+ return reply({mode,checks,summary:keyCheckSummary(checks)});
 }
 
 // Live key (issue #26). Accepted only when STRIPE_MODE is "live", only as a restricted rk_live_ key, and only for the
