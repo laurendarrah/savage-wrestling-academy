@@ -165,6 +165,13 @@ assert.match(brandedEmail({subject: '', text: 'Hi', origin: O}).html, /<h1[^>]*>
 assert.match(brandedEmail({subject: 's', text: 'Ünïcödé ✓', origin: O}).html, /Ünïcödé ✓/);
 assert.match(brandedEmail({subject: 's', text: 'Hi', audience: 'nonsense'}).html, /you have an account with/, 'an unknown audience gets the usual line');
 
+// A long, odd message is still quick to build (no slow patterns on a run of dots or spaces).
+{
+  const started = Date.now();
+  for (const filler of ['.', ' ', '!', ')', '—\n', 'https://a.test/..........']) brandedEmail({subject: filler.repeat(150), text: `${O}/family${filler.repeat(20000)}x\n\n${filler.repeat(20000)}x`, origin: O});
+  assert.ok(Date.now() - started < 2000, 'built in ' + (Date.now() - started) + 'ms');
+}
+
 // --- No address is written into the layout: it comes from appOrigin() through lib/email.ts ---
 const source = readFileSync('lib/email-brand.ts', 'utf8');
 assert.doesNotMatch(source, /https?:\/\/[a-z0-9]/i, 'no hard-coded hostname in lib/email-brand.ts');
@@ -220,6 +227,15 @@ requests = [];
 results = await email.sendEmailsDetailed(Array.from({length: 205}, (_, i) => ({to: `f${i}@example.test`, subject: 'Practice moved', text: announcement})));
 assert.equal(results.length, 205); assert.deepEqual(requests.map(r => r.body.length), [100, 100, 5]);
 assert.ok(requests.every(r => r.body.every(m => m.html.includes('>Read your messages</a>') && m.text === announcement)));
+// The same message to everyone is laid out once; a different footer line or text is its own layout.
+{
+  let builds = 0;
+  layout = {...brand, brandedEmail(input) { builds++; return brand.brandedEmail(input); }}; email = loadEmail(); requests = [];
+  await email.sendEmailsDetailed([...Array.from({length: 150}, (_, i) => ({to: `f${i}@example.test`, subject: 'Practice moved', text: announcement})),
+    {to: 'savagewrestlingclub@gmail.com', subject: 'Practice moved', text: announcement}, {to: 'x@example.test', subject: 'Practice moved', text: announcement + '!'}]);
+  assert.equal(builds, 3); assert.equal(requests.flatMap(r => r.body).filter(m => m.html.includes('you have an account')).length, 151);
+  layout = brand; email = loadEmail();
+}
 // Without APP_ORIGIN the email still goes, branded, with no logo and no button.
 origin = () => { throw Error('APP_ORIGIN is not set.'); }; requests = [];
 results = await email.sendEmailsDetailed([{to: 'savagewrestlingclub@gmail.com', subject: 'Test alert: no action needed', text: 'Test alert: no action needed.\n\nSee the Site health page in the owner dashboard.\n\n—\nSavage Wrestling Academy site', audience: 'owner'}]);
@@ -241,7 +257,7 @@ const walk = dir => readdirSync(dir, {withFileTypes: true}).flatMap(d => d.isDir
 const code = ['app', 'lib', 'build', 'public'].flatMap(walk);
 assert.deepEqual(code.filter(f => /api\.resend\.com|api\.sendgrid\.com|api\.mailgun\.net|api\.postmarkapp\.com|\/emails\/batch/i.test(readFileSync(f, 'utf8'))).map(f => f.split(path.sep).join('/')), ['lib/email.ts']);
 const adapter = readFileSync('lib/email.ts', 'utf8');
-assert.equal(count(adapter, 'fetch('), 1); assert.match(adapter, /body: JSON\.stringify\(chunk\.map\(m => emailPayload\(m, e\.MAIL_FROM, origin\)\)\)/);
+assert.equal(count(adapter, 'fetch('), 1); assert.match(adapter, /body: JSON\.stringify\(chunk\.map\(m => emailPayload\(m, e\.MAIL_FROM, origin, built\)\)\)/);
 assert.match(adapter, /import \{appOrigin, OWNER_EMAIL\} from '\.\/account-auth'/, 'the site address comes from appOrigin()');
 // Every sender goes through sendEmails or sendEmailsDetailed (a new one is branded without doing anything), and the
 // alerts and the invite name their footer line.

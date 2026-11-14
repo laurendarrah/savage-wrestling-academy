@@ -46,11 +46,15 @@ export function failureWords(reason: string | null | undefined) {
 // What the provider is sent for one message: the Savage HTML and the caller's plain text. The site address (for the
 // logo and for telling the site's own links from others) comes from appOrigin(); without one the email still goes,
 // with no logo and no button. If the layout ever fails, the plain text goes alone rather than nothing.
-function emailPayload(m: Outgoing, from: string | undefined, origin: string | null) {
+// An announcement is the same message to every family, so the layout is built once per message, not once per person.
+function emailPayload(m: Outgoing, from: string | undefined, origin: string | null, built: Map<string, string>) {
   const base = {from, to: [m.to], subject: m.subject, text: m.text};
   try {
     const audience = m.audience ?? (OWNER_EMAIL && String(m.to).trim().toLowerCase() === OWNER_EMAIL ? 'owner' : 'account');
-    return {...base, html: brandedEmail({subject: m.subject, text: m.text, origin, audience}).html};
+    const key = `${audience}\n${m.subject}\n${m.text}`;
+    let html = built.get(key);
+    if (html === undefined) { html = brandedEmail({subject: m.subject, text: m.text, origin, audience}).html; built.set(key, html); }
+    return {...base, html};
   } catch (error) {
     console.error('email layout failed', error);
     return base;
@@ -64,13 +68,14 @@ export async function sendEmailsDetailed(list: Outgoing[]): Promise<EmailResult[
   const e = env as Env, out: EmailResult[] = [];
   let origin: string | null = null;
   try { origin = appOrigin(); } catch { origin = null; }
+  const built = new Map<string, string>();
   for (let i = 0; i < list.length; i += 100) {
     const chunk = list.slice(i, i + 100);
     let result: EmailResult;
     try {
       const r = await fetch('https://api.resend.com/emails/batch', {
         method: 'POST', headers: {Authorization: 'Bearer ' + e.EMAIL_API_KEY, 'Content-Type': 'application/json'},
-        body: JSON.stringify(chunk.map(m => emailPayload(m, e.MAIL_FROM, origin))),
+        body: JSON.stringify(chunk.map(m => emailPayload(m, e.MAIL_FROM, origin, built))),
         // A provider that hangs counts as unreachable after a few seconds (issue #274) instead of holding the request.
         signal: timeoutSignal(EMAIL_TIMEOUT_MS)
       });

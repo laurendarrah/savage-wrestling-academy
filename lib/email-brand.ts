@@ -105,12 +105,18 @@ export function emailShell(parts: {title: string; preheader: string; inner: stri
 // --- Plain text to HTML ---
 
 const URL_PATTERN = /https?:\/\/[^\s<>"'`]+/g;
+// Cuts characters off the end one at a time (a pattern like /[.!?]+$/ gets slow on a long run of them mid-text).
+function dropTrailing(s: string, chars: string): string {
+  let end = s.length;
+  while (end > 0 && chars.includes(s[end - 1])) end--;
+  return s.slice(0, end);
+}
 // A sentence's own punctuation after an address is not part of the address.
 function trimUrl(raw: string): string {
   const count = (s: string, c: string) => s.split(c).length - 1;
   let url = raw;
   for (;;) {
-    url = url.replace(/[.,;:!?]+$/, '');
+    url = dropTrailing(url, '.,;:!?');
     const last = url.slice(-1), open = last === ')' ? '(' : last === ']' ? '[' : '';
     // An address in brackets ends before the closing bracket; one with its own pair, like "/wiki/Mat_(sport)", keeps it.
     if (!open || count(url, last) <= count(url, open)) return url;
@@ -150,12 +156,12 @@ export function buttonLabel(url: string, origin: string): string {
 }
 
 const BRAND_LINE = /^savage wrestling academy( site)?$/i, RULE_LINE = /^(—|–|--)$/;
-const sameWords = (a: string, b: string) => a.trim().replace(/[.!?\s]+$/, '').toLowerCase() === b.trim().replace(/[.!?\s]+$/, '').toLowerCase();
+const sameWords = (a: string, b: string) => dropTrailing(a.trim(), '.!? ').toLowerCase() === dropTrailing(b.trim(), '.!? ').toLowerCase();
 
 export function brandedEmail(input: BrandInput): {html: string; text: string} {
   const text = String(input?.text ?? ''), subject = String(input?.subject ?? '').trim() || ACADEMY_NAME;
   const origin = cleanOrigin(input?.origin);
-  const lines = text.replace(/\r\n?/g, '\n').trim().split('\n').map(l => l.replace(/\s+$/, ''));
+  const lines = text.replace(/\r\n?/g, '\n').trim().split('\n').map(l => l.trimEnd());
 
   // The plain-text sign-off ("—", the academy's name, a link) is the footer's job here. Its link can be the button.
   let body = lines, signOff: string[] = [];
