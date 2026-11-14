@@ -12,9 +12,9 @@ let cal=run('calendar()');
 assert.match(cal,/<h1>PLAN FROM YOUR CALENDAR<\/h1>/);
 assert.match(cal,/<button type="button" aria-pressed="true" onclick="setCalView\('month'\)">Month<\/button><button type="button" aria-pressed="false" onclick="setCalView\('week'\)">Week<\/button>/,'the view switch');
 // A practice is a bar; a shared plan a green dot, a draft an amber one; a day off has nothing.
-assert.match(cal,/aria-label="Monday, December 7, 2026: SWA Development, plan shared" aria-expanded="false" onclick="openCalendarDay\('2026-12-07'\)"><span class="n">7<\/span><span class="bar cal-elementary"><i><\/i><b><\/b><\/span><\/button>/);
-assert.match(cal,/aria-label="Monday, December 14, 2026: SWA Development, draft plan"[^>]*><span class="n">14<\/span><span class="bar cal-elementary"><i><\/i><b class="draft"><\/b><\/span>/);
-assert.match(cal,/aria-label="Monday, December 21, 2026: SWA Development"[^>]*><span class="n">21<\/span><span class="bar cal-elementary"><i><\/i><\/span><\/button>/,'no plan, no dot');
+assert.match(cal,/aria-label="Monday, December 7, 2026: SWA Development, plan shared" aria-expanded="false" onclick="openCalendarDay\('2026-12-07'\)"><span class="n">7<\/span><span class="bar cal-elementary"><i><strong>SWA Development<\/strong><span>6:00 PM–7:30 PM<\/span><\/i><b><\/b><\/span><\/button>/);
+assert.match(cal,/aria-label="Monday, December 14, 2026: SWA Development, draft plan"[^>]*><span class="n">14<\/span><span class="bar cal-elementary"><i><strong>SWA Development<\/strong><span>6:00 PM–7:30 PM<\/span><\/i><b class="draft"><\/b><\/span>/);
+assert.match(cal,/aria-label="Monday, December 21, 2026: SWA Development"[^>]*><span class="n">21<\/span><span class="bar cal-elementary"><i><strong>SWA Development<\/strong><span>6:00 PM–7:30 PM<\/span><\/i><\/span><\/button>/,'no plan, no dot');
 assert.match(cal,/aria-label="Monday, December 28, 2026"[^>]*><span class="n">28<\/span><\/button>/,'the day off has no practice');
 assert.doesNotMatch(cal,/calendarPractice\(/,'the grid itself opens days, not plans');
 assert.match(cal,/class="day is-today" aria-current="date" aria-label="Today, Wednesday, December 9, 2026"/);
@@ -66,8 +66,8 @@ console.log('Passed: the week list opens on today, steps by week into the next m
 run(`year=2026;month=11;calHidden=new Set();data.events=[{id:'camp',name:'Winter camp',type:'Camp',dates:['2026-12-14','2026-12-16'],price:100,slots:20},{id:'clinic',name:'Single-leg clinic',type:'Clinic',dates:['2026-12-15'],price:50,slots:20},{id:'event',name:'Academy event',type:'Event',dates:['2026-12-17'],price:0,slots:20},{id:'archived',name:'Archived camp',type:'Camp',dates:['2026-12-18','2026-12-19'],archived:true},{id:'past',name:'Old clinic',type:'Clinic',dates:['2026-12-08']}];data.extraPractices=[{id:'fnl',name:'Friday Night Live',dates:['2026-12-18'],start:'18:00',end:'19:00',memberCents:1000,nonMemberCents:2000,enabled:true}];data.seasons.push({program:'Intermediate',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Monday',start:'19:30',end:'21:00'}],excludedDates:[]},{program:'Advanced',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Monday',start:'19:30',end:'21:00'}],excludedDates:[]})`);
 for(const output of ['calendar()',"calView='week';weekStart='2026-12-14';calendar()"]){const html=run(output);for(const color of ['cal-advanced','cal-intermediate','cal-elementary','cal-special'])assert.ok(html.includes(color),color);for(const name of ['Winter camp','Single-leg clinic','Academy event','Friday Night Live'])assert.ok(html.includes(name),name);assert.doesNotMatch(html,/Archived camp|Old clinic/);run("calView='month';weekStart=''")}
 cal=run('calendar()');
-assert.match(cal,/aria-label="Monday, December 14, 2026: SWA Development, draft plan, SWA Intermediate, SWA Advance, Winter camp"[^>]*>[\s\S]*?<span class="evbar">Winter camp<\/span><\/button>/);
-assert.match(cal,/aria-label="Friday, December 18, 2026: Friday Night Live"[^>]*><span class="n">18<\/span><span class="evbar">Friday Night Live<\/span><\/button>/);
+assert.match(cal,/aria-label="Monday, December 14, 2026: SWA Development, draft plan, SWA Intermediate, SWA Advance, Winter camp"[^>]*>[\s\S]*?<span class="evbar"><strong>Winter camp<\/strong>(?:<span>[^<]*<\/span>)?<\/span><\/button>/);
+assert.match(cal,/aria-label="Friday, December 18, 2026: Friday Night Live"[^>]*><span class="n">18<\/span><span class="evbar"><strong>Friday Night Live<\/strong>(?:<span>[^<]*<\/span>)?<\/span><\/button>/);
 assert.equal(JSON.parse(run("JSON.stringify(dayEvents('2026-12-15').map(e=>e.name))"))[0],'Single-leg clinic');assert.deepEqual(JSON.parse(run("JSON.stringify(dayEvents('2026-12-16').map(e=>e.name))")),['Winter camp']);
 run("toggleCalKey('events')");assert.deepEqual(JSON.parse(run("JSON.stringify(dayEvents('2026-12-14'))")),[]);assert.doesNotMatch(run('calendar()'),/evbar/);run("toggleCalKey('events')");
 // The panel: a camp opens its details with the owner's actions; an extra practice opens its editor under Schedules.
@@ -77,7 +77,11 @@ run("calendarEvent(1)");assert.match(node('#overlay').innerHTML,/Single-leg clin
 // The program colors are the savage.css tokens (issues #227 and #232), with the same colors as fallbacks.
 const css=readFileSync('public/responsive.css','utf8');for(const [name,token,color] of [['advanced','advance','#000'],['intermediate','intermediate','#686868'],['elementary','development','#fff'],['special','event','#d72732']])assert.ok(css.includes('.program-color.cal-'+name+'{background:var(--swa-prog-'+token+','+color+')'),name);
 const portal=readFileSync('app/portal.html','utf8');
-assert.match(portal,/\.cal-elementary\{--c:var\(--swa-prog-development\)\}[\s\S]*?\.cal-intermediate\{--c:var\(--swa-prog-intermediate\)\}\.cal-advanced\{--c:var\(--swa-prog-advance\)\}\.cal-special\{--c:var\(--swa-prog-event\)\}/,'the bars use the program tokens');
-assert.match(portal,/\.day \.bar i\{display:block;flex:1;height:6px;border-radius:3px;background:var\(--c\)\}/,'a 6px bar');
+assert.match(portal,/\.cal-elementary\{--c:var\(--swa-prog-development\);[^}]*\}[\s\S]*?\.cal-intermediate\{--c:var\(--swa-prog-intermediate\);[^}]*\}\.cal-advanced\{--c:var\(--swa-prog-advance\);[^}]*\}\.cal-special\{--c:var\(--swa-prog-event\)\}/,'the bars use the program tokens');
+// Issue #322: each practice is a card like the family calendar's (name in bold, time under it) in its program color,
+// with readable ink; phone-width cells keep a 6px bar.
+assert.match(portal,/\.day \.bar i\{display:block;flex:1;min-width:0;padding:6px 8px;border-radius:6px;background:var\(--c\);color:var\(--ci,#fff\);font:400 12px\/1\.35 [^}]*\}/,'a card');
+assert.match(portal,/@media\(max-width:760px\)\{\.day \.bar i\{height:6px;padding:0;border-radius:3px\}\.day \.bar i strong,\.day \.bar i span,\.evbar span\{display:none\}\}/,'a 6px bar where there is no room for words');
+for(const [cls,token] of [['elementary','development'],['intermediate','intermediate'],['advanced','advance']])assert.ok(portal.includes(`.cal-${cls}{--c:var(--swa-prog-${token});--ci:var(--swa-prog-${token}-ink)}`),cls+' ink');
 assert.match(portal,/calView=typeof matchMedia==='function'&&matchMedia\('\(max-width:650px\)'\)\.matches\?'week':'month'/,'phones open on the week');
 console.log('Passed: program colors on desktop and phone, events and extra practices as one red bar, archive exclusion, the legend and event details with owner actions.');
