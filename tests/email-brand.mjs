@@ -45,7 +45,7 @@ assert.match(html, /bgcolor="#C4222C"[^>]*><a href="https:\/\/swa\.example\/fami
 assert.match(html, /If the button doesn’t work, paste this link into your browser:<br><a href="https:\/\/swa\.example\/family#purchaseHistory"[^>]*>https:\/\/swa\.example\/family#purchaseHistory<\/a>/);
 // Footer: the academy, its address, and why the reader got it. The plain-text sign-off is not repeated in the card.
 assert.match(html, /Savage Wrestling Academy &middot; 20 Railroad St, Huntington Station, NY 11746<br>You’re getting this because you have an account with Savage Wrestling Academy\./);
-assert.match(readFileSync('lib/interest.ts', 'utf8'), new RegExp(`ACADEMY_ADDRESS = '${brand.ACADEMY_ADDRESS}'`), 'the same address the site shows families');
+assert.match(readFileSync('lib/website.ts', 'utf8'), new RegExp(`ACADEMY_ADDRESS = '${brand.ACADEMY_ADDRESS}'`), 'the same address the site shows families');
 assert.ok(!html.includes('—'), 'the "—" sign-off stays in the plain text only');
 assert.equal(count(html, 'Savage Wrestling Academy<br>'), 0);
 // The line an inbox shows after the subject: the first sentence, hidden in the email itself.

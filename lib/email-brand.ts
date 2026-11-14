@@ -14,7 +14,7 @@ export type BrandAudience = 'account' | 'owner' | 'invite';
 export type BrandInput = {subject: string; text: string; origin?: string | null; audience?: BrandAudience};
 
 export const ACADEMY_NAME = 'Savage Wrestling Academy';
-// The same address as ACADEMY_ADDRESS in lib/interest.ts (tests/email-brand.mjs checks they match).
+// The same address as ACADEMY_ADDRESS in lib/website.ts (tests/email-brand.mjs checks they match).
 export const ACADEMY_ADDRESS = '20 Railroad St, Huntington Station, NY 11746';
 export const LOGO_PATH = '/brand/savage-logo-128.png';
 // Why the reader got the email: one line in the footer.
