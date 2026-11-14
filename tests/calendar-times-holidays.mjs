@@ -199,8 +199,22 @@ assert.match(readFileSync('app/roster/screen.html', 'utf8'), /s\.type==='event'\
   assert.equal(el('weekRange').textContent, 'Mon, Nov 9 – Sun, Nov 15');
   assert.match(week, /<div class="wday is-today" aria-current="date"><h3>Wed, Nov 11<span class="today-tag">Today<\/span><\/h3><span class="holiday-tag">Veterans Day<\/span><div class="witem p-extra"><b>9:00 AM–12:00 PM<\/b><span>Winter camp<\/span><\/div><div class="witem p-Elementary"><b>5:00 PM–6:15 PM<\/b><span>SWA Development<\/span>/);
   assert.match(week, /<b>Time to be announced<\/b><span>Winter camp<\/span>/); assert.doesNotMatch(week, /SWA Advance/, 'only the coach’s own programs');
-  assert.match(week, /<div class="wday empty"><h3>Mon, Nov 9<\/h3><\/div>/);
+  assert.match(week, /<div class="wday is-clear"><h3>Mon, Nov 9<\/h3><\/div>/);
   vm.runInContext('showWeek(2)', ctx); await settle();
-  assert.match(el('week').innerHTML, /<div class="wday"><h3>Thu, Nov 26<\/h3><span class="holiday-tag">Thanksgiving Day<\/span><\/div>/); assert.doesNotMatch(el('week').innerHTML, /is-today|No practice/i);
+  // Issue #336: a week with nothing on it is one line naming its holiday, not seven empty boxes, and never "No practice".
+  assert.match(el('week').innerHTML, /^<div class="week-none"><p><strong>Nothing scheduled this week\.<\/strong><span id="weekNext2">Thu, Nov 26 is Thanksgiving Day\.<\/span><\/p><button type="button" id="weekJump" hidden><\/button><\/div>$/); assert.doesNotMatch(el('week').innerHTML, /is-today|No practice|wday/i);
+  // From an empty week, one button jumps to the next week with something on it for this coach.
+  vm.runInContext('showWeek(-3)', ctx); await settle(); await settle();
+  if (/week-none/.test(el('week').innerHTML)) {
+    const jump = el('weekJump');
+    assert.equal(jump.hidden, false, 'the jump is offered'); assert.match(jump.textContent, /^Next: [A-Z][a-z]{2}, Nov \d+ →$/);
+    jump.onclick(); assert.match(el('week').innerHTML, /class="witem /, 'and lands on a week with a practice or event');
+  }
+  // The styles: days line up at the top, a clear day says so in one quiet line, and the old class name "empty" (which
+  // picked up the design system's empty-state padding) is gone.
+  const coachCss = readFileSync('app/coach/screen.html', 'utf8');
+  assert.match(coachCss, /\.week\{display:grid;grid-template-columns:repeat\(7,minmax\(0,1fr\)\);gap:8px;margin-top:16px;align-items:start\}/);
+  assert.match(coachCss, /\.wday\.is-clear::after\{content:"Nothing scheduled"/); assert.doesNotMatch(coachCss, /wday\.empty|' empty'/);
+  assert.match(coachCss, /a practice is canceled only when the academy marks a day off/);
 }
 console.log('Passed: public calendar, welcome, booking, register, roster and coach week show times, holidays and today.');
