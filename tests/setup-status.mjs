@@ -8,7 +8,7 @@ import ts from 'typescript';
 
 const sqlite = new DatabaseSync(':memory:');
 for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
-const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }}; }};
+const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }, async all() { return {results: sqlite.prepare(sql).all(...a)}; }}; }};
 const modules = new Map();
 function load(file) {
   if (modules.has(file)) return modules.get(file);
@@ -27,7 +27,7 @@ const today = '2026-11-06', now = Date.parse('2026-11-06T15:00:00Z');
 let s = await setupStatus(DB, {}, today, now);
 assert.deepEqual(Object.keys(s.steps), [...SETUP_STEPS]);
 assert.ok(Object.values(s.steps).every(v => v === false), 'nothing is done on a new site');
-assert.deepEqual(JSON.parse(JSON.stringify(s.stripe)), {mode: 'test', testKey: false, testWebhook: false, liveKey: false, liveWebhook: false, checkoutProblem: null});
+assert.deepEqual(JSON.parse(JSON.stringify(s.stripe)), {mode: 'test', testKey: false, testWebhook: false, liveKey: false, liveWebhook: false, checkoutProblem: null, webhooks: []});
 assert.equal(s.checkoutOpen, 'nothing');
 
 // The owner confirms a test key and publishes a waiver; Lauren adds the webhook secret and opens walk-ins.
@@ -70,6 +70,17 @@ order('o-failed', new Date(now - 300000).toISOString(), null);
 assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, 'Stripe did not accept the request (field expires_at)', 'an order that never reached Stripe changes nothing');
 order('o-after', new Date(now - 120000).toISOString(), 'cs_test_after');
 assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, null, 'a checkout that started since clears it');
+
+// Issue #337: Stripe notices from the last day, as type, outcome and count; never an id.
+const ev = (id, type, outcome, at) => sqlite.prepare('INSERT INTO stripe_events(id,type,order_id,outcome,received_at) VALUES (?,?,?,?,?)').run(id, type, 'order-secret-1', outcome, at);
+ev('evt_1', 'checkout.session.completed', 'paid', new Date(now - 7200000).toISOString());
+ev('evt_2', 'charge.refunded', 'ignored:unknown-payment', new Date(now - 3600000).toISOString());
+ev('evt_3', 'charge.refunded', 'ignored:unknown-payment', new Date(now - 1800000).toISOString());
+ev('evt_4', 'invoice.paid', 'installment-2', new Date(now - 3 * 86400000).toISOString());
+ev('evt_5', 'weird type <b>', 'paid', new Date(now - 60000).toISOString());
+const hooks = JSON.parse(JSON.stringify((await setupStatus(DB, settings, today, now)).stripe.webhooks));
+assert.deepEqual(hooks, [{type: 'other', outcome: 'paid', count: 1}, {type: 'charge.refunded', outcome: 'ignored:unknown-payment', count: 2}, {type: 'checkout.session.completed', outcome: 'paid', count: 1}], 'newest first, older than a day left out');
+assert.ok(!JSON.stringify(hooks).includes('evt_') && !JSON.stringify(hooks).includes('order-secret'));
 
 // The route is public, read-only and never cached.
 const route = readFileSync('app/api/setup-status/route.ts', 'utf8');
