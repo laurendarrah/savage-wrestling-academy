@@ -38,10 +38,13 @@ assert.match(NEEDS_ACCOUNT_SETTING, /STRIPE_ACCOUNT_ID in Cloudflare/); assert.m
 
 // A key that doesn't work at all still fails: the balance refusal or Stripe's own error goes back to the caller.
 const badKey = Object.assign(Error('Invalid API Key'), {type: 'StripeAuthenticationError', statusCode: 401});
-await assert.rejects(keyAccount(client({accountError: badKey}), 'acct_Academy0001'), e => e === badKey, 'an unrecognized key is never accepted');
-const noBalance = refused('no balance permission');
-await assert.rejects(keyAccount(client({accountError: refused('Not allowed.'), balanceError: noBalance}), 'acct_Academy0001'), e => e === noBalance);
-await assert.rejects(keyAccount(client({account: {id: 'not-an-account'}}), null), /Unexpected account/);
+await assert.rejects(m.exports.keyAccount(client({accountError: badKey}), 'acct_Academy0001'), e => e === badKey, 'an unrecognized key is never accepted');
+// #310: a key refused the Balance read too is still Stripe's own key (403, not 401), so it connects.
+assert.deepEqual(await keyAccount(client({accountError: refused('Not allowed.'), balanceError: refused('no balance permission')}), 'acct_Academy0001'), {id: 'acct_Academy0001', name: ''});
+// But a Balance read that fails any other way (Stripe down) still stops it.
+const down = Object.assign(Error('down'), {type: 'StripeConnectionError'});
+await assert.rejects(m.exports.keyAccount(client({accountError: refused('Not allowed.'), balanceError: down}), 'acct_Academy0001'), e => e === down);
+await assert.rejects(m.exports.keyAccount(client({account: {id: 'not-an-account'}}), null), /Unexpected account/);
 
 // Both the test key and the live key use it.
 const route = readFileSync('app/api/payment-setup/route.ts', 'utf8');

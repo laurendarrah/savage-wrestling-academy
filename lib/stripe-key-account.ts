@@ -1,6 +1,7 @@
-// Which Stripe account a restricted key belongs to (issues #255, #308). Stripe's current dashboard offers no
-// permission for reading the account itself, so a correct key can be refused that one read. Then the key proves it
-// works with a Balance read (a permission the setup page already asks for) and the account id comes from Stripe's
+// Which Stripe account a restricted key belongs to (issues #255, #308, #310). Stripe's current dashboard offers no
+// permission for reading the account itself, so a correct key can be refused that one read. A refusal (403) already
+// proves Stripe recognized the key: an unknown key gets 401 and is never accepted. The Balance read is then tried only
+// as a courtesy check and never blocks (on Nov 13 a correct key was refused it too). The account id comes from Stripe's
 // refusal when it names one, else from the STRIPE_ACCOUNT_ID setting. 'needs-setting' means neither was available.
 import {ACCOUNT_ID, stripeAccountName, type StripeAccountInfo} from './stripe-test';
 
@@ -18,7 +19,7 @@ export async function keyAccount(client: Client, setting: string | null): Promis
     return {id: account.id, name: stripeAccountName(account)};
   } catch (err) {
     if (!refusedRead(err)) throw err;
-    await client.balance.retrieve();
+    try { await client.balance.retrieve(); } catch (balanceErr) { if (!refusedRead(balanceErr)) throw balanceErr; }
     const named = String((err as {message?: unknown}).message ?? '').match(/\bacct_[A-Za-z0-9]{8,64}\b/)?.[0];
     if (named) return {id: named, name: ''};
     return setting ? {id: setting, name: ''} : 'needs-setting';
