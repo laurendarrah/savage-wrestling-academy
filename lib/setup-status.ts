@@ -16,6 +16,15 @@ export async function setupStatus(db: D1Database, settings: Settings, today: str
   for (const key of SETUP_STEPS) { const item = items.find(i => i.key === key); if (item) steps[key] = item.status === 'done'; }
   const saved = async (id: string) => { try { return !!(await db.prepare('SELECT 1 AS ok FROM integration_secrets WHERE id=?').bind(id).first()); } catch { return false; } };
   const kinds = (settings.CHECKOUT_KINDS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  // The latest reason a family's card checkout couldn't start, in the last day (issue #319): the site's own short
+  // wording from lib/stripe-key-check.ts (an error type, a permission or field name), never a key, date or person.
+  let checkoutProblem: string | null = null;
+  try {
+    const row = await db.prepare("SELECT message FROM error_log WHERE path='/api/checkout' AND status=502 AND at>=? AND message LIKE 'Card checkout could not start: %' ORDER BY at DESC LIMIT 1")
+      .bind(new Date(now - 86400000).toISOString()).first<{message: string}>();
+    const m = row?.message.match(/^Card checkout could not start: ([A-Za-z0-9 ,.()_\[\]-]{1,200}?)\. Check the key/);
+    checkoutProblem = m ? m[1] : null;
+  } catch { checkoutProblem = null; }
   return {
     steps,
     stripe: {
@@ -25,6 +34,7 @@ export async function setupStatus(db: D1Database, settings: Settings, today: str
       testWebhook: !!settings.STRIPE_TEST_WEBHOOK_SECRET,
       liveKey: await saved('stripe-live'),
       liveWebhook: !!settings.STRIPE_LIVE_WEBHOOK_SECRET,
+      checkoutProblem,
     },
     checkoutOpen: kinds.length ? kindList(kinds) : 'nothing',
   };

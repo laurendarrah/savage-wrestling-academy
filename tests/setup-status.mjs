@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
+import crypto from 'node:crypto';
 import ts from 'typescript';
 
 const sqlite = new DatabaseSync(':memory:');
@@ -26,7 +27,7 @@ const today = '2026-11-06', now = Date.parse('2026-11-06T15:00:00Z');
 let s = await setupStatus(DB, {}, today, now);
 assert.deepEqual(Object.keys(s.steps), [...SETUP_STEPS]);
 assert.ok(Object.values(s.steps).every(v => v === false), 'nothing is done on a new site');
-assert.deepEqual(JSON.parse(JSON.stringify(s.stripe)), {mode: 'test', testKey: false, testWebhook: false, liveKey: false, liveWebhook: false});
+assert.deepEqual(JSON.parse(JSON.stringify(s.stripe)), {mode: 'test', testKey: false, testWebhook: false, liveKey: false, liveWebhook: false, checkoutProblem: null});
 assert.equal(s.checkoutOpen, 'nothing');
 
 // The owner confirms a test key and publishes a waiver; Lauren adds the webhook secret and opens walk-ins.
@@ -45,6 +46,20 @@ assert.equal(s.checkoutOpen, 'walk-ins');
 const text = JSON.stringify(s);
 for (const bad of ['must_not_leak', 'Secret Waiver', 'Coach Private', 'example.test', '2026-', 'mfa', 'authenticator', 'families', 'health']) assert.ok(!text.includes(bad), bad);
 assert.ok(Object.values(s.steps).every(v => typeof v === 'boolean'));
+
+// Issue #319: the latest reason a card checkout couldn't start, from the last day, as the site's own short wording.
+assert.equal(s.stripe.checkoutProblem, null);
+const logErr = (at, path, status, message) => sqlite.prepare('INSERT INTO error_log(id,at,method,path,status,message) VALUES (?,?,?,?,?,?)').run(crypto.randomUUID(), at, 'POST', path, status, message);
+logErr(new Date(now - 3 * 86400000).toISOString(), '/api/checkout', 502, 'Card checkout could not start: Stripe could not be reached. Check the key on Online payment setup.');
+logErr(new Date(now - 3600000).toISOString(), '/api/roster', 500, 'Error: something else');
+assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, null, 'older than a day, or another page: nothing');
+logErr(new Date(now - 7200000).toISOString(), '/api/checkout', 502, 'Card checkout could not start: the saved key is missing a Stripe permission (rak_checkout_session_write). Check the key on Online payment setup.');
+logErr(new Date(now - 600000).toISOString(), '/api/checkout', 502, 'Card checkout could not start: Stripe did not accept the request (field expires_at). Check the key on Online payment setup.');
+s = await setupStatus(DB, settings, today, now);
+assert.equal(s.stripe.checkoutProblem, 'Stripe did not accept the request (field expires_at)', 'the newest one');
+logErr(new Date(now - 60000).toISOString(), '/api/checkout', 502, 'Card checkout could not start: <script>alert(1)</script> someone@example.test. Check the key on Online payment setup.');
+assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, null, 'anything that is not the site’s own wording is not shown');
+for (const bad of ['must_not_leak', 'example.test', '2026-']) assert.ok(!JSON.stringify(s).includes(bad), bad);
 
 // The route is public, read-only and never cached.
 const route = readFileSync('app/api/setup-status/route.ts', 'utf8');

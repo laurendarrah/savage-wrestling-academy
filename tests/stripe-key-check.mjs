@@ -54,6 +54,16 @@ assert.equal(stripeReason(refused('rak_checkout_session_write')), 'the saved key
 assert.match(stripeReason(Object.assign(Error(`Invalid API Key provided: ${KEY}`), {type: 'StripeAuthenticationError', statusCode: 401})), /no longer recognizes the saved key/);
 assert.equal(stripeReason(Object.assign(Error('bad'), {type: 'StripeInvalidRequestError', statusCode: 400, code: 'parameter_invalid'})), 'Stripe did not accept the request (parameter_invalid)');
 for (const e of [refused('rak_x'), Error(KEY), undefined]) assert.ok(!stripeReason(e).includes('rk_test'));
+// Issue #319: the rejected field is named (a field path only), so an expiry under Stripe's minimum is recognizable.
+assert.equal(stripeReason(Object.assign(Error('The `expires_at` timestamp must be at least 30 minutes from Checkout Session creation.'), {type: 'StripeInvalidRequestError', statusCode: 400, param: 'expires_at'})), 'Stripe did not accept the request (field expires_at)');
+assert.equal(stripeReason(Object.assign(Error('x'), {type: 'StripeInvalidRequestError', statusCode: 400, code: 'parameter_invalid_integer', param: 'line_items[0][price_data][unit_amount]'})), 'Stripe did not accept the request (parameter_invalid_integer, field line_items[0][price_data][unit_amount])');
+assert.equal(stripeReason(Object.assign(Error('x'), {type: 'StripeInvalidRequestError', statusCode: 400, param: 'someone@example.test said <b>'})), 'Stripe did not accept the request', 'anything that is not a field path is dropped');
+
+// Issue #319: the payment page expires with a margin above Stripe's 30-minute minimum, never exactly 30 minutes.
+const src = readFileSync('lib/checkout.ts', 'utf8');
+const expiry = src.match(/export const SESSION_MARGIN_SECONDS = (\d+);/); assert.ok(expiry && Number(expiry[1]) >= 60, 'at least a minute of margin');
+assert.match(src, /export const sessionExpiry = \(nowMs: number\) => Math\.floor\(nowMs \/ 1000\) \+ SESSION_MINUTES \* 60 \+ SESSION_MARGIN_SECONDS;/);
+assert.match(src, /expires_at: sessionExpiry\(Date\.now\(\)\)/); assert.doesNotMatch(src, /expires_at: Math\.floor\(Date\.now\(\) \/ 1000\) \+ SESSION_MINUTES \* 60\b(?! \+)/);
 
 // Wiring: the route, the checkout failure record, and the page button.
 const route = readFileSync('app/api/payment-setup/route.ts', 'utf8');
