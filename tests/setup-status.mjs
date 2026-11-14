@@ -60,6 +60,16 @@ assert.equal(s.stripe.checkoutProblem, 'Stripe did not accept the request (field
 logErr(new Date(now - 60000).toISOString(), '/api/checkout', 502, 'Card checkout could not start: <script>alert(1)</script> someone@example.test. Check the key on Online payment setup.');
 assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, null, 'anything that is not the site’s own wording is not shown');
 for (const bad of ['must_not_leak', 'example.test', '2026-']) assert.ok(!JSON.stringify(s).includes(bad), bad);
+// Issue #333: once a checkout has started at Stripe after the problem, the old reason is no longer shown.
+sqlite.prepare("DELETE FROM error_log WHERE message LIKE '%<script>%'").run();
+assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, 'Stripe did not accept the request (field expires_at)');
+const order = (id, at, session) => sqlite.prepare("INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,stripe_session_id,created_at,updated_at) VALUES (?,?,?,?,?,'walkin','Intermediate','i','Walk-in','[]',4000,0,4000,'usd','{}','{}','pending',?,0,?,?,?)").run(id, 'u', 'fam@example.test', 'w', 'Sam', id, session, at, at);
+order('o-before', new Date(now - 3600000).toISOString(), 'cs_test_before');
+assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, 'Stripe did not accept the request (field expires_at)', 'a checkout from before the problem changes nothing');
+order('o-failed', new Date(now - 300000).toISOString(), null);
+assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, 'Stripe did not accept the request (field expires_at)', 'an order that never reached Stripe changes nothing');
+order('o-after', new Date(now - 120000).toISOString(), 'cs_test_after');
+assert.equal((await setupStatus(DB, settings, today, now)).stripe.checkoutProblem, null, 'a checkout that started since clears it');
 
 // The route is public, read-only and never cached.
 const route = readFileSync('app/api/setup-status/route.ts', 'utf8');

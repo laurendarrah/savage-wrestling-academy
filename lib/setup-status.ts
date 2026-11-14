@@ -20,9 +20,11 @@ export async function setupStatus(db: D1Database, settings: Settings, today: str
   // wording from lib/stripe-key-check.ts (an error type, a permission or field name), never a key, date or person.
   let checkoutProblem: string | null = null;
   try {
-    const row = await db.prepare("SELECT message FROM error_log WHERE path='/api/checkout' AND status=502 AND at>=? AND message LIKE 'Card checkout could not start: %' ORDER BY at DESC LIMIT 1")
-      .bind(new Date(now - 86400000).toISOString()).first<{message: string}>();
-    const m = row?.message.match(/^Card checkout could not start: ([A-Za-z0-9 ,.:()_\[\]-]{1,240}?)\. Check the key/);
+    const row = await db.prepare("SELECT at,message FROM error_log WHERE path='/api/checkout' AND status=502 AND at>=? AND message LIKE 'Card checkout could not start: %' ORDER BY at DESC LIMIT 1")
+      .bind(new Date(now - 86400000).toISOString()).first<{at: string; message: string}>();
+    // Not once a checkout has started at Stripe since (issue #333): the problem is fixed, so the old reason would mislead.
+    const since = row ? await db.prepare('SELECT 1 AS ok FROM orders WHERE stripe_session_id IS NOT NULL AND created_at>? LIMIT 1').bind(row.at).first() : null;
+    const m = since ? null : row?.message.match(/^Card checkout could not start: ([A-Za-z0-9 ,.:()_\[\]-]{1,240}?)\. Check the key/);
     checkoutProblem = m ? m[1] : null;
   } catch { checkoutProblem = null; }
   return {
