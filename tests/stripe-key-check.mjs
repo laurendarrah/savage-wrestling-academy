@@ -8,7 +8,7 @@ import ts from 'typescript';
 const m = {exports: {}};
 vm.runInNewContext(ts.transpileModule(readFileSync('lib/stripe-key-check.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
   {module: m, exports: m.exports, Set, Number, String, Math, Date, Error});
-const {checkKey, keyCheckSummary, stripeReason} = m.exports;
+const {checkKey, keyCheckSummary, stripeReason, permissionNames} = m.exports;
 const plain = v => JSON.parse(JSON.stringify(v));
 const KEY = 'rk_test_51SecretSecretSecret';
 const refused = name => Object.assign(Error(`The provided key '${KEY}' does not have the required permissions for this endpoint on account 'acct_1Private'. Having the '${name}' permission would allow this request to continue.`), {type: 'StripePermissionError', statusCode: 403});
@@ -16,14 +16,15 @@ const noSuch = Object.assign(Error('No such subscription: sub_swa_permission_che
 
 function client(fail = {}) {
   const calls = [], f = (name, value) => async (...a) => { calls.push([name, ...a]); if (fail[name]) throw fail[name]; return value; };
-  return {calls, checkout: {sessions: {create: f('create', {id: 'cs_test_1'}), expire: f('expire', {})}}, subscriptions: {retrieve: f('subRead', {}), update: f('subWrite', {})},
+  return {calls, checkout: {sessions: {create: f('create', {id: 'cs_test_1'}), expire: f('expire', {}), list: f('sessionsList', {})}},
+    products: {update: f('products', {})}, prices: {update: f('prices', {})}, customers: {update: f('customers', {})}, subscriptions: {retrieve: f('subRead', {}), update: f('subWrite', {})},
     invoices: {list: f('invoices', {})}, paymentIntents: {list: f('pis', {})}, charges: {list: f('charges', {})}, balance: {retrieve: f('balance', {})}};
 }
 
 // A key with everything: all pass, and the one session it creates is shaped like a real walk-in and expired at once.
 let c = client({subRead: noSuch, subWrite: noSuch});
 let checks = plain(await checkKey(c, 'https://academy.test'));
-assert.deepEqual(checks.map(x => [x.id, x.ok]), [['checkout', true], ['subscription-read', true], ['subscription-write', true], ['invoices', true], ['payment-intents', true], ['charges', true], ['balance', true]]);
+assert.deepEqual(checks.map(x => [x.id, x.ok]), [['checkout', true], ['checkout-read', true], ['products', true], ['prices', true], ['customers', true], ['subscription-read', true], ['subscription-write', true], ['invoices', true], ['payment-intents', true], ['charges', true], ['balance', true]]);
 const created = c.calls.find(x => x[0] === 'create')[1];
 assert.equal(created.mode, 'payment'); assert.equal(created.line_items[0].price_data.unit_amount, 100); assert.ok(created.line_items[0].price_data.product_data.name);
 assert.match(created.success_url, /^https:\/\/academy\.test\/payment-setup$/);
@@ -34,7 +35,7 @@ assert.equal(keyCheckSummary(checks), 'This key can do everything the site needs
 c = client({create: refused('rak_checkout_session_write'), subRead: noSuch, subWrite: noSuch, balance: refused('rak_balance_read')});
 checks = plain(await checkKey(c, 'https://academy.test'));
 const co = checks.find(x => x.id === 'checkout');
-assert.equal(co.ok, false); assert.match(co.problem, /set Checkout Sessions to Write \(Stripe calls it rak_checkout_session_write\)/);
+assert.equal(co.ok, false); assert.match(co.problem, /set Checkout Sessions, Products and Prices to Write \(Stripe calls it rak_checkout_session_write\)/);
 assert.equal(c.calls.some(x => x[0] === 'expire'), false, 'nothing to expire when none was created');
 assert.match(checks.find(x => x.id === 'balance').problem, /Balance to Read/);
 assert.match(keyCheckSummary(checks), /can’t start card payments/);
@@ -48,6 +49,23 @@ c = client({subRead: noSuch, subWrite: noSuch, charges: refused('rak_charge_read
 assert.match(keyCheckSummary(plain(await checkKey(c, 'https://academy.test'))), /Payments work\. Card fees/);
 c = client({create: Object.assign(Error('down'), {type: 'StripeConnectionError'}), subRead: noSuch, subWrite: noSuch});
 assert.match(plain(await checkKey(c, 'https://academy.test'))[0].problem, /Couldn’t check: Stripe could not be reached/);
+
+// Issue #327: each permission is tested on its own, with made-up ids that answer "no such …" when allowed.
+const noProd = Object.assign(Error('No such product'), {type: 'StripeInvalidRequestError', statusCode: 404, code: 'resource_missing'});
+c = client({subRead: noSuch, subWrite: noSuch, products: refused('rak_product_write'), prices: noProd, customers: noProd});
+checks = plain(await checkKey(c, 'https://academy.test'));
+assert.equal(checks.find(x => x.id === 'products').ok, false); assert.match(checks.find(x => x.id === 'products').problem, /set Products to Write/);
+assert.equal(checks.find(x => x.id === 'prices').ok, true, '"no such price" means the key may write prices');
+assert.equal(checks.find(x => x.id === 'customers').ok, true);
+assert.match(keyCheckSummary(checks), /can’t start card payments/);
+assert.deepEqual(c.calls.find(x => x[0] === 'products').slice(1, 2), ['prod_swa_permission_check']);
+
+// Issue #327: permission names in Stripe's older and newer wording; never the key, an account or another id.
+assert.deepEqual(plain(permissionNames("Having the 'rak_checkout_session_write' permission would allow this request to continue.")), ['rak_checkout_session_write']);
+assert.deepEqual(plain(permissionNames(`The provided key 'rk_test_***********abcd' does not have the required permissions for this endpoint on account 'acct_1PrivateAcct'. Having one of the following permissions would allow this request to continue: 'checkout.sessions.write', "products_write".`)), ['checkout.sessions.write', 'products_write']);
+assert.deepEqual(plain(permissionNames('This key lacks checkout_session_write for cs_test_a1b2c3 and pi_3Abc.')), ['checkout_session_write']);
+assert.deepEqual(plain(permissionNames(`Invalid API Key provided: '${KEY}'`)), []);
+assert.equal(stripeReason(Object.assign(Error("…on account 'acct_1PrivateAcct'. Missing: 'checkout.sessions.write'"), {type: 'StripePermissionError', statusCode: 403})), 'the saved key is missing a Stripe permission (checkout.sessions.write)');
 
 // Reasons for Site health.
 assert.equal(stripeReason(refused('rak_checkout_session_write')), 'the saved key is missing a Stripe permission (rak_checkout_session_write)');
