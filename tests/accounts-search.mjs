@@ -29,7 +29,7 @@ assert.ok(total > 100);
 
 const page = async (query = '') => {
   const html = await (await accounts.GET(request('/accounts' + query, 'GET', null, 'owner'))).text();
-  const emails = [...html.matchAll(/<article data-programs="[^"]*"><h2>[^<]*<\/h2>(?:<p><span class="pill warn">Details missing<\/span><\/p>)?<p>([^<· ]+)/g)].map(m => m[1].trim());
+  const emails = [...html.matchAll(/<article class="card" data-programs="[^"]*"><h2>[^<]*<\/h2>(?:<p><span class="pill warn">Details missing<\/span><\/p>)?<p>([^<· ]+)/g)].map(m => m[1].trim());
   const href = rel => (html.match(new RegExp(`<a class="button" href="([^"]+)" rel="${rel}"`)) ?? [])[1]?.replace(/&amp;/g, '&');
   return {html, emails, next: href('next'), prev: href('prev'), count: html.match(/<p id="count"[^>]*>([^<]*)</)?.[1], shown: html.match(/<nav class="pager"[^>]*><p>([^<]*)</)?.[1]};
 };

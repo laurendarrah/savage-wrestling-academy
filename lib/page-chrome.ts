@@ -142,9 +142,9 @@ export function splitSentence(inner: string): [string, string] {
 
 export function decoratePage(html: string, pathname: string, ownerShell = false) {
   if (html.includes('class="swa-bar') || html.includes('data-swa-shell=')) return html;
-  // The dashboard keeps its own styles (it never loaded savage.css) and its own title row.
+  // The dashboard draws its own title row (app/portal.html). It loads the design system like every other page (issue #341).
   const dashboard = ownerShell && pathname === '/';
-  const head = (dashboard ? ICONS : HEAD) + (ownerShell ? OWNER_SHELL_HEAD : '');
+  const head = HEAD + (ownerShell ? OWNER_SHELL_HEAD : '');
   let out = html.includes('</head>') ? html.replace('</head>', head + '</head>') : head + html;
   const body = out.match(/<body[^>]*>/i);
   // data-swa-page lets the shared stylesheet give a page its own treatment (the sign-in page, for one).

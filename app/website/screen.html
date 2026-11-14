@@ -1,44 +1,48 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Public website | Savage Wrestling Academy</title><style>
-*{box-sizing:border-box}body{margin:0;background:#F4F5F7;color:#141416}main{max-width:960px;margin:auto;padding:20px 16px 120px}
-section{margin:0 0 20px}h2{margin:0 0 6px}section>p.muted{margin:0 0 14px}
-label{display:flex;flex-direction:column;gap:6px;margin:14px 0 0}.hint{font-weight:400;font-size:15px;color:#55585F}
-input,textarea{width:100%;padding:10px 12px}textarea{resize:vertical}#mission{min-height:170px}#intro{min-height:96px}
-.empty{margin:0;padding:16px 18px;border:1px dashed #C9CDD4;border-radius:10px;background:#FAFAFB;color:#3A3C42}
-.rows{display:flex;flex-direction:column;gap:12px;margin:0 0 14px}
-.row{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,1.5fr) minmax(0,.8fr);gap:0 12px;align-items:end;padding:12px 14px 14px;border:1px solid #E4E6EA;border-radius:10px;background:#FBFBFC}
-.row label{margin:0;font-size:14px}.row .n{align-self:center;font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:24px;color:#C4222C;text-align:center}
-.tools{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.tools button,.coach button{min-height:40px;padding:0 12px;font-size:15px}
-.coach{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid #E4E6EA;border-radius:10px;background:#FBFBFC;margin:0 0 10px}
-.coach.on{border-color:#141416;background:#fff}.coach label{flex-direction:row;align-items:center;gap:10px;margin:0;flex:1 1 220px;font-size:17px}
-.coach .order{font-family:'Barlow Condensed','Arial Narrow',Arial,sans-serif;font-weight:800;font-size:22px;color:#C4222C;min-width:22px}
-.coach .note{font-size:14px;color:#55585F;font-weight:400}
+/* The public website editor (issue #341): on the design system in public/savage.css; this is the page's own layout.
+   Each part of the site is a card at a form's width; the save bar stays at the bottom of the screen with Save and
+   publish, the two previews, and what the last save did right beside them. */
+*{box-sizing:border-box}body{margin:0}main{max-width:820px;margin:auto;padding:24px 16px 120px}
+html body #editor>section{margin:0 0 var(--swa-s-24)}h2{margin:0 0 var(--swa-s-4)}section>p.muted{margin:0 0 var(--swa-s-12);font-size:var(--swa-t-15)}
+#status{margin:0 0 var(--swa-s-16);font-weight:600;font-size:var(--swa-t-15)}
+label{display:flex;flex-direction:column;gap:6px;margin:var(--swa-s-16) 0 0}.hint{font-weight:400;font-size:var(--swa-t-13);color:var(--swa-muted)}
+input,textarea{width:100%}textarea{resize:vertical}#mission{min-height:170px}#intro{min-height:96px}
+html body p.empty{display:block;margin:0 0 var(--swa-s-12);padding:0}
+.rows{display:flex;flex-direction:column;gap:var(--swa-s-12);margin:0 0 var(--swa-s-12)}
+.row{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1.5fr) minmax(0,.8fr);gap:0 var(--swa-s-12);align-items:end;padding:var(--swa-s-12) var(--swa-s-16) var(--swa-s-16);border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface-2)}
+.row label{margin:0;font-size:var(--swa-t-13)}.row .n,.coach .order{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-24);line-height:1;color:var(--swa-muted-2);text-align:center}.row .n{align-self:center}
+.tools{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:var(--swa-s-8);margin-top:var(--swa-s-12)}
+html body .tools button,html body .coach button{min-height:40px;padding:0 var(--swa-s-12);font-size:var(--swa-t-15)}
+.coach{display:flex;align-items:center;gap:var(--swa-s-12);flex-wrap:wrap;min-height:64px;padding:var(--swa-s-8) var(--swa-s-16);border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface-2);margin:0 0 var(--swa-s-8)}
+.coach.on{border-color:var(--swa-ink);background:var(--swa-surface)}html body .coach label{flex-direction:row;align-items:center;gap:10px;margin:0;flex:1 1 220px;font-size:var(--swa-t-17)}
+.coach .order{min-width:22px}.coach .note{font-size:var(--swa-t-13);color:var(--swa-muted);font-weight:400}
 fieldset{border:0;margin:0;padding:0;min-width:0}
-.savebar{position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px;margin:0 -16px;background:rgba(244,245,247,.96);border-top:1px solid #E4E6EA;backdrop-filter:blur(6px)}
-.savebar .saved{font-size:15px;color:#55585F}
-#previewFrame{width:100%;height:min(78vh,900px);border:1px solid #D3D6DC;border-radius:10px;background:#fff;display:block}
-.links{display:flex;flex-wrap:wrap;gap:6px 18px}.links a{display:inline-flex;align-items:center;min-height:44px}
-@media (max-width:720px){.row{grid-template-columns:1fr;gap:10px}.row .n{text-align:left}.tools{grid-column:1}}
+.savebar{position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:wrap;gap:var(--swa-s-8) var(--swa-s-12);align-items:center;padding:var(--swa-s-12) var(--swa-s-16);margin:0 calc(-1 * var(--swa-s-16));background:rgba(243,244,246,.96);border-top:1px solid var(--swa-line);backdrop-filter:blur(6px)}
+.savebar .saved{font-size:var(--swa-t-13);color:var(--swa-muted)}
+.savebar .save-note{flex:1 1 100%;font-size:var(--swa-t-15);font-weight:600}.savebar .save-note:empty{display:none}
+#previewFrame{width:100%;height:min(78vh,900px);border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface);display:block}
+.links{display:flex;flex-wrap:wrap;gap:6px var(--swa-s-16)}.links a{display:inline-flex;align-items:center;min-height:44px}
+@media (max-width:720px){.row{grid-template-columns:1fr;gap:var(--swa-s-8)}.row .n{text-align:left}.tools{grid-column:1}html body .savebar button:not(.primary){min-height:44px;padding:0 var(--swa-s-12);font-size:var(--swa-t-15)}html body .savebar .primary{padding:0 var(--swa-s-12)}}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <h1>Public website</h1>
 <p>What visitors see on the welcome page and the team page. Saving publishes your changes straight away. Wrestlers are shown by name only, with no photos.</p>
 <nav class="links" aria-label="See the pages"><a href="/welcome" target="_blank" rel="noopener">Open the welcome page</a><a href="/team" target="_blank" rel="noopener">Open the team page</a></nav>
 <p id="status" role="status" aria-live="polite">Loading…</p>
 <fieldset id="editor" disabled>
-<section aria-labelledby="homeTitle"><h2 id="homeTitle">Welcome page</h2><p class="muted">The first thing visitors read, above the programs and the calendar.</p>
+<section class="card" aria-labelledby="homeTitle"><h2 id="homeTitle">Welcome page</h2><p class="muted">The first thing visitors read, above the programs and the calendar.</p>
 <label for="headline">Headline<input id="headline" maxlength="80" required></label>
 <label for="intro">Introduction<span class="hint">One or two sentences under the headline.</span><textarea id="intro" maxlength="320" required></textarea></label>
 <label for="mission">Mission<span class="hint">Optional. Shown under “Our mission”. Leave a blank line between paragraphs. Leave it empty to hide the section.</span><textarea id="mission" maxlength="1500"></textarea></label>
 </section>
-<section aria-labelledby="coachesTitle"><h2 id="coachesTitle">Coaches</h2><p class="muted">Choose who appears on the team page, and in what order. Each coach’s name, bio and specialties come from their coach profile. Their email and phone are never shown.</p><div id="coachList"></div></section>
-<section aria-labelledby="achTitle"><h2 id="achTitle">Wrestler achievements</h2><p class="muted">The wrestler’s name, what they achieved and the season or year. The team page groups them by season, in this order.</p><div class="rows" id="achList"></div><button type="button" data-add="achievements">Add an achievement</button></section>
-<section aria-labelledby="alumTitle"><h2 id="alumTitle">Alumni</h2><p class="muted">Former wrestlers: their name, their years with the academy and where they went or what they did next.</p><div class="rows" id="alumList"></div><button type="button" data-add="alumni">Add an alumni entry</button></section>
-<section aria-labelledby="visitTitle"><h2 id="visitTitle">Visit details</h2><p class="muted">Optional. Shown at the bottom of both pages. Leave both empty to hide them.</p>
+<section class="card" aria-labelledby="coachesTitle"><h2 id="coachesTitle">Coaches</h2><p class="muted">Choose who appears on the team page, and in what order. Each coach’s name, bio and specialties come from their coach profile. Their email and phone are never shown.</p><div id="coachList"></div></section>
+<section class="card" aria-labelledby="achTitle"><h2 id="achTitle">Wrestler achievements</h2><p class="muted">The wrestler’s name, what they achieved and the season or year. The team page groups them by season, in this order.</p><div class="rows" id="achList"></div><button type="button" data-add="achievements">Add an achievement</button></section>
+<section class="card" aria-labelledby="alumTitle"><h2 id="alumTitle">Alumni</h2><p class="muted">Former wrestlers: their name, their years with the academy and where they went or what they did next.</p><div class="rows" id="alumList"></div><button type="button" data-add="alumni">Add an alumni entry</button></section>
+<section class="card" aria-labelledby="visitTitle"><h2 id="visitTitle">Visit details</h2><p class="muted">Optional. Shown at the bottom of both pages. Leave both empty to hide them.</p>
 <label for="address">Address<input id="address" maxlength="160" autocomplete="off" placeholder="Street, town, state and ZIP"></label>
 <label for="email">Contact email<input id="email" type="email" maxlength="120" autocomplete="off"></label>
 </section>
-<section id="previewBox" aria-labelledby="previewTitle" hidden><h2 id="previewTitle">Preview</h2><p class="muted" id="previewNote">Not published until you save.</p><iframe id="previewFrame" title="Preview of the public website" sandbox="allow-scripts"></iframe></section>
-<div class="savebar"><button type="button" class="primary" id="saveButton">Save and publish</button><button type="button" data-preview="home">Preview welcome page</button><button type="button" data-preview="team">Preview team page</button><span class="saved" id="savedAt"></span></div>
+<section class="card" id="previewBox" aria-labelledby="previewTitle" hidden><h2 id="previewTitle">Preview</h2><p class="muted" id="previewNote">Not published until you save.</p><iframe id="previewFrame" title="Preview of the public website" sandbox="allow-scripts"></iframe></section>
+<div class="savebar"><button type="button" class="primary" id="saveButton">Save and publish</button><button type="button" data-preview="home">Preview welcome page</button><button type="button" data-preview="team">Preview team page</button><span class="saved" id="savedAt"></span><span class="save-note" id="saveNote" role="status" aria-live="polite"></span></div>
 </fieldset>
 </main><script>
 // The preview iframe's document inherits this page's script policy (issue #274), so the preview's own scripts are
@@ -67,7 +71,7 @@ function coachListHtml(){
  const row=c=>{const i=coaches.indexOf(c),at=site.coaches.indexOf(c.email),on=at>=0;
   return '<div class="coach'+(on?' on':'')+'" data-coach="'+i+'" data-at="'+at+'">'+(on?'<span class="order" aria-hidden="true">'+(at+1)+'</span>':'')+'<label><input type="checkbox"'+(on?' checked':'')+' data-coach-toggle><span>'+esc(c.name)+(note(c)?' <span class="note">· '+note(c)+'</span>':'')+'</span></label>'
   +(on?'<button type="button" aria-label="Move '+esc(c.name)+' up"'+(at?'':' disabled')+' data-coach-move="-1">↑ Up</button><button type="button" aria-label="Move '+esc(c.name)+' down"'+(at<site.coaches.length-1?'':' disabled')+' data-coach-move="1">↓ Down</button>':'')+'</div>'};
- return (chosen.length?'':'<p class="empty" style="margin-bottom:12px">No coaches chosen, so the team page leaves this section out. Choose the coaches to show.</p>')+chosen.concat(rest).map(row).join('')}
+ return (chosen.length?'':'<p class="empty">No coaches chosen, so the team page leaves this section out. Choose the coaches to show.</p>')+chosen.concat(rest).map(row).join('')}
 function render(){$('coachList').innerHTML=coachListHtml();for(const kind in LISTS)$(LISTS[kind].box).innerHTML=rowsHtml(kind)}
 function setField(kind,i,key,value){if(site[kind][i])site[kind][i][key]=value}
 function addRow(kind){site[kind].push(blank(kind));render()}
@@ -93,11 +97,14 @@ async function call(body){const r=await fetch('/api/website',body?{method:'POST'
 // The editor stays disabled until the published site is in, and while it saves, so nothing typed or added meanwhile is
 // overwritten (issue #220). If it cannot load, it stays disabled: saving then would replace a site the owner never saw.
 async function load(){try{fill(await call());$('status').textContent='';$('editor').disabled=false}catch(e){$('status').textContent=e.message}}
-async function saveSite(){$('editor').disabled=true;$('status').textContent='Saving…';
- try{const d=await call({action:'save',site:payload(),updatedAt});fill(d);$('status').textContent='Saved and published. Visitors see the changes within a minute.'}
- catch(e){$('status').textContent=e.message}finally{$('editor').disabled=false}}
-async function showPreview(page){$('status').textContent='';
+// What a save did shows beside the Save button, in the bar that stays on screen (issue #341); the line under the title
+// says the same for anyone at the top of the page.
+function said(text){$('status').textContent=text;const note=$('saveNote');if(note)note.textContent=text}
+async function saveSite(){$('editor').disabled=true;said('Saving…');
+ try{const d=await call({action:'save',site:payload(),updatedAt});fill(d);said('Saved and published. Visitors see the changes within a minute.')}
+ catch(e){said(e.message)}finally{$('editor').disabled=false}}
+async function showPreview(page){said('');
  try{const d=await call({action:'preview',page,site:payload()});$('previewBox').hidden=false;$('previewNote').textContent=(page==='team'?'Team page':'Welcome page')+' with your changes. Not published until you save.';$('previewFrame').srcdoc=withNonce(d.html);$('previewBox').scrollIntoView({behavior:'smooth',block:'start'})}
- catch(e){$('status').textContent=e.message}}
+ catch(e){said(e.message)}}
 load();
 </script></body></html>
