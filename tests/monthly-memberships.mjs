@@ -124,7 +124,16 @@ assert.equal(w.status, 500, 'Stripe retries an invoice for a subscription not re
 assert.equal(sqlite.prepare("SELECT count(*) n FROM stripe_events WHERE type='invoice.paid'").get().n, 0);
 
 // --- Checkout completes: the first payment, month to month, nothing set at Stripe ---
+// Issue #335: walk-ins this family booked to pay in cash, before the membership starts.
+const cash = (id, o = {}) => sqlite.prepare(`INSERT INTO cash_bookings(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,session_date,start_time,end_time,base_cents,discount_cents,amount_cents,pricing,dedupe_key,status,created_at,updated_at)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,4000,0,4000,'{}',?,'due','2026-01-01','2026-01-01')`).run(id, o.user ?? 'p1', 'pat@example.test', o.wrestler ?? 'w1', 'Sam', o.kind ?? 'walkin', o.program ?? 'Intermediate', id, 'Walk-in', o.date ?? '2999-01-05', '19:30', '21:00', id);
+cash('c-covered'); cash('c-past', {date: '2020-01-06'}); cash('c-other-program', {program: 'Advanced'}); cash('c-live', {kind: 'live', program: null}); cash('c-sibling', {wrestler: 'w2'}); cash('c-other-family', {user: 'p2'});
 w = await deliver('checkout.session.completed', completed(orderId, 'sub_1'), 'evt_complete');
+{
+  const st = id => sqlite.prepare('SELECT status,cancel_reason,canceled_by FROM cash_bookings WHERE id=?').get(id);
+  assert.deepEqual({...st('c-covered')}, {status: 'canceled', cancel_reason: 'Included in the membership', canceled_by: 'membership'}, 'a cash walk-in for a practice the membership now includes is no longer owed');
+  for (const id of ['c-past', 'c-other-program', 'c-live', 'c-sibling', 'c-other-family']) assert.equal(st(id).status, 'due', id + ' is untouched');
+}
 assert.equal(w.status, 200); assert.equal(w.body.outcome, 'paid');
 assert.equal(order().status, 'paid'); assert.equal(order().term_start, today);
 assert.equal(order().term_end, lib.paidThroughAfter(today, 1), 'access runs through the next billing day');
