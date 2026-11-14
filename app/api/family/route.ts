@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { strongAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
+import { verifiedAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
 import { validFamily, cleanFamily, emptyFamily, familyProblem, missingDetails, missingMessage } from '../../../lib/family-records';
 import { cardStatus, reviewSource, seasonOptions, CARD_RENEWAL_DAYS, type Review } from '../../../lib/usaw';
 import { checkChangedCards, familyLookup, lookupView, type LookupRow } from '../../../lib/usaw-check';
@@ -8,8 +8,7 @@ import { academyToday } from '../../../lib/public-schedule';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 export const GET = withApi(GET_); async function GET_(request:Request){
- const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
- if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return accountReply({error:'Authenticator verification required.'},403,auth.headers);
+ const auth=await verifiedAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  const today=academyToday(),cards:Record<string,unknown>={};
  // The family record and everything about its cards in one batch (issue #274): the owner's reviews, the card
  // exceptions covering today (issue #89) and the latest USA Wrestling checks (issue #202), for every wrestler at once.
@@ -31,9 +30,8 @@ export const GET = withApi(GET_); async function GET_(request:Request){
  return accountReply({email:auth.user.email,data,cards,cardSeasons:seasonOptions(today),cardRenewalDays:CARD_RENEWAL_DAYS,revision:row?.revision??0,updatedAt:row?.updated_at??null},200,auth.headers);
 }
 export const PUT = withApi(PUT_); async function PUT_(request:Request){
- const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
+ const auth=await verifiedAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  const reply=(body:unknown,status=200)=>accountReply(body,status,auth.headers);
- if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return reply({error:'Authenticator verification required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>20000)return reply({error:'Profile is too large.'},413);

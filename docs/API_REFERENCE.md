@@ -4,7 +4,7 @@ Every route the Worker serves, checked against `app/` and the build's route list
 
 This is a map, not a contract. Each `route.ts` starts with a comment saying what it does, and most actions are a field in a POST body rather than separate paths. Read the route and the `lib/` file it calls before writing a client, and look at its test in `tests/`. Every route checks who is asking on the server; a hidden link never grants access. Mutations take same-origin JSON. Every API handler is exported through `withApi()` (`lib/api.ts`): an unexpected failure answers `{error, requestId}` with status 500 (503 when Supabase cannot be reached), and the page shows the id as a reference.
 
-Access: **Public** (anyone), **Family** (any verified account, for its own records), **Coach** (an active coach with the authenticator; the owner too once he has added himself as a coach), **Owner** (the owner with the authenticator).
+Access: **Public** (anyone), **Family** (any verified account, for its own records), **Coach** (an active coach; the owner too once he has added himself as a coach), **Owner** (the confirmed owner email). Signing in is an email and a password for every role (#306, #347).
 
 ## API routes (`app/api/*/route.ts`)
 
@@ -15,7 +15,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/public-schedule` | GET | Public | The public month calendar: practices, days off, named practices, events. Cross-origin reads allowed; cacheable for a minute |
 | `/api/registration` | GET, POST | Public GET, Family POST | Programs and prices; the family's registration review. Pricing and eligibility from `lib/quotes.ts` |
 | `/api/auth` | GET, POST | Public | Session status, sign-in, sign-up, resend, password reset and change, sign-out |
-| `/api/security` | GET, POST | Signed in | Authenticator setup and challenge |
+| `/api/security` | GET | Signed in | Who is signed in and where their home is, for the Account security page. POST answers 410: there is nothing to set up |
 | `/api/coach-invite` | POST | Public, then signed in | Check a coach invite, and accept it for the invited email |
 | `/api/health` | GET | Public | Uptime check used by the Deploy workflow and the uptime monitor: `ok`, `database`, `build`, `lastCronRun` and `configured` (email, supabase, stripeWebhook as yes/no). Reveals nothing private |
 | `/api/setup-status` | GET | Public | The owner's setup progress for whoever maintains the site (#298): each launch-checklist step as `true` or `false` (programs, schedule, website, waiver, consent, coaches, contract, lessons, email, stripe, checkout, live, backup), whether the Stripe test and live keys and webhook secrets are saved, the Stripe mode, which purchase types are open, and the latest reason a card checkout couldn't start in the last day (`stripe.checkoutProblem`, the site's own short wording, #319). Also the Stripe notices received in the last day as type, outcome and count (`stripe.webhooks`, #337). No names, dates, counts or values, and nothing about sign-in safety |

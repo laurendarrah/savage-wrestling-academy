@@ -22,7 +22,7 @@ async function upcomingBooked(){
  return new Map(rows.map(r=>[r.email,r.n]));
 }
 export const GET = withApi(GET_); async function GET_(request:Request){
- const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in and authenticator verification required.'},403,auth.headers);
+ const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in required.'},403,auth.headers);
  const rows=(await env.DB!.prepare('SELECT s.email,s.name,s.programs,s.active,s.updated_at,p.display_name,p.bio,p.specialties,p.phone FROM staff_access s LEFT JOIN coach_profiles p ON p.email=s.email ORDER BY COALESCE(p.display_name,s.name)').all<Staff>()).results;
  const upcoming=await upcomingBooked();
  const view=(s:Staff)=>({email:s.email,name:s.name,displayName:s.display_name||s.name,programs:JSON.parse(s.programs),active:s.active===1,updatedAt:s.updated_at,
@@ -35,7 +35,7 @@ export const GET = withApi(GET_); async function GET_(request:Request){
   removedForGood:await removedCoaches(),retentionYears:RETENTION_YEARS},200,auth.headers);
 }
 export const POST = withApi(POST_); async function POST_(request:Request){
- const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
+ const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>4096)return reply({error:'Request too large.'},413);let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}

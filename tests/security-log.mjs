@@ -67,7 +67,8 @@ assert.equal(byTitle['Stripe message refused'].who, 'Stripe');
 assert.equal(byTitle['Monthly membership canceled'].detail, 'Sam Example · Winter camp · Canceled online by the family');
 assert.equal(byTitle['Monthly membership canceled'].who, 'Pat Example (pat@example.test)');
 assert.match(byTitle['Stripe message refused'].detail, /amount paid did not match/);
-assert.equal(byTitle['Authenticator code verified'].who, 'Another account');
+// Rows written before Nov 14 (issue #347) still read; nothing writes this action any more.
+assert.equal(byTitle['Sign-in code verified (no longer used)'].who, 'Another account');
 for (const e of log) {
   assert.match(e.at, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}(, \d{4})? · \d{1,2}:\d{2} [AP]M$/, 'readable New York time: ' + e.at);
   assert.ok(!/supabase:|owner-1|fam-a|ord1|wv1|_/.test(e.title + e.detail + e.who), 'no internal ids or action codes: ' + JSON.stringify(e));

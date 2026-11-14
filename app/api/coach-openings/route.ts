@@ -27,7 +27,7 @@ async function refOf(s: Staff, ownerAccount: string): Promise<CoachRef> {
 
 export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
-  if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
+  if (!auth.owner) return accountReply({error: 'Owner sign-in required.'}, 403, auth.headers);
   const s = await activeCoach(new URL(request.url).searchParams.get('email'));
   if (!s) return accountReply({error: 'Coach not found. Only coaches with access on Coaches have lesson openings.'}, 404, auth.headers);
   const today = academyToday(), coach = await refOf(s, auth.user!.id);
@@ -37,7 +37,7 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
-  if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
+  if (!auth.owner) return reply({error: 'Owner sign-in required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return reply({error: 'JSON required.'}, 415);
   const raw = await request.text();

@@ -8,7 +8,7 @@ import {cleanWebsite, coachRows, loadWebsite, saveWebsite, publicCoaches, render
 import {decoratePage} from '../../../lib/page-chrome';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
-const DENIED = 'Owner sign-in and authenticator verification required.';
+const DENIED = 'Owner sign-in required.';
 
 export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);

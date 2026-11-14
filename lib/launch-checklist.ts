@@ -3,11 +3,10 @@
 // nothing and never reveals a secret (only whether one is set). Issue #252: matches the Launch board (#246).
 import {kindList} from './purchase-kinds';
 import {publicSchedule} from './public-schedule';
-import {mfaSwitchedOff} from './mfa-policy';
 
 type Settings = {APP_ORIGIN?: string; SUPABASE_URL?: string; SUPABASE_PUBLISHABLE_KEY?: string; EMAIL_API_KEY?: string; MAIL_FROM?: string;
   STRIPE_TEST_WEBHOOK_SECRET?: string; STRIPE_LIVE_WEBHOOK_SECRET?: string; STRIPE_MODE?: string; STRIPE_CONFIG_ENCRYPTION_KEY?: string;
-  CHECKOUT_KINDS?: string; STAFF_MFA?: string};
+  CHECKOUT_KINDS?: string};
 // `action` names a one-click fix on the dashboard itself (publish-programs: save the default programs, issue #147).
 export type Item = {key: string; group: string; label: string; status: 'done' | 'todo' | 'waiting' | 'info'; detail: string; href?: string; section?: string; action?: 'publish-programs'};
 
@@ -51,8 +50,7 @@ async function readAll(db: D1Database, nowIso: string, dayAgo: string): Promise<
   return out;
 }
 
-// `authenticators` is how many verified authenticators the signed-in owner has (issue #167); left out, the item is skipped.
-export async function launchChecklist(db: D1Database, settings: Settings, today: string, now = Date.now(), authenticators?: number): Promise<{items: Item[]; ready: number; total: number}> {
+export async function launchChecklist(db: D1Database, settings: Settings, today: string, now = Date.now()): Promise<{items: Item[]; ready: number; total: number}> {
   const weekAgo = new Date(now - 7 * 86400000).toISOString(), dayAgo = new Date(now - 86400000).toISOString();
   const r = await readAll(db, new Date(now).toISOString(), dayAgo);
   const academy = json(r.academy?.payload) ?? {};
@@ -146,10 +144,6 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
           : 'The site is in live mode. Save a restricted live key on Online payment setup'},
     {key: 'backup', group: 'Safety', label: 'Recent backup', href: '/backups', status: backup && backup.created_at >= weekAgo ? 'done' : 'todo',
       detail: backup ? `Last downloaded ${when(backup.created_at)}${backup.created_at >= weekAgo ? '' : '. Download a fresh one'}` : 'Download an encrypted backup and keep it somewhere safe'},
-    // Only while authenticators are required (STAFF_MFA=on, #306); by default staff sign in with a password only.
-    ...(authenticators === undefined || mfaSwitchedOff(settings.STAFF_MFA) ? [] : [{key: 'authenticator', group: 'Safety', label: 'Backup authenticator', href: '/security',
-      status: authenticators >= 2 ? 'done' as const : 'todo' as const,
-      detail: authenticators >= 2 ? `${authenticators} authenticators can open the dashboard` : 'Add a second authenticator, on another phone or in a password manager, so a lost phone can’t lock you out'}]),
     {key: 'health', group: 'Safety', label: 'Site health', href: '/site-health', status: errors ? 'todo' : 'done',
       detail: errors ? `${errors} site error${errors === 1 ? '' : 's'} in the last 24 hours` : 'No site errors in the last 24 hours'},
     {key: 'families', group: 'Families', label: 'Families signed up', href: '/accounts', status: 'info', detail: `${families} famil${families === 1 ? 'y' : 'ies'}`},

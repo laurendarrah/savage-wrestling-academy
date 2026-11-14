@@ -1,30 +1,28 @@
 import assert from 'node:assert/strict';
-import {load,request,DB,sqlite,users,levels} from './accounts.mjs';
+import {load,request,DB,sqlite,users} from './accounts.mjs';
 import {encryptBackup,decryptBackup} from '../public/security-backup.js';
 const api=load('app/api/security/route.ts'),staff=load('app/api/staff/route.ts'),coach=load('app/api/coach/route.ts'),family=load('app/api/family/route.ts'),academy=load('app/api/academy/route.ts'),backups=load('app/api/backups/route.ts');
-users.ownerWeak={...users.owner};users.ownerNew={id:'owner-new',email:'savagewrestlingclub@gmail.com',email_confirmed_at:'2026-10-15',factors:[]};
-assert.equal((await academy.GET(request('/api/academy','GET',null,'ownerWeak'))).status,403);
-assert.equal((await backups.GET(request('/api/backups','GET',null,'ownerWeak'))).status,403);
+// Sign-in is a confirmed email and a password (issues #306, #347). An account that still has an authenticator saved in
+// Supabase from before Nov 14 is like any other: the stand-in client has no factor calls at all, so any attempt to
+// read or check one would fail here.
+const leftover=id=>[{id,status:'verified',factor_type:'totp'}];
+users.ownerOld={...users.owner,factors:leftover('factor-owner')};
+assert.equal((await academy.GET(request('/api/academy','GET',null,'ownerOld'))).status,200);
+assert.equal((await academy.GET(request('/api/academy','GET',null,'unverified'))).status,403,'the owner email without a confirmed email is not the owner');
 assert.equal((await staff.GET(request('/api/staff','GET',null,'alice'))).status,403);
+assert.equal((await backups.GET(request('/api/backups','GET',null,'alice'))).status,403);
 assert.equal((await api.GET(request('/api/security'))).status,401);
-assert.equal((await api.POST(request('/api/security','POST',{action:'enroll'},'ownerWeak'))).status,403);
-assert.equal((await api.POST(request('/api/security','POST',{action:'verify',factorId:'factor-owner',code:'123456'},'alice'))).status,400);
-const enrollment=await api.POST(request('/api/security','POST',{action:'enroll'},'ownerNew'));assert.equal(enrollment.status,200);const enrolled=await enrollment.json();
-// #306: the owner signs in with a password only, so an owner who never set up an authenticator is let in
-// (tests/mfa-switch.mjs and tests/api-errors.mjs cover STAFF_MFA=on).
-assert.equal((await academy.GET(request('/api/academy','GET',null,'ownerNew'))).status,200);
-assert.equal((await api.POST(request('/api/security','POST',{action:'verify',factorId:enrolled.factorId,code:'000000'},'ownerNew'))).status,400);
-assert.equal((await api.POST(request('/api/security','POST',{action:'verify',factorId:enrolled.factorId,code:'123456'},'ownerNew'))).status,200);
-assert.equal((await academy.GET(request('/api/academy','GET',null,'ownerNew'))).status,200);
-const settings=await (await api.GET(request('/api/security','GET',null,'ownerNew'))).json();assert.equal(settings.strong,true);assert.equal(settings.secret,undefined);assert.equal(settings.qr,undefined);
-users.aliceWeak={...users.alice,factors:[{id:'alice-factor',status:'verified',factor_type:'totp'}]};users.aliceStrong={...users.aliceWeak};levels.aliceStrong='aal2';
-assert.equal((await family.GET(request('/api/family','GET',null,'aliceWeak'))).status,403);
-assert.equal((await family.GET(request('/api/family','GET',null,'aliceStrong'))).status,200);
-users.coach1={id:'coach-uuid',email:'coach@example.test',email_confirmed_at:'2026-10-15',factors:[{id:'coach-factor',factor_type:'totp',status:'verified'}]};levels.coach1='aal2';users.coachWeak={...users.coach1};
+// /api/security sets nothing up and checks no code; a page left open from before gets one plain sentence.
+for(const body of [{action:'enroll'},{action:'verify',factorId:'factor-owner',code:'123456'}])for(const who of ['ownerOld','alice','']){const r=await api.POST(request('/api/security','POST',body,who));assert.equal(r.status,410);assert.equal((await r.json()).error,api.GONE)}
+assert.doesNotMatch(api.GONE,/authenticator|code|factor/i);
+assert.deepEqual(await (await api.GET(request('/api/security','GET',null,'ownerOld'))).json(),{email:'savagewrestlingclub@gmail.com',role:'owner',destination:'/'});
+users.aliceOld={...users.alice,factors:leftover('alice-factor')};
+assert.equal((await family.GET(request('/api/family','GET',null,'aliceOld'))).status,200);
+users.coach1={id:'coach-uuid',email:'coach@example.test',email_confirmed_at:'2026-10-15',factors:leftover('coach-factor')};
 const grant={action:'grant',email:'coach@example.test',name:'Coach Test',programs:['Elementary']};
 assert.equal((await staff.POST(request('/api/staff','POST',grant,'alice'))).status,403);
+assert.equal((await coach.GET(request('/api/coach','GET',null,'coach1'))).status,403,'not a coach until the owner says so');
 assert.equal((await staff.POST(request('/api/staff','POST',grant,'owner'))).status,200);
-assert.equal((await coach.GET(request('/api/coach','GET',null,'coachWeak'))).status,403);
 assert.equal((await coach.GET(request('/api/coach','GET',null,'coach1'))).status,200);
 assert.equal((await academy.GET(request('/api/academy','GET',null,'coach1'))).status,403);
 assert.equal((await backups.GET(request('/api/backups','GET',null,'coach1'))).status,403);
@@ -57,4 +55,4 @@ const realBatch=DB.batch;
 DB.batch=async statements=>{if(statements[0]._sql.startsWith('INSERT INTO restore_guard'))sqlite.prepare("UPDATE family_accounts SET revision=revision+1 WHERE user_id='alice-uuid'").run();return realBatch(statements)};
 const beforeCount=sqlite.prepare('SELECT count(*) AS n FROM recovery_snapshots').get().n;
 const raced=await backups.POST(request('/api/backups','POST',{action:'restore',backup,fingerprint:fresh.fingerprint},'owner'));assert.equal(raced.status,409);assert.equal(sqlite.prepare('SELECT count(*) AS n FROM recovery_snapshots').get().n,beforeCount);DB.batch=realBatch;
-console.log('Passed: owner MFA required, no ChatGPT bypass, MFA setup and challenge, optional family MFA enforced, coach assignment/revocation/isolation, encrypted backups, wrong passphrase/tamper rejection, restore rollback and recovery snapshot, concurrent-change protection.');
+console.log('Passed: owner-only settings and backups, password-only sign-in with nothing to set up, coach assignment/revocation/isolation, encrypted backups, wrong passphrase/tamper rejection, restore rollback and recovery snapshot, concurrent-change protection.');

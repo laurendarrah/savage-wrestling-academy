@@ -12,7 +12,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Help pages | Built for families, coaches and the owner (#109) | `/help`, `/help/coach`, `/help/owner` | |
 | **Accounts** | | | |
 | Sign-up, sign-in, password reset | Built on Supabase Auth; email links use `APP_ORIGIN` | `/login`, `/auth/confirm`, `lib/account-auth.ts` | A custom email sender in Supabase before families join (GO_LIVE) |
-| Authenticator (MFA) | Optional for everyone. Staff sign in with a password only (#306); `STAFF_MFA=on` makes it required for staff again | `/security`, `lib/mfa-policy.ts` | |
+| Account security | Everyone signs in with an email and a password only, permanently (#306, #347). No authenticator feature exists. The page shows who is signed in and Change password | `/security`, `lib/account-auth.ts` | |
 | Family profiles and wrestlers | Built, with contact, safety and medical details shown to staff on the roster (#188) | `/family`, `lib/family-records.ts` | |
 | Family data requests | Download everything; ask to close the account; owner handles requests (#113) and can delete a test family (#259) | `/family`, `/data-requests`, `/accounts`, `lib/family-deletion.ts` | Data retention policy (draft) |
 | **Programs and booking** | | | |

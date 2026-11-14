@@ -1,16 +1,15 @@
 // "Tell the academy I want this" (#273): a signed-in family asks for a membership or a lesson while that purchase type
 // is closed for online payment. GET gives the academy's contact line; POST sends the request to the owner's inbox as a
 // message in the family's own conversation (lib/interest.ts), once per item per day.
-import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyContact, tellAcademy} from '../../../lib/interest';
 import {rateLimited} from '../../../lib/rate-limit';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
-  const auth = await strongAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
+  const auth = await verifiedAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.user?.email_confirmed_at) return {auth, reply, error: reply({error: 'Sign-in required.'}, 401)};
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return {auth, reply, error: reply({error: 'Authenticator verification required.'}, 403)};
   return {auth, reply, error: null};
 }
 

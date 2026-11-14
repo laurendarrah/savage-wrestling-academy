@@ -7,12 +7,12 @@ import path from 'node:path';
 const sqlite=new DatabaseSync(':memory:');
 for(const file of readdirSync('drizzle').filter(f=>f.endsWith('.sql')&&!f.includes('_starter_')).sort())sqlite.exec(readFileSync('drizzle/'+file,'utf8'));
 const DB={prepare(sql){let args=[];return {bind(...v){args=v;return this},async first(){return sqlite.prepare(sql).get(...args)??null},async all(){return {results:sqlite.prepare(sql).all(...args)}},async run(){return sqlite.prepare(sql).run(...args)}}}};
-let actor={id:'owner',email:'owner@example.test',email_confirmed_at:'yes',strong:true,owner:true};
+let actor={id:'owner',email:'owner@example.test',email_confirmed_at:'yes',owner:true};
 const cache=new Map();
-function load(file){if(cache.has(file))return cache.get(file);const module={exports:{}};cache.set(file,module.exports);vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module,exports:module.exports,crypto,TextEncoder,Uint8Array,Intl,Date,URL,Response,Request,Headers,console,require(name){if(name==='cloudflare:workers')return {env:{DB}};if(name.endsWith('/account-auth'))return {appOrigin:()=>'https://register.swa.test',strongAccount:async()=>({user:actor,strong:actor?.strong,headers:new Headers()}),ownerIdentity:async()=>({user:actor,strong:actor?.strong,owner:actor?.owner&&actor.strong?{userId:actor.id}:null,headers:new Headers()}),sameOrigin:r=>r.headers.get('origin')===new URL(r.url).origin,accountReply:(b,s=200,h)=>Response.json(b,{status:s,headers:h})};if(name.startsWith('.'))return load(path.resolve(path.dirname(file),name+'.ts'));throw Error(name)}});return module.exports}
+function load(file){if(cache.has(file))return cache.get(file);const module={exports:{}};cache.set(file,module.exports);vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module,exports:module.exports,crypto,TextEncoder,Uint8Array,Intl,Date,URL,Response,Request,Headers,console,require(name){if(name==='cloudflare:workers')return {env:{DB}};if(name.endsWith('/account-auth'))return {appOrigin:()=>'https://register.swa.test',verifiedAccount:async()=>({user:actor,headers:new Headers()}),ownerIdentity:async()=>({user:actor,owner:actor?.owner?{userId:actor.id}:null,headers:new Headers()}),sameOrigin:r=>r.headers.get('origin')===new URL(r.url).origin,accountReply:(b,s=200,h)=>Response.json(b,{status:s,headers:h})};if(name.startsWith('.'))return load(path.resolve(path.dirname(file),name+'.ts'));throw Error(name)}});return module.exports}
 const owner=load(path.resolve('app/api/scholarships/route.ts')),family=load(path.resolve('app/api/scholarship/route.ts')),lib=load(path.resolve('lib/scholarships.ts'));
 const req=(body,origin='https://academy.test')=>new Request('https://academy.test/api/scholarships',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)});
-const setActor=(who)=>actor=who==='owner'?{id:'owner',email:'owner@example.test',email_confirmed_at:'yes',strong:true,owner:true}:who?{id:who,email:who+'@example.test',email_confirmed_at:'yes',strong:true}:null;
+const setActor=(who)=>actor=who==='owner'?{id:'owner',email:'owner@example.test',email_confirmed_at:'yes',owner:true}:who?{id:who,email:who+'@example.test',email_confirmed_at:'yes'}:null;
 const state={programNamingVersion:2,programs:[{id:'Intermediate',name:'SWA Intermediate',priceCents:20000}]};
 sqlite.prepare('INSERT INTO academy_state VALUES (?,?,?,?,?)').run('academy',JSON.stringify(state),1,'owner','2026-11-05');
 sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('alice','alice@example.test',JSON.stringify({wrestlers:[{id:'kid',name:'Alice Athlete',grade:'7', usawNumber: 'TEST-1234', usawExpires: '2099-12-31'}]}),1,'2026-11-05');
@@ -88,7 +88,7 @@ const benefit={accepted_at:'2024-02-29T17:00:00Z',ended_at:null,reference_cents:
 assert.equal(lib.benefitSummary(benefit,new Date('2025-02-28T17:00:00Z')).completedMonths,12);
 assert.equal(lib.benefitSummary(benefit,new Date('2025-02-27T17:00:00Z')).completedMonths,11);
 assert.equal(lib.benefitSummary({...benefit,ended_at:'2024-05-29T17:00:00Z'},new Date('2026-11-05T17:00:00Z')).valueCents,60000);
-console.log('Passed: owner/MFA boundary, CSRF, email-bound hashed invitations, free tuition, draft gate, version checks, family isolation, signed acceptance, revocation, link rotation, expiry and informational anniversary accounting.');
+console.log('Passed: owner boundary, CSRF, email-bound hashed invitations, free tuition, draft gate, version checks, family isolation, signed acceptance, revocation, link rotation, expiry and informational anniversary accounting.');
 
 // Drawn signatures persist as bounded vectors and old acceptances remain printable.
 setActor('owner');let drawnOffer=await (await owner.POST(req(offer))).json();

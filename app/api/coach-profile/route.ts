@@ -1,7 +1,7 @@
 // Coach profiles (issue #190). A coach reads and saves their own profile. The owner reads and saves any coach's
 // (?email= / "email" in the body), or their own once they coach. Phone numbers stay on these owner and coach pages.
 import {env} from 'cloudflare:workers';
-import {strongAccount, ownerIdentity, accountReply, sameOrigin, OWNER_EMAIL} from '../../../lib/account-auth';
+import {verifiedAccount, ownerIdentity, accountReply, sameOrigin, OWNER_EMAIL} from '../../../lib/account-auth';
 import {coachAccess} from '../../../lib/access-control';
 import {cleanProfile, profileView, saveProfile, LIMITS} from '../../../lib/coach-profile';
 import {withApi} from '../../../lib/api';
@@ -16,8 +16,8 @@ async function target(request: Request, asked: unknown) {
     if (!staff && email !== OWNER_EMAIL) return {headers: owner.headers, error: accountReply({error: 'Coach not found.'}, 404, owner.headers)};
     return {headers: owner.headers, email, name: staff?.name ?? 'Owner', actor: owner.user!.id, byOwner: email !== OWNER_EMAIL};
   }
-  const auth = await strongAccount(request), staff = await coachAccess(auth.user, auth.strong);
-  if (!staff) return {headers: auth.headers, error: accountReply({error: 'Coach access and authenticator verification required.'}, 403, auth.headers)};
+  const auth = await verifiedAccount(request), staff = await coachAccess(auth.user);
+  if (!staff) return {headers: auth.headers, error: accountReply({error: 'Coach access required.'}, 403, auth.headers)};
   if (typeof asked === 'string' && asked.trim() && asked.trim().toLowerCase() !== staff.email) return {headers: auth.headers, error: accountReply({error: 'You can only change your own profile.'}, 403, auth.headers)};
   return {headers: auth.headers, email: staff.email, name: staff.name, actor: auth.user!.id, byOwner: false};
 }

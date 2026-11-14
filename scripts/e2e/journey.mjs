@@ -6,7 +6,7 @@
 import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
 import {mkdirSync, readFileSync, rmSync} from 'node:fs';
-import {start, sessionCookie, users} from './fake-supabase.mjs';
+import {start, sessionCookie, factorCalls} from './fake-supabase.mjs';
 import {start as startUsaw} from './fake-usaw.mjs';
 import {plan, nyMinutes, nyDay, hhmm, MARGIN, FNL} from './clock.mjs';
 import {pageError} from './page-errors.mjs';
@@ -386,7 +386,7 @@ await step('a signed-out visitor lands on the welcome page with programs, steps 
   if (SHOTS) await visitor.screenshot({path: `${SHOTS}/phone-welcome.png`, fullPage: true});
   await visitor.context().close();
 });
-await step('the owner\'s first sign-in goes straight to the dashboard, with no authenticator (#306)', async () => {
+await step('the owner\'s first sign-in goes straight to the dashboard: a password is the whole sign-in (#306, #347)', async () => {
   const first = await as('freshowner');
   await first.goto(BASE + '/'); await first.waitForURL(u => new URL(u).pathname === '/');
   const open = await first.request.get(BASE + '/api/launch-checklist'); expect(open.status() === 200, 'dashboard data opens with a password only: ' + open.status());
@@ -882,7 +882,7 @@ const draw = async (page, sel) => {
 };
 // ---------- Coach invitation and onboarding (issue #190) ----------
 let lee;
-await step('owner invites a coach; the coach accepts and lands on coach home, then sets up an authenticator by choice', async () => {
+await step('owner invites a coach; the coach accepts and lands on coach home; Account security shows who is signed in and Change password', async () => {
   await owner.goto(BASE + '/staff'); await owner.waitForSelector('#inviteForm');
   await owner.fill('#inviteForm [name=name]', 'Coach Lee'); await owner.fill('#inviteForm [name=email]', 'coach.lee@example.test');
   await owner.check('#inviteForm [name=programs][value=Elementary]'); await owner.click('#sendInvite');
@@ -896,14 +896,19 @@ await step('owner invites a coach; the coach accepts and lands on coach home, th
   await lee.goto(link); await lee.waitForSelector('#acceptInvite', {state: 'visible'});
   await waitText(lee, '#details', /Coach Lee[\s\S]*SWA Development/);
   await shot(lee, 'coach-join');
-  await lee.click('#acceptInvite'); await lee.waitForURL(/\/coach$/); // no authenticator step (#306)
+  await lee.click('#acceptInvite'); await lee.waitForURL(/\/coach$/); // straight to coach home (#306, #347)
   const reuse = await api(lee, '/api/coach-invite', {action: 'accept', token: link.split('#invite=')[1]});
   expect(reuse.status === 410, 'an invite works once: ' + reuse.status);
-  // A coach may still choose an authenticator. The stand-in cannot check a real code, so the walkthrough plays a finished setup.
-  users.invitee.factors = [{id: 'f-lee', status: 'verified', factor_type: 'totp'}]; users.invitee.aal = 'aal2';
-  const c = sessionCookie('invitee', AUTH); await lee.context().addCookies([{name: c.name, value: c.value, url: BASE}]);
-  await lee.goto(BASE + '/security'); await lee.waitForSelector('#continue', {state: 'visible'}); await lee.click('#continue');
-  await lee.waitForURL(/\/coach$/); await waitText(lee, '#heading', /Coach Lee/);
+  // Account security, from coach home's Account menu (#347): who is signed in, Change password, and the way back.
+  await waitText(lee, '#heading', /Coach Lee/);
+  await lee.click('#accountMenu summary'); await lee.click('#accountMenu a:has-text("Account security")'); await lee.waitForURL(/\/security$/);
+  await at(lee, '#identity', /^coach\.lee@example\.test$/); await at(lee, '#home', /^Back to coach home$/);
+  expect(await lee.getAttribute('#change', 'href') === '/login?mode=change', 'Change password opens the password form');
+  const securityText = await lee.innerText('main');
+  expect(/Use a password you don’t use anywhere else/.test(securityText) && !/authenticator|code|verif/i.test(securityText), 'Account security is about the password only: ' + securityText);
+  expect(!(await lee.isVisible('#continue')) && !(await lee.isVisible('#ownerTools')), 'a coach sees no owner tools and no leftover "continue"');
+  await shot(lee, 'coach-security');
+  await lee.click('#home'); await lee.waitForURL(/\/coach$/); await waitText(lee, '#heading', /Coach Lee/);
   await waitText(lee, '#programs', /SWA Development/);
   await owner.goto(BASE + '/staff'); await waitText(owner, '#staff', /Coach Lee[\s\S]*SWA Development/);
   expect(!(await owner.isVisible('#invitesBox')), 'the accepted invite leaves the waiting list');
@@ -1609,6 +1614,18 @@ if (SHOTS) await step('owner screens at 1280 and 390 for the design record', asy
     await page.goto(BASE + '/payments#record', {waitUntil: 'load'}); await page.waitForSelector('#recordSheet:not([hidden])'); await page.waitForTimeout(500);
     await page.screenshot({path: `${SHOTS}/owner-payments-record-${tag}.png`, fullPage: false});
     await page.context().close();
+  }
+});
+
+await step('nothing asked the sign-in service about authenticators, though the owner and a coach still have one saved (#347)', async () => {
+  expect(!factorCalls.length, 'the site asked about authenticators: ' + factorCalls.join(', '));
+  // The owner's Account security: the same small page, inside the owner shell, with the owner's tools under it.
+  await owner.goto(BASE + '/security'); await at(owner, '#identity', /^savagewrestlingclub@gmail\.com$/); await at(owner, '#home', /^Back to the owner dashboard$/);
+  expect(await owner.isVisible('#ownerTools') && await owner.isVisible('#change'), 'the owner sees Change password and the owner tools');
+  expect(!/authenticator/i.test(await owner.content()), 'no authenticator wording for the owner');
+  for (const [tag, viewport] of SHOTS ? [['1280', {width: 1280, height: 860}], ['390', {width: 390, height: 844}]] : []) for (const who of ['family', 'owner']) {
+    const page = await as(who, viewport); await page.goto(BASE + '/security', {waitUntil: 'load'}); await at(page, '#identity', /@/); await page.waitForTimeout(500);
+    await page.screenshot({path: `${SHOTS}/security-${who}-${tag}.png`, fullPage: true}); await page.context().close();
   }
 });
 

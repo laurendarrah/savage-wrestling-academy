@@ -1,21 +1,19 @@
 import {env} from 'cloudflare:workers';
-import {strongAccount,accountReply,sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {familyProfile,checkCompetitionAccess} from '../../../lib/program-approval';
 import {scholarshipView,inviteHash,validInvite,type Scholarship} from '../../../lib/scholarships';
 import {cleanSignature,electronicConsent,type SignatureRecord} from '../../../lib/scholarship-signatures';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 export const GET = withApi(GET_); async function GET_(request:Request){
- const auth=await strongAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
+ const auth=await verifiedAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!auth.user?.email_confirmed_at)return reply({error:'Sign-in required.'},401);
- if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return reply({error:'Authenticator verification required.'},403);
  const rows=await env.DB!.prepare("SELECT * FROM scholarship_awards WHERE user_id=? ORDER BY accepted_at DESC").bind(auth.user.id).all<Scholarship>();
  return reply({awards:rows.results.map(a=>scholarshipView(a))});
 }
 export const POST = withApi(POST_); async function POST_(request:Request){
- const auth=await strongAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
+ const auth=await verifiedAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!auth.user?.email_confirmed_at)return reply({error:'Sign in with the parent email that received this invitation.'},401);
- if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return reply({error:'Authenticator verification required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>100000)return reply({error:'Request too large.'},413);

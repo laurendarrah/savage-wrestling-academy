@@ -6,7 +6,7 @@ import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 const identifier=(v:unknown):v is string=>typeof v==='string'&&/^[A-Za-z0-9-]{1,80}$/.test(v);
 export const GET = withApi(GET_); async function GET_(request:Request){
- const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
+ const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in required.'},403);
  const id=new URL(request.url).searchParams.get('id');
  if(id!==null){if(!identifier(id))return reply({error:'Choose a saved lesson.'},400);const row=await env.DB!.prepare('SELECT id,curriculum_id,lesson_order,name,payload,revision,updated_at FROM practice_curricula WHERE id=?').bind(id).first<{id:string;curriculum_id:string|null;lesson_order:number;name:string;payload:string;revision:number;updated_at:string}>();if(!row)return reply({error:'Lesson not found. Refresh the library.'},404);return reply({curriculum:{id:row.id,curriculumId:row.curriculum_id,lessonOrder:row.lesson_order,name:row.name,data:JSON.parse(row.payload),revision:row.revision,updatedAt:row.updated_at}})}
  const groups=await env.DB!.prepare('SELECT id,program,name,revision,updated_at FROM practice_curriculum_groups ORDER BY program,name_key').all();

@@ -11,7 +11,7 @@ import {lastReminderRun, REMINDER_DEADLINE_HOUR} from '../../../lib/reminder-wat
 import {buildId} from '../health/route';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
-const OWNER_ONLY = 'Owner sign-in and authenticator verification required.';
+const OWNER_ONLY = 'Owner sign-in required.';
 const EMAIL_OFF = 'Email isn’t set up yet, so no test alert was sent. Try again once email is set up.';
 const TEST_ALERTS_PER_HOUR = 3;
 export const GET = withApi(GET_); async function GET_(request: Request) {

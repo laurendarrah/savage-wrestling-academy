@@ -9,10 +9,10 @@ import ts from 'typescript';
 const sqlite = new DatabaseSync(':memory:');
 for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
 const DB = {prepare(sql) { let a = []; return {bind(...v) { a = v; return this; }, async first() { return sqlite.prepare(sql).get(...a) ?? null; }, async all() { return {results: sqlite.prepare(sql).all(...a)}; }}; }};
-let actor = {id: 'parent-1', email_confirmed_at: 'yes', strong: true};
+let actor = {id: 'parent-1', email_confirmed_at: 'yes'};
 const mod = {exports: {}};
 vm.runInNewContext(ts.transpileModule(readFileSync('app/api/orders/route.ts', 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
-  {module: mod, exports: mod.exports, URL, JSON, String, Response, Headers, require: n => n === 'cloudflare:workers' ? {env: {DB}} : n.endsWith('/lib/api') ? {withApi: h => h} : n.endsWith('/checkout-config') ? {checkoutKinds: () => new Set(['event'])} : n.endsWith('/cash-bookings') ? {familyCashBookings: async () => []} : n.endsWith('/account-auth') ? {strongAccount: async () => ({user: actor, strong: actor?.strong, headers: new Headers()}), accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})} : (() => { throw Error(n); })()});
+  {module: mod, exports: mod.exports, URL, JSON, String, Response, Headers, require: n => n === 'cloudflare:workers' ? {env: {DB}} : n.endsWith('/lib/api') ? {withApi: h => h} : n.endsWith('/checkout-config') ? {checkoutKinds: () => new Set(['event'])} : n.endsWith('/cash-bookings') ? {familyCashBookings: async () => []} : n.endsWith('/account-auth') ? {verifiedAccount: async () => ({user: actor, headers: new Headers()}), accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})} : (() => { throw Error(n); })()});
 const ins = (id, user, status, extra = {}) => sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end)
   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'usd','{}','{}',?,?,0,?,?,?,?,?)`).run(id, user, 'x@example.test', extra.w ?? 'w-1', 'Sam Example', extra.kind ?? 'event', extra.program ?? null, 'item', extra.label ?? 'Takedown Camp', JSON.stringify(extra.dates ?? []), extra.base ?? 16000, extra.disc ?? 0, (extra.base ?? 16000) - (extra.disc ?? 0), status, id, extra.created ?? '2026-11-05T12:00:00Z', '2026-11-05T12:00:00Z', extra.paid ?? null, extra.start ?? null, extra.end ?? null);
 const uuid = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -33,7 +33,8 @@ assert.equal((await get('?order=' + uuid(1))).body.order.status, 'paid');
 assert.equal((await get('?order=' + uuid(5))).status, 404, 'cannot read another family\'s order');
 assert.equal((await get('?order=not-a-uuid')).status, 404);
 actor = null; assert.equal((await get('')).status, 401);
-actor = {id: 'parent-1', email_confirmed_at: 'yes', strong: false, factors: [{status: 'verified'}]}; assert.equal((await get('')).status, 403, 'MFA enforced when enrolled');
+// Something left on the account in Supabase from before Nov 14 changes nothing (issue #347).
+actor = {id: 'parent-1', email_confirmed_at: 'yes', factors: [{status: 'verified', factor_type: 'totp'}]}; assert.equal((await get('')).status, 200, 'a password sign-in is the whole sign-in');
 
 // --- Screen ---
 const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
@@ -101,4 +102,4 @@ async function openFamily({search = '', orderStatuses = ['paid']}) {
   assert.equal(el('status').textContent, 'Checkout canceled. Nothing was charged.');
 }
 
-console.log('Passed: orders API returns only the family\'s own visible orders with MFA enforced; family page shows active membership terms, purchase history, unfinished checkouts, and confirms payment only after Stripe does.');
+console.log('Passed: orders API returns only the family\'s own visible orders to a signed-in family; family page shows active membership terms, purchase history, unfinished checkouts, and confirms payment only after Stripe does.');

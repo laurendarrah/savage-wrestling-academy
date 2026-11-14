@@ -57,7 +57,9 @@ Known issues and priorities are in `docs/ISSUES.md` and `docs/LAUNCH_PLAN.md`.
 
 ## Sign-in
 
-- The owner and coaches sign in with email and password only, by decision of Lauren and Justin on Nov 13 (#306). No authenticator is required unless `STAFF_MFA=on` is set on the Worker. Don't reintroduce a required authenticator or a warning about it without a new decision. Anyone who set one up still uses it until its factors are deleted in Supabase.
+- Everyone (the owner, coaches and families) signs in with email and password only, permanently. Lauren decided on Nov 14 (#347): "We never want to turn on the 2fa. At all." This goes one step past Lauren and Justin's decision of Nov 13 that staff sign in with a password only (#306).
+- The site has no authenticator feature: no set-up, no code step, no `STAFF_MFA` setting, and no wording about one on any page, email or error message. An account that still has a factor saved in Supabase is treated like any other. Don't add an authenticator, a second sign-in step or a mention of one without a new decision from Lauren and Justin, recorded in an issue.
+- `/security` shows who is signed in, Change password and the way back. `tests/password-only-sign-in.mjs` and `tests/clear-wording.mjs` hold this in place.
 
 ## Domain rules
 

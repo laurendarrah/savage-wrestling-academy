@@ -88,7 +88,7 @@ We use these companies to run the site. They process information on our behalf a
 
 ## Security
 
-Accounts are protected by passwords, with optional authenticator app sign-in for families (required for the owner and coaches). Sensitive actions are logged. Stored payment credentials are encrypted. Backups are encrypted with a passphrase kept outside the site.
+Accounts are protected by passwords. Sensitive actions are logged. Stored payment credentials are encrypted. Backups are encrypted with a passphrase kept outside the site.
 
 ## Changes
 

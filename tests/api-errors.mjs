@@ -20,7 +20,7 @@ const DB = {
 const users = {owner: {id: 'owner-uuid', email: 'savagewrestlingclub@gmail.com', email_confirmed_at: 'y', factors: [{status: 'verified', factor_type: 'totp'}]}, coach: {id: 'coach-uuid', email: 'coach@example.test', email_confirmed_at: 'y'}, fam: {id: 'fam-uuid', email: 'fam@example.test', email_confirmed_at: 'y'}};
 let outage = null;
 const b64url = s => Buffer.from(s).toString('base64url');
-const jwt = (sub, aal) => [b64url('{"alg":"HS256"}'), b64url(JSON.stringify({sub, aal})), b64url('sig')].join('.');
+const jwt = sub => [b64url('{"alg":"HS256"}'), b64url(JSON.stringify({sub, aal: 'aal1'})), b64url('sig')].join('.');
 const env = {DB, SUPABASE_URL: 'https://example.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test', APP_ORIGIN: 'https://academy.test'};
 const cache = new Map();
 function load(file) {
@@ -37,7 +37,7 @@ function load(file) {
             const session = options.cookies.getAll().find(c => c.name === 'test-session')?.value;
             return {auth: {
               async getUser() { if (outage) return {data: {user: null}, error: outage}; return {data: {user: users[session] ?? null}, error: users[session] ? null : {status: 400, name: 'AuthSessionMissingError'}}; },
-              async getSession() { return {data: {session: users[session] ? {access_token: jwt(users[session].id, session === 'owner' ? 'aal2' : 'aal1')} : null}, error: null}; },
+              async getSession() { return {data: {session: users[session] ? {access_token: jwt(users[session].id)} : null}, error: null}; },
             }};
           }};
         if (name.endsWith('/net')) return {timedFetch: () => fetch, SUPABASE_TIMEOUT_MS: 8000, EMAIL_TIMEOUT_MS: 10000, timeoutSignal: () => undefined};
@@ -60,7 +60,7 @@ assert.equal(api.redact('x'.repeat(400)).length, 300);
 
 // --- A thrown error: JSON with a request id, no-store, recorded with id, area and role ---
 sqlite.exec('DELETE FROM error_log');
-const boom = api.withApi(async request => { await auth.strongAccount(request); throw new Error('D1_ERROR: no such column: pat@example.test'); });
+const boom = api.withApi(async request => { await auth.verifiedAccount(request); throw new Error('D1_ERROR: no such column: pat@example.test'); });
 let r = await boom(req('/api/roster?date=2026-11-09&token=secret', 'fam'));
 assert.equal(r.status, 500); assert.equal(r.headers.get('Cache-Control'), 'no-store');
 let body = await r.json();
@@ -83,14 +83,14 @@ assert.equal(rows().length, 5);
 // --- Supabase unreachable: 503 with its own wording, never 401 or a redirect, and recorded as such ---
 for (const failure of [{status: 0, name: 'AuthRetryableFetchError', message: 'fetch failed'}, {status: 503, name: 'AuthApiError', message: 'service unavailable'}, {status: 500, code: 'unexpected_failure'}]) {
   outage = failure;
-  r = await api.withApi(async request => { const a = await auth.strongAccount(request); return Response.json({user: a.user}); })(req('/api/family', 'fam'));
+  r = await api.withApi(async request => { const a = await auth.verifiedAccount(request); return Response.json({user: a.user}); })(req('/api/family', 'fam'));
   assert.equal(r.status, 503, JSON.stringify(failure)); body = await r.json();
   assert.match(body.error, /Sign-in is temporarily unavailable/); assert.ok(body.requestId);
   row = sqlite.prepare('SELECT * FROM error_log WHERE request_id=?').get(body.requestId); assert.equal(row.status, 503); assert.match(row.message, /^SignInUnavailable: /); assert.equal(row.role, 'anon');
 }
 outage = null;
 // "No session" is still just signed out: the route's own 401, not an outage.
-r = await api.withApi(async request => { const a = await auth.strongAccount(request); return a.user ? Response.json({}) : Response.json({error: 'Sign-in required.'}, {status: 401}); })(req('/api/family'));
+r = await api.withApi(async request => { const a = await auth.verifiedAccount(request); return a.user ? Response.json({}) : Response.json({error: 'Sign-in required.'}, {status: 401}); })(req('/api/family'));
 assert.equal(r.status, 401);
 // A signed-in page answers 503 with a plain explanation instead of sending the person to sign in again.
 const pages = load('lib/protected-page.ts');
@@ -102,15 +102,15 @@ outage = null;
 assert.equal((await pages.familyPage(req('/family', 'fam'), '<html></html>')).status, 200, 'and works again when Supabase does');
 assert.equal((await pages.familyPage(req('/family'), '<html></html>')).status, 303, 'signed out still goes to sign in');
 
-// --- The identity is worked out once per request, and the level comes from the session token ---
+// --- The identity is worked out once per request, and a password session is the whole sign-in (issue #347) ---
 const counting = load('lib/account-auth.ts');
 const request = req('/api/roster', 'owner');
-const [a, b, c] = await Promise.all([counting.ownerIdentity(request), counting.strongAccount(request), counting.verifiedAccount(request)]);
-assert.equal(a.owner.userId, 'supabase:owner-uuid'); assert.equal(b.strong, true, 'aal2 from the token'); assert.equal(c.user.id, 'owner-uuid');
+const [a, b] = await Promise.all([counting.ownerIdentity(request), counting.verifiedAccount(request)]);
+assert.equal(a.owner.userId, 'supabase:owner-uuid', 'the owner, though the account still has an old factor in Supabase and the session is a password one');
+assert.equal(b.user.id, 'owner-uuid'); assert.equal(a.strong, undefined); assert.equal(a.mfaRequired, undefined);
 assert.equal(a.headers, b.headers, 'one headers object per request, so cookie refreshes are not lost');
-assert.equal((await counting.strongAccount(req('/api/roster', 'fam'))).strong, true, 'no authenticator needed by default (#306)');
 env.STAFF_MFA = 'on';
-assert.equal((await counting.strongAccount(req('/api/roster', 'fam'))).strong, false, 'aal1 without an authenticator when STAFF_MFA=on');
+assert.equal((await counting.ownerIdentity(req('/api/roster', 'owner'))).owner.userId, 'supabase:owner-uuid', 'the old Worker setting is not read');
 delete env.STAFF_MFA;
 
 // --- The Worker: an error the wrapper recorded is alerted once, not recorded twice, and the mark never leaves ---

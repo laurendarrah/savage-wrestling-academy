@@ -1,5 +1,5 @@
 // Family document signing (issues #69, #195): the waiver, and with ?kind=parent_consent the Parent Consent Form.
-import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {rateLimited} from '../../../lib/rate-limit';
 import {familyWaivers} from '../../../lib/waivers';
 import {DOCUMENTS, isKind, myDocuments, signDocument, type Kind} from '../../../lib/documents';
@@ -7,9 +7,8 @@ import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
-  const auth = await strongAccount(request);
+  const auth = await verifiedAccount(request);
   if (!auth.user?.email_confirmed_at) return {auth, error: accountReply({error: 'Sign-in required.'}, 401, auth.headers)};
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return {auth, error: accountReply({error: 'Authenticator verification required.'}, 403, auth.headers)};
   return {auth, error: null};
 }
 // Only documents families sign. Without a kind it is the waiver, as before issue #195.

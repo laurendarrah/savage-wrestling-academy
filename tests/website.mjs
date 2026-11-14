@@ -27,7 +27,6 @@ const post = (body, who = 'owner', origin) => api.POST(request('/api/website', '
 const get = (who = 'owner') => api.GET(request('/api/website', 'GET', null, who)).then(reply);
 const page = async r => { const res = await r.GET(request('/x')); return {status: res.status, html: await res.text(), headers: res.headers}; };
 const ORIGIN = 'https://register.savagewrestling.example';
-users.ownerWeak = {...users.owner}; // signed in with a password but no authenticator code this session
 
 const base = {headline: 'Built on the mat', intro: 'Wrestling for K to 12 in Huntington Station.', mission: '', coaches: [], achievements: [], alumni: [], address: '', email: ''};
 // JSON round trip: the module runs in its own context, so its objects have other prototypes.
@@ -120,9 +119,7 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
 // ---------- Owner only ----------
 {
   assert.equal((await get('')).status, 403); assert.equal((await get('alice')).status, 403, 'families cannot read the editor');
-  assert.equal((await get('ownerWeak')).status, 403, 'owner needs the authenticator');
   assert.equal((await post({action: 'save', site: base, updatedAt: null}, 'alice')).status, 403);
-  assert.equal((await post({action: 'save', site: base, updatedAt: null}, 'ownerWeak')).status, 403);
   assert.equal((await post({action: 'save', site: base, updatedAt: null}, 'owner', 'https://evil.test')).status, 403, 'same origin only');
   const plain = await api.POST(new Request('https://academy.test/api/website', {method: 'POST', headers: {'content-type': 'text/plain', origin: 'https://academy.test', cookie: 'test-session=owner'}, body: '{}'}));
   assert.equal(plain.status, 415);

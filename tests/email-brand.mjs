@@ -111,11 +111,11 @@ assert.ok(linked.size >= 8, 'found the notices’ links');
 for (const page of linked) assert.notEqual(brand.buttonLabel(`${O}/${page}`, O), brand.DEFAULT_LABEL, `/${page} has a button name`);
 
 // --- A coach invite: the button where the link was, the invite line in the footer, the rest in order ---
-const invite = `Hi Dana Example,\n\nSavage Wrestling Academy has invited you to join as a coach for SWA Intermediate.\n\nOpen this link to create your coach account (or sign in with dana@example.test) and set up your authenticator app:\n${O}/coach-join#invite=tok_123\n\nThe link works once and ends on November 21. If it stops working, ask the academy for a new one.\n\n—\nSavage Wrestling Academy`;
+const invite = `Hi Dana Example,\n\nSavage Wrestling Academy has invited you to join as a coach for SWA Intermediate.\n\nOpen this link to create your coach account (or sign in with dana@example.test):\n${O}/coach-join#invite=tok_123\n\nThe link works once and ends on November 21. If it stops working, ask the academy for a new one.\n\n—\nSavage Wrestling Academy`;
 mail = brandedEmail({subject: 'You’re invited to coach at Savage Wrestling Academy', text: invite, origin: O, audience: 'invite'});
 assert.equal(mail.text, invite);
 html = mail.html;
-assert.match(html, /authenticator app:<\/p>\n<table[^>]*><tr><td[^>]*><a href="https:\/\/swa\.example\/coach-join#invite=tok_123"[^>]*>Accept your invite<\/a>/);
+assert.match(html, /\(or sign in with dana@example\.test\):<\/p>\n<table[^>]*><tr><td[^>]*><a href="https:\/\/swa\.example\/coach-join#invite=tok_123"[^>]*>Accept your invite<\/a>/);
 assert.ok(html.indexOf('Hi Dana Example,') < html.indexOf('Accept your invite') && html.indexOf('Accept your invite') < html.indexOf('The link works once'));
 assert.match(html, /You’re getting this because Savage Wrestling Academy invited you to coach\./);
 assert.doesNotMatch(html, /you have an account/);

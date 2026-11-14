@@ -3,7 +3,7 @@
 // programs, never the reason), C. the coach's practices and lessons in those dates are listed for cover. Nothing is
 // cancelled. Runs the real routes against a database built from every migration (tests/accounts.mjs).
 import assert from 'node:assert/strict';
-import {load, request, sqlite, users, levels} from './accounts.mjs';
+import {load, request, sqlite, users} from './accounts.mjs';
 
 const staff = load('app/api/staff/route.ts'), api = load('app/api/coach-time/route.ts'), owner = load('app/api/timesheets/route.ts');
 const reply = async r => ({status: r.status, body: await r.json()});
@@ -11,9 +11,8 @@ const post = (route, path, body, who) => route.POST(request(path, 'POST', body, 
 const get = (route, path, who) => route.GET(request(path, 'GET', null, who)).then(reply);
 const all = (sql, ...a) => sqlite.prepare(sql).all(...a);
 const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
-const totp = id => [{id, status: 'verified', factor_type: 'totp'}];
 const people = {dana: 'dana.coach@example.test', lee: 'lee.coach@example.test', sam: 'sam.coach@example.test', kim: 'kim.coach@example.test'};
-for (const [k, email] of Object.entries(people)) { users[k] = {id: k + '-uuid', email, email_confirmed_at: '2026-10-15', factors: totp(k + '-f')}; levels[k] = 'aal2'; }
+for (const [k, email] of Object.entries(people)) { users[k] = {id: k + '-uuid', email, email_confirmed_at: '2026-10-15'}; }
 
 // Dana and Kim coach SWA Intermediate, Lee coaches SWA Development and SWA Intermediate, Sam only SWA Advance. The owner
 // coaches SWA Intermediate too. Kim's access was removed.

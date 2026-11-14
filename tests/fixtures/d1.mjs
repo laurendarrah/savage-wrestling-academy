@@ -52,7 +52,7 @@ export function loader(env, actor = {owner: true, id: 'owner-id'}) {
           if (name === 'cloudflare:workers') return {env};
           if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test', OWNER_EMAIL: 'owner@example.test',
             ownerIdentity: async () => ({owner: actor.owner ? {userId: actor.id} : null, user: {id: actor.id}, headers: new Headers()}),
-            strongAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
+            verifiedAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, headers: new Headers()}),
             sameOrigin: () => true, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
           if (name.endsWith('/rate-limit')) return {rateLimited: async () => false};
           if (name.endsWith('/access-control')) return {accountRole: async () => ({role: actor.owner ? 'owner' : 'family', staff: null})};

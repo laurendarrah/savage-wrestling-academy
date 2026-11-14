@@ -174,17 +174,13 @@ const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_Yor
   assert.match(read('app/calendar/screen.html'), /'><h3>'\+shortDay\(day\)\+todayTag\(day\)\+'<\/h3>'/, 'a phone\'s day cards read "Mon, Nov 9"');
 }
 
-// ---------- Account security: no "backup" button before there is a first authenticator ----------
+// ---------- Account security: one card, one red button (Change password), the way back as a quiet link ----------
 {
-  const open = async state => { const {el} = run('app/security/screen.html', {fetch: async () => json({email: 'pat@example.test', role: 'family', required: false, destination: '/family', ...state})}); await settle(); return el; };
-  let el = await open({strong: true, factors: []});
-  assert.equal(el('enroll').hidden, false); assert.equal(el('backupFactor').hidden, true, 'one button, not two that do the same thing');
-  assert.equal(el('backupNote').hidden, true);
-  el = await open({strong: true, factors: [{id: 'f1', name: 'Phone'}]});
-  assert.equal(el('backupFactor').hidden, false, 'a backup is offered once there is a first one'); assert.equal(el('backupNote').hidden, false);
-  el = await open({strong: true, factors: [{id: 'f1', name: 'Phone'}, {id: 'f2', name: 'Tablet'}]});
-  assert.equal(el('backupFactor').hidden, true);
-  assert.match(style(read('app/security/screen.html')), /main\{max-width:560px;margin:0 auto/, 'simple and centered');
+  const html = read('app/security/screen.html');
+  assert.equal((html.match(/class="[^"]*\bprimary\b/g) || []).length, 1, 'one main action');
+  assert.match(html, /<a id="change" class="button primary" href="\/login\?mode=change">Change password<\/a>/);
+  assert.match(html, /<p class="links"><a id="continue" class="swa-link" href="\/" hidden>Continue where you left off →<\/a><a id="home" href="\/login" class="swa-link">Back to sign in<\/a><\/p>/);
+  assert.match(style(html), /main\{max-width:560px;margin:0 auto/, 'simple and centered');
   assert.match(style(read('app/login/screen.html')), /main\{max-width:440px;margin:0 auto/);
 }
 

@@ -1,6 +1,6 @@
 // The signed-in family's own orders (issue #21). Read-only. Abandoned and canceled checkouts are hidden.
 import {env} from 'cloudflare:workers';
-import {strongAccount, accountReply} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply} from '../../../lib/account-auth';
 import {checkoutKinds} from '../../../lib/checkout-config';
 import {familyCashBookings} from '../../../lib/cash-bookings';
 import {withApi} from '../../../lib/api';
@@ -15,9 +15,8 @@ const FIELDS = 'o.id,o.kind,o.program,o.item_id,o.item_label,o.wrestler_id,o.wre
 const FROM = 'FROM orders o LEFT JOIN subscriptions s ON s.order_id=o.id';
 
 export const GET = withApi(GET_); async function GET_(request: Request) {
-  const auth = await strongAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
+  const auth = await verifiedAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.user?.email_confirmed_at) return reply({error: 'Sign-in required.'}, 401);
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return reply({error: 'Authenticator verification required.'}, 403);
   const one = new URL(request.url).searchParams.get('order');
   if (one !== null) {
     if (!/^[0-9a-f-]{36}$/.test(one)) return reply({error: 'Order not found.'}, 404);

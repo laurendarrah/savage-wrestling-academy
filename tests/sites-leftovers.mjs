@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {load, request, sqlite, users, levels} from './accounts.mjs';
+import {load, request, sqlite, users} from './accounts.mjs';
 
 const openingsApi = load('app/api/coach-openings/route.ts'), coachApi = load('app/api/coach/route.ts'), lessonsApi = load('app/api/lessons/route.ts');
 const familyDocs = load('app/api/waiver/route.ts'), ownerDocs = load('app/api/waivers/route.ts'), contractApi = load('app/api/contract/route.ts');
@@ -18,14 +18,13 @@ const get = (route, path, who) => route.GET(request(path, 'GET', null, who)).the
 const plain = v => JSON.parse(JSON.stringify(v));
 const OWNER = 'savagewrestlingclub@gmail.com', CORA = 'cora.coach@example.test', DREW = 'drew.coach@example.test', now = new Date().toISOString();
 const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
-const totp = id => [{id, status: 'verified', factor_type: 'totp'}];
 const strokes = [[[0.1, 0.5], [0.3, 0.4], [0.5, 0.6]]];
 const TEXT = 'Test text for the automated check only. It is not a real document and is never shown to families. '.repeat(3);
 
 // Two coaches (Cora has never signed in; Drew has), a removed coach, and a family with one carded wrestler.
-users.cora = {id: 'cora-uuid', email: CORA, email_confirmed_at: '2026-10-15', factors: totp('cora-f')}; levels.cora = 'aal2';
-users.drew = {id: 'drew-uuid', email: DREW, email_confirmed_at: '2026-10-15', factors: totp('drew-f')}; levels.drew = 'aal2';
-users.kim = {id: 'kim-uuid', email: 'kim@example.test', email_confirmed_at: '2026-10-15', factors: []};
+users.cora = {id: 'cora-uuid', email: CORA, email_confirmed_at: '2026-10-15'};
+users.drew = {id: 'drew-uuid', email: DREW, email_confirmed_at: '2026-10-15'};
+users.kim = {id: 'kim-uuid', email: 'kim@example.test', email_confirmed_at: '2026-10-15'};
 for (const [email, name, active] of [[CORA, 'Cora Coach', 1], [DREW, 'Drew Coach', 1], ['gone@example.test', 'Gone Coach', 0]])
   sqlite.prepare('INSERT INTO staff_access(email,name,programs,active,updated_at) VALUES (?,?,?,?,?)').run(email, name, '["Intermediate"]', active, now);
 sqlite.prepare('INSERT INTO family_accounts(user_id,email,payload,revision,updated_at) VALUES (?,?,?,1,?)').run('kim-uuid', 'kim@example.test',

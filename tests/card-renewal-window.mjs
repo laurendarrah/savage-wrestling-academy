@@ -27,7 +27,7 @@ function load(file) {
         if (name === 'cloudflare:workers') return {env};
         if (name.endsWith('/account-auth')) return {
           ownerIdentity: async () => ({owner: actor.owner ? {userId: actor.id} : null, headers: new Headers()}),
-          strongAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
+          verifiedAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, headers: new Headers()}),
           appOrigin: () => 'https://swa.example', sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name.endsWith('/rate-limit')) return {rateLimited: async () => false};
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'));

@@ -35,7 +35,7 @@ const secret = 'whsec_must_not_leak', key = 'rk_test_must_not_leak';
 sqlite.prepare("INSERT INTO integration_secrets(id,encrypted,updated_at,updated_by) VALUES ('stripe-test',?,?,?)").run(JSON.stringify({v: 1, secret: key}), '2026-11-06T14:00:00Z', 'owner@example.test');
 sqlite.prepare("INSERT INTO waiver_versions(id,kind,title,body,sha256,published_at,published_by) VALUES ('w1','waiver','Secret Waiver Title','Body','x','2026-11-01T00:00:00Z','owner@example.test')").run();
 sqlite.prepare("INSERT INTO staff_access(email,name,programs,active,updated_at) VALUES ('coach@example.test','Coach Private','[]',1,'2026-11-01')").run();
-const settings = {STRIPE_TEST_WEBHOOK_SECRET: secret, CHECKOUT_KINDS: 'walkin', EMAIL_API_KEY: 're_must_not_leak', MAIL_FROM: 'Private <hello@mail.example.test>', STAFF_MFA: 'off'};
+const settings = {STRIPE_TEST_WEBHOOK_SECRET: secret, CHECKOUT_KINDS: 'walkin', EMAIL_API_KEY: 're_must_not_leak', MAIL_FROM: 'Private <hello@mail.example.test>'};
 s = await setupStatus(DB, settings, today, now);
 assert.equal(s.stripe.testKey, true); assert.equal(s.stripe.testWebhook, true); assert.equal(s.stripe.liveKey, false);
 assert.equal(s.steps.stripe, true, 'test key and webhook secret together finish the Stripe step');
@@ -44,7 +44,7 @@ assert.equal(s.checkoutOpen, 'walk-ins');
 
 // Nothing private: no values, names, titles, dates, emails or counts, and no sign-in safety items.
 const text = JSON.stringify(s);
-for (const bad of ['must_not_leak', 'Secret Waiver', 'Coach Private', 'example.test', '2026-', 'mfa', 'authenticator', 'families', 'health']) assert.ok(!text.includes(bad), bad);
+for (const bad of ['must_not_leak', 'Secret Waiver', 'Coach Private', 'example.test', '2026-', 'families', 'health']) assert.ok(!text.includes(bad), bad);
 assert.ok(Object.values(s.steps).every(v => typeof v === 'boolean'));
 
 // Issue #319: the latest reason a card checkout couldn't start, from the last day, as the site's own short wording.

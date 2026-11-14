@@ -1,7 +1,7 @@
 // Owner setup progress for whoever maintains the site (issue #298). Public and read-only: for each setup step on the
 // owner's launch checklist, only whether it is done, plus whether Stripe keys are saved, the Stripe mode and which
 // purchase types are open (families can see those anyway). Never a name, title, date, count, email address or value,
-// and nothing about sign-in safety (authenticators, the STAFF_MFA switch, errors) or how many families have joined.
+// and nothing about site errors or how many families have joined.
 import {launchChecklist} from './launch-checklist';
 import {kindList} from './purchase-kinds';
 

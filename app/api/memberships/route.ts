@@ -1,15 +1,14 @@
 // A family cancels its own monthly membership online (decided Nov 13, 2026 on #2, issue #314; NY GBL §527-a). Signed in,
 // same origin, JSON, rate limited. Another family's membership is "not found". Rules in lib/memberships.ts.
-import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {cancelMembership} from '../../../lib/memberships';
 import {rateLimited} from '../../../lib/rate-limit';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
-  const auth = await strongAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
+  const auth = await verifiedAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.user?.email_confirmed_at || !auth.user.email) return reply({error: 'Sign-in required.'}, 401);
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return reply({error: 'Authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return reply({error: 'JSON required.'}, 415);
   if (Number(request.headers.get('content-length') ?? 0) > 1024) return reply({error: 'Request too large.'}, 413);

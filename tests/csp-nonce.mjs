@@ -12,9 +12,9 @@ import ts from 'typescript';
 
 const OWNER = 'savagewrestlingclub@gmail.com';
 const users = {
-  owner: {id: 'u-owner', email: OWNER, email_confirmed_at: '2026-01-01', factors: [{status: 'verified', factor_type: 'totp'}]},
-  coach: {id: 'u-coach', email: 'coach@example.test', email_confirmed_at: '2026-01-01', factors: [{status: 'verified', factor_type: 'totp'}]},
-  family: {id: 'u-family', email: 'family@example.test', email_confirmed_at: '2026-01-01', factors: []},
+  owner: {id: 'u-owner', email: OWNER, email_confirmed_at: '2026-01-01'},
+  coach: {id: 'u-coach', email: 'coach@example.test', email_confirmed_at: '2026-01-01'},
+  family: {id: 'u-family', email: 'family@example.test', email_confirmed_at: '2026-01-01'},
 };
 let as = 'owner';
 const headersFor = () => new Headers({'Cache-Control': 'private, no-store, max-age=0', 'Content-Security-Policy': "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'", 'Permissions-Policy': 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()'});
@@ -22,8 +22,7 @@ const auth = {
   securityHeaders: headersFor,
   OWNER_EMAIL: OWNER, appOrigin: () => 'https://academy.test', sameOrigin: () => true, verifiedOwner: u => u?.email === OWNER,
   verifiedAccount: async () => ({user: users[as], headers: headersFor()}),
-  strongAccount: async () => ({user: users[as], strong: true, headers: headersFor()}),
-  ownerIdentity: async () => ({user: users[as], strong: true, mfaRequired: false, headers: headersFor(), owner: as === 'owner' ? {userId: 'supabase:u-owner', displayName: OWNER} : null}),
+  ownerIdentity: async () => ({user: users[as], headers: headersFor(), owner: as === 'owner' ? {userId: 'supabase:u-owner', displayName: OWNER} : null}),
 };
 const access = {accountRole: async () => ({role: as, staff: as === 'coach' ? {email: 'coach@example.test', name: 'Coach', programs: ['Intermediate']} : null}), coachAccess: async () => ({email: 'coach@example.test', name: 'Coach', programs: ['Intermediate'], owner: as === 'owner'})};
 const statement = {bind() { return statement; }, all: async () => ({results: []}), first: async () => null, run: async () => ({meta: {changes: 0}}), raw: async () => []};

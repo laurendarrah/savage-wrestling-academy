@@ -1,13 +1,12 @@
 // A family's own data (issue #113): download everything, see and send closure requests.
-import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {familyExport, familyRequests, requestClosure} from '../../../lib/data-requests';
 import {rateLimited} from '../../../lib/rate-limit';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 async function family(request: Request) {
-  const auth = await strongAccount(request);
+  const auth = await verifiedAccount(request);
   if (!auth.user?.email_confirmed_at) return {auth, error: accountReply({error: 'Sign-in required.'}, 401, auth.headers)};
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return {auth, error: accountReply({error: 'Authenticator verification required.'}, 403, auth.headers)};
   return {auth, error: null};
 }
 export const GET = withApi(GET_); async function GET_(request: Request) {

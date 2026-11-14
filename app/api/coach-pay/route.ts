@@ -5,7 +5,7 @@ import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
-  if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
+  if (!auth.owner) return accountReply({error: 'Owner sign-in required.'}, 403, auth.headers);
   const q = new URL(request.url).searchParams, report = await coachPayReport(q.get('from'), q.get('to'));
   if ('error' in report) return accountReply({error: report.error}, 400, auth.headers);
   if (q.get('format') === 'csv') {

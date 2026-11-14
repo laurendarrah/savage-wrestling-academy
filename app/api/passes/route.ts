@@ -1,14 +1,13 @@
 // QR entry passes (issue #71). Families read and replace their wrestlers' passes; the owner can revoke any pass.
-import {strongAccount, ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {familyPasses, revokePass} from '../../../lib/passes';
 import {familyProfile} from '../../../lib/program-approval';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
-  const auth = await strongAccount(request);
+  const auth = await verifiedAccount(request);
   if (!auth.user?.email_confirmed_at) return {auth, error: accountReply({error: 'Sign-in required.'}, 401, auth.headers)};
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return {auth, error: accountReply({error: 'Authenticator verification required.'}, 403, auth.headers)};
   return {auth, error: null};
 }
 

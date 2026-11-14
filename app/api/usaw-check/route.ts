@@ -2,7 +2,7 @@
 // public verify page. Runs on the server; only the card number goes to USA Wrestling. Rate-limited and cached in
 // lib/usaw-check.ts.
 import {env} from 'cloudflare:workers';
-import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {academyToday} from '../../../lib/public-schedule';
 import {cardVerification} from '../../../lib/usaw';
 import {checkCard, familyLookup, lookupView, lookupsFor} from '../../../lib/usaw-check';
@@ -11,9 +11,8 @@ import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
-  const auth = await strongAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
+  const auth = await verifiedAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.user?.email_confirmed_at) return reply({error: 'Sign-in required.'}, 401);
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return reply({error: 'Authenticator verification required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return reply({error: 'JSON required.'}, 415);
   const raw = await request.text();

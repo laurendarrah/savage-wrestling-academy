@@ -1,12 +1,11 @@
 import {env} from 'cloudflare:workers';
-import {strongAccount,verifiedOwner,accountReply,sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount,verifiedOwner,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {rateLimited} from '../../../lib/rate-limit';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 async function access(request:Request,requestId:string){
- const auth=await strongAccount(request),owner=verifiedOwner(auth.user);
+ const auth=await verifiedAccount(request),owner=verifiedOwner(auth.user);
  if(!auth.user?.email_confirmed_at)return {...auth,owner,thread:null,error:'Sign-in required.',status:401};
- if((owner||auth.user.factors?.some(f=>f.status==='verified'))&&!auth.strong)return {...auth,owner,thread:null,error:'Authenticator verification required.',status:403};
  const thread=await env.DB!.prepare('SELECT id,user_id,wrestler_name FROM program_approvals WHERE id=?').bind(requestId).first<{id:string;user_id:string;wrestler_name:string}>();
  if(!thread||(!owner&&thread.user_id!==auth.user.id))return {...auth,owner,thread:null,error:'Conversation not found.',status:404};
  return {...auth,owner,thread,error:null,status:200};
