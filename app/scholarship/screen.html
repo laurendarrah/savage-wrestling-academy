@@ -1,4 +1,34 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scholarship invitation | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>*{box-sizing:border-box}body{margin:0;background:#f5f5f6;color:#18191c;font:16px/1.65 Arial}main{max-width:960px;margin:auto;padding:24px}section,article{background:white;border:1px solid #ddd;border-radius:10px;padding:24px;margin:20px 0}h1,h2{line-height:1.2}a{color:#a92330}label{display:block;font-weight:bold;margin:16px 0}input,select,textarea,button{font:inherit;padding:12px;border:1px solid #ccc;border-radius:6px}input,select,textarea{display:block;width:100%;margin-top:6px}input[type=checkbox]{display:inline;width:auto}button{cursor:pointer;background:white;color:#18191c;min-height:44px}button:disabled{opacity:.55;cursor:default}.primary{background:#d72732;border-color:#d72732;color:white}.muted{font-size:14px;color:#646771}.notice{padding:16px;border-left:4px solid #d72732;background:#fff2f2}.pill{display:inline-block;background:#eee;padding:4px 8px;border-radius:5px;font-size:13px;font-weight:bold}.terms{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;background:#fafafa;border:1px solid #ddd;border-radius:6px}.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}[hidden]{display:none!important}#status{font-weight:bold;scroll-margin-top:20px}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #227ab0;outline-offset:3px}@media(max-width:600px){main{padding:16px}section,article{padding:18px}.grid{grid-template-columns:1fr}}.signature-canvas{display:block;width:100%;height:auto;aspect-ratio:4/1;border:1px solid #999;border-radius:6px;background:white;touch-action:none}.signature-panel{margin:20px 0;padding:18px;background:#fafafa;border:1px solid #ddd;border-radius:6px}fieldset{border:0;margin:0;padding:0;min-width:0}fieldset:disabled .signature-canvas{opacity:.55}</style></head><body><main><h1>Your SWA scholarship offer</h1><p id="status" role="status" aria-live="polite">Loading invitation…</p><section id="signin" hidden><h2>Use the invited parent email</h2><p>Sign in or create your family account in a new tab and save the invited wrestler. Then come back to this tab and choose the button below.</p><p><a href="/login" target="_blank" rel="noopener">Sign in / create account →</a> · <a href="/family" target="_blank" rel="noopener">Save your family profile →</a></p><button id="retry">I’ve signed in and saved my wrestler – refresh</button></section><section id="offer" hidden></section></main><script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scholarship invitation | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
+/* A scholarship offer: read the agreement, then sign. Design pass (issue #340): the form's width instead of a wide
+   band, spacing, sizes and colors from the shared scale (public/savage.css gives the fonts, cards, buttons and
+   fields), the agreement about 70 characters wide, and the notice as a white box with the red bar on its left. */
+*{box-sizing:border-box}
+body{margin:0;background:var(--swa-ground);color:var(--swa-ink)}
+main{max-width:var(--swa-width-narrow);margin:auto;padding:var(--swa-s-16) 16px 56px}
+html body main>section{margin:var(--swa-s-16) 0}
+html body h2{margin:0 0 var(--swa-s-8)}
+section p{margin:0 0 var(--swa-s-12)}
+label{display:block;margin:var(--swa-s-16) 0}
+input,select,textarea{display:block;width:100%;margin-top:6px}
+html body main select,html body main input:not([type=checkbox]){max-width:420px}
+input[type=checkbox]{display:inline;width:auto}
+button:disabled{cursor:default}
+.muted{font-size:var(--swa-t-15);color:var(--swa-muted)}
+html body main .notice{padding:var(--swa-s-12) var(--swa-s-16);border:1px solid var(--swa-hair);border-left:6px solid var(--swa-red);border-radius:0;background:var(--swa-surface)}
+.terms{white-space:pre-wrap;overflow-wrap:anywhere;padding:var(--swa-s-16);background:var(--swa-surface-2);border:1px solid var(--swa-line);border-radius:var(--swa-r-control);font-size:var(--swa-t-15);line-height:1.6}
+.row{display:flex;flex-wrap:wrap;gap:var(--swa-s-12);align-items:center}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--swa-s-16)}
+[hidden]{display:none!important}
+#status{font-weight:600;scroll-margin-top:80px;margin:0 0 var(--swa-s-8)}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+.signature-canvas{display:block;width:100%;height:auto;aspect-ratio:4/1;border:1px solid #9A9EA7;border-radius:var(--swa-r-control);background:var(--swa-surface);touch-action:none}
+.signature-panel{margin:var(--swa-s-16) 0;padding:var(--swa-s-16);background:var(--swa-surface-2);border:1px solid var(--swa-line);border-radius:var(--swa-r-control)}
+.signature-panel h3{margin:0 0 var(--swa-s-4)}
+.signature-panel p{margin:0 0 var(--swa-s-8);font-size:var(--swa-t-15);color:var(--swa-muted)}
+html body .signature-panel button{margin-top:var(--swa-s-8)}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+fieldset:disabled .signature-canvas{opacity:.55}
+</style></head><body><main><h1>Your SWA scholarship offer</h1><p id="status" role="status" aria-live="polite">Loading invitation…</p><section id="signin" hidden><h2>Use the invited parent email</h2><p>Sign in or create your family account in a new tab and save the invited wrestler. Then come back to this tab and choose the button below.</p><p><a href="/login" target="_blank" rel="noopener">Sign in / create account →</a> · <a href="/family" target="_blank" rel="noopener">Save your family profile →</a></p><button id="retry">I’ve signed in and saved my wrestler – refresh</button></section><section id="offer" hidden></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const token=new URLSearchParams(location.hash.slice(1)).get('token')||'',names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
 let award=null,signatureStrokes=[],drawing=null,loads=0;

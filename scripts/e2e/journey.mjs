@@ -492,7 +492,7 @@ await step('family sees the pass, the wrestler view and the membership', async (
   await shot(family, 'wrestler-view');
   await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /Active membership/);
   await waitText(family, '#membershipCards', /\$2,400\.00 paid upfront on/);
-  await waitText(family, '#paymentsPill', /^Paid$/);
+  expect(!(await family.$('#paymentsPill')), 'no "Paid" pill floats beside the Memberships heading; the card says "Active membership"');
   await waitText(family, '#purchaseList', /Paid/);
   // Set up, so the family home leads with the next session and the entry pass instead of the guided start (issue #132).
   await waitText(family, '#nextUpBody', /SWA Intermediate practice[\s\S]*Show entry pass/);

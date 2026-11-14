@@ -1,8 +1,12 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Book a private lesson | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
 /* Book a private lesson (issue #177; redesign Phase 2, issue #282): the same choice cards in Barlow, the shared
-   segmented control for list or month, and the review as a receipt above one button. */
+   segmented control for list or month, and the review as a receipt above one button.
+   Design pass (issue #340): the page is a form, so it keeps the form width on a desk instead of stretching; a month
+   with no open time is one sentence, not a grid of empty boxes; a way to train that has no price yet shows no price
+   line; the price reads "$45.00" with "per wrestler" under it. */
 body{background:var(--swa-ground);color:var(--swa-ink);margin:0}
-main{max-width:900px;margin:auto;padding:var(--swa-s-16) 16px 56px}
+main{max-width:var(--swa-width-narrow);margin:auto;padding:var(--swa-s-16) 16px 56px}
+html body main label>select{max-width:420px}
 h1{margin:8px 0 6px}h2{margin:0 0 10px}
 html body main>section{margin:var(--swa-s-16) 0}
 label{display:flex;flex-direction:column;gap:4px;margin:10px 0}
@@ -15,11 +19,11 @@ html body button.choice:hover{border-color:var(--swa-ink)}
 html body button.choice[aria-pressed="true"]{border-color:var(--swa-ink);box-shadow:inset 0 0 0 1px var(--swa-ink);background:var(--swa-surface)}
 html body button.choice:disabled{background:var(--swa-surface-2)}
 .choice b{display:block;font-family:var(--swa-body);font-weight:700;font-size:var(--swa-t-17);line-height:1.25;color:var(--swa-ink)}
-.choice .price{font-weight:700;color:var(--swa-ink)}.choice .left{font-weight:700;color:var(--swa-ok)}
+.choice .price{font-weight:700;color:var(--swa-ink)}.choice .price:empty{display:none}.choice .left{font-weight:700;color:var(--swa-ok)}
 .day{margin:14px 0 6px;font-weight:700}
 #status{font-weight:600;min-height:1.5em}
-html body main>section.closed{border-left:4px solid var(--swa-red)}
-.closed h2{margin-bottom:6px}
+html body main>section.closed{border-left:6px solid var(--swa-red)}
+.closed h2{margin-bottom:6px}.closed p{margin:0;max-width:60ch}
 .go{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 html body a.button{display:inline-flex;align-items:center;justify-content:center;padding:0 18px;text-decoration:none}
 /* The review: the receipt, then one button with its line beneath */
@@ -54,11 +58,14 @@ fieldset{border:0;padding:0;margin:10px 0 0;min-width:0}legend{font-weight:700;p
 .cal-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 0;font-size:14px;color:var(--swa-muted)}.cal-key span{display:inline-flex;align-items:center;gap:6px}.cal-key i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--swa-prog-development-line)}
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:12px}
 .cal-dow{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--swa-muted);padding:0 4px}
-.cal-day{border:1px solid var(--swa-line);border-radius:8px;padding:7px 6px;min-height:104px;min-width:0;background:var(--swa-white)}
+.cal-day{border:1px solid var(--swa-line);border-radius:8px;padding:7px 6px;min-height:88px;min-width:0;background:var(--swa-white)}
+/* A day with nothing on it is only its number: the boxes are the days with an open time, today or a holiday */
+.cal-day.empty{border-color:transparent;background:none}
+html body #times>.empty{padding-bottom:0}
 html body .cal-day h3{margin:0;font-size:14px;font-weight:700;color:var(--swa-muted)}html body .cal-day.is-today h3{color:var(--swa-ink)}.cal-day .d-long{display:none}
-html body .cal .cal-item{display:block;width:100%;min-height:0;margin:6px 0 0;padding:5px 6px;border-radius:6px;text-align:left;font-family:var(--swa-body);font-size:12px;font-weight:400;line-height:1.35;letter-spacing:0;text-transform:none;overflow-wrap:break-word;hyphens:auto;cursor:pointer;box-shadow:none;
+html body .cal .cal-item{display:block;width:100%;min-height:0;margin:6px 0 0;padding:5px 6px;border-radius:6px;text-align:left;font-family:var(--swa-body);font-size:var(--swa-t-13);font-weight:400;line-height:1.35;letter-spacing:0;text-transform:none;overflow-wrap:break-word;hyphens:auto;cursor:pointer;box-shadow:none;
  background:var(--swa-prog-development);color:var(--swa-prog-development-ink);border:1px solid var(--swa-prog-development-line)}
-html body .cal .cal-item b,html body .cal .cal-item span,html body .cal .cal-item small{display:block}html body .cal .cal-item small{margin-top:2px;font-size:11px;font-weight:700;letter-spacing:.3px}
+html body .cal .cal-item b,html body .cal .cal-item span,html body .cal .cal-item small{display:block}html body .cal .cal-item small{margin-top:2px;font-size:var(--swa-t-13);font-weight:700;letter-spacing:0}
 html body .cal .cal-item.f-group,.cal-key i.f-group{background:var(--swa-prog-intermediate);color:var(--swa-prog-intermediate-ink);border-color:var(--swa-prog-intermediate)}
 html body .cal .cal-item[aria-pressed="true"],.cal-key i.f-chosen{background:var(--swa-prog-event);color:var(--swa-prog-event-ink);border-color:var(--swa-prog-event)}
 html body .cal .cal-item:hover{border-color:var(--swa-red);box-shadow:0 0 0 2px var(--swa-red)}
@@ -112,11 +119,13 @@ function seatLine(o,way){
 function monthItem(o,way){const group=o.capacity>1||o.format==='partner'||o.format==='small-group';
  return '<button type="button" class="cal-item'+(group?' f-group':'')+'" data-opening="'+esc(o.id)+'" aria-pressed="'+(o.id===opening)+'"><span class="vh">'+esc(day(o.date))+': </span><b>'+esc(clock(o.start))+'–'+esc(clock(o.end))+'</b><span>'+esc(o.coach)+(way==='group'?' · '+esc(nameOf(o.format)):'')+'</span><small>'+esc(seatLine(o,way))+'</small></button>'}
 function monthHtml(cal,way){
+ // A month with no open time is one sentence and the way on, not seven columns of empty boxes (issue #340).
+ if(!cal.days.some(d=>d.items.length))return '';
  const days=cal.days.map(d=>{const quiet=!d.items.length&&!d.holidays.length&&!d.today;
   return '<div class="cal-day'+(d.today?' is-today':'')+(quiet?' empty':'')+'"'+(d.today?' aria-current="date"':'')+'><h3><span class="d-num">'+Number(d.date.slice(8))+'</span><span class="d-long">'+esc(longDay(d.date))+'</span>'+(d.today?'<span class="today-tag">Today</span>':'')+'</h3>'
    +d.holidays.map(h=>'<span class="holiday-tag">'+esc(h)+'</span>').join('')+d.items.map(o=>monthItem(o,way)).join('')+'</div>'}).join('');
- return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=>'<div class="cal-dow" aria-hidden="true">'+w+'</div>').join('')+'<div class="cal-blank" aria-hidden="true"></div>'.repeat(cal.lead)+days
-  +(cal.days.some(d=>d.items.length)?'':'<p class="muted" style="grid-column:1/-1">No open times this month. Try the next month.</p>')}
+ return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=>'<div class="cal-dow" aria-hidden="true">'+w+'</div>').join('')+'<div class="cal-blank" aria-hidden="true"></div>'.repeat(cal.lead)+days}
+const noTimes=month=>'<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><p>No open times in '+esc(new Date(month+'-15T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'long'}))+'. Try the next month, or switch to List to see every open time.</p></div>';
 function monthKey(way){return '<p class="cal-key">'+(way==='group'?'':'<span><i></i>One-on-one or open time</span>')+(way==='one'?'':'<span><i class="f-group"></i>Partner or small group</span>')+'<span><i class="f-chosen"></i>Your choice</span></p>'}
 function setView(v){view=v;render()}
 async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});if(r.status===401){location.href='/login?next='+encodeURIComponent(location.pathname+location.search);throw Error('Sign in again.')}const d=await r.json();if(!r.ok){const e=Error(d.error||'Something went wrong.');e.data=d;throw e}return d}
@@ -133,8 +142,10 @@ function choices(){
  };
 }
 const PATHS=[['one','Book a one-on-one','Your wrestler alone with a coach for an hour.',()=>priced('one-on-one')?money(fmt('one-on-one').cents)+' per wrestler':''],
- ['group','Join a partner or small group','A coach’s group lesson. Book a spot for your wrestler.',()=>['partner','small-group'].filter(priced).map(f=>nameOf(f).replace(' lesson','')+' '+money(fmt(f).cents)).join(' · ')+' per wrestler'],
- ['request','Start a private group','Take an open time as a partner or small group and invite the families you choose.',()=>['partner','small-group'].filter(priced).map(f=>nameOf(f).replace(' lesson','')+' '+money(fmt(f).cents)).join(' · ')+' per wrestler']];
+ ['group','Join a partner or small group','A coach’s group lesson. Book a spot for your wrestler.',()=>groupPrices()],
+ ['request','Start a private group','Take an open time as a partner or small group and invite the families you choose.',()=>groupPrices()]];
+// "Partner $45.00 · Small-group $35.00 per wrestler", or nothing while neither has a price (never a bare "per wrestler").
+function groupPrices(){const list=['partner','small-group'].filter(priced).map(f=>nameOf(f).replace(' lesson','')+' '+money(fmt(f).cents)).join(' · ');return list?list+' per wrestler':''}
 // What stops a family from booking, said first, before any steps (issue #132). Null when they can book.
 function blocker(){
  if(!data||!family)return null;
@@ -192,7 +203,7 @@ function render(){
  $('monthPicker').hidden=view!=='month'||!days.length;
  if(view==='month'&&days.length&&typeof MonthPicker!=='undefined')MonthPicker.set(picker(),shownMonth,{min:months[0],max:months[months.length-1]});
  $('times').innerHTML=!days.length?'<p class="muted">This coach has no open times for this right now. Choose Any coach to see every open time.</p>'
-  :view==='month'?monthKey(path)+'<div class="cal">'+monthHtml(lessonMonth(list,shownMonth,data.today||'',data.holidays||[]),path)+'</div>'
+  :view==='month'?(grid=>grid?monthKey(path)+'<div class="cal">'+grid+'</div>':noTimes(shownMonth))(monthHtml(lessonMonth(list,shownMonth,data.today||'',data.holidays||[]),path))
   :days.map(d=>`<div class="day">${esc(day(d))}</div><div class="times">${list.filter(o=>o.date===d).map(o=>`<button type="button" class="choice" data-opening="${esc(o.id)}" aria-pressed="${o.id===opening}"><b>${esc(clock(o.start))}–${esc(clock(o.end))}</b><span>${esc(o.coach)}</span>${path==='group'?`<span>${esc(nameOf(o.format))}</span><span class="left">${spotsText(o.spotsLeft,o.capacity)}</span>`:''}</button>`).join('')}</div>`).join('');
  document.querySelectorAll('[data-opening]').forEach(b=>b.onclick=()=>{opening=b.dataset.opening;review=null;render();check()});
  renderReview();
@@ -220,7 +231,7 @@ function renderReview(){
  $('reviewHeading').textContent=path==='join'?'Review':'4. Review';
  $('requestArea').hidden=review.kind!=='request';
  if(review.kind==='request'){
-  $('summary').innerHTML='<div class="swa-receipt">'+line('Lesson',`<strong>Private ${esc(nameOf(review.format).toLowerCase())}</strong>`,`with ${esc(review.coach)}`)+line('When',`${esc(day(review.date))} · ${esc(clock(review.start))}–${esc(clock(review.end))}`)+line('Spots',`${review.capacity} spots: ${esc(review.names.join(' and '))}${review.capacity>review.names.length?' and '+(review.capacity-review.names.length)+' for families you invite':''}`)+`<div class="swa-receipt__total"><span class="k">Each wrestler</span><span class="v">${money(review.cents)} per wrestler${review.names.length>1?'<small>'+money(review.cents*review.names.length)+' for your '+review.names.length+' wrestlers</small>':''}</span></div></div>`;
+  $('summary').innerHTML='<div class="swa-receipt">'+line('Lesson',`<strong>Private ${esc(nameOf(review.format).toLowerCase())}</strong>`,`with ${esc(review.coach)}`)+line('When',`${esc(day(review.date))} · ${esc(clock(review.start))}–${esc(clock(review.end))}`)+line('Spots',`${review.capacity} spots: ${esc(review.names.join(' and '))}${review.capacity>review.names.length?' and '+(review.capacity-review.names.length)+' for families you invite':''}`)+`<div class="swa-receipt__total"><span class="k">Each wrestler</span><span class="v">${money(review.cents)} <small>per wrestler${review.names.length>1?' · '+money(review.cents*review.names.length)+' for your '+review.names.length+' wrestlers':''}</small></span></div></div>`;
   $('payArea').hidden=true;$('notOpen').hidden=true;return;
  }
  const group=review.capacity>1;
