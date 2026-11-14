@@ -35,7 +35,7 @@ export async function verifyStripeSignature(raw: string, header: string | null, 
   return signatures.some(s => sameString(s, expected));
 }
 
-type OrderRow = {id: string; user_id: string; wrestler_id: string; status: string; kind: string; amount_cents: number; currency: string; livemode: number; stripe_session_id: string | null; dedupe_key: string; item_id: string; dates: string; pricing: string};
+type OrderRow = {id: string; user_id: string; wrestler_id: string; status: string; kind: string; program: string | null; amount_cents: number; currency: string; livemode: number; stripe_session_id: string | null; dedupe_key: string; item_id: string; dates: string; pricing: string};
 
 
 async function overLimit(order: OrderRow): Promise<string | null> {
@@ -171,7 +171,7 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
   if (event.type.startsWith('checkout.session.')) {
     const orderId = typeof obj.client_reference_id === 'string' ? obj.client_reference_id : typeof obj.metadata?.order_id === 'string' ? obj.metadata.order_id : null;
     if (!orderId) return none('ignored:no-order');
-    const order = await env.DB!.prepare('SELECT id,user_id,wrestler_id,status,kind,amount_cents,currency,livemode,stripe_session_id,dedupe_key,item_id,dates,pricing FROM orders WHERE id=?').bind(orderId).first<OrderRow>();
+    const order = await env.DB!.prepare('SELECT id,user_id,wrestler_id,status,kind,program,amount_cents,currency,livemode,stripe_session_id,dedupe_key,item_id,dates,pricing FROM orders WHERE id=?').bind(orderId).first<OrderRow>();
     if (!order) return none('rejected:unknown-order', orderId);
     if (order.stripe_session_id && order.stripe_session_id !== obj.id) return none('rejected:session-mismatch', orderId);
     if (Boolean(obj.livemode) !== Boolean(order.livemode)) return none('rejected:mode-mismatch', orderId);
@@ -196,7 +196,13 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
             .bind(at, at, obj.id, paidDate, paidThrough, orderId),
           // The first payment is counted here; the matching subscription_create invoice is ignored.
           env.DB!.prepare("INSERT INTO subscriptions(order_id,stripe_subscription_id,status,payments_made,payments_total,term_start,term_end,paid_through,cancel_at,updated_at) VALUES (?,?,'active',1,NULL,?,NULL,?,NULL,?)")
-            .bind(orderId, subscriptionId, paidDate, paidThrough, at)
+            .bind(orderId, subscriptionId, paidDate, paidThrough, at),
+          // Issue #335: the membership includes this program's practices, so a walk-in the family had booked to pay in
+          // cash for one of them, from today on, is no longer owed. It is canceled here, in the same step as the
+          // membership, with the reason the owner and the family see. Other programs, camps and extra practices stay.
+          env.DB!.prepare(`UPDATE cash_bookings SET status='canceled',canceled_at=?,canceled_by='membership',cancel_reason='Included in the membership',updated_at=?
+            WHERE user_id=? AND wrestler_id=? AND kind='walkin' AND program=? AND status='due' AND session_date>=?`)
+            .bind(at, at, order.user_id, order.wrestler_id, order.program, paidDate)
         ]};
       }
       // Upfront memberships are no longer sold (#210), but a checkout started before then whose event arrives late
