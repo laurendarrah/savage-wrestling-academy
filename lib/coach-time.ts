@@ -4,8 +4,8 @@
 //   Q4  pay covers only the scheduled practice time. No prep or cleanup allowance. Punches far outside the practice are
 //       flagged for the owner, never paid automatically.
 //   Q5  coaches are paid monthly and submit the whole month on or after its last day (academy time).
-//   Q6  employee or contractor is NOT decided, so nothing here works out overtime or withholding, and the file says
-//       "hours" and "amount" only.
+//   Q6  coaches are independent contractors (decided Nov 14, 2026, #331), so nothing here works out overtime or
+//       withholding: the file is a statement of hours and amounts owed.
 // Lesson pay stays on /coach-pay (lib/coach-pay.ts), from what families paid; the CSV adds each coach's lesson share.
 // All amounts are integer cents. Times are instants (ISO strings) shown in academy time (America/New_York).
 import {ACADEMY_TIME_ZONE, academyDay, clockTime, dayDate} from './datetime';
@@ -190,7 +190,7 @@ export function monthState(t: ReturnType<typeof totals>) {
 
 // ---------- The month's file ----------
 // One line per approved practice shift, one line per coach for their private lesson share (from lib/coach-pay.ts), and
-// a total per coach. Hours and amounts only: no overtime, no withholding, no employment wording (#197 Q6 is open).
+// a total per coach. Hours and amounts owed only: no overtime, no withholding (coaches are contractors, #331).
 const csvCell = (v: unknown) => { const s = String(v ?? ''); const lead = /^[\s﻿]*[=+\-@]|^[\t\r]/.test(s); return /[",\n\r]/.test(s) || lead ? '"' + (lead ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
 const dollars = (c: number) => (c / 100).toFixed(2);
 export type PayrollCoach = {email: string; name: string; shifts: ShiftView[]; notApproved: number; lessons: {lessons: number; grossCents: number; refundedCents?: number; splitPct: number | null; owedCents: number | null} | null};

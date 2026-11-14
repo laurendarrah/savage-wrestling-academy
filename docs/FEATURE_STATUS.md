@@ -41,7 +41,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Coach accounts and profiles | Owner invites by link; coaches sign in with a password and keep a profile families see (#190) | `/staff`, `/coach-join`, `/coach-profile` | |
 | Coach home and calendar | Tonight first, month calendar of practices and events, published practice plans (#133, #191) | `/coach`, `/practice-plans` | |
 | Practice plans and curricula | Owner writes and publishes plans; reusable curricula | `/practice-plans`, `/curricula` | |
-| Coach hours and time off | Clock in and out, corrections, owner approval, monthly file; time off tells same-program coaches (#193) | `/coach-time`, `/timesheets` | Employee or contractor (#197 Q6) |
+| Coach hours and time off | Clock in and out, corrections, owner approval, monthly file; time off tells same-program coaches (#193) | `/coach-time`, `/timesheets` | Coaches are contractors (#331): hours and amounts owed, no withholding |
 | Coach pay from lessons | Totals per coach at the owner's share, CSV (#75) | `/coach-pay` | |
 | Removed coaches | Records kept 3 years, then deleted or anonymized by the daily job (#212) | `lib/coach-retention.ts` | |
 | **Running the academy** | | | |
