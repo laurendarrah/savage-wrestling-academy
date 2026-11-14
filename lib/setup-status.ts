@@ -22,7 +22,7 @@ export async function setupStatus(db: D1Database, settings: Settings, today: str
   try {
     const row = await db.prepare("SELECT message FROM error_log WHERE path='/api/checkout' AND status=502 AND at>=? AND message LIKE 'Card checkout could not start: %' ORDER BY at DESC LIMIT 1")
       .bind(new Date(now - 86400000).toISOString()).first<{message: string}>();
-    const m = row?.message.match(/^Card checkout could not start: ([A-Za-z0-9 ,.()_\[\]-]{1,200}?)\. Check the key/);
+    const m = row?.message.match(/^Card checkout could not start: ([A-Za-z0-9 ,.:()_\[\]-]{1,240}?)\. Check the key/);
     checkoutProblem = m ? m[1] : null;
   } catch { checkoutProblem = null; }
   return {
