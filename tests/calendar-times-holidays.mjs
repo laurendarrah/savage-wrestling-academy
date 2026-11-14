@@ -91,7 +91,7 @@ console.log('Passed: event times are validated and published, holidays match the
 run("hydratePrograms();save=()=>{};render=()=>{};academyToday=()=>'2026-11-11';page='Calendar';year=2026;month=10;calView='month';calHidden=new Set();openDay=null;weekStart='';calendarPlanSummaries['2026-11']={status:'ready',items:[]}");
 run(`data.seasons=${JSON.stringify(state.seasons)};data.events=${JSON.stringify(state.events)}`);
 const cal = run('calendar()');
-assert.match(cal, /<button type="button" class="day is-today" aria-current="date" aria-label="Today, Wednesday, November 11, 2026: SWA Development, Winter camp"[^>]*><span class="n">11<span class="today-tag">Today<\/span><\/span><span class="holiday-tag">Veterans Day<\/span><span class="bar cal-elementary"><i>[^<]+ Development<\/i><\/span><span class="evbar">Winter camp<\/span><\/button>/, 'today ringed, with its holiday, its practice and the camp');
+assert.match(cal, /<button type="button" class="day is-today" aria-current="date" aria-label="Today, Wednesday, November 11, 2026: SWA Development, Winter camp"[^>]*><span class="n">11<span class="today-tag">Today<\/span><\/span><span class="holiday-tag">Veterans Day<\/span><span class="bar cal-elementary"><i><strong>SWA Development<\/strong><span>[^<]+<\/span><\/i><\/span><span class="evbar"><strong>Winter camp<\/strong>(?:<span>[^<]*<\/span>)?<\/span><\/button>/, 'today ringed, with its holiday, its practice and the camp');
 assert.match(cal, /<span class="n">26<\/span><span class="holiday-tag">Thanksgiving Day<\/span><span class="bar cal-elementary">/, 'Thanksgiving still has its practice');
 assert.doesNotMatch(cal, />\s*No practice\s*</i, 'no "No practice" cards');
 assert.equal((cal.match(/class="day is-today"/g) || []).length, 1, 'one day is today');
