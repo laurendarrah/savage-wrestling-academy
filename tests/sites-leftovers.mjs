@@ -32,8 +32,8 @@ sqlite.prepare('INSERT INTO family_accounts(user_id,email,payload,revision,updat
   JSON.stringify({parentName: 'Robin Kim', phone: '555-0101', wrestlers: [{id: 'k1', name: 'Kai Kim', grade: '8', usawNumber: 'AB1234', usawExpires: '2099-12-31'}]}), now);
 sqlite.prepare("INSERT INTO academy_settings VALUES ('lessons',?,?,'owner')").run(JSON.stringify({prices: {'one-on-one': 6000, partner: 4500, 'small-group': 3500}, splits: {}, defaultSplit: 65}), now);
 const openingsOf = email => sqlite.prepare('SELECT * FROM coach_openings WHERE coach_email=? ORDER BY date,start').all(email).map(r => ({...r}));
-const events = action => sqlite.prepare('SELECT actor,target FROM security_events WHERE action=? ORDER BY created_at').all(action).map(r => ({...r}));
-const notices = kind => sqlite.prepare('SELECT user_id,email,subject,body FROM notifications WHERE kind=? ORDER BY created_at').all(kind).map(r => ({...r}));
+const events = action => sqlite.prepare('SELECT actor,target FROM security_events WHERE action=? ORDER BY created_at,rowid').all(action).map(r => ({...r}));
+const notices = kind => sqlite.prepare('SELECT user_id,email,subject,body FROM notifications WHERE kind=? ORDER BY created_at,rowid').all(kind).map(r => ({...r}));
 const pay = (openingId, wrestler = 'k1') => sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at)
   VALUES (?,'kim-uuid','kim@example.test',?,'Kai Kim','lesson',?,'Lesson','[]',6000,0,6000,'usd',?,'{}','paid',?,0,?,?)`).run('ord-' + openingId + wrestler, wrestler, openingId, JSON.stringify({coachEmail: CORA}), 'k|' + openingId + wrestler, now, now);
 const add = (body, who = 'owner') => post(openingsApi, '/api/coach-openings', {action: 'add', email: CORA, start: '15:00', end: '16:00', ...body}, who);
