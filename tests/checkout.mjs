@@ -245,7 +245,7 @@ sqlite.prepare("UPDATE orders SET term_end=? WHERE id='old-annual'").run(members
 stripe.failCreate = true;
 res = await pay({source: 'booking', type: 'live', id: 'live-1', date: liveDate, wrestlerId: 'w-1'});
 assert.equal(res.status, 502);
-assert.equal(sqlite.prepare("SELECT status FROM orders WHERE kind='live' ORDER BY created_at DESC").get().status, 'canceled');
+assert.equal(sqlite.prepare("SELECT status FROM orders WHERE kind='live' ORDER BY created_at DESC,rowid DESC").get().status, 'canceled');
 stripe.failCreate = false;
 res = await pay({source: 'booking', type: 'live', id: 'live-1', date: liveDate, wrestlerId: 'w-1'});
 assert.equal(res.status, 200);

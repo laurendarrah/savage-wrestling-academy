@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {makeDb, loader, call} from './fixtures/d1.mjs';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const {sqlite, DB} = makeDb();
 const env = {DB};
@@ -73,6 +74,7 @@ assert.match(mail.text, /https:\/\/swa\.test\/payments#attempts/);
 const mixed = alerts.alertEmail([{at: iso(0), path: '/register', status: 500}, {at: iso(0), path: alerts.STRIPE_REFUSED, status: 0, outcome: 'rejected:mode-mismatch'}], null, at);
 assert.match(mixed.subject, /2 new problems/); assert.match(mixed.text, /Test and live payments were mixed up\. \(1\)/); assert.match(mixed.text, /\/register: unexpected error \(1\)/);
 // After the hour, a second refusal is picked up from the security log on its own.
+await nextMillisecond();   // an alert covers refusals up to the last one it reported; this one is later
 sqlite.prepare("UPDATE academy_settings SET payload=json_set(payload,'$.sentAt','2000-01-01T00:00:00.000Z') WHERE id='owner-alert'").run();
 res = await webhook.applyStripeEvent({id: 'evt_unknown_2', type: 'checkout.session.completed', livemode: false, data: {object: {id: 'cs_y', client_reference_id: 'no-such-order', payment_status: 'paid', livemode: false, amount_total: 4000, currency: 'usd'}}});
 assert.equal(res.outcome, 'rejected:unknown-order');

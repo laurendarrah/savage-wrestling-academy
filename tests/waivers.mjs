@@ -5,6 +5,7 @@ import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
 import ts from 'typescript';
 import path from 'node:path';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const sqlite = new DatabaseSync(':memory:');
 for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
@@ -124,6 +125,7 @@ let entry = (await roster.rosterFor(today, {role: 'owner'})).find(s => s.key.sta
 assert.equal(entry.waiverSigned, true);
 
 // --- A new version needs new signatures; old copies are kept ---
+await nextMillisecond();   // the version in force is the one published last
 assert.equal((await call(ownerApi, 'POST', {action: 'publish', title: '2027 Participation waiver', body: TEXT + ' Updated.'})).status, 200);
 assert.match((await walkin('p1')).error, /2027 Participation waiver/);
 entry = (await roster.rosterFor(today, {role: 'owner'})).find(s => s.key.startsWith('practice:Intermediate:')).entries[0];

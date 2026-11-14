@@ -230,7 +230,7 @@ const restored = await timed(`Backup restore of ${fmt(FAMILIES)} families' core 
 }, target.stats);
 assert.ok(restored);
 assert.equal(target.sqlite.prepare('SELECT count(*) AS n FROM family_accounts').get().n, FAMILIES + 1);
-const snaps = target.sqlite.prepare("SELECT id FROM recovery_snapshots WHERE instr(id,':')=0 ORDER BY created_at DESC").all();
+const snaps = target.sqlite.prepare("SELECT id FROM recovery_snapshots WHERE instr(id,':')=0 ORDER BY created_at DESC,rowid DESC").all();
 assert.ok(target.sqlite.prepare("SELECT count(*) AS n FROM recovery_snapshots WHERE instr(id,':')>0").get().n > 0, 'the large snapshot is saved in parts');
 assert.equal((await targetBackups.readSnapshot(snaps[0].id)).families.length, FAMILIES + 1, 'and read back whole');
 

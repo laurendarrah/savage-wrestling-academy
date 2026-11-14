@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {load, request, sqlite, users} from './accounts.mjs';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const familyApi = load('app/api/waiver/route.ts'), ownerApi = load('app/api/waivers/route.ts'), contractApi = load('app/api/contract/route.ts');
 const exceptionsApi = load('app/api/exceptions/route.ts'), coachApi = load('app/api/coach/route.ts'), payments = load('app/api/payments/route.ts');
@@ -185,6 +186,7 @@ const signConsent = (extra = {}) => post(familyApi, '/api/waiver', {kind: 'paren
   // A contract signature is not a family document.
   assert.deepEqual((await get(familyApi, '/api/waiver', 'cora')).body.signatures, []);
   // A new version asks again.
+  await nextMillisecond();   // the version in force is the one published last
   assert.equal((await post(ownerApi, '/api/waivers', {action: 'publish', kind: 'coach_contract', title: 'Coach contract 2027', body: TEXT + ' Updated.'}, 'owner')).status, 200);
   assert.equal((await get(contractApi, '/api/contract', 'cora')).body.signatures[0].current, false);
 }

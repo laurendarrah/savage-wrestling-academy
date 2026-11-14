@@ -68,7 +68,7 @@ const webhook = load(path.resolve('lib/stripe-webhook.ts'));
 const O = 'https://a.test';
 const call = async (route, method, body) => { const r = await route[method](new Request(O + '/x', method === 'GET' ? {} : {method, headers: {'content-type': 'application/json', origin: O}, body: JSON.stringify(body)})); return {status: r.status, body: await r.json()}; };
 const as = id => { actor = id === 'owner' ? {owner: true, id: 'owner-id'} : {owner: false, id}; };
-const notices = (u, kind) => sqlite.prepare('SELECT * FROM notifications WHERE user_id IS ? AND kind=? ORDER BY created_at').all(u, kind);
+const notices = (u, kind) => sqlite.prepare('SELECT * FROM notifications WHERE user_id IS ? AND kind=? ORDER BY created_at,rowid').all(u, kind);
 const box = async u => { as(u); return (await call(inbox, 'GET')).body; };
 
 // --- Daily reminders: card expiring soon and expired, once per day and once per card ---
