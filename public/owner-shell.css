@@ -140,3 +140,8 @@ html body .os-panel hr{width:auto;border:0;border-top:1px solid var(--os-line);m
    room under itself (the public website's save bar) keeps it. */
 html body[data-swa-shell] .os-work>main{margin-left:0;margin-right:auto;padding-top:24px;padding-left:16px;padding-right:16px}
 @media (min-width:901px){html body[data-swa-shell] .os-work>main{padding-top:32px;padding-left:32px;padding-right:32px}}
+/* An empty table is one sentence: when a table's only row is its "nothing here" line, the column headings go and the
+   line reads as text, not as a table with nothing in it. */
+html body[data-swa-shell] .swa-table:has(tbody>tr:only-child>td[colspan]) thead{display:none}
+html body[data-swa-shell] .swa-table tbody>tr:only-child>td[colspan]{border-bottom:0;padding:var(--swa-s-4,4px) 0;color:var(--swa-muted,#55585F)}
+html body[data-swa-shell] .swa-table tbody>tr:only-child:has(>td[colspan]):hover{background:none}
