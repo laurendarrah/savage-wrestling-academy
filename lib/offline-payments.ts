@@ -114,7 +114,7 @@ export type PaymentFilters = {from?: string; to?: string; status?: string; kind?
 // Payments, newest first. The list comes a page at a time (keyset on paid_at and id, issue #46); the totals and the
 // number of matching payments are worked out in the database over every match, not just the page shown.
 const PAYMENT_COLS: SortCol[] = [{expr: 'o.paid_at', desc: true}, {expr: 'o.id', desc: true}];
-const PAYMENT_FIELDS = 'o.id,o.paid_at,o.updated_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,s.payments_made,f.payload AS family,'
+const PAYMENT_FIELDS = 'o.id,o.paid_at,o.updated_at,o.status,o.source,o.kind,o.program,o.item_label,o.dates,o.wrestler_name,o.email,o.amount_cents,o.base_cents,o.discount_cents,o.pricing,o.term_start,o.term_end,s.payments_made,s.status AS subscription_status,CASE WHEN s.payments_total IS NULL THEN s.cancel_at END AS cancel_on,f.payload AS family,'
   + `${collectorKeySql('o')} AS collector_key,${collectorNameSql('o')} AS collector_name`;
 const nextDay = (d: string) => new Date(Date.parse(d + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
 const validCollector = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200;
@@ -175,6 +175,8 @@ function paymentView(r: any, m: CardMoney) {
     // Who collected it (issue #250): a coach's display name, "Owner" or "Former coach"; empty for an online payment.
     collectedBy: (r.collector_name as string | null) ?? '', collectorKey: (r.collector_key as string | null) ?? '', collectedAt: r.source === 'offline' && typeof p.collectedAt === 'string' ? p.collectedAt : null,
     termStart: r.term_start as string | null, termEnd: r.term_end as string | null,
+    // A monthly membership paid online (issue #314): its state, and the last day once a cancellation was asked for.
+    membership: r.subscription_status ? {status: r.subscription_status as string, cancelOn: (r.cancel_on as string | null) ?? null} : null,
     refundedCents: back?.cents ?? 0, refundedOn: back && Number.isFinite(Date.parse(back.at)) ? academyDay(back.at) : '', cardPayments,
     feeCents: feeKnown ? fee!.fee : null, netCents: feeKnown ? fee!.net : null,
     // A card dispute (issue #272): open, won or lost. The payment itself stays as paid; the books move the money.

@@ -33,7 +33,7 @@ export async function paymentAttempts(opts: {q?: unknown; days?: number; limit?:
 }
 
 export type Attention = {orderId: string; wrestler: string; parent: string; email: string; phone: string; item: string; program: string | null; amountCents: number;
-  paymentsMade: number; paymentsTotal: number; paidThrough: string; rosterThrough: string; failedAt: string | null; failures: number};
+  paymentsMade: number; paymentsTotal: number | null; paidThrough: string; rosterThrough: string; failedAt: string | null; failures: number};
 
 // Memberships whose latest monthly payment failed, oldest failure first.
 export async function paymentAttention(): Promise<{attention: Attention[]; graceDays: number}> {
@@ -41,7 +41,7 @@ export async function paymentAttention(): Promise<{attention: Attention[]; grace
       json_extract(f.payload,'$.parentName') AS parent,json_extract(f.payload,'$.phone') AS phone,
       (SELECT max(received_at) FROM stripe_events WHERE order_id=o.id AND outcome='installment-failed') AS failed_at,
       (SELECT count(*) FROM stripe_events e WHERE e.order_id=o.id AND e.outcome='installment-failed'
-        AND e.received_at>COALESCE((SELECT max(received_at) FROM stripe_events WHERE order_id=o.id AND outcome GLOB 'installment-[0-9]*-of-[0-9]*'),'')) AS failures
+        AND e.received_at>COALESCE((SELECT max(received_at) FROM stripe_events WHERE order_id=o.id AND outcome GLOB 'installment-[0-9]*'),'')) AS failures
     FROM subscriptions s JOIN orders o ON o.id=s.order_id LEFT JOIN family_accounts f ON f.user_id=o.user_id
     WHERE s.status='past_due' AND o.status='paid' ORDER BY failed_at, o.id`).all<any>()).results;
   return {graceDays: GRACE_DAYS, attention: rows.map(r => ({orderId: r.id, wrestler: r.wrestler_name, parent: r.parent || '', email: r.email, phone: r.phone || '', item: r.item_label, program: r.program ?? null, amountCents: r.amount_cents,

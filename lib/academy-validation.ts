@@ -6,7 +6,7 @@ export function validTeamCodes(codes:any):boolean{
 export function teamCodeDiscount(codes:unknown,raw:unknown,program:string,plan:string,base:number|null):{error:string}|{cents:number|null;discount:null|{code:string;name:string;percent:number;cents:number|null}}{
  if(raw===undefined||raw===null||raw==='')return {cents:base,discount:null};
  if(typeof raw!=='string'||raw.length>64)return {error:'Enter a valid team code.'};const code=raw.trim().toUpperCase();if(!code)return {cents:base,discount:null};
- if(plan!=='monthly')return {error:'Team codes apply to the 12-month installment plan only. Choose that plan to use a team code.'};
+ if(plan!=='monthly')return {error:'Team codes apply to the monthly membership only. Choose that plan to use a team code.'};
  if(!validTeamCodes(codes))return {error:'This team code is unavailable.'};
  const found=(codes as any[]).find(c=>c.code===code&&c.active);if(!found||!found.programs.includes(program))return {error:'This team code is inactive, invalid, or unavailable for the selected program.'};
  const amount=base===null?null:Math.round(base*found.percent/100);return {cents:base===null?null:base-(amount??0),discount:{code,name:found.name,percent:found.percent,cents:amount}};

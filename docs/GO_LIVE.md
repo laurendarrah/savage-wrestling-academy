@@ -118,7 +118,7 @@ The full guide for problems after launch (site down, failed deploys, bad update,
 Only after the matching decision is recorded on its issue:
 
 1. Refund policy decided (#3): set `CHECKOUT_KINDS=walkin,event,live`.
-2. Membership terms approved (#2): add `monthly`. A year paid upfront is not offered (#210).
+2. Membership terms decided Nov 13 (#2) and built (#314): add `monthly` once a Stripe test-card run of a membership (sign-up, acknowledgment email, a renewal, cancel, a failed card and a pause) has passed. A year paid upfront is not offered (#210). In Stripe, keep **Billing → Subscriptions and emails → Manage failed payments → If all retries for a payment fail** on **Cancel the subscription** (the default): the site turns that into a paused membership. A future price increase for existing members needs written notice 5 to 30 days ahead and their consent or a chance to cancel (GBL §527-a).
 3. Lesson refund policy decided (#80): add `lesson`.
 4. If the test key came from a Stripe sandbox, set `STRIPE_ACCOUNT_ID` to the real account's id first (see step 6).
 5. Test with Stripe test cards first ([the launch test pass](LAUNCH_TEST_PASS.md), #24), then follow the live steps on #26. The live key must come from the same Stripe account the test key connected (or `STRIPE_ACCOUNT_ID`, if set). Without either, `/payment-setup` refuses it: "Save your test key first so the site knows your Stripe account."

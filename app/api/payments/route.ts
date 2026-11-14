@@ -68,6 +68,13 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
     const r = await receiveCash(input.bookingId, ownerCollector(auth.owner.userId), {role: 'owner'});
     return r.status === 200 ? reply({ok: true, orderId: r.orderId}) : reply({error: r.error}, r.status);
   }
+  // The owner cancels a family's monthly membership for them (issue #314): the same rules as the family's own button.
+  if (input?.action === 'membership-cancel') {
+    // Loaded only for this action, so the rest of Payments never loads the Stripe client.
+    const {cancelMembership} = await import('../../../lib/memberships');
+    const r = await cancelMembership(input.orderId, {userId: auth.owner.userId, role: 'owner'});
+    return r.status === 200 ? reply({ok: true, endsOn: r.endsOn, wrestler: r.wrestler}) : reply({error: r.error}, r.status);
+  }
   if (input?.action === 'cash-cancel') {
     const r = await cancelByOwner(auth.owner.userId, input.bookingId, input.reason);
     return r.status === 200 ? reply({ok: true}) : reply({error: r.error}, r.status);

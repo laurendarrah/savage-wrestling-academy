@@ -32,8 +32,8 @@ To change the schema, edit `db/schema.ts`, then run `pnpm db:generate` to add a 
 | `scholarship_awards` | Scholarship offers, frozen terms, acceptance and drawn signatures |
 | **Money** | |
 | `orders` | Every purchase: online (Stripe) and offline (cash, check), with the server-calculated price, status, and for memberships the paid-through term |
-| `subscriptions` | Monthly memberships: one row per monthly order, ending after 12 payments |
-| `installment_payments` | Monthly payments 2 to 12 as Stripe reported them: the amount collected and the price at the time, one row per counted invoice event (#271) |
+| `subscriptions` | Monthly memberships: one row per monthly order, month to month until canceled (#314). `status` active, past_due, canceled or paused (Stripe gave up on the card, #313); `cancel_at` is the last day once a cancellation is asked for. Rows from the earlier 12-month plan keep their `payments_total` and `term_end` |
+| `installment_payments` | Every monthly payment after the first, as Stripe reported it: the amount collected and the price at the time, one row per counted invoice event (#271) |
 | `stripe_events` | Every Stripe event id, stored once, so a repeated delivery changes nothing |
 | `payment_refunds` | Stripe's cumulative refunded amount per card payment, from `charge.refunded` events |
 | `payment_disputes` | Card disputes (chargebacks), one row per `charge.dispute.*` event: created, funds withdrawn, funds reinstated, closed |

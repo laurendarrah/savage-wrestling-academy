@@ -14,6 +14,7 @@ import {dayDate, dayTime} from './datetime';
 import {waiverProblem} from './waivers';
 import {lessonOpening, lessonSettings, lessonHolders, mayJoin} from './lessons';
 import {PROGRAM_ON} from './transfers';
+import {renewalDisclosure} from './membership-renewal';
 
 // No 'annual': a membership paid upfront for the year is not sold (decision Q9 in #197, issue #210). Orders of that
 // kind made before then still count as memberships below and in the roster, transfers and family history.
@@ -48,6 +49,13 @@ async function academyState(): Promise<any> {
   return row ? JSON.parse(row.payload) : {};
 }
 
+// A paused monthly membership (#313) for this wrestler in this program: the family restarts it with a new sign-up.
+export async function pausedMembership(userId: string, wrestlerId: string, program: string) {
+  return await env.DB!.prepare(`SELECT o.id FROM orders o JOIN subscriptions s ON s.order_id=o.id
+    WHERE o.user_id=? AND o.wrestler_id=? AND o.program=? AND o.kind='monthly' AND o.status='paid' AND s.status='paused' ORDER BY o.created_at DESC LIMIT 1`)
+    .bind(userId, wrestlerId, program).first<{id: string}>();
+}
+
 // A wrestler counts as a member when they hold an active scholarship or a paid membership whose term covers today.
 // 'annual' is kept here so a membership paid upfront before #210 still counts until its term ends.
 export async function paidMembership(userId: string, wrestlerId: string, today: string, program?: string) {
@@ -64,9 +72,11 @@ export async function isMember(userId: string, wrestlerId: string, today: string
 }
 
 // Memberships and walk-ins for the three programs. Mirrors the original /api/registration review rules.
+// A membership is month to month (decided Nov 13, 2026 on #2, issue #314): the program's monthly price, with a team
+// code's discount, charged every month until canceled. A wrestler moving to another program keeps that price.
 export async function quoteMembership(userId: string, input: any, opts?: QuoteOptions): Promise<Quote> {
   // An old link or page may still ask for the upfront year (#210); say plainly what is offered instead.
-  if (input?.plan === 'annual') return fail(400, 'Paying for a full year upfront is no longer offered. Choose the monthly membership (12 monthly payments) or a walk-in.');
+  if (input?.plan === 'annual') return fail(400, 'Paying for a full year upfront is no longer offered. Choose the monthly membership or a walk-in.');
   if (!input || typeof input.wrestlerId !== 'string' || !['Elementary', 'Intermediate', 'Advanced'].includes(input.program) || !['monthly', 'walkin'].includes(input.plan))
     return fail(400, 'Choose a saved wrestler, program, and plan.');
   const profile = await familyProfile(userId), w = profile?.wrestlers.find(w => w.id === input.wrestlerId);
@@ -85,7 +95,10 @@ export async function quoteMembership(userId: string, input: any, opts?: QuoteOp
   const practice = input.plan === 'walkin' ? catalog.practices.find(s => s.program === input.program && s.date === date && s.id === input.practiceId) : null;
   if (input.plan === 'walkin' && !practice) return fail(409, 'This practice changed or is unavailable. Refresh the schedule.');
   const membership = input.plan !== 'walkin';
-  if (membership && await paidMembership(userId, w.id, today, p.id))
+  // A paused membership (#313) is restarted with a new sign-up from today, with no back pay, even on its last paid day.
+  const paused = membership ? await pausedMembership(userId, w.id, p.id) : null;
+  const active = membership ? await paidMembership(userId, w.id, today, p.id) : null;
+  if (active && active.id !== paused?.id)
     return fail(409, 'This wrestler already has an active paid membership in this program. View it in your family account.');
   // A member is never charged for a practice the membership already covers (issue #272): the same check stops a
   // walk-in at the academy (lib/offline-payments.ts) and a cash booking (lib/cash-bookings.ts).
@@ -102,9 +115,10 @@ export async function quoteMembership(userId: string, input: any, opts?: QuoteOp
   const review = {
     wrestlerName: w.name, grade: w.grade, programName: p.name, programId: p.id, plan: input.plan, baseCents,
     cents: pricing.cents, discount: pricing.discount, practice,
-    termMonths: membership ? 12 : null, paymentCount: input.plan === 'monthly' ? 12 : 1,
-    totalCents: pricing.cents === null ? null : pricing.cents * (input.plan === 'monthly' ? 12 : 1),
-    renewal: membership ? 'manual' : null, termsStatus: membership ? 'draft' : null, termsUrl: membership ? '/membership-terms' : null
+    // The automatic-renewal terms shown beside the consent tick (NY GBL §527-a), and the first billing day: today.
+    renewal: membership ? 'monthly' : null, termsStatus: membership ? 'final' : null, termsUrl: membership ? '/membership-terms' : null,
+    billingStart: membership ? today : null, restart: !!paused,
+    renewalTerms: membership && pricing.cents !== null ? renewalDisclosure({wrestler: w.name, program: p.name, cents: pricing.cents, start: today}) : null
   };
   let charge: Charge | null = null;
   if (baseCents !== null && pricing.cents !== null) {
@@ -112,7 +126,7 @@ export async function quoteMembership(userId: string, input: any, opts?: QuoteOp
     charge = {
       kind, program: p.id,
       itemId: kind === 'walkin' ? String(practice!.id) : p.id,
-      itemLabel: kind === 'walkin' ? `${p.name} walk-in` : `${p.name}: 12-month membership, monthly payment`,
+      itemLabel: kind === 'walkin' ? `${p.name} walk-in` : `${p.name}: monthly membership`,
       dates: kind === 'walkin' ? [date] : [],
       baseCents, discountCents: baseCents - pricing.cents, amountCents: pricing.cents,
       pricing: {plan: kind, teamCode: input.teamCode ? String(input.teamCode).trim().toUpperCase() : null, discount: pricing.discount ?? null},

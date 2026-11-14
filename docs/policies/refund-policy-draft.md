@@ -1,8 +1,8 @@
 # Refund and cancellation policy for single purchases
 
-**Decided by Justin on Nov 13, 2026 (#3):** every suggested answer below was accepted. The final wording families see is on `/membership-terms#refunds` (`app/membership-terms/screen.html`). Still open: whether partner and small-group lessons are paid by one family (as built) or each family pays its share.
+**Decided by Justin on Nov 13, 2026 (#3):** every suggested answer below was accepted. The final wording families see is on `/membership-terms#refunds` (`app/membership-terms/screen.html`). Also decided Nov 13: a camp the academy cancels is fully refunded, and in partner and small-group lessons each family books and pays for its own wrestler (as built), so every wrestler has an account, a signed waiver and a USA Wrestling card.
 
-Covers walk-ins, Friday Night Live and other extra practices, camps, clinics and events, and private lessons. **12-month memberships** are covered by the membership terms (#2), not here.
+Covers walk-ins, Friday Night Live and other extra practices, camps, clinics and events, and private lessons. **Monthly memberships** are covered by the membership terms (#2), not here.
 
 Online payment for each of these stays **closed** until its rules below are decided (#3, #80), because families must see the refund terms before paying. Once decided, they are shown on `/membership-terms` and on every review screen before payment.
 

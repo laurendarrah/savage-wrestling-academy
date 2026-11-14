@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
-function compile(file,deps={}){const module={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,Request,Response,URL,Intl,Date,require:name=>{if(name in deps)return deps[name];if(name==='./friday-live')return compile('lib/friday-live.ts');if(name==='./event-schedule')return compile('lib/event-schedule.ts');if(name==='./holidays')return compile('lib/holidays.ts');if(name==='./datetime')return compile('lib/datetime.ts');throw Error(name)}});return module.exports}
+function compile(file,deps={}){const module={exports:{}};vm.runInNewContext(ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{module,exports:module.exports,Request,Response,URL,Intl,Date,require:name=>{if(name in deps)return deps[name];if(name==='./friday-live')return compile('lib/friday-live.ts');if(name==='./event-schedule')return compile('lib/event-schedule.ts');if(name==='./holidays')return compile('lib/holidays.ts');if(name==='./datetime')return compile('lib/datetime.ts');if(name==='./membership-renewal')return compile('lib/membership-renewal.ts');throw Error(name)}});return module.exports}
 const {registrationCatalog}=compile('lib/registration-catalog.ts',{'./program-names':compile('lib/program-names.ts')});
 const state={programs:[{id:'Elementary',name:'Elementary',description:'Train',grades:'K–5',priceCents:20000,walkInPriceCents:4000,secret:'PRIVATE'}],kids:[{name:'PRIVATE'}],seasons:[{program:'Elementary',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Friday',start:'18:00',end:'19:30'}],excludedDates:['2026-12-25']}]};
 const catalog=registrationCatalog(state,'2026-12','2026-12-05');assert.deepEqual(Array.from(catalog.practices,s=>s.date),['2026-12-11','2026-12-18']);assert.equal(catalog.programs[0].monthlyCents,20000);assert.equal(catalog.programs[0].walkInCents,4000);assert.equal(JSON.stringify(catalog).includes('PRIVATE'),false);assert.equal(catalog.paymentsEnabled,false);
@@ -17,7 +17,7 @@ auth.strong=true;assert.equal((await route.GET(new Request('https://academy.test
 const nodes=new Map();const el=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='plan'?'monthly':'',hidden:false,innerHTML:'',textContent:'',replaceChildren(...items){this.value=items[0]?.value??''},focus(){},scrollIntoView(){}});return nodes.get(id)};
 const script=readFileSync('app/register/screen.html','utf8').match(/<script>([\s\S]*)<\/script>/)[1];let slotButtons=[];
 const ctx=vm.createContext({Intl,Date,URL,URLSearchParams,location:{search:''},document:{getElementById:el,createElement:()=>({}),querySelectorAll:()=>slotButtons},ApprovalChat:{open(){},close(){}},fetch:async (url,options)=>({ok:true,status:200,json:async()=>options?.method==='POST'?{review:{wrestlerName:'Test Wrestler',grade:'5',programName:'Elementary',programId:'Elementary',plan:JSON.parse(options.body).plan,cents:JSON.parse(options.body).plan==='walkin'?4000:20000,practice:catalog.practices[0]}}:url==='/api/program-approvals'?{approvals:[]}:url==='/api/family'?{data:{wrestlers:[{id:'kid',name:'Test Wrestler',grade:'5', usawNumber: 'TEST-1234', usawExpires: '2099-12-31'}]}}:catalog})});
-vm.runInContext(script,ctx);await new Promise(resolve=>setImmediate(resolve));assert.equal(el('wrestler').value,'kid');assert.equal(el('program').value,'Elementary');await el('selection').onsubmit({preventDefault(){}});assert.match(el('reviewDetails').innerHTML,/12-month commitment — paid monthly/);assert.match(el('reviewDetails').innerHTML,/\$200.00/);vm.runInContext('back()',ctx);el('plan').value='walkin';el('plan').onchange();assert.equal(el('reviewButton').disabled,true);vm.runInContext("selected='Elementary:2026-12-11:18:00';update()",ctx);assert.equal(el('reviewButton').disabled,false);await el('selection').onsubmit({preventDefault(){}});assert.match(el('reviewDetails').innerHTML,/Single-practice walk-in/);assert.match(el('reviewDetails').innerHTML,/6:00 PM–7:30 PM/);assert.match(el('reviewDetails').innerHTML,/\$40.00/);
+vm.runInContext(script,ctx);await new Promise(resolve=>setImmediate(resolve));assert.equal(el('wrestler').value,'kid');assert.equal(el('program').value,'Elementary');await el('selection').onsubmit({preventDefault(){}});assert.match(el('reviewDetails').innerHTML,/Monthly membership, month to month/);assert.match(el('reviewDetails').innerHTML,/\$200.00/);vm.runInContext('back()',ctx);el('plan').value='walkin';el('plan').onchange();assert.equal(el('reviewButton').disabled,true);vm.runInContext("selected='Elementary:2026-12-11:18:00';update()",ctx);assert.equal(el('reviewButton').disabled,false);await el('selection').onsubmit({preventDefault(){}});assert.match(el('reviewDetails').innerHTML,/Single-practice walk-in/);assert.match(el('reviewDetails').innerHTML,/6:00 PM–7:30 PM/);assert.match(el('reviewDetails').innerHTML,/\$40.00/);
 vm.runInContext(`catalog.programs.push({id:'Advanced',name:'Competition Training',description:'Competition',grades:'7–12',monthlyCents:20000,walkInCents:4000});family.data.wrestlers[0].grade='7';document.getElementById('program').value='Advanced';document.getElementById('plan').value='monthly';back();update()`,ctx);
 assert.equal(el('reviewButton').disabled,true);assert.equal(el('approvalGate').hidden,false);assert.match(el('approvalText').textContent,/All wrestlers in grades 7–12/);
 vm.runInContext(`approvals=[{id:'approval-test',wrestlerId:'kid',status:'pending'}];update()`,ctx);assert.equal(el('reviewButton').disabled,true);assert.match(el('approvalText').textContent,/pending/);
@@ -47,22 +47,29 @@ vm.runInContext(`loading=true;update()`,ctx);assert.equal(el('practiceCalendar')
 vm.runInContext(`loading=false;document.getElementById('program').value='Intermediate';document.getElementById('program').onchange()`,ctx);assert.equal(el('reviewButton').disabled,true);assert.match(el('calendarAvailability').textContent,/No published practices/);assert.equal(el('selectedPractice').hidden,true);
 console.log('Passed: calendar days, unavailable/past/holiday dates, explicit time selection, selection clearing, monthly schedule browsing, walk-in switch, loading state and unpublished schedule empty state.');
 
-// Only the monthly membership and walk-ins are offered (decision Q9 in #197, issue #210): 12 monthly payments, shown with
-// their total, with the team code sent along.
+// Only the monthly membership and walk-ins are offered (decision Q9 in #197, issue #210). Since Nov 13 (#2, issue #314) a
+// membership is month to month: no 12-payment total anywhere, the team code sent along, and the automatic-renewal terms
+// from the server shown right beside the consent box.
 assert.doesNotMatch(readFileSync('app/register/screen.html','utf8'),/plan-annual|paid upfront|upfront/,'no upfront plan on the page');
 assert.match(readFileSync('app/register/screen.html','utf8'),/if\(\['monthly','walkin'\]\.includes\(params\.get\('plan'\)\)\)/,'an old ?plan=annual link falls back to the monthly plan');
 vm.runInContext("family.data.wrestlers[0].grade='5';document.getElementById('program').value='Elementary';document.getElementById('plan').value='monthly';document.getElementById('teamCode').value='TEAM10';catalog.programs[0].monthlyCents=20000;back();update()",ctx);
 assert.equal(el('teamCodeField').hidden,false);
 assert.equal(el('monthly').hidden,false);
-assert.match(el('price').textContent,/\$200\.00 per wrestler, per month × 12 payments · \$2,400\.00 total/);
-assert.match(el('membershipBilling').textContent,/^12 monthly payments cover a 12-month commitment/);
-ctx.fetch=async(url,options)=>{sent=JSON.parse(options.body);return {ok:true,json:async()=>({review:{wrestlerName:'Test Wrestler',programName:'SWA Development',programId:'Elementary',plan:'monthly',cents:20000,totalCents:240000,paymentCount:12,termMonths:12}})}};
+assert.equal(el('price').textContent,'$200.00 per wrestler, per month · month to month');
+assert.match(el('membershipBilling').textContent,/^Month to month with no contract: you pay when you sign up, then on the same day every month until you cancel\./);
+ctx.fetch=async(url,options)=>{sent=JSON.parse(options.body);return {ok:true,json:async()=>({review:{wrestlerName:'Test Wrestler',programName:'SWA Development',programId:'Elementary',plan:'monthly',cents:20000,billingStart:'2026-12-05',renewal:'monthly',renewalTerms:'Test Wrestler’s SWA Development membership includes every regular scheduled practice. It costs $200.00 a month. <b>'},paymentsEnabled:true})}};
 await el('selection').onsubmit({preventDefault(){}});
 assert.equal(sent.plan,'monthly');
 assert.equal(sent.teamCode,'TEAM10');
-assert.match(el('reviewDetails').innerHTML,/12-month commitment — paid monthly/);
-// The receipt (#282): the term and payments as lines, the monthly price as the total, with the 12-payment total beside it.
-assert.match(el('reviewDetails').innerHTML,/<span class="k">Payments<\/span><span class="v">12 monthly payments<small>On your billing anniversary · \$2,400\.00 in all<\/small>/);
-assert.match(el('reviewDetails').innerHTML,/<div class="swa-receipt__total"><span class="k">Each month<\/span><span class="v">\$200\.00<small>× 12 payments<\/small>/);
+assert.match(el('reviewDetails').innerHTML,/Monthly membership, month to month/);
+// The receipt (#282): the billing day as a line, the monthly price as the total, and no 12-payment total.
+assert.match(el('reviewDetails').innerHTML,/<span class="k">Billing<\/span><span class="v">Every month on the 5th<small>Starts today · renews until you cancel<\/small>/);
+assert.match(el('reviewDetails').innerHTML,/<div class="swa-receipt__total"><span class="k">Each month<\/span><span class="v">\$200\.00<small>Renews monthly<\/small>/);
+assert.doesNotMatch(el('reviewDetails').innerHTML,/12|anniversary|in all/);
+// The renewal terms sit next to the consent box, as text (escaped), and the box's own words name the renewal.
+assert.equal(el('renewalTerms').hidden,false);
+assert.equal(el('renewalText').textContent,'Test Wrestler’s SWA Development membership includes every regular scheduled practice. It costs $200.00 a month. <b>');
+assert.match(el('termsLabel').innerHTML,/automatic monthly renewal described above: my card is charged every month until I cancel/);
+assert.equal(el('acceptTerms').checked,false,'never ticked for the family');
 assert.doesNotMatch(el('reviewDetails').innerHTML,/upfront/);
-console.log('Passed: monthly membership selection, 12-payment total, team code sent, and no upfront year.');
+console.log('Passed: monthly membership selection, month to month with no 12-payment total, renewal terms beside the consent box, team code sent, and no upfront year.');

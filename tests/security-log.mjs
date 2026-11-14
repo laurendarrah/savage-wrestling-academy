@@ -43,6 +43,7 @@ const events = [
   ['supabase:owner-1', 'announcement_sent', 'a1 1'],
   ['owner-1', 'backup_restored', 'v3:' + 'practice_curriculum_groups+'.repeat(40)],
   ['stripe', 'stripe_event_rejected', 'evt_1 rejected:amount-mismatch'],
+  ['fam-a', 'membership_canceled', 'ord1 family'],
   ['someone-gone', 'mfa_verified', ''],
 ];
 for (const [i, [actor, action, target]] of events.entries()) run('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)', 'e' + i, actor, action, target, new Date(Date.parse(at) - i * 1000).toISOString());
@@ -62,6 +63,9 @@ assert.equal(byTitle['Booking allowed anyway'].detail, 'Sam Example may book wit
 assert.equal(byTitle['Announcement sent'].detail, 'Sent to 1 family');
 assert.equal(byTitle['Backup restored'].detail, '', 'no list of internal table names');
 assert.equal(byTitle['Stripe message refused'].who, 'Stripe');
+// Issue #314: a family canceling its monthly membership online.
+assert.equal(byTitle['Monthly membership canceled'].detail, 'Sam Example · Winter camp · Canceled online by the family');
+assert.equal(byTitle['Monthly membership canceled'].who, 'Pat Example (pat@example.test)');
 assert.match(byTitle['Stripe message refused'].detail, /amount paid did not match/);
 assert.equal(byTitle['Authenticator code verified'].who, 'Another account');
 for (const e of log) {

@@ -14,14 +14,15 @@ assert.match(form, /<div class="reviewbar"><p id="price" class="price"><\/p><but
 // Phase 2 (#282): the wrestler is a chip row over a hidden value, the plan a two-way segmented control over a hidden
 // value, and the summary sits in its own column on a desk (sticky) while staying the thumb bar on a phone.
 assert.match(form, /<div class="swa-chips" id="wrestlerChips"><\/div><input type="hidden" id="wrestler" required>/);
-assert.match(form, /<input type="hidden" id="plan" value="monthly"><div class="swa-seg" id="planSeg" role="group" aria-label="Plan"><button type="button" id="plan-monthly" data-plan="monthly" aria-pressed="true">Monthly membership<small><span id="planPrice-monthly"><\/span> · <span id="planTerm-monthly">12 monthly payments<\/span><\/small><\/button><button type="button" id="plan-walkin" data-plan="walkin" aria-pressed="false">Walk-in/);
+assert.match(form, /<input type="hidden" id="plan" value="monthly"><div class="swa-seg" id="planSeg" role="group" aria-label="Plan"><button type="button" id="plan-monthly" data-plan="monthly" aria-pressed="true">Monthly membership<small><span id="planPrice-monthly"><\/span> · <span id="planTerm-monthly">Month to month, cancel any time<\/span><\/small><\/button><button type="button" id="plan-walkin" data-plan="walkin" aria-pressed="false">Walk-in/);
 assert.match(form, /<aside class="reg-side" aria-label="Your selection">/);
 assert.match(html, /@media \(min-width:900px\)\{\n \.reg\{grid-template-columns:minmax\(0,1fr\) 320px/); assert.match(html, /\.reg-side\{position:sticky;top:84px\}/);
 assert.doesNotMatch(html, /practice-dot/, 'days with a practice are ink, not dotted red');
 assert.match(html, /html body \.calendar-day\[aria-pressed=true\]\{color:#fff;background:var\(--swa-red\)/, 'red only on the chosen day');
 assert.match(html, /html body \.calendar-day\[aria-current=date\]::after\{[^}]*background:var\(--swa-red\)/, 'a red dot for today');
 // The review: the receipt then one Confirm, with the terms line beneath; no inline handlers (the page carries the nonce policy).
-assert.match(body, /<div id="payBox" class="confirm" hidden><button class="primary" id="payButton" disabled>Confirm and pay<\/button><label class="swa-terms check"><input type="checkbox" id="acceptTerms">/);
+// The automatic-renewal terms sit right above the consent box, and both come before the pay button (issue #314, NY GBL §527-a).
+assert.match(body, /<div id="payBox" class="confirm" hidden><div id="renewalTerms" class="swa-receipt__next renewal-terms" hidden><p><strong>Automatic monthly renewal<\/strong><\/p><p id="renewalText"><\/p><\/div><label class="swa-terms check"><input type="checkbox" id="acceptTerms">[\s\S]*?<\/label><button class="primary" id="payButton" disabled>Confirm and pay<\/button>/);
 assert.match(body, /<div id="cashBox" class="confirm" hidden><button class="primary" id="cashButton" type="button">Confirm booking<\/button>/);
 assert.doesNotMatch(body, /\son[a-z]+=/, 'no inline handlers');
 

@@ -1,8 +1,8 @@
 // Which purchase types can be paid online. Kept free of the Stripe SDK so review pages can read it cheaply.
 import {env} from 'cloudflare:workers';
 
-// Monthly memberships charge 12 times through a Stripe subscription that cancels itself after the 12th
-// payment (issue #20). Only list "monthly" in CHECKOUT_KINDS once the membership terms are approved.
+// Monthly memberships are a Stripe subscription that renews every month until canceled (issue #20; month to month
+// since Nov 13, 2026, #2 and #314). "monthly" opens once it is listed in CHECKOUT_KINDS.
 // Paying for a whole year upfront ("annual") is not offered (decision Q9 in #197, issue #210): it never opens, even
 // if CHECKOUT_KINDS still lists it.
 export const ONLINE_KINDS = ['walkin', 'monthly', 'event', 'live', 'lesson'] as const;

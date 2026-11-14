@@ -29,6 +29,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/booking-review` | POST | Review an event, Friday Night Live or lesson booking, priced by `lib/quotes.ts` |
 | `/api/checkout` | POST | Start Stripe Checkout for a reviewed purchase, only for types open in `CHECKOUT_KINDS` |
 | `/api/cash-bookings` | GET, POST | Book a walk-in, an extra practice or a camp, clinic or event to pay cash at the academy, or cancel it before it starts |
+| `/api/memberships` | POST | `{action: 'cancel', orderId}`: the family cancels its own monthly membership (#314). Stripe stops charging at the end of the paid month (a past-due one is canceled at once); returns `endsOn`, the last day of access. Same origin, rate limited; another family's membership is 404 |
 | `/api/interest` | GET, POST | "Tell the academy I want this": the academy's contact line, and a request for a closed membership or lesson sent to the owner's inbox, once per item per day |
 | `/api/orders` | GET | The family's own orders and cash bookings |
 | `/api/lessons` | GET, POST | Lesson formats, prices and open coach times; book, join or organise a private group |
@@ -65,7 +66,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/waivers` | GET, POST | Publish and retire the waiver, the Parent Consent Form (`?kind=parent_consent`) or the coach contract (`?kind=coach_contract`); see who signed; ask for a signature again; carry a signature over to a renamed wrestler |
 | `/api/exceptions` | GET, POST | Dated exceptions to the card, waiver and consent-form booking blocks |
 | `/api/usaw-cards` | GET, POST | Review every wrestler's card; mark verified or not valid |
-| `/api/payments` | GET, POST | Every payment with totals and CSV; record and void offline payments; unpaid cash bookings; `?attention=1` memberships whose monthly payment failed and `?attempts=1` every online checkout with Stripe's last word (#271) |
+| `/api/payments` | GET, POST | Every payment with totals and CSV; record and void offline payments; unpaid cash bookings; `?attention=1` memberships whose monthly payment failed and `?attempts=1` every online checkout with Stripe's last word (#271); POST `membership-cancel` cancels a family's monthly membership for them (#314) |
 | `/api/payment-setup` | GET, POST | Connect the academy's Stripe account with a restricted key, test or live |
 | `/api/transfers` | GET, POST | Move a paid membership to another program |
 | `/api/messages` | GET, POST | Announcements and family threads; retry emails that didn't send |

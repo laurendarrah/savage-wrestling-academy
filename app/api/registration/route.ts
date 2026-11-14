@@ -15,7 +15,9 @@ export const GET = withApi(GET_); async function GET_(request:Request){
  const row=await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload:string}>();
  // now: the New York clock time ("HH:MM"), so the page can stop offering today's practices once they have started (#273).
  const now=new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
- return accountReply({...registrationCatalog(row?JSON.parse(row.payload):{},month,today),now},200,auth.headers);
+ // onlineKinds: which of this page's plans can be paid online now, so the page speaks only about the plan chosen.
+ const onlineKinds=[...checkoutKinds()].filter(k=>k==='walkin'||k==='monthly');
+ return accountReply({...registrationCatalog(row?JSON.parse(row.payload):{},month,today),now,onlineKinds},200,auth.headers);
 }
 
 // Registration review is authorized on the server. A browser flag cannot grant approval.

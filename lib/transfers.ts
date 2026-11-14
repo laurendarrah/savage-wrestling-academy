@@ -1,6 +1,6 @@
 // Program transfers on paid memberships (issue #74). The owner moves a membership to another program from an
 // effective date. Eligibility uses the same server rules as registration (grade ranges, SWA Advance approval).
-// No money moves: any price difference between programs is handled separately, since no policy is decided for it.
+// No money moves: changing programs doesn't change a membership's price (decided Nov 13, 2026 on #2).
 import {env} from 'cloudflare:workers';
 import {familyProfile, checkCompetitionAccess} from './program-approval';
 import {academyToday} from './public-schedule';

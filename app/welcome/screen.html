@@ -128,7 +128,7 @@ function timesLines(times){return times.length?times.map(t=>'<span class="times"
 // prices and a quiet Choose. The first program is the one shown on a phone until the switch is tapped.
 function programCard(p,schedules=[],today='',on=false){
  const grades=String(p.grades||GRADES[p.id]||'').replace(/\s*·\s*Coach approval required/i,'');
- const prices=[p.monthlyCents!=null?money(p.monthlyCents)+' a month for a 12-month membership':'',p.walkInCents!=null?money(p.walkInCents)+' for a single walk-in practice':''].filter(Boolean);
+ const prices=[p.monthlyCents!=null?money(p.monthlyCents)+' a month, month to month':'',p.walkInCents!=null?money(p.walkInCents)+' for a single walk-in practice':''].filter(Boolean);
  return '<article class="program'+(on?' is-on':'')+'" data-program="'+esc(p.id)+'">'+(grades?'<span class="grades" style="'+(swatch[p.id]||'background:var(--swa-prog-event);color:var(--swa-prog-event-ink)')+'">'+esc(grades)+'</span>':'')+'<h3>'+esc(p.name)+'</h3>'+timesLines(weeklyTimes(p.id,schedules,today))+(p.description?'<p>'+esc(p.description)+'</p>':'')+'<div class="prices">'+prices.map(x=>'<span class="price">'+esc(x)+'</span>').join('')+'</div>'+(p.id==='Advanced'?'<p class="note">Every SWA Advance wrestler needs coach approval before joining.</p>':'')+'<a class="button quiet" href="/register?program='+encodeURIComponent(p.id)+'">Choose '+esc(p.name)+'</a></article>'}
 // The phone switch: one button per program; tapping one shows its column.
 function renderSwitch(programs){const sw=$('programSwitch');sw.hidden=programs.length<2;sw.innerHTML=programs.map((p,i)=>'<button type="button" data-program="'+esc(p.id)+'" aria-pressed="'+(i===0)+'">'+esc(p.name.replace(/^SWA /,''))+'</button>').join('')}

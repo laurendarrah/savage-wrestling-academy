@@ -3,7 +3,7 @@
 // Each Stripe event id is stored once, so repeated, late or out-of-order deliveries cannot apply twice.
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
-import {noticeInstallmentFailed, noticeInstallmentMismatch, noticeLessonBooked, noticeSubscriptionCanceled, quietly} from './notify';
+import {noticeInstallmentFailed, noticeInstallmentMismatch, noticeLessonBooked, noticeMembershipPaused, noticeMembershipStarted, noticeSubscriptionCanceled, quietly} from './notify';
 import {graceEnd, membershipTerm, paidThroughAfter} from './membership-term';
 export {membershipTerm, paidThroughAfter};
 import {storedStripeKeyFor, stripeClientFor} from './stripe-test';
@@ -37,23 +37,6 @@ export async function verifyStripeSignature(raw: string, header: string | null, 
 
 type OrderRow = {id: string; user_id: string; wrestler_id: string; status: string; kind: string; amount_cents: number; currency: string; livemode: number; stripe_session_id: string | null; dedupe_key: string; item_id: string; dates: string; pricing: string};
 
-
-const PAYMENTS = 12;
-
-// Set the subscription to end exactly 12 months after its billing anchor, so Stripe never sends a 13th invoice.
-async function setTwelvePaymentEnd(livemode: number, subscriptionId: string) {
-  const mode = livemode ? 'live' : 'test';
-  const key = await storedStripeKeyFor(mode);
-  if (!key) throw new Error('Stripe key missing; let Stripe retry this event.');
-  const stripe = stripeClientFor(mode, key);
-  const sub: any = await stripe.subscriptions.retrieve(subscriptionId);
-  const anchor = new Date((sub.billing_cycle_anchor ?? sub.start_date) * 1000);
-  const cancel = new Date(anchor);
-  cancel.setUTCFullYear(anchor.getUTCFullYear() + 1);
-  const cancelAt = Math.floor(cancel.getTime() / 1000);
-  await stripe.subscriptions.update(subscriptionId, {cancel_at: cancelAt, proration_behavior: 'none', metadata: {...(sub.metadata ?? {}), payments: String(PAYMENTS)}});
-  return new Date(cancelAt * 1000).toISOString();
-}
 
 async function overLimit(order: OrderRow): Promise<string | null> {
   const slots = Number(JSON.parse(order.pricing || '{}').slots);
@@ -116,13 +99,14 @@ export async function applyStripeEvent(event: any): Promise<Outcome & {duplicate
     // A refused payment message reaches the owner through the hourly alert email (issue #271), never more than one an hour.
     await quietly(() => alertOwner(env.DB));
   }
-  // A paid lesson tells the coach and the family (issue #105); other notices are not needed for online payments.
-  if (outcome.startsWith('paid') && orderId) await quietly(() => noticeLessonBooked(orderId));
+  // A paid lesson tells the coach and the family (issue #105). A new monthly membership sends the family its
+  // acknowledgment of the automatic-renewal terms (NY GBL §527-a, issue #314), once per membership.
+  if (outcome.startsWith('paid') && orderId) { await quietly(() => noticeLessonBooked(orderId)); await quietly(() => noticeMembershipStarted(orderId)); }
   // A new dispute is a problem for the owner to answer in Stripe within days: it goes through the site's problem alerts
   // (lib/owner-alerts.ts), which email the owner at most once an hour and show on Site health.
   if (outcome === 'disputed') await quietly(() => alertOwner(env.DB));
-  // Monthly memberships (issue #271): a failed payment, a mismatched amount and a canceled plan each tell the family
-  // and the owner once, keyed by the event, so a replay sends nothing more.
+  // Monthly memberships (issue #271): a failed payment, a mismatched amount, a canceled membership and a paused one
+  // (#313) each tell the family and the owner once, keyed by the event, so a replay sends nothing more.
   if (orderId) await quietly(() => installmentNotices(outcome, orderId, event));
   return {outcome, orderId, duplicate: false};
 }
@@ -131,7 +115,8 @@ async function installmentNotices(outcome: string, orderId: string, event: any) 
   const obj = event.data?.object ?? {};
   if (outcome === 'installment-failed') await noticeInstallmentFailed(orderId, event.id);
   if (outcome === 'subscription-canceled') await noticeSubscriptionCanceled(orderId, event.id);
-  if (/^installment-\d+-of-\d+$/.test(outcome)) {
+  if (outcome === 'subscription-paused') await noticeMembershipPaused(orderId, event.id);
+  if (/^installment-\d+(-of-\d+)?$/.test(outcome)) {
     const row = await env.DB!.prepare('SELECT amount_cents,expected_cents,payment_number FROM installment_payments WHERE id=?').bind(event.id).first<{amount_cents: number; expected_cents: number; payment_number: number}>();
     if (row && row.amount_cents !== row.expected_cents) await noticeInstallmentMismatch(orderId, event.id, row.payment_number, row.amount_cents, row.expected_cents, typeof obj.id === 'string' ? obj.id : '');
   }
@@ -202,15 +187,16 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
       if (order.kind === 'monthly') {
         const subscriptionId = typeof obj.subscription === 'string' ? obj.subscription : typeof obj.subscription?.id === 'string' ? obj.subscription.id : null;
         if (!subscriptionId) return none('rejected:no-subscription', orderId);
-        const cancelAt = await setTwelvePaymentEnd(order.livemode, subscriptionId);
-        const full = membershipTerm(paidDate), paidThrough = paidThroughAfter(paidDate, 1);
+        // Month to month (decided Nov 13, 2026, #2): Stripe keeps charging every month until the membership is canceled,
+        // so nothing is set at Stripe here; there is no last payment and no end date.
+        const paidThrough = paidThroughAfter(paidDate, 1);
         return {outcome: 'paid', orderId, writes: [
           env.DB!.prepare("UPDATE orders SET status='canceled',updated_at=? WHERE dedupe_key=? AND status='pending' AND id<>?").bind(at, order.dedupe_key, orderId),
           env.DB!.prepare("UPDATE orders SET status='paid',paid_at=?,updated_at=?,stripe_session_id=?,term_start=?,term_end=? WHERE id=? AND status IN ('pending','expired','canceled')")
-            .bind(at, at, obj.id, full.start, paidThrough, orderId),
-          // The first of 12 payments is counted here; the matching subscription_create invoice is ignored.
-          env.DB!.prepare("INSERT INTO subscriptions(order_id,stripe_subscription_id,status,payments_made,payments_total,term_start,term_end,paid_through,cancel_at,updated_at) VALUES (?,?,'active',1,?,?,?,?,?,?)")
-            .bind(orderId, subscriptionId, PAYMENTS, full.start, full.end, paidThrough, cancelAt, at)
+            .bind(at, at, obj.id, paidDate, paidThrough, orderId),
+          // The first payment is counted here; the matching subscription_create invoice is ignored.
+          env.DB!.prepare("INSERT INTO subscriptions(order_id,stripe_subscription_id,status,payments_made,payments_total,term_start,term_end,paid_through,cancel_at,updated_at) VALUES (?,?,'active',1,NULL,?,NULL,?,NULL,?)")
+            .bind(orderId, subscriptionId, paidDate, paidThrough, at)
         ]};
       }
       // Upfront memberships are no longer sold (#210), but a checkout started before then whose event arrives late
@@ -275,15 +261,17 @@ async function plan(event: any, at: string): Promise<{outcome: string; orderId: 
 }
 
 type Plan = {outcome: string; orderId: string | null; writes: D1PreparedStatement[]};
-type SubRow = {order_id: string; status: string; payments_made: number; payments_total: number; term_start: string; term_end: string; paid_through: string; amount_cents: number; livemode: number};
+type SubRow = {order_id: string; status: string; payments_made: number; payments_total: number | null; term_start: string; term_end: string | null; paid_through: string; amount_cents: number; livemode: number};
 
-// Monthly payments 2 to 12 (issues #20 and #271).
-// - invoice.payment_failed: the plan is past due, the family and the owner are told (installmentNotices), and the wrestler
-//   keeps roster access for a short grace after the paid-through day while Stripe retries (graceEnd). Nothing is extended.
+// Every monthly payment after the first (issues #20, #271, #314). A membership is month to month, so there is no last one.
+// - invoice.payment_failed: the membership is past due, the family and the owner are told (installmentNotices), and the
+//   wrestler keeps roster access for 7 days after the paid-through day while Stripe retries (graceEnd). Nothing is extended.
 // - invoice.paid: the payment counts whatever Stripe collected. A coupon or a price edit in Stripe makes the amount differ
 //   from the membership's price; it is stored per payment (installment_payments), the books read that amount, and the
 //   owner is told about the difference. A replay stores nothing twice (stripe_events), and the payments_made guard keeps
-//   two deliveries of different invoices from counting the same number, whatever order they arrive in.
+//   two deliveries of different invoices from counting the same number, whatever order they arrive in. A payment that
+//   arrives after the membership was paused or canceled still counts and covers its month, but never restarts the
+//   membership: only a new sign-up does.
 async function invoicePlan(event: any, at: string): Promise<Plan> {
   const obj = event.data?.object ?? {};
   const none = (outcome: string, orderId: string | null = null): Plan => ({outcome, orderId, writes: []});
@@ -302,31 +290,44 @@ async function invoicePlan(event: any, at: string): Promise<Plan> {
       env.DB!.prepare('UPDATE orders SET term_end=max(term_end,?),updated_at=? WHERE id=?').bind(graceEnd(sub.paid_through, sub.term_end), at, sub.order_id)
     ]};
   }
-  if (sub.payments_made >= sub.payments_total) return none('rejected:payment-beyond-term-refund-needed', sub.order_id);
   const paid = Number.isSafeInteger(obj.amount_paid) && obj.amount_paid >= 0 ? obj.amount_paid : null;
   if (paid === null) return none('rejected:malformed', sub.order_id);
   const made = sub.payments_made + 1;
-  const paidThrough = made >= sub.payments_total ? sub.term_end : paidThroughAfter(sub.term_start, made);
+  const paidThrough = paidThroughAfter(sub.term_start, made);
   const mismatch = paid !== sub.amount_cents ? [env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)')
     .bind(crypto.randomUUID(), 'stripe', 'installment_amount_mismatch', `${sub.order_id} ${made} ${paid} ${sub.amount_cents}`, at)] : [];
-  return {outcome: `installment-${made}-of-${sub.payments_total}`, orderId: sub.order_id, writes: [...mismatch,
-    env.DB!.prepare("UPDATE subscriptions SET payments_made=?,paid_through=?,status='active',updated_at=? WHERE order_id=? AND payments_made=?").bind(made, paidThrough, at, sub.order_id, sub.payments_made),
+  // A membership from the earlier 12-month plan keeps its payments_total; it may now be paid past it, like any other.
+  const total = sub.payments_total !== null && made > sub.payments_total ? null : sub.payments_total;
+  return {outcome: `installment-${made}`, orderId: sub.order_id, writes: [...mismatch,
+    env.DB!.prepare("UPDATE subscriptions SET payments_made=?,payments_total=?,paid_through=?,status=CASE WHEN status='past_due' THEN 'active' ELSE status END,updated_at=? WHERE order_id=? AND payments_made=?")
+      .bind(made, total, paidThrough, at, sub.order_id, sub.payments_made),
     env.DB!.prepare('UPDATE orders SET term_end=?,updated_at=? WHERE id=?').bind(paidThrough, at, sub.order_id),
     env.DB!.prepare('INSERT INTO installment_payments(id,order_id,invoice_id,payment_number,amount_cents,expected_cents,livemode,received_at) VALUES (?,?,?,?,?,?,?,?)')
       .bind(event.id, sub.order_id, typeof obj.id === 'string' ? obj.id : null, made, paid, sub.amount_cents, sub.livemode, at)
   ]};
 }
 
-// The plan ended at Stripe: after the 12th payment (completed), or earlier (canceled by the family, the owner, or Stripe
-// after its retries failed). A canceled plan's access ends on the paid-through day: the grace after a failed payment
-// (issue #271) stops, and the family and the owner are told (installmentNotices).
+// The subscription ended at Stripe (issues #271, #313, #314). Why decides what it means:
+// - Stripe gave up on a failing card (cancellation_details.reason 'payment_failed', or a past-due membership nobody asked
+//   to cancel): the membership is paused, not ended. Nothing more is charged, the wrestler comes off the roster after the
+//   paid-through day (the grace stops), and the family can restart it from their account with a new sign-up, from that
+//   day, with no back pay.
+// - Canceled by the family or the owner (on the site, which sets cancel_at, or in Stripe): the membership ends on the
+//   paid-through day, the end of the month already paid for.
+// - A membership from the earlier 12-month plan that made all its payments: completed.
+// Each ending is applied once: a later or repeated deletion of an ended membership changes nothing.
 async function subscriptionEndedPlan(event: any, at: string): Promise<Plan> {
   const obj = event.data?.object ?? {};
-  const sub = await env.DB!.prepare('SELECT order_id,payments_made,payments_total,paid_through FROM subscriptions WHERE stripe_subscription_id=?').bind(obj.id).first<{order_id: string; payments_made: number; payments_total: number; paid_through: string}>();
+  const sub = await env.DB!.prepare('SELECT order_id,status,payments_made,payments_total,paid_through,cancel_at FROM subscriptions WHERE stripe_subscription_id=?').bind(obj.id)
+    .first<{order_id: string; status: string; payments_made: number; payments_total: number | null; paid_through: string; cancel_at: string | null}>();
   if (!sub) return {outcome: 'ignored:unknown-subscription', orderId: null, writes: []};
-  const ended = sub.payments_made >= sub.payments_total ? 'completed' : 'canceled';
+  if (!['active', 'past_due'].includes(sub.status)) return {outcome: 'ignored:subscription-' + sub.status, orderId: sub.order_id, writes: []};
+  const reason = typeof obj.cancellation_details?.reason === 'string' ? obj.cancellation_details.reason : null;
+  const askedToCancel = sub.payments_total === null && !!sub.cancel_at;
+  const ended = sub.payments_total !== null && sub.payments_made >= sub.payments_total ? 'completed'
+    : reason === 'payment_failed' || (!reason && sub.status === 'past_due' && !askedToCancel) ? 'paused' : 'canceled';
   return {outcome: 'subscription-' + ended, orderId: sub.order_id, writes: [
-    env.DB!.prepare('UPDATE subscriptions SET status=?,updated_at=? WHERE order_id=?').bind(ended, at, sub.order_id),
-    ...(ended === 'canceled' ? [env.DB!.prepare('UPDATE orders SET term_end=min(term_end,?),updated_at=? WHERE id=?').bind(sub.paid_through, at, sub.order_id)] : [])
+    env.DB!.prepare("UPDATE subscriptions SET status=?,updated_at=? WHERE order_id=? AND status IN ('active','past_due')").bind(ended, at, sub.order_id),
+    ...(ended !== 'completed' ? [env.DB!.prepare('UPDATE orders SET term_end=min(term_end,?),updated_at=? WHERE id=?').bind(sub.paid_through, at, sub.order_id)] : [])
   ]};
 }

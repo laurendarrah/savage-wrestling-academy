@@ -9,7 +9,9 @@ export const dynamic = 'force-dynamic';
 // paid_in_cash: paid in cash at the academy (issue #250). The family sees that it was paid in cash, never which coach took it.
 const FIELDS = 'o.id,o.kind,o.program,o.item_id,o.item_label,o.wrestler_id,o.wrestler_name,o.dates,o.base_cents,o.discount_cents,o.amount_cents,o.currency,o.status,o.created_at,o.paid_at,o.term_start,o.term_end,'
   + "CASE WHEN o.source='offline' AND json_extract(o.pricing,'$.method')='cash' THEN 1 ELSE 0 END AS paid_in_cash,"
-  + 's.payments_made,s.payments_total,s.status AS subscription_status,s.term_end AS membership_end,s.paid_through';
+  + 's.payments_made,s.payments_total,s.status AS subscription_status,s.term_end AS membership_end,s.paid_through,'
+  // The last day of a membership the family or the owner canceled online (issue #314); empty until then.
+  + 'CASE WHEN s.payments_total IS NULL THEN s.cancel_at END AS cancel_on';
 const FROM = 'FROM orders o LEFT JOIN subscriptions s ON s.order_id=o.id';
 
 export const GET = withApi(GET_); async function GET_(request: Request) {

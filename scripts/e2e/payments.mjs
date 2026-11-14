@@ -160,28 +160,35 @@ await step('a year paid upfront is refused at checkout and nothing is created (#
   expect(r.status === 400 && /no longer offered/.test(r.body?.error), 'upfront checkout ' + JSON.stringify(r));
   expect(sql("SELECT count(*) n FROM orders WHERE kind='annual'")[0].n === 0, 'no upfront order');
 });
-await step('family starts a 12-month membership paid monthly: a Stripe subscription checkout', async () => {
+await step('family starts a month-to-month membership: the renewal terms beside the consent box, then a Stripe subscription checkout', async () => {
   await family.goto(BASE + '/register'); await family.waitForSelector('#wrestlerChips [data-wrestler]');
   await family.click('#plan-monthly'); await family.selectOption('#program', 'Intermediate');
-  await family.click('#reviewButton'); await family.waitForSelector('#acceptTerms', {state: 'visible'}); await family.check('#acceptTerms');
+  await family.click('#reviewButton'); await family.waitForSelector('#acceptTerms', {state: 'visible'});
+  // NY GBL §527-a (issue #314): what it includes, the price, the monthly renewal and how to cancel, next to the box.
+  await waitText(family, '#renewalTerms', /It costs \$200\.00 a month\. It renews automatically[\s\S]*until you cancel[\s\S]*cancel before your next billing day/);
+  await waitText(family, '#termsLabel', /automatic monthly renewal described above/);
+  expect(await family.isDisabled('#payButton'), 'no payment before the box is ticked');
+  await family.check('#acceptTerms');
   if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-review-monthly.png`, fullPage: true});
   await Promise.all([family.waitForURL(/checkout\.stripe\.com/, {timeout: 15000}), family.click('#payButton')]);
   const o = sql("SELECT id,status,amount_cents FROM orders WHERE kind='monthly'")[0];
   expect(o && o.status === 'pending' && o.amount_cents === 20000, 'pending monthly order ' + JSON.stringify(o));
   monthlyOrder = o.id;
 });
-await step('Stripe reports the first payment: the app sets the 12-payment end date on the subscription', async () => {
+await step('Stripe reports the first payment: month to month with no end date, and the acknowledgment email is sent once', async () => {
   const o = sql(`SELECT stripe_session_id FROM orders WHERE id='${monthlyOrder}'`)[0];
   const r = await webhook('checkout.session.completed', {id: o.stripe_session_id, object: 'checkout.session', client_reference_id: monthlyOrder, metadata: {order_id: monthlyOrder}, payment_status: 'paid', amount_total: 20000, currency: 'usd', livemode: false, subscription: 'sub_rehearsal_1', mode: 'subscription'});
   expect(r.status === 200, 'webhook ' + JSON.stringify(r.body));
   const s = sql("SELECT * FROM subscriptions")[0];
-  expect(s && s.payments_made === 1 && s.payments_total === 12 && s.cancel_at, 'subscription ' + JSON.stringify(s));
+  expect(s && s.payments_made === 1 && s.payments_total === null && s.term_end === null && s.cancel_at === null, 'subscription ' + JSON.stringify(s));
+  const ack = sql("SELECT body FROM notifications WHERE kind='membership_started'");
+  expect(ack.length === 1 && /renews automatically and charges \$200\.00[\s\S]*How to cancel: any time, online in your family account/.test(ack[0].body), 'acknowledgment ' + JSON.stringify(ack));
   await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /Active membership/);
 });
 await step('the second monthly payment extends paid-through to the next billing day', async () => {
   const before = sql("SELECT paid_through FROM subscriptions")[0].paid_through;
   const r = await webhook('invoice.paid', {id: 'in_rehearsal_2', object: 'invoice', subscription: 'sub_rehearsal_1', billing_reason: 'subscription_cycle', amount_paid: 20000, livemode: false});
-  expect(r.status === 200 && r.body.outcome === 'installment-2-of-12', 'invoice.paid ' + JSON.stringify(r.body));
+  expect(r.status === 200 && r.body.outcome === 'installment-2', 'invoice.paid ' + JSON.stringify(r.body));
   const s = sql("SELECT payments_made,paid_through,term_start FROM subscriptions")[0];
   expect(s.payments_made === 2 && s.paid_through > before, 'not extended ' + JSON.stringify(s));
   // Issue #271: paid through the billing day itself (the second payment covers through the day the third is due).
@@ -217,7 +224,7 @@ await step('a failed monthly payment: family and owner told, "Payment needs atte
 // Stripe collected, and the owner is told about the difference.
 await step('a monthly payment for a different amount counts for what Stripe collected and is flagged for the owner', async () => {
   const r = await webhook('invoice.paid', {id: 'in_rehearsal_4', object: 'invoice', subscription: 'sub_rehearsal_1', billing_reason: 'subscription_cycle', amount_paid: 15000, livemode: false});
-  expect(r.status === 200 && r.body.outcome === 'installment-3-of-12', 'invoice.paid ' + JSON.stringify(r.body));
+  expect(r.status === 200 && r.body.outcome === 'installment-3', 'invoice.paid ' + JSON.stringify(r.body));
   const s = sql("SELECT status,payments_made FROM subscriptions")[0];
   expect(s.status === 'active' && s.payments_made === 3, 'counted ' + JSON.stringify(s));
   const p = sql("SELECT invoice_id,payment_number,amount_cents,expected_cents FROM installment_payments WHERE payment_number=3")[0];
@@ -234,7 +241,7 @@ await step('a monthly payment for a different amount counts for what Stripe coll
 await step('the Payment attempts list on /payments shows each checkout with what happened', async () => {
   await owner.goto(BASE + '/payments'); await waitText(owner, '#attemptRows', /Sam Example/);
   const rows = await owner.textContent('#attemptRows');
-  expect(/12-month membership, monthly payment[\s\S]*Monthly payment 3 of 12 received\./.test(rows), 'the membership attempt: ' + rows);
+  expect(/monthly membership[\s\S]*Monthly payment 3 received\./.test(rows), 'the membership attempt: ' + rows);
   expect(/walk-in[\s\S]*Refunded in full\./.test(rows), 'the refunded walk-in: ' + rows);
   expect(rows.includes(sql(`SELECT stripe_session_id FROM orders WHERE id='${monthlyOrder}'`)[0].stripe_session_id), 'the Stripe session id to look up');
   await owner.fill('#attemptsQ', 'nobody'); await waitText(owner, '#attemptRows', /No online payment attempts match/);
@@ -244,6 +251,25 @@ await step('the Payment attempts list on /payments shows each checkout with what
   const r = await webhook('checkout.session.completed', {id: 'cs_test_nowhere', object: 'checkout.session', client_reference_id: 'no-such-order', metadata: {order_id: 'no-such-order'}, payment_status: 'paid', amount_total: 4000, currency: 'usd', livemode: false, mode: 'payment'});
   expect(r.status === 200 && r.body.outcome === 'rejected:unknown-order', 'refused ' + JSON.stringify(r.body));
   await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /Stripe message refused[\s\S]*It named an order the site does not have/);
+});
+// Issue #314: the family cancels online from the membership, in two taps; Stripe stops at the end of the paid month.
+await step('the family cancels the membership on /family: confirm on the same page, the result under the button', async () => {
+  const paidThrough = sql("SELECT paid_through FROM subscriptions")[0].paid_through;
+  await family.goto(BASE + '/family'); await waitText(family, '#membershipCards', /Active membership/);
+  await family.click('#membershipCards [data-action="cancel-membership"]');
+  await waitText(family, '#membershipCards .cancel-confirm', /Cancel Sam Example’s membership\?[\s\S]*No more charges\. Sam Example can keep practicing through/);
+  if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-family-cancel-confirm.png`, fullPage: true});
+  await family.click('#membershipCards [data-action="confirm-cancel"]');
+  await waitText(family, '#membershipCards', /Canceled\. No more charges\. Sam Example can practice through/);
+  await waitText(family, '#membershipCards', /Canceled · ends/);
+  const s = sql("SELECT status,cancel_at FROM subscriptions")[0];
+  expect(s.status === 'active' && s.cancel_at === paidThrough, 'still a member to the end of the paid month: ' + JSON.stringify(s));
+  expect(sql(`SELECT term_end FROM orders WHERE id='${monthlyOrder}'`)[0].term_end === paidThrough, 'access stays to the paid-through day');
+  expect(sql("SELECT kind FROM notifications WHERE kind='membership_canceled'").length === 1, 'the confirmation is sent');
+  if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-family-canceled.png`, fullPage: true});
+  // Stripe ends it on the billing day: canceled, not paused.
+  const r = await webhook('customer.subscription.deleted', {id: 'sub_rehearsal_1', object: 'subscription', status: 'canceled', cancellation_details: {reason: 'cancellation_requested'}, livemode: false});
+  expect(r.status === 200 && r.body.outcome === 'subscription-canceled', 'deleted ' + JSON.stringify(r.body));
 });
 await step('a late Stripe event for an upfront order started before #210 still records it, with its 12-month term', async () => {
   const at = new Date(Date.now() - 20 * 60000).toISOString();

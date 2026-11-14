@@ -18,7 +18,9 @@ const event = (id, orderId, type, outcome, min) => sqlite.prepare('INSERT INTO s
 
 // --- Plain words for every outcome ---
 assert.equal(outcomes.outcomeWords('paid', 'paid'), 'Paid.');
-assert.equal(outcomes.outcomeWords('installment-3-of-12', 'paid'), 'Monthly payment 3 of 12 received.');
+assert.equal(outcomes.outcomeWords('installment-3', 'paid'), 'Monthly payment 3 received.');
+assert.equal(outcomes.outcomeWords('installment-3-of-12', 'paid'), 'Monthly payment 3 received.', 'recorded before memberships became month to month');
+assert.equal(outcomes.outcomeWords('subscription-paused', 'paid'), 'Stripe stopped retrying the card, so the membership is paused. Nothing more is charged.');
 assert.equal(outcomes.outcomeWords('rejected:amount-mismatch', 'pending'), 'Refused: The amount paid did not match the price.');
 assert.equal(outcomes.outcomeWords('rejected:something-new', 'pending'), 'Refused: Stripe sent a payment message the site could not match.');
 assert.match(outcomes.outcomeWords(null, 'pending'), /^Checkout opened; no answer from Stripe yet/);
@@ -91,9 +93,9 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
   assert.match(row, /<td data-label="Stripe session"><span class="session-id">cs_test_123<\/span><\/td>/);
   assert.match(row, /<td data-label="What happened"><span class="badge rejected">Refused<\/span><br>Refused: The amount paid did not match the price\.<br><span class="muted">Stripe’s last message Nov 8, 6:11 PM<\/span><\/td>/);
   assert.match(ctx.attemptRow({id: 'y', at: '2026-11-08T23:10:00Z', state: 'open', livemode: true, wrestler: 'S', parent: '', email: 'e', item: 'i', amountCents: 1, sessionId: null, words: 'w'}), /Never reached Stripe/);
-  const att = ctx.attentionRow({wrestler: 'Sam Example', parent: 'Pat Example', email: 'pat@example.test', phone: '631-555-0100', item: 'SWA Intermediate: 12-month membership, monthly payment', amountCents: 20000, paymentsMade: 3, paymentsTotal: 12, failedAt: '2026-11-08T23:10:00Z', failures: 2, paidThrough: '2026-12-05', rosterThrough: '2026-12-12'});
+  const att = ctx.attentionRow({wrestler: 'Sam Example', parent: 'Pat Example', email: 'pat@example.test', phone: '631-555-0100', item: 'SWA Intermediate: monthly membership', amountCents: 20000, paymentsMade: 3, paymentsTotal: 12, failedAt: '2026-11-08T23:10:00Z', failures: 2, paidThrough: '2026-12-05', rosterThrough: '2026-12-12'});
   assert.match(att, /<td data-label="Failed"><span class="badge attn">Payment failed<\/span><br><span class="muted">Nov 8, 6:10 PM · 2 tries<\/span><\/td><td data-label="Paid through">Dec 5, 2026<\/td><td data-label="On the roster through"><b>Dec 12, 2026<\/b><\/td>/);
-  assert.match(att, /\$200\.00 a month · 3 of 12 payments made/);
+  assert.match(att, /\$200\.00 a month · 3 payments made/);
   assert.match(html, /<section id="attention" aria-labelledby="attentionHeading" hidden>/); assert.match(html, /<section id="attempts" aria-labelledby="attemptsHeading">/);
   assert.match(html, /<input id="attemptsQ" type="search"/);
   assert.ok(script.includes("call('/api/payments?attention=1')") && script.includes("'/api/payments?attempts=1'"), 'the page loads both lists');

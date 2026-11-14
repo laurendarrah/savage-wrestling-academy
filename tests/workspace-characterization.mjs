@@ -294,6 +294,8 @@ reset();
 // fixture from the UTC run for a deliberate change like those.
 // Issue #322 made the month grid's practices and events cards with a name and a time, like the family calendar's, so
 // the calendar digests were frozen again.
+// Issue #314 (memberships month to month) dropped the 12-month total and wording from the programs editor, so
+// ownerPrograms was frozen again.
 record('dashboard', run('dashboard()'));
 
 // ---------- Compare ----------
