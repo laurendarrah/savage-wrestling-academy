@@ -835,8 +835,9 @@ await step('a family starts a private partner lesson; a second family joins thro
 await step('owner transfers Sam to SWA Advance after approval checks', async () => {
   await owner.goto(BASE + '/transfers'); await owner.waitForFunction(() => [...document.querySelectorAll('#order option')].some(o => o.value));
   await owner.selectOption('#to', 'Advanced'); await owner.fill('#reason', 'Moved up'); await owner.fill('#date', ny(5));
-  await owner.click('#form button'); await waitText(owner, '#status', /approv/i);
-  await owner.selectOption('#to', 'Elementary'); await owner.click('#form button'); await waitText(owner, '#status', /grades K/);
+  // The result shows under the Transfer button (issue #341).
+  await owner.click('#form button'); await waitText(owner, '#formNote', /approv/i);
+  await owner.selectOption('#to', 'Elementary'); await owner.click('#form button'); await waitText(owner, '#formNote', /grades K/);
 });
 
 // ---------- Messages ----------
@@ -1118,7 +1119,7 @@ await step('family requests SWA Advance approval; owner approves; transfer to SW
   await waitText(owner, '#requests', /Revoke approval/);
   await owner.goto(BASE + '/transfers'); await owner.waitForFunction(() => [...document.querySelectorAll('#order option')].some(o => o.value));
   await owner.selectOption('#to', 'Advanced'); await owner.fill('#reason', 'Moved up after evaluation'); await owner.fill('#date', ny(5));
-  await owner.click('#form button'); await waitText(owner, '#status', /moves to SWA Advance/);
+  await owner.click('#form button'); await waitText(owner, '#formNote', /moves to SWA Advance/);
   const later = await api(owner, '/api/roster?date=' + ny(5)), before = await api(owner, '/api/roster?date=' + ny(4));
   const where = r => r.body.sessions.filter(s => s.entries.some(e => e.name === 'Sam Example')).map(s => s.title).join();
   expect(where(later) === 'SWA Advance' && where(before) === 'SWA Intermediate', `roster after transfer: ${where(before)} -> ${where(later)}`);

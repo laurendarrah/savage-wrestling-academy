@@ -45,6 +45,16 @@ html body .sheet-close{min-height:40px;width:40px;padding:0;font-size:var(--swa-
 @keyframes fade{from{opacity:0}to{opacity:1}}@keyframes slide-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
 @media (max-width:640px){.wide{display:none}td.narrow,th.narrow{display:table-cell}span.narrow{display:block}span.abbr{display:inline}table{font-size:var(--swa-t-15)}th,td{padding:8px 4px}.monthbar .downloads{margin-left:0}.month-picker{width:100%}.month-picker select{flex:1}
  .sheet-back{align-items:flex-end}.sheet{width:100%;height:auto;max-height:92vh;border-radius:16px 16px 0 0;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.25);animation-name:slide-up}@keyframes slide-up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}}
+/* Issue #341: on a phone an entry's first line is its date with the amount on the right, then what it was; the
+   category and source are said once, under it (the shared phone table showed the hidden columns again). */
+@media(max-width:600px){
+ html body #lines td.wide{display:none}
+ html body #lines td:nth-child(2){font-size:var(--swa-t-15);color:var(--swa-ink)}
+ html body #lines td.right{grid-column:2;grid-row:1;text-align:right;font-size:var(--swa-t-17);font-weight:600;color:var(--swa-ink);white-space:nowrap}
+ html body #lines td.right.neg{color:var(--swa-bad)}
+ html body #lines td:last-child{grid-column:1/-1;grid-row:auto;text-align:left;font-weight:400}
+ html body #lines td[colspan]{grid-column:1/-1;font-size:var(--swa-t-15);font-weight:400}
+}
 @media(prefers-reduced-motion:reduce){.sheet-back,.sheet{animation:none}}
 @media print{.monthbar,form,.actions,#entrySection,.sheet-back{display:none}}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main class="ledger"><h1>Income and expenses</h1><p><a href="#add" class="button quiet" id="openEntry">Add an expense</a></p><p>The academy's books by month: card and offline payments are added on their own, and you add expenses and any other income.</p>
