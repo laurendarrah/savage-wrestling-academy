@@ -4,7 +4,8 @@ import {quoteMembership, quoteBooking} from '../../../lib/quotes';
 import {checkoutKinds, startCheckout, CheckoutError} from '../../../lib/checkout';
 import {rateLimited} from '../../../lib/rate-limit';
 import {cashBookingDue} from '../../../lib/cash-bookings';
-import {withApi} from '../../../lib/api';
+import {withApi, recordApiError, RECORDED_HEADER} from '../../../lib/api';
+import {env} from 'cloudflare:workers';
 export const dynamic = 'force-dynamic';
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
@@ -36,7 +37,15 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
     const {orderId, url} = await startCheckout({id: auth.user.id, email: auth.user.email}, quote.wrestler, quote.charge, new URL(request.url).origin, termsUrl);
     return reply({orderId, url, amountCents: quote.charge.amountCents});
   } catch (e) {
-    if (e instanceof CheckoutError) return reply({error: e.message}, e.status);
+    if (e instanceof CheckoutError) {
+      // Stripe refused to start the checkout (issue #315): the family sees the plain message, and Site health gets the
+      // reason, so the owner knows what to fix. Marked as recorded so the Worker doesn't record it a second time.
+      if (e.status === 502 && e.reason) {
+        await recordApiError((env as Cloudflare.Env & {DB?: D1Database}).DB, request, 502, `Card checkout could not start: ${e.reason}. Check the key on Online payment setup.`, crypto.randomUUID(), 'family');
+        auth.headers.set(RECORDED_HEADER, '1');
+      }
+      return reply({error: e.message}, e.status);
+    }
     return reply({error: 'Could not start secure checkout. Nothing was charged.'}, 500);
   }
 }
