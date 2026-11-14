@@ -1,4 +1,6 @@
-# Refund and cancellation policy for single purchases (DRAFT)
+# Refund and cancellation policy for single purchases
+
+**Decided by Justin on Nov 13, 2026 (#3):** every suggested answer below was accepted. The final wording families see is on `/membership-terms#refunds` (`app/membership-terms/screen.html`). Still open: whether partner and small-group lessons are paid by one family (as built) or each family pays its share.
 
 Covers walk-ins, Friday Night Live and other extra practices, camps, clinics and events, and private lessons. **12-month memberships** are covered by the membership terms (#2), not here.
 
