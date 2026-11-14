@@ -27,8 +27,8 @@ Nothing in Launch 1 can be finished without these. Each one blocks a specific da
 | # | Decision | Who decides | Blocks |
 |---|---|---|---|
 | 1 | Approve the Launch 1 scope in this document | Owner | Everything |
-| 2 | Membership terms: what happens after the 12th payment, early cancellation, missed payments, refunds | Owner, ideally with an attorney | Checkout (Mon) |
-| 3 | Camp, clinic and Friday Night Live refund policy | Owner | Checkout (Mon) |
+| 2 | Membership terms: what happens after the 12th payment, early cancellation, missed payments, refunds | Owner, ideally with an attorney | **Partly decided Nov 13** (#2): 7-day grace, a membership **pauses** after repeated failed payments. Memberships stay closed until the attorney settles the NY bond question ($50,000 bond above $150 a month) |
+| 3 | Refund policy for walk-ins, Friday Night Live, camps, clinics, events and lessons | Owner | **Decided Nov 13** (#3): on `/membership-terms#refunds`. Online payment can open for `walkin,live,event,lesson` |
 | 4 | ~~Who owns the live Stripe account, and who can see payouts~~ **Decided:** Justin creates and owns the academy's Stripe account himself. The site has no account built in: the first test key Justin saves and confirms on `/payment-setup` connects his account (#255) | Owner | Going live (Thu) |
 | 5 | Waiver approach for the first weeks: paper, or an external waiver service link | Owner | Soft launch (Fri) |
 | 6 | Stay on the current web address, or move to a custom domain now | Owner | Thu |
