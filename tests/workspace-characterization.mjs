@@ -292,6 +292,7 @@ reset();
 // Issue #283 redrew the dashboard and the calendar (the title row with the date, four tiles, the month grid of bars,
 // the week list), so their digests were frozen again; everything else is unchanged. WORKSPACE_UPDATE=1 rewrites the
 // fixture from the UTC run for a deliberate change like those.
+// Issue #322 labeled the month grid's practice bars ("6:00 PM Development"), so the calendar digests were frozen again.
 record('dashboard', run('dashboard()'));
 
 // ---------- Compare ----------
