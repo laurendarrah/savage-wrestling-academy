@@ -38,7 +38,10 @@ jobs:
     # accessibility check on every page. Uses a stand-in for Supabase sign-in and a throwaway local database.
     name: Browser walkthrough
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The walkthrough can't run in the last 42 minutes of the New York day and waits for midnight first
+    # (scripts/e2e/clock.mjs). 25 minutes cancelled it mid-wait, which skipped that merge's deploy (Nov 13). 75 covers
+    # the longest wait plus the run.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
