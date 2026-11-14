@@ -28,7 +28,7 @@ In a private window, signed out:
 - [ ] **Must pass.** The SWA Intermediate practice days and times on `/calendar` match what Justin set under **Schedules** in the owner dashboard.
 - [ ] Program cards on `/calendar?view=programs` show the prices set under **Programs & pricing**.
 - [ ] The public website: `/welcome` shows the headline, introduction and mission from **Public website** (`/website`), and `/team` shows the coaches ticked there, with names only.
-- [ ] A team code made under **Programs & pricing → Team codes** shows its discount on the review step of a 12-month membership on `/register` (the test family can check this in section 2; online payment for memberships stays closed until #2).
+- [ ] A team code made under **Programs & pricing → Team codes** shows its discount on the review step of a monthly membership on `/register` (the test family can check this in section 2; online payment for memberships stays closed until #2).
 
 Notes: ____________________________________________________________
 

@@ -86,6 +86,7 @@ const TITLES: Record<string, string> = {
   family_account_deleted: 'Family account deleted',
   stripe_event_rejected: 'Stripe message refused',
   installment_amount_mismatch: 'Monthly payment for a different amount',
+  membership_canceled: 'Monthly membership canceled',
   waiver_carried_over: 'Waiver signature carried over to a new name',
   parent_consent_carried_over: 'Parent Consent Form signature carried over to a new name',
   lesson_double_booked: 'Lesson paid for twice',
@@ -150,6 +151,8 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
       const o = order(first); detail = [o?.wrestler, o?.item, money(rest[1] ?? '')].filter(Boolean).join(' · '); break;
     }
     case 'offline_payment_voided': { const o = order(t); detail = o ? `${o.wrestler} · ${o.item}` : ''; break; }
+    // Issue #314: "orderId family|owner". No more charges; the membership runs to the end of the paid month.
+    case 'membership_canceled': { const o = order(first); detail = [o ? `${o.wrestler} · ${o.item}` : '', rest[0] === 'owner' ? 'Canceled for the family' : 'Canceled online by the family'].filter(Boolean).join(' · '); break; }
     // Issue #272: "orderId cents reason" (created), "orderId cents" (money moved) or "orderId cents status" (closed).
     case 'payment_disputed': case 'dispute_funds_withdrawn': case 'dispute_funds_reinstated': case 'dispute_closed': {
       const o = order(first), why = row.action === 'payment_disputed' ? DISPUTE_REASONS[rest[1] ?? ''] ?? rest[1]?.replace(/_/g, ' ') : row.action === 'dispute_closed' ? (rest[1] === 'won' ? 'The academy won' : rest[1] === 'lost' ? 'The academy lost' : rest[1]?.replace(/_/g, ' ')) : '';

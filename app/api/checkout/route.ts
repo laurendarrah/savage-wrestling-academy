@@ -33,7 +33,7 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
     return reply({error: 'This is already booked to pay cash at the academy. To pay online instead, cancel that booking in your family account first.'}, 409);
 
   try {
-    const termsUrl = quote.charge.kind === 'monthly' ? '/membership-terms' : '/membership-terms#camps';
+    const termsUrl = quote.charge.kind === 'monthly' ? '/membership-terms' : '/membership-terms#refunds';
     const {orderId, url} = await startCheckout({id: auth.user.id, email: auth.user.email}, quote.wrestler, quote.charge, new URL(request.url).origin, termsUrl);
     return reply({orderId, url, amountCents: quote.charge.amountCents});
   } catch (e) {

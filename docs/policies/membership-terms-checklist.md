@@ -1,6 +1,16 @@
 # Membership terms: review checklist
 
-The draft terms are already on the site at `/membership-terms`, labeled "Draft for owner and attorney review". Online payment for memberships stays closed until they are final (#2). This checklist matches that page to what the platform does.
+> **Superseded Nov 13, 2026.** Justin decided with Lauren on #2 that memberships are **month to month with no contract**, and the academy's attorney confirmed New York's Health Club Services Act doesn't apply. The final terms are on `/membership-terms` and are built in #314:
+>
+> - The program's monthly price (team code discounts as before), charged at sign-up and on the same day every month until canceled. No 12-month term, no year upfront, no end date at Stripe.
+> - Cancel any time, online from the membership on `/family` (or `/register`), or by email, phone or in person. No more charges; access continues to the end of the paid month. No partial refund and no exit fee. The owner can cancel for a family from Payments.
+> - Changing programs doesn't change the price.
+> - A failed payment keeps the wrestler on the roster for 7 days while Stripe retries. If Stripe gives up, the membership pauses: off the roster, no more charges, family and owner told. **Restart membership** is a new monthly sign-up from that day with no back pay (#313).
+> - New York's automatic-renewal law (GBL §527-a): the renewal terms are shown beside the consent box before payment, the family must tick it, an acknowledgment email with the terms, amount, frequency, next billing day and how to cancel is sent once after sign-up, and cancellation is online. A price increase for existing members needs notice 5 to 30 days ahead and their consent or a chance to cancel; nothing for it is built.
+>
+> The checklist below is the earlier 12-month plan, kept for the record.
+
+The draft terms were on the site at `/membership-terms`, labeled "Draft for owner and attorney review". This checklist matched that page to what the platform did then.
 
 ## What the site does today (check that the terms match)
 - 12-month commitment paid monthly ($200 × 12), using the program's saved prices. A team code discount can apply. A year paid upfront is not offered (Justin's decision, #197 Q9, #210).

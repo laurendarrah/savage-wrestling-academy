@@ -41,7 +41,7 @@ const yearOn = d => { const [y, m, dd] = d.split('-').map(Number); return new Da
 const screenOrders = [
   {id: uuid(10), kind: 'annual', program: 'Intermediate', item_label: 'SWA Intermediate: 12-month membership, paid upfront', wrestler_id: 'w-1', wrestler_name: 'Sam Example', dates: [], amount_cents: 240000, discount_cents: 0, status: 'paid', created_at: today + 'T12:00:00Z', paid_at: today + 'T12:00:00Z', term_start: today, term_end: yearOn(today)},
   {id: uuid(11), kind: 'event', program: null, item_label: 'Takedown Camp', wrestler_id: 'w-1', wrestler_name: 'Sam Example', dates: ['2026-12-01', '2026-12-02'], amount_cents: 14400, discount_cents: 1600, status: 'paid', created_at: today + 'T13:00:00Z', paid_at: today + 'T13:00:00Z'},
-  {id: uuid(13), kind: 'monthly', program: 'Elementary', item_label: 'SWA Development: 12-month membership, monthly payment', wrestler_id: 'w-2', wrestler_name: 'Alex Example', dates: [], amount_cents: 20000, discount_cents: 0, status: 'paid', created_at: today + 'T11:00:00Z', paid_at: today + 'T11:00:00Z', term_start: today, term_end: today, payments_made: 4, payments_total: 12, subscription_status: 'past_due', membership_end: yearOn(today), paid_through: today},
+  {id: uuid(13), kind: 'monthly', program: 'Elementary', item_label: 'SWA Development: monthly membership', wrestler_id: 'w-2', wrestler_name: 'Alex Example', dates: [], amount_cents: 20000, discount_cents: 0, status: 'paid', created_at: today + 'T11:00:00Z', paid_at: today + 'T11:00:00Z', term_start: today, term_end: today, payments_made: 4, payments_total: null, subscription_status: 'past_due', membership_end: null, paid_through: today, cancel_on: null},
   {id: uuid(12), kind: 'live', program: null, item_label: 'Friday Night Live on 2026-12-04', wrestler_id: 'w-2', wrestler_name: 'Alex Example', dates: ['2026-12-04'], amount_cents: 2000, discount_cents: 0, status: 'pending', created_at: today + 'T14:00:00Z'}
 ];
 async function openFamily({search = '', orderStatuses = ['paid']}) {
@@ -66,9 +66,11 @@ async function openFamily({search = '', orderStatuses = ['paid']}) {
   const {el} = await openFamily({});
   const cards = el('membershipCards').innerHTML;
   assert.match(cards, /Active membership/);
-  assert.match(cards, /\$2,400\.00 paid upfront/);
-  assert.match(cards, /12-month term ends/);
-  assert.match(cards, /\$200\.00 a month · 4 of 12 payments made/, 'monthly progress');
+  assert.match(cards, /<dt>Payment<\/dt><dd>\$2,400\.00 paid upfront on /, 'a year paid upfront before it stopped being sold still shows');
+  assert.match(cards, /<dt>Membership ends<\/dt>/);
+  assert.match(cards, /\$200\.00 a month, on the \d+(st|nd|rd|th)</, 'month to month: the price and the billing day, no count of payments');
+  assert.doesNotMatch(cards, /12-month|of 12|term ends/);
+  assert.match(cards, /Cancel membership/, 'a past-due membership can still be canceled');
   assert.match(cards, /Paid through/);
   assert.match(cards, /Payment needs attention/, 'past-due monthly membership is flagged');
   const list = el('purchaseList').innerHTML;

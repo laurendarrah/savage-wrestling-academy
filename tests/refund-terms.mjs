@@ -16,13 +16,14 @@ for (const rule of [
   /Less than 7 days before the first day, there is no refund/,
   /single camp day follows the same rules/,
   /doctor’s note[^.]*\. These are decided case by case/,
+  /If the academy cancels a camp, clinic or event, you get a full refund/,
   /Cancel at least 24 hours before the lesson for a full refund/,
   /If the coach cancels, you choose a full refund or a new time/,
   /refunded to the same card within 10 business days/,
   /written copy of this refund policy/,
 ]) assert.match(text, rule, String(rule));
 assert.equal((text.match(/no-shows are not refunded/g) || []).length, 2, 'no-shows: walk-ins and lessons');
-assert.match(page, /The refunds for single purchases are final\. The membership terms further down are planned/);
+assert.match(page, /<p class="notice"><strong>These terms are final\.<\/strong> They cover single purchases and the monthly membership\./);
 assert.doesNotMatch(section, /credit|fee/i, 'no academy credit or refund fee, which were not decided');
 
 assert.match(readFileSync('app/booking/screen.html', 'utf8'), /href="\/membership-terms#refunds"[^>]*>refund policy<\/a>/);

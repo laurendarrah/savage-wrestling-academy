@@ -200,7 +200,7 @@ assert.ok(!(await books.ledgerLines(feeDay, feeDay)).some(l => l.id === 'fee:pi_
 // ---------- Monthly memberships: fees for each monthly payment; a refund of one month is recorded ----------
 order('month', 'monthly', 20000);
 assert.equal((await pay('month', 20000, {subscription: 'sub_m'})).outcome, 'paid');
-assert.equal((await event('evt_inv2', 'invoice.paid', {subscription: 'sub_m', billing_reason: 'subscription_cycle', amount_paid: 20000})).outcome, 'installment-2-of-12');
+assert.equal((await event('evt_inv2', 'invoice.paid', {subscription: 'sub_m', billing_reason: 'subscription_cycle', amount_paid: 20000})).outcome, 'installment-2');
 const inv = (id, amount, list) => ({id, object: 'invoice', livemode: false, amount_paid: amount, parent: {subscription_details: {subscription: 'sub_m'}}, ...(list ? {payments: {data: list}} : {})});
 const ip = intent => ({status: 'paid', payment: {type: 'payment_intent', payment_intent: intent}});
 invoices.sub_m = [inv('in_1', 20000, [ip('pi_m1')]), inv('in_2', 20000), inv('in_adjust', 500, [ip('pi_odd')])];

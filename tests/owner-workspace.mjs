@@ -54,7 +54,7 @@ assert.equal(run("practiceSlot(programs[0],'2026-12-07').label"),'6:00 PM–7:30
 assert.equal(run("practiceSlot(programs[0],'2026-12-28')"),null);
 assert.equal(run("practiceSlot(programs[1],'2026-12-07')"),null);
 run('data.seasons=[]');assert.equal(run("practiceSlot(programs[0],'2026-10-19')"),null);
-run('data.programs[0].priceCents=22500;hydratePrograms()');assert.match(run('ownerPrograms()'),/value="225.00"/);assert.match(run('ownerPrograms()'),/\$2,700.00/);
+run('data.programs[0].priceCents=22500;hydratePrograms()');assert.match(run('ownerPrograms()'),/value="225.00"/);assert.doesNotMatch(run('ownerPrograms()'),/12-month|× 12|\$2,700\.00/, 'month to month: no 12-month total');
 // Exercise queued writes, reload from a second session, and conflicts using the real API handlers.
 ctx.fetch=async(url,options)=>options?.method==='PUT'?PUT(request(JSON.parse(options.body))):GET();
 await run('reloadAcademy()');assert.equal(run('revision'),2);

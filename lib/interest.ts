@@ -1,5 +1,5 @@
 // "Tell the academy I want this" (#273). While a purchase type is closed in CHECKOUT_KINDS, a family who has reviewed a
-// 12-month membership on /register or a lesson time on /lesson is given one real action instead of a disabled button: a
+// monthly membership on /register or a lesson time on /lesson is given one real action instead of a disabled button: a
 // message to the owner, in the family's own conversation (lib/messages.ts, so it shows under Messages for both, with the
 // owner's unread count), saying which wrestler, what they want and when. The owner replies there or records the payment.
 //
@@ -14,22 +14,14 @@ import {familyProfile} from './program-approval';
 import {programDetails} from './program-names';
 import {lessonOpening} from './lessons';
 import {privateFormats, academyToday} from './public-schedule';
-import {loadWebsite} from './website';
 import {postMessage} from './messages';
 import {dayTime, academyDayStart, fullDate} from './datetime';
 
-export const ACADEMY_ADDRESS = '20 Railroad St, Huntington Station, NY 11746';
-export const ACADEMY_EMAIL = 'savagewrestlingclub@gmail.com';
+import {academyContact, type Contact} from './website';
+export {ACADEMY_ADDRESS, ACADEMY_EMAIL, academyContact, type Contact} from './website';
 type Result = {status: number; error?: string; message?: string; contact?: Contact};
-export type Contact = {address: string; email: string};
 
-// Where a family can reach the academy: the website settings when saved, else the fixed address and email.
-export async function academyContact(): Promise<Contact> {
-  const {site} = await loadWebsite();
-  return {address: site.address || ACADEMY_ADDRESS, email: site.email || ACADEMY_EMAIL};
-}
-
-// The owner's message for a request, or an error. kind 'membership': the 12-month membership in a program for a saved
+// The owner's message for a request, or an error. kind 'membership': the monthly membership in a program for a saved
 // wrestler. kind 'lesson': a lesson at one of the coaches' open times (an inquiry without a time names only the format).
 export async function interestMessage(userId: string, input: any, today = academyToday()): Promise<{message: string} | {error: string; status: number}> {
   if (!input || typeof input !== 'object' || typeof input.wrestlerId !== 'string') return {status: 400, error: 'Choose a saved wrestler.'};
@@ -39,7 +31,7 @@ export async function interestMessage(userId: string, input: any, today = academ
   if (input.kind === 'membership') {
     const p = programDetails[input.program as string];
     if (!p || typeof input.program !== 'string') return {status: 400, error: 'Choose a program.'};
-    return {message: `Request from the website: a 12-month ${p.name} membership, paid monthly, for ${who}, asked for on ${fullDate(today)}. Please let us know how to pay and when ${w.name} can start.`};
+    return {message: `Request from the website: a monthly ${p.name} membership for ${who}, asked for on ${fullDate(today)}. Please let us know how to pay and when ${w.name} can start.`};
   }
   if (input.kind === 'lesson') {
     if (input.openingId === undefined || input.openingId === null || input.openingId === '') {

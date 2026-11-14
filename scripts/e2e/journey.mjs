@@ -710,13 +710,13 @@ await step('a membership review offers "Tell the academy I want this"; the owner
   await at(family2, '#contactLine', /20 Railroad St, Huntington Station, NY 11746/);
   await family2.click('#interestButton'); await at(family2, '#interestDone', /Sent\.[\s\S]*Riley Two’s SWA Intermediate membership/);
   await shot(family2, 'register-tell-academy');
-  const inbox = (await api(family2, '/api/inbox')).body, mine = (inbox.thread || []).find(m => /Request from the website: a 12-month SWA Intermediate membership, paid monthly, for Riley Two \(grade 8\)/.test(m.body));
+  const inbox = (await api(family2, '/api/inbox')).body, mine = (inbox.thread || []).find(m => /Request from the website: a monthly SWA Intermediate membership for Riley Two \(grade 8\)/.test(m.body));
   expect(mine && mine.from === 'you', 'the request is in the family’s own conversation: ' + JSON.stringify(inbox.thread));
   const families = await api(owner, '/api/messages?families=1&q=family.b');
   const fam = (families.body.families || []).find(f => f.email === 'family.b@example.test');
   expect(fam && fam.unread >= 1, 'the owner sees an unread message from the family: ' + JSON.stringify(families.body));
   const thread = await api(owner, '/api/messages?family=' + encodeURIComponent(fam.userId));
-  expect((thread.body.thread || []).some(m => m.from === 'family' && /12-month SWA Intermediate membership/.test(m.body)), 'the owner reads the request: ' + JSON.stringify(thread.body));
+  expect((thread.body.thread || []).some(m => m.from === 'family' && /monthly SWA Intermediate membership/.test(m.body)), 'the owner reads the request: ' + JSON.stringify(thread.body));
   const twice = await api(family2, '/api/interest', {kind: 'membership', wrestlerId: rileyId, program: 'Intermediate'});
   expect(twice.status === 409 && /already told the academy/.test(twice.body.error), 'one request per item per day: ' + JSON.stringify(twice.body));
 });

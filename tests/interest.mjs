@@ -36,7 +36,7 @@ assert.equal(rows().length, 0, 'nothing was sent');
 let r = await post({kind: 'membership', wrestlerId: 'w1', program: 'Intermediate', note: '<b>free text</b>', body: 'ignored'});
 assert.equal(r.status, 200, JSON.stringify(r.body));
 const longToday = new Date(today + 'T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric'});
-assert.equal(r.body.message, `Request from the website: a 12-month SWA Intermediate membership, paid monthly, for Jo One (grade 8), asked for on ${longToday}. Please let us know how to pay and when Jo One can start.`);
+assert.equal(r.body.message, `Request from the website: a monthly SWA Intermediate membership for Jo One (grade 8), asked for on ${longToday}. Please let us know how to pay and when Jo One can start.`);
 assert.equal(interest.ACADEMY_ADDRESS, '20 Railroad St, Huntington Station, NY 11746', 'the address on the membership terms page');
 assert.deepEqual(r.body.contact, {address: '20 Railroad St, Huntington Station, NY 11746', email: 'savagewrestlingclub@gmail.com'}, 'the fixed address until the owner saves one');
 assert.doesNotMatch(JSON.stringify(rows()), /free text|ignored/, 'nothing the browser wrote is in the message');
@@ -64,9 +64,9 @@ assert.equal((await post({kind: 'lesson', wrestlerId: 'w1', openingId: 'grp1'}))
 
 // ---------- Who reads it: the owner, and the family in their own conversation; never another family ----------
 const owner = await messages.ownerThread('p1');
-assert.ok(owner.thread.some(m => m.from === 'family' && /12-month SWA Intermediate membership/.test(m.body)), 'the owner reads it in the family’s thread');
+assert.ok(owner.thread.some(m => m.from === 'family' && /monthly SWA Intermediate membership/.test(m.body)), 'the owner reads it in the family’s thread');
 const mine = await messages.familyInbox('p1');
-assert.ok(mine.thread.some(m => m.from === 'you' && /12-month SWA Intermediate membership/.test(m.body)), 'the family sees what they sent');
+assert.ok(mine.thread.some(m => m.from === 'you' && /monthly SWA Intermediate membership/.test(m.body)), 'the family sees what they sent');
 const other = await messages.familyInbox('p2');
 assert.equal(other.thread.length, 0, 'another family sees nothing');
 const list = await messages.familiesPage();

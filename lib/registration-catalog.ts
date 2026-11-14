@@ -23,5 +23,5 @@ export function registrationCatalog(state:any,month:string,today:string){
  practices.push({id:p.id+':'+date+':'+slot.start,program:p.id,date,start:slot.start,end:slot.end});
  }
  }
- return {programs,practices,month,today,membershipTermMonths:12,renewal:'manual',termsStatus:'draft',termsUrl:'/membership-terms',paymentsEnabled:false};
+ return {programs,practices,month,today,renewal:'monthly',termsStatus:'final',termsUrl:'/membership-terms',paymentsEnabled:false};
 }

@@ -76,11 +76,11 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
       LEFT JOIN subscriptions s ON s.order_id=o.id
       WHERE o.status IN ('paid','refunded') AND o.paid_at IS NOT NULL AND o.paid_at>=? AND o.paid_at<? AND o.amount_cents>0
         AND (o.source='offline' OR (o.source='stripe' AND o.livemode=?))`).bind(lo, hi, live),
-    // Monthly payments 2 to 12. The webhook counts each once (stripe_events), for the amount Stripe collected
+    // Every monthly payment after the first. The webhook counts each once (stripe_events), for the amount Stripe collected
     // (installment_payments, issue #271); a payment counted before amounts were stored was for the membership's price.
     env.DB!.prepare(`SELECT e.id,e.received_at,e.outcome,o.kind,o.item_label,o.wrestler_name,COALESCE(p.amount_cents,o.amount_cents) AS amount_cents FROM stripe_events e JOIN orders o ON o.id=e.order_id
       LEFT JOIN installment_payments p ON p.id=e.id
-      WHERE e.outcome GLOB 'installment-[0-9]*-of-[0-9]*' AND o.source='stripe' AND o.livemode=? AND COALESCE(p.amount_cents,o.amount_cents)>0 AND e.received_at>=? AND e.received_at<?`).bind(live, lo, hi),
+      WHERE e.outcome GLOB 'installment-[0-9]*' AND o.source='stripe' AND o.livemode=? AND COALESCE(p.amount_cents,o.amount_cents)>0 AND e.received_at>=? AND e.received_at<?`).bind(live, lo, hi),
     // Full refunds recorded before refund amounts were stored (issue #42), dated when Stripe reported them.
     env.DB!.prepare(`SELECT * FROM (SELECT o.id,o.kind,o.item_label,o.wrestler_name,o.amount_cents,
         COALESCE((SELECT min(received_at) FROM stripe_events WHERE order_id=o.id AND outcome='refunded'),o.updated_at) AS refunded_at
@@ -104,7 +104,7 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
     const date = academyDay(r.paid_at);
     if (!inRange(date)) continue;
     const offline = r.source === 'offline', p = offline ? JSON.parse(r.pricing || '{}') : {};
-    const of = r.kind === 'monthly' ? ` (payment 1 of ${r.payments_total || 12})` : '';
+    const of = r.kind === 'monthly' ? ' (payment 1)' : '';
     lines.push({...base, id: 'payment:' + r.id, date, type: 'income', source: offline ? 'offline' : 'online', category: KIND_CATEGORY[r.kind] ?? r.kind,
       description: `${r.item_label}${of} · ${r.wrestler_name}`, method: offline ? METHOD_LABEL[p.method] ?? 'Offline' : 'Card online', amountCents: r.amount_cents,
       collectedBy: offline ? r.collected_by ?? '' : ''});
@@ -112,9 +112,9 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
   for (const r of installments.results as any[]) {
     const date = academyDay(r.received_at);
     if (!inRange(date)) continue;
-    const [, made, total] = /^installment-(\d+)-of-(\d+)$/.exec(r.outcome) ?? [];
+    const [, made] = /^installment-(\d+)/.exec(r.outcome) ?? [];
     lines.push({...base, id: 'installment:' + r.id, date, type: 'income', source: 'online', category: KIND_CATEGORY[r.kind] ?? r.kind,
-      description: `${r.item_label} (payment ${made} of ${total}) · ${r.wrestler_name}`, method: 'Card online', amountCents: r.amount_cents});
+      description: `${r.item_label} (payment ${made}) · ${r.wrestler_name}`, method: 'Card online', amountCents: r.amount_cents});
   }
   for (const r of refunds.results as any[]) {
     const date = academyDay(r.refunded_at);

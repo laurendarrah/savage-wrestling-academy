@@ -150,15 +150,19 @@ export const attendance=sqliteTable("attendance",{
  source:text("source").notNull(),checkedInAt:text("checked_in_at").notNull(),checkedInBy:text("checked_in_by").notNull()
 },t=>[uniqueIndex("attendance_once").on(t.sessionKey,t.userId,t.wrestlerId),index("attendance_date").on(t.sessionDate)]);
 
-// Monthly memberships (issue #20). One row per monthly order. Stripe charges monthly and the subscription is
-// set to cancel exactly 12 months after it starts, so there is never a 13th charge. orders.term_end tracks
-// the paid-through date, so every existing access check (roster, member pricing, family page) follows payments.
+// Monthly memberships (issue #20). One row per monthly order. Since Nov 13, 2026 (#2, issue #314) a membership is month
+// to month: Stripe charges every month until the family or the owner cancels, so payments_total, term_end and cancel_at
+// are empty for a new one. Rows from the earlier 12-month plan keep their 12 and end dates. cancel_at is the last day
+// of access once a cancellation is asked for on the site. status 'paused' is a membership whose card kept failing until
+// Stripe gave up (#313): no more charges, off the roster after the paid month, and the family can restart it.
+// orders.term_end tracks the paid-through date, so every existing access check (roster, member pricing, family page)
+// follows payments.
 export const subscriptions=sqliteTable("subscriptions",{
  orderId:text("order_id").primaryKey(),stripeSubscriptionId:text("stripe_subscription_id").notNull(),
- status:text("status").notNull(),paymentsMade:integer("payments_made").notNull(),paymentsTotal:integer("payments_total").notNull(),
- termStart:text("term_start").notNull(),termEnd:text("term_end").notNull(),paidThrough:text("paid_through").notNull(),
- cancelAt:text("cancel_at").notNull(),updatedAt:text("updated_at").notNull()
-},t=>[uniqueIndex("subscriptions_stripe").on(t.stripeSubscriptionId),check("subscriptions_status",sql`${t.status} IN ('active','past_due','canceled','completed')`),check("subscriptions_payments",sql`${t.paymentsMade} >= 0 AND ${t.paymentsMade} <= ${t.paymentsTotal}`)]);
+ status:text("status").notNull(),paymentsMade:integer("payments_made").notNull(),paymentsTotal:integer("payments_total"),
+ termStart:text("term_start").notNull(),termEnd:text("term_end"),paidThrough:text("paid_through").notNull(),
+ cancelAt:text("cancel_at"),updatedAt:text("updated_at").notNull()
+},t=>[uniqueIndex("subscriptions_stripe").on(t.stripeSubscriptionId),check("subscriptions_status",sql`${t.status} IN ('active','past_due','canceled','completed','paused')`),check("subscriptions_payments",sql`${t.paymentsMade} >= 0 AND (${t.paymentsTotal} IS NULL OR ${t.paymentsMade} <= ${t.paymentsTotal})`)]);
 
 // Monthly payments 2 to 12 as Stripe reported them (issue #271). One row per counted invoice.paid event: the payment's
 // number, what Stripe actually collected (amount_cents) and the membership's price at the time (expected_cents). A

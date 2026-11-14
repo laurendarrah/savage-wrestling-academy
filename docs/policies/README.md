@@ -10,7 +10,7 @@
 | [Privacy policy](privacy-policy-draft.md) | Launch (families' and children's data) | A new `/privacy` page, linked from sign-up and every page footer |
 | [Refund and cancellation policy](refund-policy-draft.md) | Online payment for walk-ins, Friday Night Live, camps and lessons (#3, #80) | The `/membership-terms` page, then `CHECKOUT_KINDS` |
 | [Data retention](data-retention-draft.md) | Handling account closure requests (#113) | The owner guide and the privacy policy |
-| [Membership terms review checklist](membership-terms-checklist.md) | 12-month memberships (#2) | The existing `/membership-terms` page |
+| [Membership terms review checklist](membership-terms-checklist.md) | Monthly memberships (#2). Superseded Nov 13: month to month, final terms on the page (#314) | The existing `/membership-terms` page |
 | [Parent Consent Form](parent-consent-form-draft.md) | Requiring the form before booking (#195, decision Q15 on #197) | Published by the owner on `/consent-forms`; families sign it on `/consent` |
 
 ## How to finish them

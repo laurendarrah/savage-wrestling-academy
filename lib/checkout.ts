@@ -65,9 +65,10 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
     };
     const product = {name: charge.itemLabel, description: `For ${wrestler.name}`};
     session = await stripe.checkout.sessions.create(charge.kind === 'monthly'
-      // 12 monthly charges. The webhook sets the subscription to cancel 12 months after it starts.
+      // Month to month (decided Nov 13, 2026 on #2): Stripe charges the same amount every month, on the same day, until
+      // the membership is canceled. The price is fixed at checkout, so a later price change never reaches it.
       ? {...common, mode: 'subscription', line_items: [{quantity: 1, price_data: {currency: 'usd', unit_amount: charge.amountCents, recurring: {interval: 'month'}, product_data: product}}],
-         subscription_data: {metadata: {order_id: id}, description: `${charge.itemLabel}, 12 monthly payments`}}
+         subscription_data: {metadata: {order_id: id}, description: `${charge.itemLabel}, renews every month until canceled`}}
       : {...common, mode: 'payment', line_items: [{quantity: 1, price_data: {currency: 'usd', unit_amount: charge.amountCents, product_data: product}}],
          payment_intent_data: {metadata: {order_id: id}}},
       {idempotencyKey: `order-${id}`});

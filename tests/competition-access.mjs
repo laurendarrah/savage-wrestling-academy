@@ -113,16 +113,20 @@ state.extraPractices.push({...state.extraPractices[0],id:'clinic',name:'Live Cli
 state.extraPractices[0].enabled=false;sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));assert.equal((await booking.POST(bReq(liveBody))).status,409);state.extraPractices=[];sqlite.prepare('UPDATE academy_state SET payload=?').run(JSON.stringify(state));assert.equal((await booking.POST(bReq(liveBody))).status,409);
 console.log('Passed: named practice/date lookup, same-day offerings use their own prices, forged membership/amount ignored, saved wrestler isolation, unselected dates, hide and removal.');
 
-// Monthly totals and commitment length come from saved prices, not browser input.
+// The monthly price comes from saved prices, not browser input. Month to month (issue #314): no term and no total; the
+// automatic-renewal terms for the consent box come from the server too.
 const monthly=await review('kid-7',{program:'Intermediate',plan:'monthly',cents:1,totalCents:1,paymentCount:999,termMonths:1});
 assert.equal(monthly.status,200);
 const installments=await monthly.json();
 assert.equal(installments.review.cents,20000);
-assert.equal(installments.review.paymentCount,12);
-assert.equal(installments.review.totalCents,240000);
-assert.equal(installments.review.termMonths,12);
-assert.equal(installments.review.renewal,'manual');
-assert.equal(installments.review.termsStatus,'draft');
+assert.equal(installments.review.paymentCount,undefined);
+assert.equal(installments.review.totalCents,undefined);
+assert.equal(installments.review.termMonths,undefined);
+assert.equal(installments.review.renewal,'monthly');
+assert.equal(installments.review.termsStatus,'final');
+assert.match(installments.review.renewalTerms,/It costs \$200\.00 a month\. It renews automatically: your card is charged \$200\.00 today and again every month on the \d+(st|nd|rd|th) of each month[^.]*, until you cancel\./);
+assert.match(installments.review.renewalTerms,/To stop the next charge, cancel before your next billing day/);
+assert.equal(installments.review.restart,false);
 assert.equal(installments.paymentsEnabled,false);
 // No year paid upfront (decision Q9 in #197, issue #210), whatever the browser sends.
 const upfront=await review('kid-7',{program:'Intermediate',plan:'annual',cents:240000});

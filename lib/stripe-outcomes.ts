@@ -10,7 +10,8 @@ export const REJECTIONS: Record<string, string> = {
   'rejected:amount-mismatch': 'The amount paid did not match the price.',
   'rejected:duplicate-payment-refund-needed': 'The same purchase was paid twice. Refund one payment in Stripe.',
   'rejected:no-subscription': 'The monthly plan was missing from Stripe.',
-  'rejected:payment-beyond-term-refund-needed': 'A payment came after all 12 were made. Refund it in Stripe.',
+  // No longer sent since memberships became month to month (issue #314); kept for messages recorded before.
+  'rejected:payment-beyond-term-refund-needed': 'A payment came after the membership’s last one. Refund it in Stripe.',
   'rejected:refund-amount': 'The refund was for more than was paid.',
 };
 
@@ -25,8 +26,9 @@ const OUTCOMES: Record<string, string> = {
   'installment-partial-refund': 'Part of one monthly payment was refunded.',
   'partial-refund': 'Partly refunded.',
   refunded: 'Refunded in full.',
-  'subscription-completed': 'All 12 monthly payments were made; the plan ended.',
-  'subscription-canceled': 'The monthly plan was canceled before 12 payments.',
+  'subscription-completed': 'All the planned monthly payments were made; the membership ended.',
+  'subscription-canceled': 'The membership was canceled; no more monthly payments.',
+  'subscription-paused': 'Stripe stopped retrying the card, so the membership is paused. Nothing more is charged.',
 };
 
 // The latest Stripe outcome for an order, as a sentence. `status` is the order's own status, for orders Stripe never
@@ -34,8 +36,9 @@ const OUTCOMES: Record<string, string> = {
 export function outcomeWords(outcome: string | null | undefined, status: string) {
   if (outcome) {
     if (OUTCOMES[outcome]) return OUTCOMES[outcome];
-    const m = /^installment-(\d+)-of-(\d+)$/.exec(outcome);
-    if (m) return `Monthly payment ${m[1]} of ${m[2]} received.`;
+    // "installment-3" since memberships became month to month (issue #314); "installment-3-of-12" before.
+    const m = /^installment-(\d+)(?:-of-\d+)?$/.exec(outcome);
+    if (m) return `Monthly payment ${m[1]} received.`;
     if (outcome.startsWith('rejected:')) return 'Refused: ' + (REJECTIONS[outcome] ?? 'Stripe sent a payment message the site could not match.');
     if (outcome.startsWith('ignored:')) return 'A Stripe message that changed nothing.';
     return outcome;

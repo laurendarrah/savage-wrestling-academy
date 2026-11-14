@@ -48,7 +48,7 @@ function page(file, {fetch, search = '', hidden = []}) {
   const cards = el('programs').innerHTML;
   assert.match(cards, /<span class="grades" style="[^"]*">Grades K–6<\/span><h3>SWA Development<\/h3>/, 'grades fall back to the program rules, shown as a label above the name');
   assert.doesNotMatch(cards, /class="swatch"/, 'no colour square that looks like a checkbox (issue #171)');
-  assert.match(cards, /\$200 a month for a 12-month membership/);
+  assert.match(cards, /\$200 a month, month to month/);
   assert.doesNotMatch(cards, /upfront|2,400/, 'no year paid upfront (#210)');
   assert.match(cards, /\$40 for a single walk-in practice/);
   // Weekly practice times on each card, from the published practices (issue #180).
@@ -192,14 +192,14 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   const ctx = {Intl, $: el}; vm.runInNewContext(line('const money=') + '\n' + line('function choosePlan') + '\n' + line('function renderPlanCards'), ctx);
   el('plan').value = 'monthly';
   ctx.renderPlanCards({monthlyCents: 20000, walkInCents: 4000});
-  assert.equal(el('planPrice-monthly').textContent, '$200.00 a month'); assert.equal(el('planTerm-monthly').textContent, '12 monthly payments · $2,400.00 total');
+  assert.equal(el('planPrice-monthly').textContent, '$200.00 a month'); assert.equal(el('planTerm-monthly').textContent, 'Month to month, cancel any time');
   assert.equal(el('planPrice-walkin').textContent, '$40.00');
   assert.equal(el('planPrice-annual').textContent, '', 'no upfront plan card (#210)');
   assert.doesNotMatch(html, /plan-annual|paid upfront/, 'the register page offers only monthly and walk-in');
   assert.equal(el('plan-monthly').checked, true); assert.equal(el('plan-walkin').checked, false);
   assert.equal(el('plan-monthly').attrs['aria-pressed'], 'true'); assert.equal(el('plan-walkin').attrs['aria-pressed'], 'false', 'the segment shows which is chosen');
   ctx.renderPlanCards({monthlyCents: null, walkInCents: 4000});
-  assert.equal(el('planPrice-monthly').textContent, 'Price to be set by the academy'); assert.equal(el('planTerm-monthly').textContent, '12 monthly payments');
+  assert.equal(el('planPrice-monthly').textContent, 'Price to be set by the academy'); assert.equal(el('planTerm-monthly').textContent, 'Month to month, cancel any time');
   let changed = 0; el('plan').onchange = () => changed++;
   ctx.choosePlan('walkin'); assert.equal(el('plan').value, 'walkin'); assert.equal(changed, 1, 'a card choice runs the same update as before');
 }

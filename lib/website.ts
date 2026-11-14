@@ -248,3 +248,13 @@ export async function saveWebsite(site: Website, updatedAt: string | null, actor
   await env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), actor, 'website_saved', 'website', at).run();
   return {updatedAt: at};
 }
+
+// Where a family can reach the academy (issue #273): the website settings when saved, else the academy's fixed address
+// and email, the ones on the membership terms page. Used by "Tell the academy I want this" and the membership emails.
+export const ACADEMY_ADDRESS = '20 Railroad St, Huntington Station, NY 11746';
+export const ACADEMY_EMAIL = 'savagewrestlingclub@gmail.com';
+export type Contact = {address: string; email: string};
+export async function academyContact(): Promise<Contact> {
+  const {site} = await loadWebsite();
+  return {address: site.address || ACADEMY_ADDRESS, email: site.email || ACADEMY_EMAIL};
+}

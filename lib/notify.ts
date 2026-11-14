@@ -9,6 +9,8 @@ import {currentVersion, FAMILY_KINDS, LIVE_SIGNATURE, DOCUMENTS, CARRIED_NAME, S
 import {dayTime, fullDate} from './datetime';
 import {cardSeason, isSeasonEnd, renewalDue} from './usaw';
 import {chunks, eachFamily, jsonChunks, keysetPage} from './paging';
+import {membershipAcknowledgment} from './membership-renewal';
+import {academyContact} from './website';
 
 type Notice = {userId: string | null; email: string; kind: string; subject: string; body: string; dedupeKey: string; link?: string};
 
@@ -119,7 +121,21 @@ export async function noticeLessonBooked(orderId: string) {
 const ownerNotice = (n: Omit<Notice, 'userId' | 'email'>): Notice[] => OWNER_EMAIL ? [{...n, userId: null, email: OWNER_EMAIL}] : [];
 const dollars = (c: number) => '$' + (c / 100).toFixed(2);
 async function membershipOrder(orderId: string) {
-  return await env.DB!.prepare('SELECT o.*,s.paid_through,s.payments_made,s.payments_total FROM orders o JOIN subscriptions s ON s.order_id=o.id WHERE o.id=?').bind(orderId).first<any>();
+  return await env.DB!.prepare('SELECT o.*,s.paid_through,s.payments_made,s.payments_total,s.status AS subscription_status FROM orders o JOIN subscriptions s ON s.order_id=o.id WHERE o.id=?').bind(orderId).first<any>();
+}
+const paymentsMade = (n: number) => `${n} monthly payment${n === 1 ? '' : 's'} made`;
+// A new monthly membership (decided Nov 13, 2026 on #2, issue #314): the acknowledgment New York's automatic-renewal law
+// asks for (GBL §527-a), with the terms, the amount, how often, the deadline to stop the next charge and how to cancel.
+// Sent once per membership, by email and to the family's Messages, after the verified webhook records the first payment.
+export async function noticeMembershipStarted(orderId: string) {
+  const o = await membershipOrder(orderId);
+  if (!o || o.kind !== 'monthly' || o.status !== 'paid') return;
+  const contact = await academyContact(), pricing = JSON.parse(o.pricing || '{}');
+  const discount = o.discount_cents > 0 ? `${dollars(o.base_cents)} with ${dollars(o.discount_cents)} off${pricing.teamCode ? ` for team code ${pricing.teamCode}` : ''}` : null;
+  const program = String(o.item_label).replace(/: monthly membership$/, '');
+  const text = membershipAcknowledgment({wrestler: o.wrestler_name, program, cents: o.amount_cents, start: o.term_start, nextBilling: o.paid_through,
+    origin: appOrigin(), email: contact.email, address: contact.address, discount});
+  await notify([{userId: o.user_id, email: o.email, kind: 'membership_started', dedupeKey: `membership-started:${orderId}`, link: '/family#memberships', ...text}]);
 }
 // A monthly payment failed: the family is asked to fix the card; the owner sees who, and for how long the wrestler stays
 // on the roster (the grace, lib/membership-term.ts). One notice per failed invoice event, so Stripe's retries, which
@@ -129,10 +145,10 @@ export async function noticeInstallmentFailed(orderId: string, eventId: string) 
   if (!o) return;
   await notify([{userId: o.user_id, email: o.email, kind: 'installment_failed', dedupeKey: `installment-failed:${orderId}:${eventId}`, link: '/family#memberships',
     subject: `Payment needs attention: ${o.wrestler_name}'s membership`,
-    body: `The monthly payment for ${o.wrestler_name}'s ${o.item_label} did not go through. Stripe will try the card again over the next few days; to fix it sooner, update the card in Stripe's email receipt or contact the academy. ${o.wrestler_name} can still come to practice through ${longDate(o.term_end)}. After that, the membership pauses until a payment goes through.`},
+    body: `The monthly payment for ${o.wrestler_name}'s ${o.item_label} did not go through. Stripe will try the card again over the next few days; to fix it sooner, update the card in Stripe's email receipt or contact the academy. ${o.wrestler_name} can still come to practice through ${longDate(o.term_end)}. If the payment still doesn't go through, the membership pauses and nothing more is charged.`},
     ...ownerNotice({kind: 'installment_failed_owner', dedupeKey: `installment-failed-owner:${orderId}:${eventId}`, link: '/payments#attention',
       subject: `Payment needs attention: ${o.wrestler_name} (${o.email})`,
-      body: `A monthly payment for ${o.wrestler_name}'s ${o.item_label} failed at Stripe (${o.payments_made} of ${o.payments_total} payments made, paid through ${longDate(o.paid_through)}). Stripe retries the card by itself. ${o.wrestler_name} stays on the roster through ${longDate(o.term_end)}. The Payment needs attention list on Payments shows every membership in this state.`})]);
+      body: `A monthly payment for ${o.wrestler_name}'s ${o.item_label} failed at Stripe (${paymentsMade(o.payments_made)}, paid through ${longDate(o.paid_through)}). Stripe retries the card by itself. ${o.wrestler_name} stays on the roster through ${longDate(o.term_end)}. The Payment needs attention list on Payments shows every membership in this state.`})]);
 }
 // Stripe collected a different amount than the membership's price (a coupon, or a price edited in Stripe). The payment
 // counted; the owner checks it is what they meant.
@@ -141,18 +157,44 @@ export async function noticeInstallmentMismatch(orderId: string, eventId: string
   if (!o) return;
   await notify(ownerNotice({kind: 'installment_mismatch_owner', dedupeKey: `installment-mismatch:${orderId}:${eventId}`, link: '/payments#attempts',
     subject: `Check a monthly payment: ${o.wrestler_name} paid ${dollars(paidCents)}, not ${dollars(expectedCents)}`,
-    body: `Stripe collected ${dollars(paidCents)} for payment ${number} of ${o.payments_total} on ${o.wrestler_name}'s ${o.item_label}; the membership's price is ${dollars(expectedCents)}. The payment counts and the books show ${dollars(paidCents)}. If this is not a discount you gave in Stripe, check the subscription${invoiceId ? ` (invoice ${invoiceId})` : ''} in your Stripe dashboard.`}));
+    body: `Stripe collected ${dollars(paidCents)} for monthly payment ${number} on ${o.wrestler_name}'s ${o.item_label}; the membership's price is ${dollars(expectedCents)}. The payment counts and the books show ${dollars(paidCents)}. If this is not a discount you gave in Stripe, check the subscription${invoiceId ? ` (invoice ${invoiceId})` : ''} in your Stripe dashboard.`}));
 }
-// The monthly plan ended before its 12 payments: the family's access ends on the paid-through day.
+// A cancellation asked for on the site, by the family or by the owner for them (issue #314): confirmed to the family
+// straight away, with the last day. The owner is told when the family canceled. Once per membership.
+export async function noticeMembershipCanceled(orderId: string, by: 'family' | 'owner', endsOn: string) {
+  const o = await membershipOrder(orderId);
+  if (!o) return;
+  const through = endsOn >= academyToday() ? `${o.wrestler_name} can keep practicing through ${longDate(endsOn)}.` : `The last paid month ended on ${longDate(endsOn)}.`;
+  await notify([{userId: o.user_id, email: o.email, kind: 'membership_canceled', dedupeKey: `membership-canceled:${orderId}`, link: '/family#memberships',
+    subject: `${o.wrestler_name}'s membership is canceled`,
+    body: `${by === 'family' ? 'You canceled' : 'The academy canceled'} ${o.wrestler_name}'s ${o.item_label}. No more charges. ${through} To train again later, sign up from your family account.`},
+    ...(by === 'family' ? ownerNotice({kind: 'membership_canceled_owner', dedupeKey: `membership-canceled-owner:${orderId}`, link: '/payments',
+      subject: `Membership canceled: ${o.wrestler_name} (${o.email})`,
+      body: `The family canceled ${o.wrestler_name}'s ${o.item_label} online. No more payments are taken. ${o.wrestler_name} stays on the roster through ${longDate(endsOn)}, the end of the month already paid for.`}) : [])]);
+}
+// The membership ended at Stripe after a cancellation (by the family, the owner, or in Stripe): access ends on the
+// paid-through day.
 export async function noticeSubscriptionCanceled(orderId: string, eventId: string) {
   const o = await membershipOrder(orderId);
   if (!o) return;
   await notify([{userId: o.user_id, email: o.email, kind: 'subscription_canceled', dedupeKey: `subscription-canceled:${orderId}:${eventId}`, link: '/family#memberships',
     subject: `${o.wrestler_name}'s membership has ended`,
-    body: `The monthly payments for ${o.wrestler_name}'s ${o.item_label} have stopped after ${o.payments_made} of ${o.payments_total}, so the membership ends on ${longDate(o.term_end)}. To keep training, sign up again from your family account, or talk to the academy.`},
+    body: `${o.wrestler_name}'s ${o.item_label} was canceled, so no more payments are taken. The last day of the membership is ${longDate(o.term_end)}. To train again, sign up from your family account, or talk to the academy.`},
     ...ownerNotice({kind: 'subscription_canceled_owner', dedupeKey: `subscription-canceled-owner:${orderId}:${eventId}`, link: '/payments',
-      subject: `Membership ended early: ${o.wrestler_name} (${o.email})`,
-      body: `Stripe canceled the monthly plan for ${o.wrestler_name}'s ${o.item_label} after ${o.payments_made} of ${o.payments_total} payments. ${o.wrestler_name} comes off the roster after ${longDate(o.term_end)}. The family has been told.`})]);
+      subject: `Membership ended: ${o.wrestler_name} (${o.email})`,
+      body: `The monthly membership ${o.item_label} for ${o.wrestler_name} was canceled at Stripe after ${paymentsMade(o.payments_made)}. ${o.wrestler_name} comes off the roster after ${longDate(o.term_end)}. The family has been told.`})]);
+}
+// Stripe gave up on a failing card (#313, decided Nov 13 on #2): the membership pauses instead of ending. No more
+// charges, off the roster after the paid month, and the family can restart it with a working card, with no back pay.
+export async function noticeMembershipPaused(orderId: string, eventId: string) {
+  const o = await membershipOrder(orderId);
+  if (!o) return;
+  await notify([{userId: o.user_id, email: o.email, kind: 'membership_paused', dedupeKey: `membership-paused:${orderId}:${eventId}`, link: '/family#memberships',
+    subject: `${o.wrestler_name}'s membership is paused`,
+    body: `The monthly payment for ${o.wrestler_name}'s ${o.item_label} still didn't go through after Stripe tried the card again, so the membership is paused. Nothing more will be charged. ${o.wrestler_name}'s last paid day was ${longDate(o.term_end)}, so ${o.wrestler_name} is off the practice roster until the membership restarts. To restart, choose Restart membership in your family account and pay with a working card. Payments start again from that day; the missed months are not charged.`},
+    ...ownerNotice({kind: 'membership_paused_owner', dedupeKey: `membership-paused-owner:${orderId}:${eventId}`, link: '/payments',
+      subject: `Membership paused: ${o.wrestler_name} (${o.email})`,
+      body: `Stripe stopped retrying the card for ${o.wrestler_name}'s ${o.item_label} after ${paymentsMade(o.payments_made)}, so the membership is paused. Nothing more is charged and ${o.wrestler_name} comes off the roster after ${longDate(o.term_end)}. The family has been told how to restart it from their account; a restart starts a new monthly payment from that day, with no back pay.`})]);
 }
 
 export async function noticeTransfer(orderId: string, toProgramName: string, effective: string) {

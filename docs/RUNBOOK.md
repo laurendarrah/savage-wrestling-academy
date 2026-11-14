@@ -160,11 +160,12 @@ Every refused message also goes to the owner in the hourly alert email, once ema
 
 ### A monthly payment failed
 
-A 12-month membership is 12 monthly card payments at Stripe (#20). When one fails (#271):
+A membership is a monthly card payment at Stripe that renews until canceled (#20; month to month since Nov 13, #2, #314). When one fails (#271):
 - The family gets a notice ("Payment needs attention") and the owner an email. Stripe retries the card by itself over the next days, and each retry that fails sends another notice.
 - **/payments → Payment needs attention** (and the dashboard tile of the same name) lists every membership in this state, with the paid-through day and the day the wrestler comes off the roster.
-- **The grace:** the wrestler stays on the roster for **7 days after the paid-through day** while Stripe retries, never past the membership's own end. A payment covers through the next billing day itself, so a member is never off the roster on billing-day morning. Once a retry goes through, access runs to the next billing day as usual.
-- **If Stripe gives up** and cancels the subscription, the membership ends on the paid-through day (the grace stops), and the family and the owner are told. To keep training they sign up again.
+- **The grace:** the wrestler stays on the roster for **7 days after the paid-through day** while Stripe retries. A payment covers through the next billing day itself, so a member is never off the roster on billing-day morning. Once a retry goes through, access runs to the next billing day as usual.
+- **If Stripe gives up** and cancels the subscription, the membership **pauses** (#313): the wrestler comes off the roster after the paid-through day (the grace stops), nothing more is charged, and the family and the owner are told. The family restarts it with **Restart membership** on their account: a new monthly payment from that day, with no back pay for the missed months. /payments shows the membership as "Paused".
+- **A family asks to cancel** by email, phone or in person: on /payments → All payments, find the membership and choose **Cancel membership**. No more charges; the wrestler stays on the roster through the paid-through day, and the family gets an email. Cancel there rather than in Stripe, so the family is told straight away.
 - **To settle it by hand:** take the payment in Stripe (Customers → the subscription → pay the open invoice, or update the card), or talk to the family. Don't record a card payment as an offline payment; Stripe's own notice counts it.
 - **A payment for a different amount** (a coupon or a price you changed in Stripe) still counts, for the amount Stripe collected: the books show that amount, /security-log says "Monthly payment for a different amount", and the owner gets an email to check it was meant.
 

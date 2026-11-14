@@ -739,12 +739,12 @@
   "10000.00"
  ],
  "ownerPrograms": {
-  "sha256": "068d000d91b6962a0d1cdf8fe0974438f6e3cdfdcb10a158c3e739590c2bc203",
-  "length": 6482
+  "sha256": "c8b9a74fd1bd530ea1432c5c567ff2280bc010040723691c0211a7354a381e5b",
+  "length": 6244
  },
  "ownerPrograms.unpublished": {
-  "sha256": "4ab77e2920396df0cafed9595d5b471b03e2b11e4e0889344548d9f3e5715a00",
-  "length": 6866
+  "sha256": "1acdb776948269b6f14d1acecdae1cafe17eca81e73ff3363f3924db8e437a45",
+  "length": 6628
  },
  "saveProgram.ok": {
   "sha256": "6fcb2e7b86ecdcd162a09cbbdc2ad00d169ad3ca9e78562268d1a1ea8613d19b",
@@ -775,8 +775,8 @@
   "length": 807
  },
  "teamCodeManager": {
-  "sha256": "5dea131e9cd5e8a4bb5b34dcd9ed54a47f623d4ab5676dd27ddfd8879a87fcee",
-  "length": 1117
+  "sha256": "bf6899b6a43617b789a3ddb904be8c5aa269c8f70a7b21a5e67dee135f45cde8",
+  "length": 1090
  },
  "saveTeamCode.ok": {
   "codes": [
