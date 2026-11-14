@@ -5,40 +5,53 @@
 section{margin:0 0 24px}.muted{color:var(--swa-muted,#55585F)}[hidden]{display:none!important}
 #status{font-weight:600;min-height:1.5em;margin:0 0 12px}
 .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 24px}
-.tile small{display:block;margin-top:6px;font-size:13px;letter-spacing:0;text-transform:none;font-weight:500;color:var(--swa-muted,#55585F)}
+.tile small{display:block;margin-top:6px;font-size:var(--swa-t-13);letter-spacing:0;text-transform:none;font-weight:500;color:var(--swa-muted,#55585F)}
 .tile.hot{border-color:rgba(196,34,44,.35)}.tile.hot b{color:var(--swa-red,#C4222C)}
 @media(max-width:900px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sec-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 16px;margin:0 0 8px}.sec-head h2,.sec-head h3{margin:0}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;padding:0;list-style:none}
-html body .chips button,html body .chips a.button{min-height:36px;padding:0 14px;border-radius:999px;font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+html body .chips button,html body .chips a.button{min-height:36px;padding:0 14px;border-radius:999px;font-size:var(--swa-t-15);font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
 html body .chips button[aria-pressed=true]{background:var(--swa-ink,#111113);color:#fff;border-color:var(--swa-ink,#111113)}
-.chips .count{min-width:20px;padding:0 6px;border-radius:999px;background:var(--swa-bad-bg,#FDECEC);color:var(--swa-bad,#8E1A22);font-size:12px;line-height:20px;text-align:center}
+.chips .count{min-width:20px;padding:0 6px;border-radius:999px;background:var(--swa-bad-bg,#FDECEC);color:var(--swa-bad,#8E1A22);font-size:var(--swa-t-13);line-height:20px;text-align:center}
 .chips .count.zero{background:var(--swa-surface-2,#F8F9FA);color:var(--swa-muted,#55585F)}
-details.filters{margin:0 0 16px}details.filters>summary{font-size:15px;color:var(--swa-muted,#55585F)}
-.filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:8px 0 0}.filter-row label{display:flex;flex-direction:column;gap:4px;font-size:14px}
+details.filters{margin:0 0 16px}details.filters>summary{font-size:var(--swa-t-15);color:var(--swa-muted,#55585F)}
+.filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:8px 0 0}.filter-row label{display:flex;flex-direction:column;gap:4px;font-size:var(--swa-t-15)}
 .collectors{list-style:none;padding:0;margin:0 0 16px;display:flex;flex-wrap:wrap;gap:8px}
-html body .collectors button{min-height:36px;padding:0 12px;font-size:14px;font-weight:500;text-align:left;border-radius:999px}.collectors b{font-weight:700;margin-right:6px}html body .collectors .on{border-color:var(--swa-ink,#111113);background:var(--swa-ink,#111113);color:#fff}
+html body .collectors button{min-height:36px;padding:0 12px;font-size:var(--swa-t-15);font-weight:500;text-align:left;border-radius:999px}.collectors b{font-weight:700;margin-right:6px}html body .collectors .on{border-color:var(--swa-ink,#111113);background:var(--swa-ink,#111113);color:#fff}
 .table{overflow-x:auto}#rows td:nth-child(2),#cashRows td:first-child,#collectedRows td:first-child,#attemptRows td:first-child{white-space:nowrap;font-variant-numeric:tabular-nums}
 @media(max-width:600px){#rows td:nth-child(2),#cashRows td:first-child,#collectedRows td:first-child,#attemptRows td:first-child{white-space:normal}}
-.cash-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}html body .cash-actions button{min-height:40px;padding:0 12px;font-size:15px}
+.cash-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}html body .cash-actions button{min-height:40px;padding:0 12px;font-size:var(--swa-t-15)}
 html body .cash-actions button+button,html body button.void{border-color:transparent;background:transparent;box-shadow:none;color:var(--swa-muted,#55585F);text-decoration:underline;text-underline-offset:3px}
 html body .cash-actions button+button:hover,html body button.void:hover{color:var(--swa-red,#C4222C)}
-html body button.void{min-height:36px;padding:0 8px;font-size:14px}
+html body button.void{min-height:36px;padding:0 8px;font-size:var(--swa-t-15)}
 #cashSummary{font-weight:600;margin:0 0 8px}
-#attention{border-top:4px solid var(--swa-red,#C4222C)}.session-id{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;overflow-wrap:anywhere}
-.attempts-head{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;justify-content:space-between}.attempts-head label{min-width:min(100%,320px);display:flex;flex-direction:column;gap:4px;font-size:14px}
+#attention{border-top:4px solid var(--swa-red,#C4222C)}.session-id{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--swa-t-13);overflow-wrap:anywhere}
+.attempts-head{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;justify-content:space-between}.attempts-head label{min-width:min(100%,320px);display:flex;flex-direction:column;gap:4px;font-size:var(--swa-t-15)}
 .policy{margin:12px 0 0}
 @media(max-width:640px){.cash-actions{justify-content:flex-start}.sec-head{flex-direction:column;align-items:flex-start}}
 /* The record panel: beside the page on a desktop, a sheet from the bottom on a phone. Only transform and opacity move. */
 .sheet-back{position:fixed;inset:0;z-index:80;background:rgba(10,10,12,.45);display:flex;justify-content:flex-end;animation:fade .18s ease-out}
 .sheet{background:var(--swa-surface,#fff);width:min(480px,100%);height:100%;overflow:auto;padding:24px;box-shadow:-12px 0 40px rgba(0,0,0,.25);animation:slide-in .2s ease-out}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 16px}.sheet-head h2{margin:0}
-html body .sheet-close{min-height:40px;width:40px;padding:0;font-size:22px;line-height:1}
-.sheet .grid{display:grid;grid-template-columns:1fr;gap:14px}.sheet label{display:flex;flex-direction:column;gap:4px;font-size:14px}
+html body .sheet-close{min-height:40px;width:40px;padding:0;font-size:var(--swa-t-24);line-height:1}
+.sheet .grid{display:grid;grid-template-columns:1fr;gap:14px}.sheet label{display:flex;flex-direction:column;gap:4px;font-size:var(--swa-t-15)}
 .sheet .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:16px}.preview{background:var(--swa-surface-2,#F8F9FA);border-radius:8px;padding:12px;margin-top:16px}
 @keyframes fade{from{opacity:0}to{opacity:1}}@keyframes slide-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
 @media(max-width:640px){.sheet-back{align-items:flex-end}.sheet{width:100%;height:auto;max-height:92vh;border-radius:16px 16px 0 0;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.25);animation-name:slide-up}@keyframes slide-up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}}
 @media(prefers-reduced-motion:reduce){.sheet-back,.sheet{animation:none}}
+/* Issue #341. Nothing owed at the door is one sentence (the summary beside the heading), not that sentence and an
+   empty table under it. On a phone a payment's first line is the wrestler with the amount on the right; Void and
+   Cancel membership move to the row's last line. */
+#cashSection>.table:has(#cashRows td[colspan]){display:none}
+#attemptsSummary:empty{display:none}
+#rows td:first-child b{white-space:nowrap}
+@media(max-width:600px){
+ html body #rows td.right{grid-column:2;grid-row:1;text-align:right;font-size:var(--swa-t-17);font-weight:600;color:var(--swa-ink);white-space:nowrap}
+ html body #rows td.right::before{content:none}
+ html body #rows td:last-child{grid-column:1/-1;grid-row:auto;text-align:left;font-weight:400}
+ html body #rows td[colspan]{grid-column:1/-1;font-size:var(--swa-t-15);font-weight:400}
+ #rows td:first-child b{white-space:normal}
+}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Payments</h1><p><a href="#record" class="button primary" id="openRecord">Record a payment</a></p><p class="muted">Every payment, online and offline. Offline payments count exactly like online ones for rosters, member pricing and family accounts. A refund is taken off the payment it belongs to here, on the payment’s own date; <a href="/financials">Income and expenses</a> books it on the day it was refunded, so the two can differ when a refund crosses a month. Cash due at the door lists walk-ins, extra practices and camps that families booked to pay at the academy: coaches tap Cash received on the roster for practices, camp cash is recorded here, and an unpaid camp booking holds its seat until you cancel it.</p><p id="status" role="status" aria-live="polite">Loading…</p>
 <div class="tiles"><div class="tile" id="tCollectedTile">Collected<b id="tCollected">–</b><small><span id="tCount">–</span> payments · online <span id="tOnline">–</span> · offline <span id="tOffline">–</span></small><small id="tSeason"></small></div><div class="tile" id="tCashTile">Cash due now<b id="tCashDue">–</b><small id="tCashNote"></small></div><div class="tile">Refunded<b id="tRefunded">–</b></div><div class="tile">Card fees<b id="tFees">–</b><small>Stripe, read once a day</small></div></div>
 <section id="attention" aria-labelledby="attentionHeading" hidden><h2 id="attentionHeading">Payment needs attention</h2><p class="muted">Monthly memberships whose latest payment failed at Stripe. Stripe retries the card by itself and the family has been told. The wrestler stays on the roster for <span id="graceDays">7</span> days after the paid-through day; if Stripe gives up, the membership ends on the paid-through day. To settle it by hand, take a payment in Stripe or talk to the family.</p><p id="attentionSummary" role="status" aria-live="polite"></p>
@@ -166,7 +179,7 @@ async function loadAttention(){try{const d=await call('/api/payments?attention=1
 const STATE={paid:'Paid',refunded:'Refunded',rejected:'Refused',failed:'Failed',open:'Not finished',closed:'Closed'};
 function attemptRow(a){return `<tr><td data-label="Started">${esc(fullTime(a.at))}${a.livemode?'':'<br><span class="muted">Test mode</span>'}</td><td data-label="Family"><b>${esc(a.wrestler)}</b><br><span class="muted">${esc(a.parent||'')}${a.parent?' · ':''}${esc(a.email)}</span></td><td data-label="For">${esc(a.item)}</td><td class="right" data-label="Amount">${esc(money(a.amountCents))}</td><td data-label="Stripe session">${a.sessionId?'<span class="session-id">'+esc(a.sessionId)+'</span>':'<span class="muted">Never reached Stripe</span>'}</td><td data-label="What happened"><span class="badge ${esc(a.state)}">${esc(STATE[a.state]||a.state)}</span><br>${esc(a.words)}${a.lastEventAt?'<br><span class="muted">Stripe’s last message '+esc(fullTime(a.lastEventAt))+'</span>':''}</td></tr>`}
 let attemptsTicket=0,attemptsTyping;
-async function loadAttempts(){const ticket=++attemptsTicket,q=$('attemptsQ').value.trim();try{const d=await call('/api/payments?attempts=1'+(q?'&q='+encodeURIComponent(q):''));if(ticket!==attemptsTicket)return;const list=d.attempts||[];$('attemptRows').innerHTML=list.length?list.map(attemptRow).join(''):'<tr><td colspan="6" class="muted">'+(q?'No online payment attempts match.':'No online payment attempts in the last 90 days.')+'</td></tr>';$('attemptsSummary').textContent=(list.length===1?'1 attempt':list.length+' attempts')+(d.more?', showing the newest '+list.length+'. Search to narrow the list.':'')+(q?' for “'+q+'”':'')+'.'}catch(e){if(ticket===attemptsTicket)$('attemptsSummary').textContent=e.message}}
+async function loadAttempts(){const ticket=++attemptsTicket,q=$('attemptsQ').value.trim();try{const d=await call('/api/payments?attempts=1'+(q?'&q='+encodeURIComponent(q):''));if(ticket!==attemptsTicket)return;const list=d.attempts||[];$('attemptRows').innerHTML=list.length?list.map(attemptRow).join(''):'<tr><td colspan="6" class="muted">'+(q?'No online payment attempts match.':'No online payment attempts in the last 90 days.')+'</td></tr>';$('attemptsSummary').textContent=!list.length&&!q?'':(list.length===1?'1 attempt':list.length+' attempts')+(d.more?', showing the newest '+list.length+'. Search to narrow the list.':'')+(q?' for “'+q+'”':'')+'.'}catch(e){if(ticket===attemptsTicket)$('attemptsSummary').textContent=e.message}}
 let cashDue=[];
 async function loadCash(){const d=await call('/api/payments?cash=due');cashDue=d.bookings;const got=d.collected||[];$('collectedRows').innerHTML=got.length?got.map(collectedRow).join(''):'<tr><td colspan="5" class="muted">No bookings were paid at the academy in the last 14 days.</td></tr>';$('cashSummary').textContent=d.count?(d.count===1?'1 booking':d.count+' bookings')+' · '+money(d.dueCents)+' due'+(d.more?'. Showing the first '+d.bookings.length+'.':''):'Nothing is waiting to be paid at the academy.';
  $('tCashDue').textContent=money(d.dueCents);$('tCashNote').textContent=d.count?(d.count===1?'1 booking':d.count+' bookings')+' to collect':'Nothing owed at the door';$('tCashTile').className='tile'+(d.count?' hot':'');
