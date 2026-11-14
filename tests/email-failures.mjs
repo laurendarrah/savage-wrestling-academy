@@ -113,6 +113,9 @@ assert.equal(sent.length, 2);
 const notice = sent.find(m => m.to[0] === 'p1@example.test' && /New message/.test(m.subject));
 assert.ok(notice && !notice.text.includes('weight class') && notice.text.includes('https://swa.example/inbox'), 'the message notice again, with the inbox link');
 const again = sent.find(m => m.subject === 'Camp packing list'); assert.match(again.text, /Bring two water bottles\.[\s\S]*https:\/\/swa\.example\/inbox/);
+// Issue #320: an email sent again is in the Savage layout too.
+for (const m of [notice, again]) { assert.match(m.html, /^<!doctype html>/); assert.match(m.html, />Savage<\/div>/); assert.match(m.html, /<a href="https:\/\/swa\.example\/inbox" style="[^"]*">Read your messages<\/a>/); }
+assert.ok(!notice.html.includes('weight class')); assert.match(again.html, /Bring two water bottles\./);
 assert.deepEqual(Object.values(sqlite.prepare("SELECT email_status s, email_error e FROM family_messages WHERE id=?").get(msg.id)), ['sent', null]);
 assert.equal(sqlite.prepare("SELECT count(*) n FROM security_events WHERE action='emails_resent' AND target='2 of 2 sent'").get().n, 1, 'recorded in the security log');
 r = await call('POST', {action: 'retry', items: [msg]}); assert.equal(r.status, 409, 'already sent');
@@ -121,6 +124,7 @@ provider(429); sent.length = 0;
 r = await call('POST', {action: 'retry', items: [coach]});
 assert.equal(r.body.sent, 0); assert.equal(r.body.failed, 1); assert.match(r.body.failedEmails.find(f => f.id === coach.id).reason, /Too many emails/);
 assert.equal(sent[0].to[0], 'dana@example.test'); assert.match(sent[0].text, /https:\/\/swa\.example\/coach/, 'a coach notice links to the coach page');
+assert.match(sent[0].html, /<a href="https:\/\/swa\.example\/coach" style="[^"]*">Open coach home<\/a>/);
 // Double click: two retries at once send once.
 provider(200); sent.length = 0;
 const pnotice = list.find(f => f.kind === 'notice' && !f.to.coach);

@@ -85,6 +85,13 @@ assert.deepEqual(mail.to, ['savagewrestlingclub@gmail.com']); assert.equal(mail.
 assert.equal(mail.subject, 'Test alert: no action needed');
 assert.match(mail.text, /^Test alert: no action needed\./); assert.match(mail.text, /Nothing is wrong with the site/);
 assert.match(mail.text, /https:\/\/swa\.example\/site-health/, 'link built from appOrigin()');
+// Issue #320: the test alert is in the Savage layout, like every email, with the plain text beside it.
+assert.deepEqual(Object.keys(mail).sort(), ['from', 'html', 'subject', 'text', 'to']);
+assert.match(mail.html, /^<!doctype html>/); assert.match(mail.html, />Savage<\/div>/); assert.match(mail.html, /<img src="https:\/\/swa\.example\/brand\/savage-logo-128\.png"/);
+assert.match(mail.html, /<h1[^>]*>Test alert: no action needed<\/h1>\n<p[^>]*>This is a test of the Savage Wrestling Academy site&#39;s problem alerts/, 'the headline is not repeated as the first line');
+assert.match(mail.html, /Nothing is wrong with the site/);
+assert.match(mail.html, /<a href="https:\/\/swa\.example\/site-health" style="[^"]*">Open Site health<\/a>/);
+assert.match(mail.html, /You’re getting this because you run the Savage Wrestling Academy site\./);
 assert.deepEqual(logged(), [{actor: 'supabase:owner-1', action: 'owner_test_alert', target: 'sent'}]);
 
 // --- The real alert throttle is untouched: no marker is written, and a real alert still goes out right after ---
@@ -122,6 +129,7 @@ assert.deepEqual(marker(), real, 'failures leave the real marker alone too');
 provider(); origin = () => { throw Error('APP_ORIGIN is not set.'); }; clock = Date.parse('2026-11-09T20:00:00.000Z');
 r = await post(); assert.equal(r.status, 200);
 assert.ok(!/https?:\/\//.test(sent.at(-1).body[0].text)); assert.match(sent.at(-1).body[0].text, /Site health page in the owner dashboard/);
+assert.match(sent.at(-1).body[0].html, />Savage<\/div>/, 'still in the Savage layout'); assert.ok(!/https?:\/\/|<img/.test(sent.at(-1).body[0].html), 'no link, button or logo without a site address');
 origin = () => 'https://swa.example';
 
 // --- Security activity describes it in plain words ---

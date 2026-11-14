@@ -16,6 +16,7 @@ function load(file) {
   vm.runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText,
     {module, exports: module.exports, Intl, Date, Number, String, Object, Array, JSON, require(name) {
       if (name === 'cloudflare:workers') return {env: {DB}};
+      if (name.endsWith('/account-auth')) return {};   // lib/email.ts reads the site address from it; nothing is sent here
       return load('lib/' + name.replace('./', '') + '.ts');
     }});
   return cache.get(file);

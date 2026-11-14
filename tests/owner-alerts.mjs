@@ -71,6 +71,14 @@ assert.match(mail.text, /\/api\/checkout: timed out or unavailable \(1\)/, 'grou
 assert.match(mail.text, /morning reminders[^\n]*: 1 time/i, 'scheduled job failures are named');
 assert.match(mail.text, /at most one of these emails an hour/);
 for (const secret of ['D1_ERROR', 'pat@example.test', 'token', 'abc', 'session']) assert.ok(!mail.text.includes(secret) && !mail.subject.includes(secret), 'no error text or details: ' + secret);
+// Issue #320: the alert goes out in the Savage layout with the plain text beside it, and the HTML says no more than the text.
+assert.deepEqual(Object.keys(mail).sort(), ['from', 'html', 'subject', 'text', 'to']);
+assert.match(mail.html, /^<!doctype html>/); assert.match(mail.html, />Savage<\/div>/); assert.match(mail.html, /20 Railroad St, Huntington Station, NY 11746/);
+assert.match(mail.html, /<h1[^>]*>Site alert: 4 new problems on the academy site<\/h1>/);
+assert.match(mail.html, /owner sign-in needed\):<\/p>\n<table[^>]*><tr><td[^>]*><a href="https:\/\/swa\.example\/site-health"[^>]*>Open Site health<\/a>/, 'the Site health link is the button');
+assert.match(mail.html, /Server errors, by page:<br>- \/register: unexpected error \(2\)<br>- \/api\/checkout: timed out or unavailable \(1\)/, 'the lists keep their lines');
+assert.match(mail.html, /You’re getting this because you run the Savage Wrestling Academy site\./);
+for (const secret of ['D1_ERROR', 'pat@example.test', 'session']) assert.ok(!mail.html.includes(secret), 'no error text or details in the HTML: ' + secret);
 let m = marker(); assert.equal(m.status, 'sent'); assert.equal(m.count, 4); assert.equal(m.coveredUntil, at(4).toISOString());
 st = await alerts.alertStatus(DB); assert.equal(st.emailOn, true); assert.equal(st.last.sent, true); assert.equal(st.last.count, 4); assert.equal(st.to, 'savagewrestlingclub@gmail.com');
 
@@ -107,6 +115,7 @@ provider(); origin = () => { throw Error('APP_ORIGIN is not set.'); };
 error(500, '/waivers');
 assert.equal(await alerts.alertOwner(DB, at(501)), 'sent');
 assert.ok(!/https?:\/\//.test(sent.at(-1).body[0].text)); assert.match(sent.at(-1).body[0].text, /Site health page in the owner dashboard/);
+assert.match(sent.at(-1).body[0].html, />Savage<\/div>/, 'still in the Savage layout'); assert.ok(!/https?:\/\/|<img/.test(sent.at(-1).body[0].html), 'no link, button or logo without a site address');
 origin = () => 'https://swa.example';
 sqlite.exec("DELETE FROM academy_settings WHERE id='owner-alert'");
 error(-3000, '/very-old'); error(1000, '/fresh');

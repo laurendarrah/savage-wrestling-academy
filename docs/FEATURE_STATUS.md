@@ -36,6 +36,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | **Messages** | | | |
 | Announcements and private messages | Built, in-app; emails that didn't send are listed with the reason, to send again (#72, #35) | `/messages`, `/inbox`, `lib/messages.ts` | Resend set up (#35) |
 | Automatic notices | Card expiring or expired, waiver to sign, approval decision, payment recorded, lesson booked, transfer (#105). Daily reminders run on a schedule | `lib/notify.ts` | Email (#35) |
+| Branded emails | Built: every email the site sends is in the Savage layout, with the plain text beside it (#320). The sign-in emails from Supabase have the same layout as templates | `lib/email.ts`, `lib/email-brand.ts`, `docs/email-templates/` | Lauren pastes the six templates into Supabase (README in that folder) |
 | **Coaches** | | | |
 | Coach accounts and profiles | Owner invites by link; coaches sign in with a password and keep a profile families see (#190) | `/staff`, `/coach-join`, `/coach-profile` | |
 | Coach home and calendar | Tonight first, month calendar of practices and events, published practice plans (#133, #191) | `/coach`, `/practice-plans` | |

@@ -100,7 +100,7 @@ export async function alertOwner(db: DB, now = new Date()): Promise<'off' | 'non
     if (Number(claim.meta?.changes ?? (claim as any).changes ?? 0) !== 1) return 'waiting';
     let origin: string | null = null;
     try { origin = appOrigin(); } catch { origin = null; }
-    const [result] = await sendEmailsDetailed([{to: OWNER_EMAIL, ...alertEmail(rows, origin, now)}]);
+    const [result] = await sendEmailsDetailed([{to: OWNER_EMAIL, ...alertEmail(rows, origin, now), audience: 'owner'}]);
     const status = result.status === 'sent' ? 'sent' : 'failed';
     await db.prepare('UPDATE academy_settings SET payload=? WHERE id=? AND updated_at=?').bind(JSON.stringify({...next, status, reason: result.reason}), ALERT_KEY, at).run();
     return status;
@@ -127,7 +127,7 @@ export async function sendTestAlert(now = new Date()): Promise<TestAlertResult> 
   if (!emailConfigured()) return {status: 'off', to: OWNER_EMAIL, reason: null};
   let origin: string | null = null;
   try { origin = appOrigin(); } catch { origin = null; }
-  const [result] = await sendEmailsDetailed([{to: OWNER_EMAIL, ...testAlertEmail(origin, now)}]);
+  const [result] = await sendEmailsDetailed([{to: OWNER_EMAIL, ...testAlertEmail(origin, now), audience: 'owner'}]);
   if (result.status === 'skipped') return {status: 'off', to: OWNER_EMAIL, reason: null};
   return result.status === 'sent' ? {status: 'sent', to: OWNER_EMAIL, reason: null} : {status: 'failed', to: OWNER_EMAIL, reason: result.reason ?? 'unreachable'};
 }

@@ -18,7 +18,7 @@ There is no ChatGPT Sites or ChatGPT code or tooling left in the repository.
 | Business data | Cloudflare D1 (SQLite), bound as `DB`, queried with prepared SQL. Drizzle is used only for the schema in `db/schema.ts` and to generate migrations in `drizzle/` |
 | Sign-in | Supabase Auth (`@supabase/ssr`), sign-in only. No business data is stored in Supabase |
 | Payments | Stripe (SDK 23, API `2026-09-30.endive`), test mode unless `STRIPE_MODE=live` |
-| Email | Resend's batch API (`lib/email.ts`), off until `EMAIL_API_KEY` and `MAIL_FROM` are set |
+| Email | Resend's batch API (`lib/email.ts`), off until `EMAIL_API_KEY` and `MAIL_FROM` are set. Callers write plain text; the adapter adds the Savage HTML layout (`lib/email-brand.ts`) to every message and keeps the plain text as the alternative (#320) |
 | USA Wrestling cards | Server-side lookup on USA Wrestling's public verify page (`lib/usaw-lookup.ts`, `lib/usaw-check.ts`) |
 | Package manager | pnpm `11.25.0` with a committed lockfile and a supply-chain policy in `pnpm-workspace.yaml` (minimum release age, allowed build scripts) |
 | Node | 22.13 or newer locally; CI and Deploy use Node 24 |
@@ -88,6 +88,6 @@ CI (`.github/workflows/ci.yml`) runs the tests, typecheck, build and `pnpm audit
 
 ## What stays outside the code
 
-- Supabase email templates are pasted into the Supabase dashboard by hand ([email-templates](email-templates/README.md)).
+- Supabase email templates are pasted into the Supabase dashboard by hand ([email-templates](email-templates/README.md)). The files are written by `node scripts/build-email-templates.mjs` from the same layout as the site's own emails.
 - Worker settings and secrets live in Cloudflare; GitHub holds the Deploy secrets and variables. `.env.example` lists every setting the code reads.
 - Policies (privacy, refunds, retention, membership terms, the Parent Consent Form) are drafts for the attorney in [policies](policies/README.md). Nothing is published until approved.
