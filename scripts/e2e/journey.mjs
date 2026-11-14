@@ -1334,13 +1334,13 @@ await step('owner moves through the owner shell with the sidebar: dashboard, Pay
     await open('/financials', /\/financials$/, /^Income and expenses$/, 'Academy / Money', false, !phone);
     // Money's switch (issue #283): Coach pay is a sister page under the same sidebar item.
     expect(await page.locator('.os-tabs a[href="/coach-pay"]').count() === 1 && await page.getAttribute('.os-tabs a[href="/financials"]', 'aria-current') === 'page', `${tag}: the money switch marks Income & expenses`);
-    await open('/#programs', /\/#programs$/, /PROGRAMS & PRICING/, 'Academy / Programs, schedules & events');
+    await open('/#programs', /\/#programs$/, /^Programs & pricing$/, 'Academy / Programs, schedules & events');
     // Camps & events has no sidebar item of its own: the section's switch opens it, and the sidebar keeps marking its parent.
-    await page.click('.os-tabs a[href="/#events"]'); await page.waitForURL(/\/#events$/); await waitText(page, 'main h1', /CAMPS & CLINICS/);
+    await page.click('.os-tabs a[href="/#events"]'); await page.waitForURL(/\/#events$/); await waitText(page, 'main h1', /^Camps & events$/);
     await page.waitForFunction(() => document.querySelector('.os-nav [aria-current="page"]')?.getAttribute('href') === '/#programs');
     expect((await shellState(page)).crumb === 'Academy / Programs, schedules & events', `${tag}: /#events keeps its parent in the breadcrumb`);
     expect(await page.getAttribute('.os-tabs a[href="/#events"]', 'aria-current') === 'page', `${tag}: the section switch marks Camps & events`);
-    await open('/#practice-calendar', /\/#practice-calendar/, /PLAN FROM YOUR CALENDAR/, 'Academy / Calendar & plans', true);
+    await open('/#practice-calendar', /\/#practice-calendar/, /^Practice calendar$/, 'Academy / Calendar & plans', true);
     // The calendar (issue #283): a month grid of bars on a desktop, the week list on a phone; a day opens its panel.
     if (phone) { expect(await page.locator('.week .wk-day').count() === 7, 'phones open on the week list'); await page.click('.view-switch button:has-text("Month")'); }
     await page.waitForSelector('.cal .day:not(.blank)');

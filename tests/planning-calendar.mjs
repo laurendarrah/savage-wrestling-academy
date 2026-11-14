@@ -9,7 +9,7 @@ run(`hydratePrograms();page='Calendar';year=2026;month=11;calView='month';calHid
 
 // ---------- The month grid ----------
 let cal=run('calendar()');
-assert.match(cal,/<h1>PLAN FROM YOUR CALENDAR<\/h1>/);
+assert.match(cal,/<div class="swa-title"><div class="swa-title__text"><h1>Practice calendar<\/h1>/,'the shared title row, named like its tab (issue #341)');
 assert.match(cal,/<button type="button" aria-pressed="true" onclick="setCalView\('month'\)">Month<\/button><button type="button" aria-pressed="false" onclick="setCalView\('week'\)">Week<\/button>/,'the view switch');
 // A practice is a bar; a shared plan a green dot, a draft an amber one; a day off has nothing.
 assert.match(cal,/aria-label="Monday, December 7, 2026: SWA Development, plan shared" aria-expanded="false" onclick="openCalendarDay\('2026-12-07'\)"><span class="n">7<\/span><span class="bar cal-elementary"><i><strong>SWA Development<\/strong><span>6:00 PM–7:30 PM<\/span><\/i><b><\/b><\/span><\/button>/);
@@ -18,7 +18,7 @@ assert.match(cal,/aria-label="Monday, December 21, 2026: SWA Development"[^>]*><
 assert.match(cal,/aria-label="Monday, December 28, 2026"[^>]*><span class="n">28<\/span><\/button>/,'the day off has no practice');
 assert.doesNotMatch(cal,/calendarPractice\(/,'the grid itself opens days, not plans');
 assert.match(cal,/class="day is-today" aria-current="date" aria-label="Today, Wednesday, December 9, 2026"/);
-assert.equal((cal.match(/class="day blank"/g)||[]).length,1,'December 2026 starts on a Tuesday');
+assert.equal((cal.match(/class="day blank"/g)||[]).length,4,'December 2026 starts on a Tuesday (one blank before the 1st) and ends on a Thursday (three after the 31st, so the grid ends on a whole week, issue #341)');
 assert.doesNotMatch(cal,/day-panel/,'no panel until a day is chosen');
 // The legend toggles a program off: its bars go, and the toggle is struck through.
 run("toggleCalKey('Elementary')");cal=run('calendar()');
@@ -73,7 +73,7 @@ run("toggleCalKey('events')");assert.deepEqual(JSON.parse(run("JSON.stringify(da
 // The panel: a camp opens its details with the owner's actions; an extra practice opens its editor under Schedules.
 run("openCalendarDay('2026-12-15')");assert.match(run('calendar()'),/<div class="dp-row cal-special"><i aria-hidden="true"><\/i><div><b>Single-leg clinic<\/b><small><span class="event-time">Time to be announced<\/span> · Clinic<\/small><\/div><button type="button" onclick="calendarEvent\(1\)">Details<\/button><\/div>/);
 run("openCalendarDay('2026-12-18')");assert.match(run('calendar()'),/<b>Friday Night Live<\/b><small><span class="event-time">6:00 PM–7:00 PM<\/span> · \$10\.00 members \/ \$20\.00 non-members<\/small><\/div><button type="button" onclick="go\('Schedules'\);editExtraPractice\('fnl'\)">Edit<\/button>/);
-run("calendarEvent(1)");assert.match(node('#overlay').innerHTML,/Single-leg clinic/);assert.match(node('#overlay').innerHTML,/Edit event/);
+run("calendarEvent(1)");assert.match(node('#overlay').innerHTML,/Single-leg clinic/);assert.match(node('#overlay').innerHTML,/aria-label="Edit Single-leg clinic" onclick="newEvent\(1\)">Edit<\/button>/);
 // The program colors are the savage.css tokens (issues #227 and #232), with the same colors as fallbacks.
 const css=readFileSync('public/responsive.css','utf8');for(const [name,token,color] of [['advanced','advance','#000'],['intermediate','intermediate','#686868'],['elementary','development','#fff'],['special','event','#d72732']])assert.ok(css.includes('.program-color.cal-'+name+'{background:var(--swa-prog-'+token+','+color+')'),name);
 const portal=readFileSync('app/portal.html','utf8');
@@ -83,5 +83,8 @@ assert.match(portal,/\.cal-elementary\{--c:var\(--swa-prog-development\);[^}]*\}
 assert.match(portal,/\.day \.bar i\{display:block;flex:1;min-width:0;padding:6px 8px;border-radius:6px;background:var\(--c\);color:var\(--ci,#fff\);font:400 12px\/1\.35 [^}]*\}/,'a card');
 assert.match(portal,/@media\(max-width:760px\)\{\.day \.bar i\{height:6px;padding:0;border-radius:3px\}\.day \.bar i strong,\.day \.bar i span,\.evbar span\{display:none\}\}/,'a 6px bar where there is no room for words');
 for(const [cls,token] of [['elementary','development'],['intermediate','intermediate'],['advanced','advance']])assert.ok(portal.includes(`.cal-${cls}{--c:var(--swa-prog-${token});--ci:var(--swa-prog-${token}-ink)}`),cls+' ink');
+// Issue #341: nothing is cut off with "…" in a card, and the chosen day opens over the page's edge instead of squeezing the month.
+assert.match(portal,/\.day \.bar i strong,\.day \.bar i span,\.evbar strong,\.evbar span\{display:block;overflow-wrap:anywhere\}/);assert.doesNotMatch(portal,/text-overflow:ellipsis[^}]*\}[^{]*\.evbar|\.cal-layout\.open\{grid-template-columns/);
+assert.match(portal,/\.day-panel\{position:fixed;z-index:45;top:64px;right:0;bottom:0;width:min\(360px,100vw\);/,'the day panel is a sheet on the right edge');
 assert.match(portal,/calView=typeof matchMedia==='function'&&matchMedia\('\(max-width:650px\)'\)\.matches\?'week':'month'/,'phones open on the week');
 console.log('Passed: program colors on desktop and phone, events and extra practices as one red bar, archive exclusion, the legend and event details with owner actions.');

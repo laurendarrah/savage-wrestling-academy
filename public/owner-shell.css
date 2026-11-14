@@ -1,7 +1,7 @@
 /* The owner shell (issue #261): one sidebar and header on every owner page, added by the Worker (lib/owner-shell.ts).
    Loaded after the page's own styles and savage.css. Every rule starts "html body" and a shell class, so it outranks
    the shared "html body button" and "html body a" rules and the pages' own element rules, and touches nothing else.
-   The dashboard does not load savage.css, so the colors below repeat its tokens as fallbacks. */
+   The colors below repeat the savage.css tokens as fallbacks. */
 :root{--os-red:var(--swa-red,#C4222C);--os-ink:var(--swa-ink,#111113);--os-muted:var(--swa-muted,#55585F);--os-line:var(--swa-line,#E4E6EA);
   --os-hair:var(--swa-hair,rgba(17,17,19,.08));--os-ground:var(--swa-ground,#F3F4F6);--os-shadow:var(--swa-shadow,0 1px 2px rgba(17,17,19,.05),0 10px 28px -12px rgba(17,17,19,.16));
   --os-side:264px;--os-body:Barlow,'Helvetica Neue',Arial,sans-serif;--os-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif}
@@ -132,3 +132,11 @@ html body .os-panel hr{width:auto;border:0;border-top:1px solid var(--os-line);m
 }
 @media (max-width:900px) and (prefers-reduced-motion:reduce){html body .os-side,html body.os-open .os-side{transition:none}}
 @media print{html body .os-side,html body .os-top,html body .os-scrim,html body .os-skip{display:none!important}html body .os{display:block}}
+
+/* ---------- Owner pages: one layout (design pass, issue #341) ----------
+   Every page in the shell starts at the same left edge with the same room around it, so moving between owner pages
+   changes the content and never where it sits. Each page keeps its own width: wide for lists and tables, narrow for
+   forms and reading. A phone keeps 16px at the sides. Only the top and the sides are set here; a page that leaves
+   room under itself (the public website's save bar) keeps it. */
+html body[data-swa-shell] .os-work>main{margin-left:0;margin-right:auto;padding-top:24px;padding-left:16px;padding-right:16px}
+@media (min-width:901px){html body[data-swa-shell] .os-work>main{padding-top:32px;padding-left:32px;padding-right:32px}}
