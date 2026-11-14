@@ -47,4 +47,15 @@ async function page(state, enrollReply) {
   const {els} = await page({email: 'o@x', destination: '/', role: 'owner', required: true, strong: true, factors: [{id: 'f', name: 'Phone'}]});
   assert.equal(els.backupNote.hidden, false); assert.equal(els.ownerTools.hidden, false);
 }
+// Signed in with a password only and no authenticator (#306, #317): the page must not claim a code was verified.
+{
+  const {els} = await page({email: 'fam@example.test', destination: '/family', role: 'family', required: false, strong: true, factors: []});
+  assert.equal(els.verified.hidden, true, 'no "valid authenticator code" line without an authenticator');
+  assert.equal(els.status.textContent, '', 'and no "verified" status');
+}
+// With an authenticator and a verified code, it still says so.
+{
+  const {els} = await page({email: 'fam@example.test', destination: '/family', role: 'family', required: false, strong: true, factors: [{id: 'f', name: 'Phone'}]});
+  assert.equal(els.verified.hidden, false); assert.equal(els.status.textContent, 'Your authenticator code is verified.');
+}
 console.log('security-first-time ok');
