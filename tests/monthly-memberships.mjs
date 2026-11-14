@@ -99,7 +99,10 @@ assert.deepEqual(JSON.parse(JSON.stringify(params.line_items[0].price_data)), {c
 assert.equal(params.subscription_data.metadata.order_id, orderId);
 assert.equal(params.subscription_data.description, 'SWA Intermediate: monthly membership, renews every month until canceled');
 assert.equal(params.subscription_data.cancel_at, undefined); assert.equal(params.payment_intent_data, undefined, 'not allowed in subscription mode');
-assert.doesNotMatch(JSON.stringify(params), /12/, 'no 12-month term anywhere in the checkout');
+// No 12-month term anywhere in the checkout. (Checked on the words and fields, not on the digits "12": the request
+// also carries an expiry timestamp and a random order id, which can contain them.)
+assert.doesNotMatch(JSON.stringify(params), /12[- ]month|12 monthly|twelve|payments_total|term_end|cancel_at\b/i, 'no 12-month term anywhere in the checkout');
+assert.equal(params.subscription_data.cancel_at_period_end, undefined); assert.equal(params.subscription_data.trial_end, undefined);
 
 // --- Webhook helpers ---
 const sign = raw => { const t = Math.floor(Date.now() / 1000); return `t=${t},v1=${createHmac('sha256', SECRET).update(`${t}.${raw}`).digest('hex')}`; };
