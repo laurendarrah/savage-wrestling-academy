@@ -1,7 +1,10 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><!--slot:head--><link rel="stylesheet" href="/responsive.css"><style>
 /* The welcome page (issue #196; redesign Phase 2, issue #282): the hero on the texture with a photo slot ready for
    Phase 5, one red button in the first screen, the next session as one row in the hero, the programs as one comparison
-   card (three columns on a desk, a switch on a phone), then the steps, the team and the visit details. */
+   card (three columns on a desk, a switch on a phone), then the steps, the team and the visit details.
+   Design pass (issue #340), after the academy's own posts: the next session in the hero is the practice box (a thin
+   outline with the red bar on its left, the session in caps and the time larger under it), with one red "Today" line
+   when it is today; section titles carry a thin rule; the page's columns line up with the hero's. */
 body{margin:0;background:var(--swa-ground);color:var(--swa-ink)}
 .hero{position:relative;color:#fff;padding:var(--swa-s-48) 16px;border-bottom:2px solid var(--swa-red);overflow:hidden}
 .hero .in,main{max-width:var(--swa-width-wide);margin:0 auto}
@@ -19,12 +22,19 @@ html body .actions a.button.quiet:hover{color:var(--swa-silver)}
 .herolink{display:inline-flex;align-items:center;min-height:44px;margin-top:var(--swa-s-8);color:var(--swa-silver)!important;font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.4px;text-transform:uppercase;text-decoration:none}
 .herolink:hover{color:#fff!important}
 /* Coming up: one row in the hero */
-.hero__next{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--swa-s-4) var(--swa-s-12);margin:var(--swa-s-24) 0 0;padding-top:var(--swa-s-16);border-top:1px solid var(--swa-dark-line);font-size:var(--swa-t-15);color:#D7DBE0;max-width:62ch}
+.hero__next{display:flex;flex-direction:column;align-items:flex-start;gap:var(--swa-s-8);margin:var(--swa-s-24) 0 0;padding-top:var(--swa-s-16);border-top:1px solid var(--swa-dark-line);font-size:var(--swa-t-15);color:#D7DBE0;max-width:440px}
 .hero__next .lbl{font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px;text-transform:uppercase;color:var(--swa-silver)}
-.hero__next .when{font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+.hero__next .lbl .today{display:block;margin-top:2px;color:var(--swa-red-on-dark);font-size:var(--swa-t-20);letter-spacing:1.2px;line-height:1.2}
+.hero__next .swa-practice{display:block;align-self:stretch}
+.hero__next .swa-practice__name,.hero__next .swa-practice__time{display:block}
+html body .hero__next .swa-practice__time{font-size:var(--swa-t-29);color:#fff}
 .hero__next .what{overflow-wrap:anywhere}
-.hero__next a{color:#fff;font-weight:600;white-space:nowrap}
-main{padding:var(--swa-s-32) 16px 56px;display:flex;flex-direction:column;gap:var(--swa-s-48)}
+html body .hero__next a{display:inline-flex;align-items:center;min-height:44px;color:#fff;font-weight:600;white-space:nowrap}
+/* The page's column starts where the hero's text does */
+main{max-width:calc(var(--swa-width-wide) + 32px);padding:var(--swa-s-32) 16px 56px;display:flex;flex-direction:column;gap:var(--swa-s-48)}
+/* A section title with a thin rule under it */
+html body main>section.plain>h2{padding-bottom:var(--swa-s-8);border-bottom:1px solid #D5D8DD}
+html body #programs>.empty{padding:var(--swa-s-16)}
 main>section{display:flex;flex-direction:column;gap:var(--swa-s-16)}
 html body main>section.plain{background:none;border:0;border-radius:0}
 h2{margin:0}
@@ -147,7 +157,10 @@ function upcoming(schedules,today,limit=6){
  const groups=[];for(const i of items.sort((a,b)=>(a.date+(a.start||'99')).localeCompare(b.date+(b.start||'99')))){const last=groups[groups.length-1];if(last&&last.date===i.date&&last.start===i.start)last.items.push(i);else groups.push({date:i.date,start:i.start,items:[i]})}
  return groups.slice(0,limit)}
 // Coming up, as one row in the hero: the soonest session (or sessions at the same time) and a link to the calendar.
-function nextRow(g){return '<span class="lbl">Coming up</span><span class="when">'+esc(dayLabel(g.date))+(g.start?' · '+esc(clock(g.start)):g.items.some(i=>i.tba)?' · Time to be announced':'')+'</span><span class="what">'+g.items.map(i=>esc(i.title)).join(', ')+'</span><a href="/calendar">Full calendar →</a>'}
+// It is the academy's practice box (issue #340): the session in caps, the day and time larger under it, and one red
+// "Today" line beside the label when the session is today.
+function nextRow(g,today){const now=g.date===today,time=g.start?clock(g.start):g.items.some(i=>i.tba)?'Time to be announced':'';
+ return '<span class="lbl">Coming up'+(now?'<b class="today">Today</b>':'')+'</span><span class="swa-practice dark"><span class="swa-practice__name what">'+g.items.map(i=>esc(i.title)).join(', ')+'</span><span class="swa-practice__time when">'+esc([now&&time?'':dayLabel(g.date),time].filter(Boolean).join(' · '))+'</span></span><a href="/calendar">Full calendar →</a>'}
 async function get(url){const r=await fetch(url,{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'The schedule could not be loaded. Refresh the page to try again.');return d}
 async function load(){
  try{
@@ -155,10 +168,10 @@ async function load(){
   // Near the end of a month the next sessions are in next month, so read both.
   let later=null;try{later=await get('/api/public-schedule?month='+nextMonth(now.month||now.today.slice(0,7)))}catch{}
   const programs=now.programs||[];
-  $('programs').innerHTML=programs.map((p,i)=>programCard(p,[now,later].filter(Boolean),now.today,i===0)).join('')||'<p class="muted" style="padding:16px">The programs will be listed here soon.</p>';
+  $('programs').innerHTML=programs.map((p,i)=>programCard(p,[now,later].filter(Boolean),now.today,i===0)).join('')||'<div class="empty"><p>The programs will be listed here soon. The calendar shows what is on now.</p><a class="button" href="/calendar">See the calendar</a></div>';
   renderSwitch(programs);
   const next=upcoming([now,later].filter(Boolean),now.today,1);
-  $('week').innerHTML=next.length?nextRow(next[0]):'<span class="lbl">Coming up</span><span class="what">Nothing is scheduled in the next few weeks.</span><a href="/calendar">Full calendar →</a>';
+  $('week').innerHTML=next.length?nextRow(next[0],now.today):'<span class="lbl">Coming up</span><span class="what">Nothing is scheduled in the next few weeks.</span><a href="/calendar">Full calendar →</a>';
  }catch(e){$('programs').innerHTML='<p style="padding:16px">'+esc(e.message)+'</p>';$('week').innerHTML='<span class="what">'+esc(e.message)+'</span>'}
 }
 load();

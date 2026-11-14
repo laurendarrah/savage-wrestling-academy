@@ -326,7 +326,7 @@ const myGroup = {id: 'pg', date: '2026-11-10', start: '09:30', end: '10:30', coa
   p.el('spots').value = '4';
   assert.doesNotMatch(p.el('times').innerHTML, /10:00 AM/, 'only open times can become a private group');
   p.button('opening', 'one').onclick(); await settle();
-  assert.match(p.el('summary').innerHTML, /Private small-group lesson[\s\S]*4 spots: Sam and 3 for families you invite[\s\S]*\$35\.00 per wrestler/);
+  assert.match(p.el('summary').innerHTML, /Private small-group lesson[\s\S]*4 spots: Sam and 3 for families you invite[\s\S]*\$35\.00 <small>per wrestler<\/small>/);
   assert.equal(p.el('requestArea').hidden, false); assert.equal(p.el('payArea').hidden, true);
   await p.el('requestGroup').onclick(); await settle();
   assert.deepEqual(p.calls.find(c => c.body?.action === 'request').body, {action: 'request', openingId: 'one', format: 'small-group', spots: 4, wrestlerIds: ['w1']});

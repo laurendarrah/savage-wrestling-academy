@@ -44,7 +44,9 @@ vm.runInContext(`selectPracticeDay('2026-12-18')`,ctx);assert.equal(el('reviewBu
 vm.runInContext(`document.getElementById('plan').value='monthly';update()`,ctx);assert.equal(el('reviewButton').disabled,false);assert.match(el('calendarHelp').textContent,/no individual reservation/);
 vm.runInContext(`selectPracticeTime('Elementary:2026-12-18:18:00')`,ctx);assert.equal(el('plan').value,'walkin');assert.match(el('selectedPractice').textContent,/Fri, Dec 18, 2026/);
 vm.runInContext(`loading=true;update()`,ctx);assert.equal(el('practiceCalendar').innerHTML,'');assert.equal(el('reviewButton').disabled,true);
-vm.runInContext(`loading=false;document.getElementById('program').value='Intermediate';document.getElementById('program').onchange()`,ctx);assert.equal(el('reviewButton').disabled,true);assert.match(el('calendarAvailability').textContent,/No published practices/);assert.equal(el('selectedPractice').hidden,true);
+vm.runInContext(`loading=false;document.getElementById('program').value='Intermediate';document.getElementById('program').onchange()`,ctx);assert.equal(el('reviewButton').disabled,true);
+// A program with no practice that month says so in one sentence where the grid would be (issue #340), not as 31 faded days.
+assert.match(el('noPractices').innerHTML,/<p>No practices (?:left )?in December for [^<]+\.<\/p>/);assert.equal(el('noPractices').hidden,false);assert.equal(el('calendarGrid').hidden,true);assert.equal(el('calendarAvailability').textContent,'');assert.equal(el('selectedPractice').hidden,true);
 console.log('Passed: calendar days, unavailable/past/holiday dates, explicit time selection, selection clearing, monthly schedule browsing, walk-in switch, loading state and unpublished schedule empty state.');
 
 // Only the monthly membership and walk-ins are offered (decision Q9 in #197, issue #210). Since Nov 13 (#2, issue #314) a

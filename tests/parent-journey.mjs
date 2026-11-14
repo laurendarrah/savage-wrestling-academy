@@ -165,7 +165,7 @@ const wrestlers = [{id: 'w1', name: 'Sam Example', grade: '8'}, {id: 'w2', name:
   await settle();
   const out = p.el('passes').innerHTML;
   assert.equal((out.match(/<section class="pass"/g) || []).length, 1, 'only the wrestler asked for');
-  assert.match(out, /<h2>Sam Example<\/h2><div class="qr"><svg aria-label="Entry pass for Sam Example">SWA1:abc<\/svg><\/div><p class="next">Next up<b>Mon, Jan 5 · 6:00 PM · SWA Intermediate<\/b><\/p><\/section>/);
+  assert.match(out, /<h2>Sam Example<\/h2><div class="qr"><svg aria-label="Entry pass for Sam Example">SWA1:abc<\/svg><\/div><p class="swa-day">Next up · Mon, Jan 5<\/p><div class="swa-practice"><p class="swa-practice__name">SWA Intermediate<\/p><p class="swa-practice__time">6:00 PM<\/p><\/div><\/section>/);
   assert.match(out, /<button type="button" class="quiet" data-replace="w1">Replace this pass<\/button>/);
   const w = page('app/wrestler/screen.html', {search: '?id=w1', fetch: async () => json({id: 'w1', name: 'Sam Example', grade: '8', card: {state: 'verified'}, pass: 'SWA1:abc', upcoming, checkInsThisMonth: 2})});
   await settle();

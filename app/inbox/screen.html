@@ -8,7 +8,10 @@ h1{margin:8px 0 4px}h2{margin:0 0 8px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 html body .swa-title__actions button.quiet{justify-content:flex-start;padding:0;text-align:left}
 html body main>.card{margin:var(--swa-s-16) 0}
-.inbox section+section{border-top:1px solid var(--swa-line);margin-top:var(--swa-s-8);padding-top:var(--swa-s-8)}
+/* Announcements and notices read as one list: the same line between every two items */
+.inbox section+section{border-top:1px solid var(--swa-line)}
+html body .inbox .empty{padding:var(--swa-s-8) 0}
+html body #thread>.empty{padding:0 0 var(--swa-s-8)}
 details{border-top:1px solid var(--swa-line)}
 details:first-of-type{border-top:0}
 html body details>summary{padding:var(--swa-s-8) 0;align-items:flex-start}
@@ -67,7 +70,7 @@ function render(d){
  document.querySelectorAll('details[data-notice]').forEach(el=>{el.ontoggle=()=>markShown(el,{action:'read',noticeId:el.dataset.notice})});
  $('announcements').innerHTML=announcements.map((a,i)=>item('data-id="'+esc(a.id)+'"','Announcement',a.subject,a.sentAt,a.read,a.body,i===open.announcement)).join('')||'<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p>No announcements yet. The academy’s news shows here.</p></div>';
  document.querySelectorAll('details[data-id]').forEach(el=>{el.ontoggle=()=>markShown(el,{action:'read',announcementId:el.dataset.id})});
- $('thread').innerHTML=(d.thread||[]).map(m=>`<div class="msg ${m.from}">${esc(m.body)}<small>${m.from==='you'?'You':'Savage Wrestling Academy'} · ${esc(when(m.at))}</small></div>`).join('')||'<p class="muted">No messages yet. Questions about schedules, payments or your wrestler? Write to the academy here.</p>';
+ $('thread').innerHTML=(d.thread||[]).map(m=>`<div class="msg ${m.from}">${esc(m.body)}<small>${m.from==='you'?'You':'Savage Wrestling Academy'} · ${esc(when(m.at))}</small></div>`).join('')||'<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><p>No messages yet. Questions about schedules, payments or your wrestler? Write to the academy here.</p></div>';
  showMarkAll(d);
 }
 document.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>more(b.dataset.more));

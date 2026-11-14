@@ -22,11 +22,11 @@ const list = () => el('calendar').innerHTML.split('<div class="list">')[1] ?? ''
 
 // Opens on the week with today in it (Mon Nov 9 – Sun Nov 15), not the whole month.
 assert.match(list(), /Mon, Nov 9[^<]*– Sun, Nov 15/);
-assert.match(list(), /Nov 10, 2026/); assert.match(list(), /Winter camp/);
+assert.match(list(), /Tue, Nov 10/); assert.match(list(), /Winter camp/);
 assert.doesNotMatch(list(), /Nov 3,|Nov 24,/, 'other weeks are not on the page');
 // Next and previous week.
 vm.runInContext('stepWeek(1)', ctx); assert.match(list(), /Mon, Nov 16 – Sun, Nov 22/); assert.match(list(), /Nothing is scheduled this week/);
-vm.runInContext('stepWeek(-2)', ctx); assert.match(list(), /Nov 3, 2026/);
+vm.runInContext('stepWeek(-2)', ctx); assert.match(list(), /Tue, Nov 3</);
 // Going back from the first week loads the previous month at its last week.
 vm.runInContext('stepWeek(-1)', ctx); assert.match(list(), /Mon, Oct 26 – Sun, Nov 1/, 'the first week of the month starts in October');
 vm.runInContext('stepWeek(-1)', ctx); await settle(); assert.ok(fetched.some(u => /month=2026-10/.test(u)), 'previous month requested');
@@ -38,7 +38,7 @@ filters[4].onclick(); assert.match(el('calendar').innerHTML, /Winter camp/); ass
 filters[0].onclick(); assert.match(el('calendar').innerHTML, /SWA Development<\/strong>/);
 // Issue #182: opening on an empty week moves to the next week with practices; This week still shows this week.
 vm.runInContext("state.today='2026-11-17';week=null;pendingWeek=null;render()", ctx);
-assert.match(list(), /Mon, Nov 23 – Sun, Nov 29/); assert.match(list(), /next week with practices/); assert.match(list(), /Nov 24, 2026/);
+assert.match(list(), /Mon, Nov 23 – Sun, Nov 29/); assert.match(list(), /next week with practices/); assert.match(list(), /Tue, Nov 24</);
 vm.runInContext('thisWeek()', ctx); await settle(); assert.match(list(), /Mon, Nov 16 – Sun, Nov 22/); assert.match(list(), /Nothing is scheduled this week/);
 // Program buttons choose a plan; they don't promise online payment.
 // One "Choose a walk-in" per day (#282), none per chip, and no promise of online payment.

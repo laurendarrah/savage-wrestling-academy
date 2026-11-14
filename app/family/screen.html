@@ -1,7 +1,10 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My family | Savage Wrestling Academy</title><link rel="stylesheet" href="/responsive.css"><style>
-/* The family home (redesign Phase 2, issue #282): a greeting row, then what matters today in two columns on a desk and
-   one on a phone: the dark "Next up" card, this week, three ways to book; the wrestler card, payments and the family's
-   contacts. Purchases and memberships follow further down; the Account menu holds the account tools. */
+/* The family home (redesign Phase 2, issue #282; design pass, issue #340): a greeting row, then what matters today.
+   The page reads in one order on a phone and on a desk: the dark "Next up" card and each wrestler's status first, then
+   what is due, this week, three ways to book and the family's contacts. On a desk those are two columns (next and who
+   on the left; money, the week and booking on the right). Memberships and purchases follow, kept short: a wrestler's
+   details fold behind "Details" when everything is in order, and older purchases wait behind "Show all". The Account
+   menu holds the account tools. */
 body{background:var(--swa-ground);color:var(--swa-ink);margin:0}
 main{max-width:var(--swa-width-wide);margin:auto;padding:0 16px 56px}
 /* The greeting row keeps the fam-hero hook (lib/page-chrome.ts leaves a page with its own opening alone). */
@@ -28,7 +31,9 @@ html body .account-menu .menu .sep{border-top:1px solid var(--swa-line);margin:4
 .fam-col{display:grid;gap:var(--swa-s-16);align-content:start;min-width:0}
 .fam-col:empty,.fam-col:not(:has(> :not([hidden]))){display:none}
 html body .fam-grid>.fam-col>section{margin:0}
-@media (min-width:900px){.fam-grid{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:var(--swa-s-24);align-items:start}.fam-col{gap:var(--swa-s-24)}}
+@media (min-width:900px){.fam-grid{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:var(--swa-s-24);align-items:start}.fam-col{gap:var(--swa-s-24)}
+ /* A new family has only the "Get set up" list: it takes the form's width instead of a lone narrow column. */
+ .fam-grid:not(:has(.fam-col+.fam-col>:not([hidden])))>.fam-col{grid-column:1/-1;max-width:var(--swa-width-narrow)}}
 html body main>section,html body main>details.card{margin:var(--swa-s-16) 0}
 @media (min-width:900px){html body main>section{margin:var(--swa-s-24) 0}}
 h1{margin:6px 0 2px}h2{margin:0 0 6px}
@@ -56,18 +61,12 @@ html body main>section.paid{background:var(--swa-ok-bg);border:1px solid #9FCFAE
 .step .done-note{color:var(--swa-ok);font-weight:600}
 .step .go{margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 html body .step .go .button,html body .step .go button{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;text-decoration:none}
-/* Next up: the dark card. The day as a tag, the time as the figure, the session and the wrestler, one red button. */
-html body #nextUp{position:relative;overflow:hidden}
-html body #nextUp::after{content:"";position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(196,34,44,.28),transparent 68%);pointer-events:none}
-html body #nextUp>*{position:relative}
-/* "NEXT UP · TODAY": the label and the day share one line */
-html body #nextUp h2.swa-label{display:inline-block;margin:0 var(--swa-s-8) 0 0;vertical-align:middle}
-.next-day{display:inline-block;margin:0;vertical-align:middle;font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px;text-transform:uppercase;color:var(--swa-dark-muted)}
-.next-day .today{display:inline-block;color:#fff;background:var(--swa-red);border-radius:4px;padding:2px 8px;font-size:var(--swa-t-13);font-weight:700;letter-spacing:1px;text-transform:uppercase}
-.next-when{margin:var(--swa-s-12) 0 var(--swa-s-4);color:#fff}
-.next-what{margin:0;font-size:var(--swa-t-17);color:#fff}
-.next-what span{color:var(--swa-dark-muted)}
-.next-meta{margin:var(--swa-s-4) 0 0;font-size:var(--swa-t-15);color:var(--swa-dark-muted)}
+/* Next up: the dark card, the way the academy's own posts show a practice (issue #340). The day is grey caps, or one
+   red caps line when it is today (.swa-day); then the practice box (.swa-practice, public/savage.css): the session in
+   bold caps with the time larger under it; who it is for and how it is paid; one red button. Red is the bar, the
+   "Today" line and the button, never a fill. */
+html body #nextUp h2.swa-label{margin:0 0 var(--swa-s-4)}
+.next-meta{margin:var(--swa-s-12) 0 0;font-size:var(--swa-t-15);color:var(--swa-dark-muted);overflow-wrap:anywhere}
 .next-actions{display:flex;gap:var(--swa-s-8);margin-top:var(--swa-s-16);flex-wrap:wrap}
 html body .next-actions a.button{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;text-decoration:none;white-space:nowrap}
 html body .next-actions a.button.primary{flex:1 1 auto}
@@ -93,6 +92,15 @@ html body .kid-links a.button{flex:1 1 auto;display:inline-flex;align-items:cent
 .kid-safety{margin:var(--swa-s-12) 0 0;padding:var(--swa-s-12);border-radius:var(--swa-r-control);background:var(--swa-surface-2);font-size:var(--swa-t-15);overflow-wrap:anywhere;white-space:pre-line}
 .kid-safety b{color:var(--swa-red)}
 .kid-safety.quiet{background:none;padding:0;color:var(--swa-muted);font-size:var(--swa-t-13)}
+/* What is in order (the card's dates, the signed copies, the birth date) folds behind "Details"; anything that needs
+   the family stays in the open. */
+.kid-more{margin-top:var(--swa-s-4)}
+html body .kid-more>summary{display:inline-flex;min-height:44px;font-size:var(--swa-t-15);color:var(--swa-muted)}
+html body .kid-more>summary:hover{color:var(--swa-ink)}
+.kid-more .status-lines{margin-top:0}
+.kid-more .kid-safety.quiet{margin-top:var(--swa-s-8)}
+html body #summary #savedTime{margin:var(--swa-s-12) 0 0}
+html body #summary #savedTime:empty{display:none}
 #contactRows dl{margin:0}
 #contactRows dd{margin:0}
 html body #contactRows .swa-rows>div{grid-template-columns:96px minmax(0,1fr)}
@@ -128,26 +136,37 @@ html body .safety textarea{min-height:76px}
 .section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .section-title h2,.section-title h3{margin:0}
 /* Memberships and purchases */
-.member-card{border:1px solid var(--swa-line);border-radius:var(--swa-r-control);padding:16px;margin:16px 0}
-.member-card p{margin:8px 0 12px}
-.member-details{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:18px 0}
-.member-details div{min-width:0}
-.member-details dt{font-size:14px;color:var(--swa-muted)}
-.member-details dd{font-weight:600;margin:3px 0 0;overflow-wrap:anywhere}
+.member-card{border:1px solid var(--swa-line);border-radius:var(--swa-r-control);padding:var(--swa-s-16);margin:var(--swa-s-12) 0 0}
+.member-card p{margin:var(--swa-s-4) 0 var(--swa-s-12)}
+.member-card>p:last-child,.member-card .billing-note:last-child{margin-bottom:0}
+html body .member-card h3{font-size:var(--swa-t-17)}
+/* A membership's facts as rows, like a receipt: the label on the left, the value on the right */
+.member-details{margin:var(--swa-s-12) 0}
+.member-details div{display:flex;justify-content:space-between;align-items:baseline;gap:var(--swa-s-16);padding:var(--swa-s-8) 0;border-top:1px solid var(--swa-line);min-width:0;font-size:var(--swa-t-15)}
+.member-details dt{flex:none;color:var(--swa-muted)}
+.member-details dd{font-weight:600;margin:0;text-align:right;overflow-wrap:anywhere}
+html body #membershipCards>.empty{padding-bottom:0}
+/* On a desk a membership is a card of its own width, two to a row, not a band across the page */
+@media (min-width:900px){#membershipCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--swa-s-16);align-items:start}#membershipCards>:not(.member-card){grid-column:1/-1}}
 .billing-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .billing-actions button{padding:0 16px}
-.billing-note{font-size:15px;color:var(--swa-muted)}
+.billing-note{font-size:var(--swa-t-15);color:var(--swa-muted)}
+html body main>section>.billing-note{margin:0 0 var(--swa-s-12);max-width:70ch}
 #purchaseList .due{color:var(--swa-warn-ink);white-space:nowrap}
 #purchaseList td small{display:block;font-size:var(--swa-t-13);color:var(--swa-muted);line-height:1.4}
 #purchaseList td button{margin-top:6px}
+/* The status pill names itself, so the phone's two-line row drops the "Status:" prefix and keeps the pill and its date on one line */
+html body #purchaseList .swa-table td[data-label="Status"]::before{content:none}
+@media (max-width:600px){html body #purchaseList .swa-table td[data-label="Status"]{display:flex;flex-wrap:wrap;align-items:center;gap:var(--swa-s-4) var(--swa-s-8)}html body #purchaseList .swa-table td[data-label="Status"] small{flex:0 1 auto}html body #purchaseList .swa-table td[data-label="Status"] button{margin-top:0}/* A paid row's caption already starts "Paid …", so the green pill is left to the desk's Status column */html body #purchaseList .swa-table td[data-label="Status"] .pill.ok{display:none}html body main>section#purchases>.billing-note{font-size:var(--swa-t-13)}html body #purchaseList .swa-table td:first-child{font-size:var(--swa-t-15)}}
+@media (min-width:601px){#purchaseList td[data-label="Wrestler"]{white-space:nowrap}}
+html body #purchaseList>button.quiet{margin-top:var(--swa-s-4);padding:0;font-size:var(--swa-t-15)}
+html body main>section#yourData{max-width:var(--swa-width-narrow)}
 main>section[id],#status{scroll-margin-top:80px}
 @media(max-width:560px){
  .row{grid-template-columns:1fr;gap:0}
  .row.emergency-row{grid-template-columns:1fr}
  .row.addr-row{grid-template-columns:1fr 1fr;gap:0 12px}
  .row.addr-row label:first-child{grid-column:1/-1}
- .member-details{grid-template-columns:1fr}
- .member-card{padding:14px}
  .billing-actions{flex-direction:column;align-items:stretch}
  .billing-actions>*{width:100%;text-align:center}
  .account-menu summary{padding:0 12px}
@@ -160,16 +179,17 @@ main>section[id],#status{scroll-margin-top:80px}
 <div class="fam-grid"><div class="fam-col">
 <section id="start" class="card" hidden aria-labelledby="startHeading"><div class="section-title"><h2 id="startHeading">Get set up</h2><span class="pill" id="startCount"></span></div><div class="progress" aria-hidden="true"><span id="startBar" style="width:0"></span></div><p class="muted" id="startLede"></p><ol class="steps" id="startSteps"></ol></section>
 <section id="nextUp" class="card dark" hidden aria-labelledby="nextUpHeading"><h2 id="nextUpHeading" class="swa-label">Next up</h2><div id="nextUpBody"></div></section>
+<section id="summary" class="card" hidden tabindex="-1" aria-labelledby="savedHeading"><div class="swa-section"><h2 id="savedHeading" class="swa-label">Your wrestler</h2><button type="button" class="quiet" data-action="add-wrestler">Add another</button></div><div id="savedDetails"></div><p class="swa-caption" id="savedTime"></p></section>
+
+<section id="payments" class="card" hidden aria-labelledby="paymentsHeading"><div class="swa-section"><h2 id="paymentsHeading" class="swa-label">Payments</h2><a href="#purchases">History</a></div><div class="money" id="moneyLine"></div></section>
+</div><div class="fam-col">
 <section id="week" class="card" hidden aria-labelledby="weekHeading"><div class="swa-section"><h2 id="weekHeading" class="swa-label">This week</h2><a href="/calendar">Calendar</a></div><div id="weekRows"></div><a class="swa-link" id="weekMore" href="/calendar">See the calendar →</a></section>
 <section id="book" class="card" hidden aria-labelledby="bookHeading"><h2 id="bookHeading" class="swa-label">Book</h2><div class="swa-doors" id="doors"></div></section>
-</div><div class="fam-col">
-<section id="summary" class="card" hidden tabindex="-1" aria-labelledby="savedHeading"><div class="swa-section"><h2 id="savedHeading" class="swa-label">Your wrestler</h2><button type="button" class="quiet" data-action="add-wrestler">Add another</button></div><div id="savedDetails"></div><p class="swa-caption" id="savedTime"></p></section>
-<section id="payments" class="card" hidden aria-labelledby="paymentsHeading"><div class="swa-section"><h2 id="paymentsHeading" class="swa-label">Payments</h2><a href="#purchases">History</a></div><div class="money" id="moneyLine"></div></section>
 <section id="contacts" class="card" hidden aria-labelledby="contactsHeading"><div class="swa-section"><h2 id="contactsHeading" class="swa-label">Family</h2><button type="button" class="quiet" id="editProfile" data-action="edit">Edit</button></div><div id="contactRows"></div></section>
 </div></div>
 <section id="editor" class="card" aria-labelledby="editorHeading"><h2 id="editorHeading">Your family profile</h2><p class="notice" id="editorNotice">Add your name, phone number and each wrestler, then choose Save family profile. When you pay at the academy, the payment shows here once the academy records it.</p><form id="familyForm" novalidate><fieldset id="familyFields" disabled><h3>Parent or guardian</h3><label>Your name<input name="parentName" maxlength="120" required autocomplete="name"></label><label>Phone number<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label><div class="why-box" id="detailsWhy"><p><strong>The academy needs these details for every family.</strong> They let us reach someone quickly and look after your wrestler if they get hurt or feel unwell at practice. The academy and your wrestler’s coaches see them at check-in, and you can update them at any time.</p></div><fieldset class="details-group"><legend>Home address</legend><label>Street address<input id="homeAddress" maxlength="300" autocomplete="address-line1" required></label><div class="row addr-row"><label>City<input id="homeCity" maxlength="100" autocomplete="address-level2" required></label><label>State<input id="homeState" maxlength="40" autocomplete="address-level1" required></label><label>ZIP code<input id="homeZip" maxlength="10" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" title="5 digits, for example 11746" required></label></div></fieldset><fieldset class="details-group"><legend>Emergency contact</legend><p class="muted field-hint" id="emergencyHint">Someone other than you that the academy can call if we can’t reach you.</p><div class="row emergency-row"><label>Name<input id="emergencyContactName" maxlength="120" autocomplete="off" aria-describedby="emergencyHint" required></label><label>Phone number<input id="emergencyContactPhone" type="tel" maxlength="40" autocomplete="off" aria-describedby="emergencyHint" required></label></div></fieldset><h3>Your wrestlers</h3><div id="wrestlers"></div><button type="button" data-action="add-wrestler-form">+ Add wrestler</button><p class="muted">Saving a wrestler doesn’t sign them up. Choose a membership or walk-in after you save.</p><div class="form-actions"><button class="primary" id="save">Save family profile</button><button id="cancelEdit" type="button" hidden data-action="cancel-edit">Cancel changes</button></div></fieldset></form></section>
-<section id="memberships" class="card" aria-labelledby="membershipsHeading"><div class="section-title"><h2 id="membershipsHeading">Memberships</h2><span class="pill ok" id="paymentsPill" hidden>Paid</span></div><p class="billing-note">After you pay for a membership, each wrestler’s program, start date, payments and next billing day show here, with a button to cancel.</p><div id="membershipCards"><p>Loading your family…</p></div></section>
-<section id="purchases" class="card" aria-labelledby="purchaseHeading"><h2 id="purchaseHeading">Purchases</h2><p class="billing-note">Everything you pay for shows here: memberships, walk-ins, camps, clinics, events and private lessons. Extra practices such as Friday Night Live are separate purchases, with a lower price for members.</p><div id="purchaseList"><div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16l-3-2-3 2-3-2-3 2-3-2z"/><path d="M8 9h8M8 13h5"/></svg><p>No purchases yet. Looking over a registration doesn’t charge you or hold a spot; each payment shows here with its date and amount after you pay.</p></div></div></section>
+<section id="memberships" class="card" aria-labelledby="membershipsHeading"><h2 id="membershipsHeading" class="swa-label">Memberships</h2><p class="billing-note" id="membershipsNote">After you pay for a membership, each wrestler’s program, start date, payments and next billing day show here, with a button to cancel.</p><div id="membershipCards"><span class="skeleton row" aria-hidden="true"></span><span class="swa-sr">Loading your family…</span></div></section>
+<section id="purchases" class="card" aria-labelledby="purchaseHeading"><h2 id="purchaseHeading" class="swa-label">Purchases</h2><p class="billing-note">Everything you pay for shows here: memberships, walk-ins, camps, clinics, events and private lessons. Extra practices such as Friday Night Live are separate purchases, with a lower price for members.</p><div id="purchaseList"><div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16l-3-2-3 2-3-2-3 2-3-2z"/><path d="M8 9h8M8 13h5"/></svg><p>No purchases yet. Looking over a registration doesn’t charge you or hold a spot; each payment shows here with its date and amount after you pay.</p></div></div></section>
 <section id="yourData" class="card" hidden aria-labelledby="yourDataHeading"><h2 id="yourDataHeading">Close my account</h2><p class="muted">Ask the academy to close your family account. They contact you before anything is removed. You can also <a href="/api/my-data?format=download" download>download everything the academy holds about your family</a> first.</p><form id="closeForm"><label>Anything the academy should know (optional)<textarea id="closeNote" maxlength="1000" rows="3"></textarea></label><button type="submit">Send request to the academy</button></form><p id="requestStatus" class="muted"></p></section>
 </main><script>
 let scholarshipAwards=[];
@@ -209,9 +229,12 @@ function contactRows(){const place=[profile.homeCity,[profile.homeState,profile.
 function kidCard(w){
  const card=cardStatus(w),waiver=waiverStatus(w),consent=consentStatus(w),member=membershipStatus(w);
  const chips=[card,waiver,consent].filter(Boolean).map(s=>pill(s.label,s.ok)).join('');
- const lines=[card,waiver,consent,member].filter(s=>s&&s.text).map(s=>'<li'+(s.ok?' class="swa-caption"':'')+'>'+s.text+'</li>').join('');
+ // What needs the family (and any line with a button to press) stays in the open; what is in order folds behind Details.
+ const all=[card,waiver,consent,member].filter(x=>x&&x.text),open=all.filter(x=>!x.ok||x.text.includes('<button')),fine=all.filter(x=>!open.includes(x));
+ const item=x=>'<li'+(x.ok?' class="swa-caption"':'')+'>'+x.text+'</li>',lines=open.map(item).join(''),safety=safetyLine(w),quiet=safety.includes('kid-safety quiet');
+ const more=fine.length||quiet?'<details class="kid-more"><summary>Details</summary>'+(fine.length?'<ul class="status-lines">'+fine.map(item).join('')+'</ul>':'')+(quiet?safety:'')+'</details>':'';
  return '<article class="kid" data-wrestler="'+esc(w.id)+'"><div class="kid-top"><div class="swa-avatar" aria-hidden="true">'+esc(initials(w.name))+'</div><div><h3>'+esc(w.name)+'</h3><p class="kid-sub">'+esc(gradeLabel(w.grade))+' · '+member.short+'</p></div></div>'
-  +'<div class="chips">'+chips+'</div>'+(lines?'<ul class="status-lines">'+lines+'</ul>':'')+safetyLine(w)
+  +'<div class="chips">'+chips+'</div>'+(lines?'<ul class="status-lines">'+lines+'</ul>':'')+(quiet?'':safety)+more
   +'<div class="kid-links"><a class="button" href="/pass?wrestler='+encodeURIComponent(w.id)+'">Entry pass</a><a class="button" href="/wrestler?id='+encodeURIComponent(w.id)+'">'+esc(firstName(w.name))+'’s page</a></div></article>';
 }
 function showSummary(focus=false){
@@ -447,7 +470,7 @@ function renderNextUp(setUp){
  if($('nextUp').hidden)return;
  if(!next){$('nextUpBody').innerHTML='<div class="empty"><p>Nothing is booked for the next three weeks.</p><a class="button" href="/calendar">See the calendar</a></div>';return}
  const same=upcoming.filter(s=>s.date===next.date&&s.start===next.start&&s.title===next.title).map(s=>s.wrestler),day=dayName(next.date);
- $('nextUpBody').innerHTML='<p class="next-day">'+(day==='Today'?'<b class="today">Today</b>':esc(day))+'</p><p class="next-when swa-figure">'+esc(clock(next.start)||'All day')+'</p><p class="next-what"><strong>'+esc(sessionName(next))+'</strong> <span>· '+esc([...new Set(same)].join(', '))+'</span></p><p class="next-meta">'+esc(dueText(next)||why[next.why]||next.why||'')+(next.end?' · ends '+esc(clock(next.end)):'')+'</p>'
+ $('nextUpBody').innerHTML='<p class="swa-day">'+(day==='Today'?'<b class="today">Today</b>':esc(day))+'</p><div class="swa-practice"><p class="swa-practice__name">'+esc(sessionName(next))+'</p><p class="swa-practice__time">'+esc(clock(next.start)||'All day')+'</p></div><p class="next-meta">'+esc([[...new Set(same)].join(', '),dueText(next)||why[next.why]||next.why||''].filter(Boolean).join(' · '))+(next.end?' · ends '+esc(clock(next.end)):'')+'</p>'
   +'<div class="next-actions"><a class="button primary" href="/pass?wrestler='+encodeURIComponent(next.wrestlerId)+'">Show entry pass</a>'+directions()+'</div>';
 }
 // This week: the next four sessions after the one in Next up, within seven days, and a link to the rest.
@@ -521,10 +544,13 @@ async function cancelCash(id){const b=cashBookings.find(x=>x.id===id);if(!b||!co
 // Cash handed over at the academy (issue #250) reads "Paid in cash at the academy"; who took it is for the academy only.
 const paidText=o=>(o.paid_in_cash?'Paid in cash at the academy on ':'Paid ')+esc(longDate(o.paid_at));
 // Purchases as one table (issue #282): the purchase, who it was for, its status, the amount. On a phone each row is two lines.
+// Anything still due at the academy always shows. Of what is paid, the latest five show and the rest wait behind
+// "Show all", so a season of receipts does not push everything else off a phone (issue #340).
+let allPurchases=false;const PURCHASES_SHOWN=5;
 function renderPurchases(){
  if((!Array.isArray(orders)||!orders.length)&&!cashBookings.length){$('purchaseList').innerHTML='<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16l-3-2-3 2-3-2-3 2-3-2z"/><path d="M8 9h8M8 13h5"/></svg><p>No purchases yet. Looking over a registration doesn’t charge you or hold a spot; each payment shows here with its date and amount after you pay.</p></div>';return}
  const label={paid:'Paid',refunded:'Refunded',pending:'Checkout not finished'},cls={paid:'ok',refunded:'neutral',pending:'warn'};
- $('purchaseList').innerHTML='<table class="swa-table"><thead><tr><th>Purchase</th><th>Wrestler</th><th>Status</th><th class="num">Amount</th></tr></thead><tbody>'+cashBookings.map(cashItem).join('')+orders.map(o=>`<tr><td><strong>${esc(o.item_label)}</strong>${o.dates&&o.dates.length?'<small>'+o.dates.map(longDate).map(esc).join(' · ')+'</small>':''}${o.discount_cents?'<small>Includes '+dollars(o.discount_cents)+' discount</small>':''}</td><td data-label="Wrestler">${esc(o.wrestler_name)}</td><td data-label="Status"><span class="pill ${cls[o.status]||'neutral'}">${esc(label[o.status]||o.status)}</span><small class="muted">${o.status==='paid'?paidText(o):o.status==='refunded'?'Refunded after payment on '+esc(longDate(o.paid_at)):'Started '+esc(longDate(o.created_at))+'. Nothing has been charged.'}</small></td><td class="num"><strong>${dollars(o.amount_cents)}</strong></td></tr>`).join('')+'</tbody></table>';
+ $('purchaseList').innerHTML='<table class="swa-table"><thead><tr><th>Purchase</th><th>Wrestler</th><th>Status</th><th class="num">Amount</th></tr></thead><tbody>'+cashBookings.map(cashItem).join('')+(allPurchases?orders:orders.slice(0,PURCHASES_SHOWN)).map(o=>`<tr><td><strong>${esc(o.item_label)}</strong>${o.dates&&o.dates.length?'<small>'+o.dates.map(longDate).map(esc).join(' · ')+'</small>':''}${o.discount_cents?'<small>Includes '+dollars(o.discount_cents)+' discount</small>':''}</td><td data-label="Wrestler">${esc(o.wrestler_name)}</td><td data-label="Status"><span class="pill ${cls[o.status]||'neutral'}">${esc(label[o.status]||o.status)}</span><small class="muted">${o.status==='paid'?paidText(o):o.status==='refunded'?'Refunded after payment on '+esc(longDate(o.paid_at)):'Started '+esc(longDate(o.created_at))+'. Nothing has been charged.'}</small></td><td class="num"><strong>${dollars(o.amount_cents)}</strong></td></tr>`).join('')+'</tbody></table>'+(!allPurchases&&orders.length>PURCHASES_SHOWN?'<button type="button" class="quiet" data-action="all-purchases">Show all '+orders.length+' purchases</button>':'');
  document.querySelectorAll('[data-cash-cancel]').forEach(b=>b.onclick=()=>cancelCash(b.dataset.cashCancel));
 }
 function renderMembershipCards(){
@@ -538,9 +564,10 @@ function renderMembershipCards(){
   if(paused)return pausedCard(w,paused);
   return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="pill neutral">Not enrolled</span></div><p class="muted">${esc(gradeLabel(w.grade))}</p><p>No membership is recorded for this wrestler yet, so there is no start date or next payment.</p><div class="billing-actions"><a class="button" href="/register?plan=monthly&amp;wrestler=${encodeURIComponent(w.id)}">Monthly membership →</a><a class="button" href="/register?plan=walkin&amp;wrestler=${encodeURIComponent(w.id)}">One practice, walk-in →</a></div></article>`;
  }).join(''):'<div class="empty"><p>Add your wrestler to get started. Save a wrestler in your family profile, then choose a program; a profile alone does not start a membership.</p></div>';
- // "Paid" beside Memberships only while a wrestler has an active membership in good standing (issue #231): a paid
- // lesson, camp or walk-in is not a membership, and a past-due one says "Payment needs attention" on its card.
- $('paymentsPill').hidden=!profile.wrestlers.some(w=>{const m=activeMembership(w);return m&&m.subscription_status!=='past_due'});
+ // Each membership says its own state on its card ("Active membership", "Payment needs attention", "Paused"), so the
+ // heading carries no pill of its own (issue #340; it used to read "Memberships … Paid", issue #231). The line that
+ // explains what will show here is only for a family with no membership or scholarship yet.
+ $('membershipsNote').hidden=profile.wrestlers.some(w=>activeMembership(w)||pausedMembership(w)||scholarshipAwards.some(a=>a.wrestler_id===w.id&&a.status==='active'));
  const history=scholarshipAwards.filter(a=>a.accepted_at&&a.status!=='active');
  if(history.length)$('membershipCards').innerHTML+='<h3>Past scholarship agreements</h3>'+history.map(a=>`<p>${esc(a.wrestler_name)} · ${esc(a.status)}<br><a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View / print signed copy →</a> · <a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}&amp;download=1">Download copy</a></p>`).join('');
 
@@ -598,7 +625,7 @@ async function checkoutReturn(){
  $('status').textContent='Stripe has your payment, and confirmation is taking longer than usual. Refresh this page in a minute. You will not be charged twice.';
 }
 // Buttons act through data-action, so the page runs under the script nonce policy (issue #274) with no inline handlers.
-const ACTIONS={signout,edit:editProfile,'cancel-edit':cancelProfileEdit,'add-wrestler':addAnother,'add-wrestler-form':addWrestler,'start-details':startDetails,'start-wrestler':startWrestler,'start-safety':startSafety,'close-account':showClose,'check-card':b=>checkMyCard(b.dataset.wrestler),'remove-wrestler':b=>removeWrestler(Number(b.dataset.index)),'cancel-membership':askCancel,'confirm-cancel':confirmCancel,'keep-membership':keepMembership};
+const ACTIONS={signout,edit:editProfile,'cancel-edit':cancelProfileEdit,'add-wrestler':addAnother,'add-wrestler-form':addWrestler,'start-details':startDetails,'start-wrestler':startWrestler,'start-safety':startSafety,'close-account':showClose,'check-card':b=>checkMyCard(b.dataset.wrestler),'remove-wrestler':b=>removeWrestler(Number(b.dataset.index)),'all-purchases':()=>{allPurchases=true;renderPurchases()},'cancel-membership':askCancel,'confirm-cancel':confirmCancel,'keep-membership':keepMembership};
 if(typeof document.addEventListener==='function'){
  document.addEventListener('click',e=>{const b=e.target&&e.target.closest?e.target.closest('[data-action]'):null;if(!b)return;const fn=ACTIONS[b.dataset.action];if(fn){e.preventDefault();fn(b)}});
  document.addEventListener('change',e=>{const t=e.target,d=t&&t.dataset;if(!d)return;if(d.notes!==undefined)notesNone(Number(d.notes));if(d.season!==undefined)seasonPicked(Number(d.season))});

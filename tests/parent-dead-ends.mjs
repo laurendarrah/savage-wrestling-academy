@@ -174,7 +174,9 @@ const contact = {address: '1 Mat Way, Melville, NY 11747', email: 'hello@swa.tes
   }});
   await settle();
   assert.equal(el('choice').hidden, true, 'no booking form for a started practice');
-  assert.match(el('status').textContent, /This practice has already started, so it can’t be booked here/);
+  assert.match(el('goneText').textContent, /This practice has already started, so it can’t be booked here/);
+  assert.equal(el('gone').hidden, false, 'a card says so, with the way back to the calendar (issue #340)');
+  assert.equal(el('status').textContent, '');
 }
 
 // ---------- Lessons: no wrestler picked for a group spot when the family has several ----------

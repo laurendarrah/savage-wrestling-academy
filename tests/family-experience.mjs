@@ -59,7 +59,7 @@ function page(file, {fetch, search = '', hidden = []}) {
   assert.match(cards, /">Grades 7–12<\/span><h3>SWA Advance<\/h3>/, 'approval is said once, in the note');
   // Coming up is one row in the hero (#282): the soonest session, with sessions at the same time sharing it.
   const week = el('week').innerHTML;
-  assert.equal(week, '<span class="lbl">Coming up</span><span class="when">Mon, Nov 30 · 6:00 PM</span><span class="what">SWA Development practice, SWA Intermediate practice</span><a href="/calendar">Full calendar →</a>');
+  assert.equal(week, '<span class="lbl">Coming up<b class="today">Today</b></span><span class="swa-practice dark"><span class="swa-practice__name what">SWA Development practice, SWA Intermediate practice</span><span class="swa-practice__time when">6:00 PM</span></span><a href="/calendar">Full calendar →</a>', 'the test clock is Nov 30, so the session is today: the red Today line, and the box keeps the time');
   assert.doesNotMatch(week, /2026-1|18:00/);
   // The rest of the list is still computed (next month included), for the row to reach into December when November is over.
   const groups = vm.runInContext('upcoming(__s,"2026-11-30",5)', Object.assign(page('app/welcome/screen.html', {fetch: async () => json({}, false)}).ctx, {__s: [months[''], months['?month=2026-12']]}));
@@ -155,12 +155,12 @@ async function family({profile, updatedAt, cards = {}, waiver = {waiver: null, s
   await settle();
   assert.equal(el('start').hidden, true, 'no guided start once everything is done');
   assert.equal(el('nextUp').hidden, false);
-  // The dark card (#282): the day, the time as the figure, the session and the wrestler, the pass button.
+  // The dark card (#282, #340): the day, then the practice box with the session and the time larger under it, who it
+  // is for, the pass button.
   const next = el('nextUpBody').innerHTML;
   // (The day reads "Today" or "Tomorrow" when the test happens to run on those dates.)
-  assert.match(next, /^<p class="next-day">(?:<b class="today">Today<\/b>|Tomorrow|Mon, Nov 9)<\/p><p class="next-when swa-figure">3:00 PM<\/p>/, 'the soonest session first, time as the figure');
-  assert.match(next, /One-on-one lesson with Coach Dana<\/strong> <span>· Sam Example<\/span>/);
-  assert.match(next, /class="next-meta">Paid · ends 4:00 PM<\/p>/);
+  assert.match(next, /^<p class="swa-day">(?:<b class="today">Today<\/b>|Tomorrow|Mon, Nov 9)<\/p><div class="swa-practice"><p class="swa-practice__name">One-on-one lesson with Coach Dana<\/p><p class="swa-practice__time">3:00 PM<\/p><\/div>/, 'the soonest session first, in the practice box with the time as the figure');
+  assert.match(next, /class="next-meta">Sam Example · Paid · ends 4:00 PM<\/p>/);
   assert.match(next, /class="button primary" href="\/pass\?wrestler=w-1">Show entry pass/);
   assert.doesNotMatch(next, /Directions/, 'no Directions until the academy’s address is in');
   // This week: the rest of the sessions within seven days, as rows; the link goes to the one wrestler's page.

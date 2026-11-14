@@ -162,19 +162,22 @@ const schedule = {month: '2026-11', today: '2026-11-11', programs: [{id: 'Elemen
   assert.match(grid, /26<span class="holiday-tag">Thanksgiving Day<\/span><\/div>/, 'a holiday with no practice is just a label');
   assert.match(grid, /Winter camp<\/strong><span>9:00 AM–12:00 PM<\/span>/); assert.match(grid, /Winter camp<\/strong><span>Time to be announced<\/span>/);
   assert.match(grid, /Single-leg clinic<\/strong><span>Time to be announced<\/span>/); assert.doesNotMatch(all, /No practice/i);
-  assert.match(list, /<article class="is-today"><h3>Nov 11, 2026<span class="today-tag">Today<\/span><\/h3><span class="holiday-tag">Veterans Day<\/span>/);
+  assert.match(list, /<article class="is-today"><h3>Wed, Nov 11<span class="today-tag">Today<\/span><\/h3><span class="holiday-tag">Veterans Day<\/span>/);
   // The grid holds one "Choose a walk-in" per day with a practice still to come, never one per chip (#282).
   assert.match(grid, /<div class="slot elementary"><strong>SWA Development<\/strong><span>5:00 PM–6:15 PM<\/span><\/div>[\s\S]*?<a class="choose" href="\/register\?plan=walkin&amp;date=2026-11-11" target="_top">Choose a walk-in →<\/a>/);
   assert.equal((grid.match(/Choose a walk-in/g) || []).length, 2, 'one per day with a practice (Nov 11 and Nov 12)');
-  vm.runInContext('stepWeek(2)', ctx); assert.match(el('calendar').innerHTML.split('<div class="list">')[1], /<article><h3>Nov 26, 2026<\/h3><span class="holiday-tag">Thanksgiving Day<\/span><\/article><p>Nothing is scheduled this week.<\/p>/, 'holiday-only day on phones, and the week is still empty');
+  vm.runInContext('stepWeek(2)', ctx); assert.match(el('calendar').innerHTML.split('<div class="list">')[1], /<article><h3>Thu, Nov 26<\/h3><span class="holiday-tag">Thanksgiving Day<\/span><\/article><p>Nothing is scheduled this week.<\/p>/, 'holiday-only day on phones, and the week is still empty');
 }
 // Welcome page "Coming up": event times, or "Time to be announced".
 {
   const later = {...schedule, month: '2026-12', practices: [], events: [], holidays: []};
   const {el, ctx} = page('app/welcome/screen.html', {fetch: async url => json(url.includes('month=') ? later : {...schedule, practices: [], events: [schedule.events[1], {...schedule.events[0], dates: ['2026-11-12', '2026-11-13'], schedule: [{date: '2026-11-12', start: '09:00', end: '12:00'}]}]})}); await settle();
   // One row in the hero (#282): the soonest, with its time; a day without a time would say "Time to be announced".
-  assert.match(el('week').innerHTML, /<span class="when">Thu, Nov 12 · 9:00 AM<\/span><span class="what">Winter camp \(camp\)<\/span>/);
-  assert.match(vm.runInContext("nextRow({date:'2026-11-14',start:'',items:[{title:'Single-leg clinic (clinic)',tba:true}]})", ctx), /<span class="when">Sat, Nov 14 · Time to be announced<\/span><span class="what">Single-leg clinic \(clinic\)<\/span>/);
+  // It is the practice box since #340: the session's name, then the day and time larger under it.
+  assert.match(el('week').innerHTML, /<span class="swa-practice__name what">Winter camp \(camp\)<\/span><span class="swa-practice__time when">Thu, Nov 12 · 9:00 AM<\/span>/);
+  assert.match(vm.runInContext("nextRow({date:'2026-11-14',start:'',items:[{title:'Single-leg clinic (clinic)',tba:true}]})", ctx), /<span class="swa-practice__name what">Single-leg clinic \(clinic\)<\/span><span class="swa-practice__time when">Sat, Nov 14 · Time to be announced<\/span>/);
+  // A session today gets the one red "Today" line beside the label, and the box keeps only the time.
+  assert.match(vm.runInContext("nextRow({date:'2026-11-14',start:'16:00',items:[{title:'Friday Night Live'}]},'2026-11-14')", ctx), /^<span class="lbl">Coming up<b class="today">Today<\/b><\/span><span class="swa-practice dark"><span class="swa-practice__name what">Friday Night Live<\/span><span class="swa-practice__time when">4:00 PM<\/span><\/span>/);
 }
 // Booking: each day with its time; the single-day choices name today; the review lists the chosen days' times.
 {
