@@ -3,6 +3,7 @@
 // nothing and never reveals a secret (only whether one is set). Issue #252: matches the Launch board (#246).
 import {kindList} from './purchase-kinds';
 import {publicSchedule} from './public-schedule';
+import {mfaSwitchedOff} from './mfa-policy';
 
 type Settings = {APP_ORIGIN?: string; SUPABASE_URL?: string; SUPABASE_PUBLISHABLE_KEY?: string; EMAIL_API_KEY?: string; MAIL_FROM?: string;
   STRIPE_TEST_WEBHOOK_SECRET?: string; STRIPE_LIVE_WEBHOOK_SECRET?: string; STRIPE_MODE?: string; STRIPE_CONFIG_ENCRYPTION_KEY?: string;
@@ -145,11 +146,10 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
           : 'The site is in live mode. Save a restricted live key on Online payment setup'},
     {key: 'backup', group: 'Safety', label: 'Recent backup', href: '/backups', status: backup && backup.created_at >= weekAgo ? 'done' : 'todo',
       detail: backup ? `Last downloaded ${when(backup.created_at)}${backup.created_at >= weekAgo ? '' : '. Download a fresh one'}` : 'Download an encrypted backup and keep it somewhere safe'},
-    ...(authenticators === undefined ? [] : [{key: 'authenticator', group: 'Safety', label: 'Backup authenticator', href: '/security',
+    // Only while authenticators are required (STAFF_MFA=on, #306); by default staff sign in with a password only.
+    ...(authenticators === undefined || mfaSwitchedOff(settings.STAFF_MFA) ? [] : [{key: 'authenticator', group: 'Safety', label: 'Backup authenticator', href: '/security',
       status: authenticators >= 2 ? 'done' as const : 'todo' as const,
       detail: authenticators >= 2 ? `${authenticators} authenticators can open the dashboard` : 'Add a second authenticator, on another phone or in a password manager, so a lost phone can’t lock you out'}]),
-    ...(String(settings.STAFF_MFA ?? '').trim().toLowerCase() === 'off' ? [{key: 'mfa-off', group: 'Safety', label: 'Authenticator sign-in is turned off', status: 'todo' as const,
-      detail: 'Anyone with the owner or a coach password can sign in without an authenticator code. Before families join, ask whoever maintains the site to delete the STAFF_MFA setting in Cloudflare'}] : []),
     {key: 'health', group: 'Safety', label: 'Site health', href: '/site-health', status: errors ? 'todo' : 'done',
       detail: errors ? `${errors} site error${errors === 1 ? '' : 's'} in the last 24 hours` : 'No site errors in the last 24 hours'},
     {key: 'families', group: 'Families', label: 'Families signed up', href: '/accounts', status: 'info', detail: `${families} famil${families === 1 ? 'y' : 'ies'}`},

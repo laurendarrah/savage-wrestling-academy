@@ -108,7 +108,10 @@ const request = req('/api/roster', 'owner');
 const [a, b, c] = await Promise.all([counting.ownerIdentity(request), counting.strongAccount(request), counting.verifiedAccount(request)]);
 assert.equal(a.owner.userId, 'supabase:owner-uuid'); assert.equal(b.strong, true, 'aal2 from the token'); assert.equal(c.user.id, 'owner-uuid');
 assert.equal(a.headers, b.headers, 'one headers object per request, so cookie refreshes are not lost');
-assert.equal((await counting.strongAccount(req('/api/roster', 'fam'))).strong, false, 'aal1 for a family without an authenticator (STAFF_MFA unset)');
+assert.equal((await counting.strongAccount(req('/api/roster', 'fam'))).strong, true, 'no authenticator needed by default (#306)');
+env.STAFF_MFA = 'on';
+assert.equal((await counting.strongAccount(req('/api/roster', 'fam'))).strong, false, 'aal1 without an authenticator when STAFF_MFA=on');
+delete env.STAFF_MFA;
 
 // --- The Worker: an error the wrapper recorded is alerted once, not recorded twice, and the mark never leaves ---
 const site = load('lib/site-health.ts');

@@ -40,12 +40,12 @@ A daily Cron Trigger (12:41 UTC, set in `vite.config.ts`) sends card and waiver 
 
 | Role | Who | How |
 |---|---|---|
-| Owner | The one verified email `OWNER_EMAIL` in `lib/account-auth.ts` | Needs a verified authenticator code (AAL2) |
+| Owner | The one verified email `OWNER_EMAIL` in `lib/account-auth.ts` | Password only; an authenticator only if one was set up, or if `STAFF_MFA=on` (#306) |
 | Coach | An active row in `staff_access`, granted by an owner invite (`lib/coach-invites.ts`) | Needs AAL2. The owner can add himself as a coach |
 | Family | Any other verified account | Optional authenticator; once set up it is always required |
 | Anonymous | Signed out | Public pages only |
 
-`STAFF_MFA=off` on the Worker temporarily lets staff without an authenticator sign in before launch (#204, `lib/mfa-policy.ts`); the owner's launch checklist shows it in red while it is off. `lib/protected-page.ts` holds the page guards (`ownerPage`, `coachPage`). Hidden links never grant access: every route checks again on the server. Mutations are same-origin JSON, rate-limited per feature (`lib/rate-limit.ts`), and sensitive actions are written to `security_events` (`/security-log`).
+Staff sign in without an authenticator unless `STAFF_MFA=on` is set on the Worker (#204, #306, `lib/mfa-policy.ts`). Off is the default, so a deploy that drops the setting can't bring the requirement back. `lib/protected-page.ts` holds the page guards (`ownerPage`, `coachPage`). Hidden links never grant access: every route checks again on the server. Mutations are same-origin JSON, rate-limited per feature (`lib/rate-limit.ts`), and sensitive actions are written to `security_events` (`/security-log`).
 
 ## The data
 

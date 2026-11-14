@@ -71,9 +71,9 @@ users.ownerWeak = {...users.owner}; // signed in with a password but no authenti
   assert.equal((await post(invites, '/api/coach-invite', {action: 'accept', token}, '')).status, 401);
   assert.equal((await post(invites, '/api/coach-invite', {action: 'accept', token}, 'leeUnconfirmed')).status, 401);
 
-  // The invited coach accepts: access granted with the invite's name and programs, then the authenticator step.
+  // The invited coach accepts: access granted with the invite's name and programs, then straight to coach home (#306).
   r = await post(invites, '/api/coach-invite', {action: 'accept', token}, 'lee');
-  assert.equal(r.status, 200); assert.equal(r.body.redirect, '/security', 'coaches set up an authenticator first');
+  assert.equal(r.status, 200); assert.equal(r.body.redirect, '/coach', 'no authenticator step: coaches sign in with a password (#306)');
   const granted = row("SELECT * FROM staff_access WHERE email='coach.lee@example.test'");
   assert.equal(granted.active, 1); assert.equal(granted.name, 'Coach Lee'); assert.equal(granted.programs, '["Elementary"]');
   const used = row('SELECT used_at,used_by FROM coach_invites WHERE id=?', made.body.invite.id);
@@ -83,9 +83,12 @@ users.ownerWeak = {...users.owner}; // signed in with a password but no authenti
   r = await post(invites, '/api/coach-invite', {action: 'accept', token}, 'lee');
   assert.equal(r.status, 410); assert.match(r.body.error, /already used/);
   assert.equal((await post(invites, '/api/coach-invite', {action: 'check', token}, '')).body.invite.status, 'used');
-  // Coach home still needs the authenticator; after it, Lee lands on coach home.
+  // Coach home opens with a password only (#306).
+  assert.equal((await get(coach, '/api/coach', 'lee')).status, 200);
+  // A coach who sets up an authenticator then needs its code: without it, refused; with it, in.
+  users.lee.factors = totp('lee-f');
   assert.equal((await get(coach, '/api/coach', 'lee')).status, 403);
-  users.lee.factors = totp('lee-f'); levels.lee = 'aal2';
+  levels.lee = 'aal2';
   r = await get(coach, '/api/coach', 'lee');
   assert.equal(r.status, 200); assert.equal(r.body.name, 'Coach Lee'); assert.deepEqual(r.body.programs, ['Elementary']); assert.equal(r.body.owner, false); assert.equal(r.body.maxWeeks, 12);
   assert.equal((await post(invites, '/api/coach-invite', {action: 'accept', token}, 'lee')).body.redirect, undefined);
@@ -124,7 +127,7 @@ users.ownerWeak = {...users.owner}; // signed in with a password but no authenti
   assert.equal((await post(invites, '/api/coach-invite', {action: 'accept'}, 'mallory')).status, 404, 'no invite for this email');
   assert.equal((await post(invites, '/api/coach-invite', {action: 'accept'}, 'sam')).status, 200);
   assert.equal(row("SELECT active FROM staff_access WHERE email='sam.coach@example.test'").active, 1);
-  assert.equal((await post(auth, '/api/auth', {action: 'login', email: 'sam.coach@example.test', password: 'valid-password'}, '')).body.redirect, '/security', 'once accepted, the coach sign-in rules apply');
+  assert.equal((await post(auth, '/api/auth', {action: 'login', email: 'sam.coach@example.test', password: 'valid-password'}, '')).body.redirect, '/coach', 'once accepted, the coach signs in with a password straight to coach home (#306)');
 }
 
 // The confirmation link brings an invited coach to /coach-join; everyone else to sign-in as before.
