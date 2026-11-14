@@ -101,6 +101,20 @@ const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_Yor
   assert.match(style(html), /html body main>section#review\{max-width:calc\(100% - 320px - var\(--swa-s-24\)\)\}/);
   assert.match(html, /<div id="noPractices" class="empty" role="status" aria-live="polite" hidden><\/div>/);
 }
+// If the months ahead cannot be read, the sentence stays and nothing is claimed about what is scheduled.
+{
+  let first = true;
+  const {el, ctx} = run('app/register/screen.html', {fetch: async url => {
+    if (url.startsWith('/api/registration')) { if (!first) return json({error: 'Unable to load registration options.'}, 500); first = false; return json({today, now: '10:00', month: today.slice(0, 7), programs: [{id: 'Intermediate', name: 'SWA Intermediate', monthlyCents: 20000, walkInCents: 4000}], onlineKinds: [], practices: []}); }
+    if (url === '/api/family') return json({data: {wrestlers: [{id: 'w-1', name: 'Sam Example', grade: '8'}]}});
+    if (url === '/api/program-approvals') return json({approvals: []});
+    return json({orders: []});
+  }});
+  await settle();
+  vm.runInContext(`document.getElementById('program').value='Intermediate';update()`, ctx); await settle();
+  assert.match(el('noPractices').innerHTML, /<p>No practices left in \w+ for SWA Intermediate\.<\/p><p class="next">Choose another month above to see its practices\.<\/p>$/);
+  assert.doesNotMatch(el('noPractices').innerHTML, /Nothing is scheduled|Next:/);
+}
 // With nothing scheduled in the six months after it, the page says so and points to Messages.
 {
   const {el, ctx} = run('app/register/screen.html', {fetch: async url => {

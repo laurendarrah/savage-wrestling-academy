@@ -157,7 +157,7 @@ html body main>section>.billing-note{margin:0 0 var(--swa-s-12);max-width:70ch}
 #purchaseList td button{margin-top:6px}
 /* The status pill names itself, so the phone's two-line row drops the "Status:" prefix and keeps the pill and its date on one line */
 html body #purchaseList .swa-table td[data-label="Status"]::before{content:none}
-@media (max-width:600px){html body #purchaseList .swa-table td[data-label="Status"]{display:flex;flex-wrap:wrap;align-items:center;gap:var(--swa-s-4) var(--swa-s-8)}html body #purchaseList .swa-table td[data-label="Status"] small{flex:0 1 auto}html body #purchaseList .swa-table td[data-label="Status"] button{margin-top:0}html body #purchaseList .swa-table td:first-child{font-size:var(--swa-t-15)}}
+@media (max-width:600px){html body #purchaseList .swa-table td[data-label="Status"]{display:flex;flex-wrap:wrap;align-items:center;gap:var(--swa-s-4) var(--swa-s-8)}html body #purchaseList .swa-table td[data-label="Status"] small{flex:0 1 auto}html body #purchaseList .swa-table td[data-label="Status"] button{margin-top:0}/* A paid row's caption already starts "Paid …", so the green pill is left to the desk's Status column */html body #purchaseList .swa-table td[data-label="Status"] .pill.ok{display:none}html body main>section#purchases>.billing-note{font-size:var(--swa-t-13)}html body #purchaseList .swa-table td:first-child{font-size:var(--swa-t-15)}}
 @media (min-width:601px){#purchaseList td[data-label="Wrestler"]{white-space:nowrap}}
 html body #purchaseList>button.quiet{margin-top:var(--swa-s-4);padding:0;font-size:var(--swa-t-15)}
 html body main>section#yourData{max-width:var(--swa-width-narrow)}

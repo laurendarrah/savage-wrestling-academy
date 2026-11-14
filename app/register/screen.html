@@ -239,9 +239,10 @@ async function findNextPractice(programId,from){const [y,m]=from.split('-').map(
 function showNoPractices(p){
  const key=p.id+'|'+catalog.month,left=catalog.month===catalog.today.slice(0,7),known=key in nextPractice,next=nextPractice[key];
  $('noPractices').innerHTML=CAL_ICON+'<p>No practices '+(left?'left ':'')+'in '+esc(monthWord(catalog.month))+' for '+esc(p.name)+'.</p>'
-  +(!known?'<p class="next">Looking for the next practice…</p>':next?'<p class="next">Next: <strong>'+esc(shortDay(next.date))+'</strong></p><button type="button" class="button" data-jump="'+esc(next.date)+'">Go to '+esc(monthWord(next.date.slice(0,7)))+'</button>':'<p class="next">Nothing is scheduled for the six months after it yet. Message the academy to ask when practices start.</p><a class="button" href="/inbox">Message the academy</a>');
+  +(!known?'<p class="next">Looking for the next practice…</p>':next==='?'?'<p class="next">Choose another month above to see its practices.</p>':next?'<p class="next">Next: <strong>'+esc(shortDay(next.date))+'</strong></p><button type="button" class="button" data-jump="'+esc(next.date)+'">Go to '+esc(monthWord(next.date.slice(0,7)))+'</button>':'<p class="next">Nothing is scheduled for the six months after it yet. Message the academy to ask when practices start.</p><a class="button" href="/inbox">Message the academy</a>');
  if(known||nextPractice[key+'?'])return;nextPractice[key+'?']=true;
- findNextPractice(p.id,catalog.month).then(found=>{nextPractice[key]=found},()=>{nextPractice[key]=null}).then(()=>{if(!loading&&program()?.id===p.id&&key===p.id+'|'+catalog.month&&!$('noPractices').hidden)showNoPractices(p)});
+ // If the months ahead cannot be read just now, the sentence stays and points at the month picker; nothing is claimed.
+ findNextPractice(p.id,catalog.month).then(found=>{nextPractice[key]=found},()=>{nextPractice[key]='?'}).then(()=>{if(!loading&&program()?.id===p.id&&key===p.id+'|'+catalog.month&&!$('noPractices').hidden)showNoPractices(p)});
 }
 // The jump lands on the day of that next practice, with its times open.
 let jumpDate='';
