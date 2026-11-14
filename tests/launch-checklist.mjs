@@ -182,20 +182,15 @@ for (const [o, ok] of [['http://register.savagewrestling.example', false], ['htt
   assert.equal(a.status, ok ? 'done' : 'todo', o); if (!ok) assert.match(a.detail, /must start with https/);
 }
 
-// Backup authenticator (issue #167): to do with one, done with two, left out when the caller doesn't say.
-{
-  const on = {...settings, STAFF_MFA: 'on'};
-  const one = by(await launchChecklist(DB, on, today, now, 1)).authenticator;
-  assert.equal(one.status, 'todo'); assert.equal(one.href, '/security'); assert.match(one.detail, /lost phone/);
-  assert.equal(by(await launchChecklist(DB, on, today, now, 2)).authenticator.status, 'done');
-  assert.equal(by(await launchChecklist(DB, on, today, now)).authenticator, undefined);
-  assert.equal(by(await launchChecklist(DB, settings, today, now, 1)).authenticator, undefined, 'no backup-authenticator item while staff sign in with a password only (#306)');
+// Issues #306, #347: sign-in is a password, so the checklist has no sign-in safety item, whatever the old Worker
+// setting says.
+for (const v of [undefined, 'off', 'on']) {
+  const items = by(await launchChecklist(DB, {...settings, STAFF_MFA: v}, today, now));
+  for (const k of ['authenticator', 'mfa-off']) assert.equal(items[k], undefined, k + ' ' + v);
+  assert.deepEqual(Object.values(items).filter(x => x.href === '/security'), [], 'nothing on the checklist points at Account security');
 }
 const routeText = readFileSync('app/api/launch-checklist/route.ts', 'utf8');
-assert.match(routeText, /factors \?\? \[\]\)\.filter\(f => f\.status === 'verified'\)/, 'counts only verified authenticators');
-
-// Issue #306: no red Safety item about the authenticator, whatever STAFF_MFA says.
-for (const v of [undefined, 'off', 'on']) assert.equal(by(await launchChecklist(DB, {...settings, STAFF_MFA: v}, today, now))['mfa-off'], undefined, String(v));
+assert.doesNotMatch(routeText, /factors/, 'the route does not look at what is saved on the account');
 
 // The page is owner-only and the dashboard shows it.
 const route = readFileSync('app/api/launch-checklist/route.ts', 'utf8');

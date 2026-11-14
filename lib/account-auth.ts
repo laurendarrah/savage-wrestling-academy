@@ -1,7 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
 import type { User } from '@supabase/supabase-js';
-import { fullySignedIn, mfaSwitchedOff } from './mfa-policy';
 import { SUPABASE_TIMEOUT_MS, timedFetch } from './net';
 
 export const OWNER_EMAIL = 'savagewrestlingclub@gmail.com';
@@ -60,9 +59,10 @@ export const isSignInUnavailable = (e: unknown): e is SignInUnavailable => e ins
 const retryable = (error: {status?: number; name?: string; code?: string} | null) =>
  !!error && (error.name === 'AuthRetryableFetchError' || error.status === 0 || (typeof error.status === 'number' && error.status >= 500) || error.code === 'unexpected_failure');
 
-// The claims in the session's own token: `aal` (authenticator level) and `sub` (user id). Read from the cookie, so it
-// costs no call to Supabase. Never a substitute for getUser(): only getUser() proves the session is still valid.
-export type SessionClaims = {sub?: string; aal?: string; amr?: {method: string}[]};
+// The claims in the session's own token; the site reads only `sub` (user id), to count sign-out and password-change
+// attempts per account. Read from the cookie, so it costs no call to Supabase. Never a substitute for getUser(): only
+// getUser() proves the session is still valid.
+export type SessionClaims = {sub?: string};
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 export function decodeClaims(token: string | undefined | null): SessionClaims | null {
  if (!token) return null;
@@ -80,16 +80,16 @@ export async function sessionClaims(client: {auth: {getSession(): Promise<{data:
  try { return decodeClaims((await client.auth.getSession()).data.session?.access_token); } catch { return null; }
 }
 
-// Who is asking, worked out once per request (issue #274): one getUser() round trip, the authenticator level from the
-// session token, and the role once lib/access-control.ts has looked it up. Every helper below reads this.
-export type Identity = {client: ReturnType<typeof accountClient>['client']; headers: Headers; user: User | null; aal2: boolean};
+// Who is asking, worked out once per request (issue #274): one getUser() round trip. Every helper below reads this.
+// A confirmed email and a valid password session is fully signed in, always (issues #306, #347): the site has no
+// second sign-in step, and anything else saved on the account in Supabase changes nothing.
+export type Identity = {client: ReturnType<typeof accountClient>['client']; headers: Headers; user: User | null};
 const identities = new WeakMap<Request, Promise<Identity>>();
 async function resolveIdentity(request: Request): Promise<Identity> {
  const auth = accountClient(request);
  const {data: {user}, error} = await auth.client.auth.getUser();
  if (error && retryable(error)) throw new SignInUnavailable();
- const claims = !error && user ? await sessionClaims(auth.client) : null;
- return {...auth, user: error ? null : user, aal2: claims?.aal === 'aal2'};
+ return {...auth, user: error ? null : user};
 }
 export function identityFor(request: Request): Promise<Identity> {
  let pending = identities.get(request);
@@ -114,19 +114,9 @@ export async function verifiedAccount(request: Request) {
  const id = await identityFor(request);
  return {client: id.client, headers: id.headers, user: id.user};
 }
-export async function strongAccount(request: Request) {
- const id = await identityFor(request), auth = {client: id.client, headers: id.headers, user: id.user};
- let strong=false;
- if(auth.user?.email_confirmed_at){
- const hasVerifiedFactor=!!auth.user.factors?.some(f=>f.status==='verified'&&f.factor_type==='totp');
- // STAFF_MFA=off lets accounts without an authenticator through until launch (issue #204, lib/mfa-policy.ts).
- strong=fullySignedIn({emailConfirmed:true,aal2:id.aal2,hasVerifiedFactor,mfaOff:mfaSwitchedOff((env as {STAFF_MFA?:string}).STAFF_MFA)});
- }
- return {...auth,strong};
-}
 export async function ownerIdentity(request: Request) {
- const auth=await strongAccount(request);
- return {...auth,mfaRequired:verifiedOwner(auth.user)&&!auth.strong,owner:verifiedOwner(auth.user)&&auth.strong?{userId:'supabase:'+auth.user!.id,displayName:auth.user!.email!}:null};
+ const auth=await verifiedAccount(request);
+ return {...auth,owner:verifiedOwner(auth.user)?{userId:'supabase:'+auth.user!.id,displayName:auth.user!.email!}:null};
 }
 export function sameOrigin(request:Request){return request.headers.get('origin')===new URL(request.url).origin}
 export function accountReply(body:unknown,status=200,headers?:Headers){return Response.json(body,{status,headers:headers??{'Cache-Control':'private, no-store'}})}

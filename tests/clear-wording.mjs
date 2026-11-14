@@ -1,7 +1,7 @@
 // Issue #127: what families, coaches and the owner read is plain, complete and in one date format. Runs page scripts
 // with a fake DOM (inline JavaScript is not typechecked) and checks family and coach pages for builder language.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync, readdirSync, statSync} from 'node:fs';
 import vm from 'node:vm';
 
 function page(file, {fetch, search = '', extra = {}}) {
@@ -55,12 +55,11 @@ const reply = body => ({ok: true, status: 200, json: async () => body});
 
 // Account security: a signed-in person goes back to their own home, and no role label is shown.
 for (const [role, destination, label] of [['family', '/family', 'Back to your family account'], ['coach', '/coach', 'Back to coach home'], ['owner', '/', 'Back to the owner dashboard']]) {
-  const {el} = page('app/security/screen.html', {fetch: async () => reply({email: 'x@example.test', role, strong: role !== 'family', required: role !== 'family', destination, factors: []})});
+  const {el} = page('app/security/screen.html', {fetch: async () => reply({email: 'x@example.test', role, destination})});
   await settle();
   assert.equal(el('identity').textContent, 'x@example.test', 'no lowercase role label');
   assert.equal(el('home').href, destination); assert.equal(el('home').textContent, label);
-  assert.doesNotMatch(el('explain').textContent + el('continue').textContent, /workspace/);
-  if (role === 'family') assert.equal(el('status').textContent, '', 'nothing to do, so no status line');
+  assert.equal(el('status').textContent, '', 'nothing to do, so no status line');
 }
 
 // Calendar: the status line only shows real problems, and Refresh stays because the error tells people to use it.
@@ -118,5 +117,15 @@ assert.doesNotMatch(readFileSync('lib/notify.ts', 'utf8'), /at \$\{p\.start/);
 // Owner pages explain settings in words instead of showing setting names, API paths or issue numbers.
 for (const file of ['app/lesson-settings/screen.html', 'app/messages/screen.html', 'app/site-health/screen.html', 'app/payment-setup/screen.html', 'lib/launch-checklist.ts'])
   assert.doesNotMatch(readFileSync(file, 'utf8').replace(/^\s*\/\/.*$/gm, '').replace(/settings\.[A-Z_]+|[A-Z_]+\?: string/g, ''), /CHECKOUT_KINDS|STRIPE_TEST_WEBHOOK_SECRET|\/api\/health|#87|decision #/, file);
+
+// Issue #347: sign-in is an email and a password, and the site never asks for, offers or mentions a second step.
+// Every page, script, style, email and message the site can show is checked (not only the family and coach pages),
+// plus the code behind them, so the words cannot come back in an error message either.
+{
+  const walk = d => readdirSync(d).flatMap(n => { const p = d + '/' + n; return statSync(p).isDirectory() ? walk(p) : [p]; });
+  const shown = [...walk('app'), ...walk('lib'), ...walk('public'), ...walk('docs/email-templates')].filter(p => /\.(html|ts|tsx|js|css|md|txt|json)$/.test(p) && !p.startsWith('public/jsqr'));
+  assert.ok(shown.length > 250, 'the scan found the pages');
+  for (const file of shown) assert.doesNotMatch(readFileSync(file, 'utf8'), /authenticator|\b2fa\b|two[- ]factor|two[- ]step\b|\bmfa\b|multi[- ]factor|\btotp\b|one-time passcode|verification code/i, file);
+}
 
 console.log('Clear wording tests passed');

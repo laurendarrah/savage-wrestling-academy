@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {load, request, sqlite, users, levels} from './accounts.mjs';
+import {load, request, sqlite, users} from './accounts.mjs';
 
 const T = load('lib/coach-time.ts'), S = load('lib/coach-timesheets.ts');
 const staff = load('app/api/staff/route.ts'), api = load('app/api/coach-time/route.ts'), owner = load('app/api/timesheets/route.ts');
@@ -17,8 +17,7 @@ const get = (route, path, who) => route.GET(request(path, 'GET', null, who)).the
 const deq = (a, b, m) => assert.deepEqual(JSON.parse(JSON.stringify(a)), b, m);
 const row = (sql, ...a) => sqlite.prepare(sql).get(...a);
 const at = s => new Date(s);
-const totp = id => [{id, status: 'verified', factor_type: 'totp'}];
-for (const [k, email] of [['dana', 'dana.coach@example.test'], ['lee', 'lee.coach@example.test']]) { users[k] = {id: k + '-uuid', email, email_confirmed_at: '2026-10-15', factors: totp(k + '-f')}; levels[k] = 'aal2'; }
+for (const [k, email] of [['dana', 'dana.coach@example.test'], ['lee', 'lee.coach@example.test']]) { users[k] = {id: k + '-uuid', email, email_confirmed_at: '2026-10-15'}; }
 
 // ---------- Pure rules ----------
 {

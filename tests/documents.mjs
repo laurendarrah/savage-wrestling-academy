@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {load, request, sqlite, users, levels} from './accounts.mjs';
+import {load, request, sqlite, users} from './accounts.mjs';
 
 const familyApi = load('app/api/waiver/route.ts'), ownerApi = load('app/api/waivers/route.ts'), contractApi = load('app/api/contract/route.ts');
 const exceptionsApi = load('app/api/exceptions/route.ts'), coachApi = load('app/api/coach/route.ts'), payments = load('app/api/payments/route.ts');
@@ -16,14 +16,13 @@ const post = (route, path, body, who) => route.POST(request(path, 'POST', body, 
 const get = (route, path, who) => route.GET(request(path, 'GET', null, who)).then(reply);
 const OWNER = 'savagewrestlingclub@gmail.com', now = new Date().toISOString();
 const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
-const totp = id => [{id, status: 'verified', factor_type: 'totp'}];
 const strokes = [[[0.1, 0.5], [0.3, 0.4], [0.5, 0.6]]];
 const TEXT = 'Test text for the automated check only. It is not a real document and is never shown to families. '.repeat(3);
 
 // A family with a grade 8 wrestler and an adult wrestler, two coaches, and the owner also set up as a coach (issue #190).
-users.kim = {id: 'kim-uuid', email: 'kim@example.test', email_confirmed_at: '2026-10-15', factors: []};
-users.cora = {id: 'cora-uuid', email: 'cora.coach@example.test', email_confirmed_at: '2026-10-15', factors: totp('cora-f')}; levels.cora = 'aal2';
-users.drew = {id: 'drew-uuid', email: 'drew.coach@example.test', email_confirmed_at: '2026-10-15', factors: totp('drew-f')}; levels.drew = 'aal2';
+users.kim = {id: 'kim-uuid', email: 'kim@example.test', email_confirmed_at: '2026-10-15'};
+users.cora = {id: 'cora-uuid', email: 'cora.coach@example.test', email_confirmed_at: '2026-10-15'};
+users.drew = {id: 'drew-uuid', email: 'drew.coach@example.test', email_confirmed_at: '2026-10-15'};
 const card = {usawNumber: 'AB1234', usawExpires: '2099-12-31'};
 sqlite.prepare('INSERT INTO family_accounts(user_id,email,payload,revision,updated_at) VALUES (?,?,?,1,?)').run('kim-uuid', 'kim@example.test',
   JSON.stringify({parentName: 'Robin Kim', phone: '555-0101', wrestlers: [{id: 'k1', name: 'Kai Kim', grade: '8', ...card}, {id: 'k2', name: 'Ari Kim', grade: 'Adult', ...card}]}), now);

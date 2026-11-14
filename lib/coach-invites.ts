@@ -86,7 +86,7 @@ async function emailInvite(row: InviteRow, token: string): Promise<'sent' | 'fai
   const programs = (JSON.parse(row.programs) as string[]).map(p => PROGRAM_NAMES[p] ?? p).join(', ');
   const [status] = await sendEmails([{to: row.email, subject: 'You’re invited to coach at Savage Wrestling Academy',
     text: `Hi ${row.name},\n\nSavage Wrestling Academy has invited you to join as a coach${programs ? ' for ' + programs : ''}.\n\n`
-      + `Open this link to create your coach account (or sign in with ${row.email}) and set up your authenticator app:\n${inviteLink(token)}\n\n`
+      + `Open this link to create your coach account (or sign in with ${row.email}):\n${inviteLink(token)}\n\n`
       + `The link works once and ends on ${new Date(row.expires_at).toLocaleDateString('en-US', {timeZone: 'America/New_York', month: 'long', day: 'numeric'})}. `
       + 'If it stops working, ask the academy for a new one.\n\n—\nSavage Wrestling Academy', audience: 'invite'}]);
   return status === 'sent' ? 'sent' : 'failed';

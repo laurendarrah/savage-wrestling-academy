@@ -1,4 +1,4 @@
-import {ownerIdentity,strongAccount,isSignInUnavailable,securityHeaders} from './account-auth';
+import {ownerIdentity,verifiedAccount,isSignInUnavailable,securityHeaders} from './account-auth';
 import {accountRole,coachAccess} from './access-control';
 import {markOwnerShell} from './owner-shell';
 // Supabase could not be reached (issue #274): the page says so with a 503, which the Worker records, instead of sending
@@ -7,25 +7,22 @@ export function unavailablePage(){const headers=securityHeaders();headers.set('C
  return new Response('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign-in unavailable | Savage Wrestling Academy</title></head><body><main><h1>Sign-in is temporarily unavailable</h1><p>The sign-in service could not be reached, so this page cannot check who you are. Nothing is lost and you are not signed out. Please try again in a few minutes.</p><p><a href="/">Back to the home page</a></p></main></body></html>',{status:503,statusText:'Sign-in unavailable',headers})}
 const guarded=<T>(fn:()=>Promise<T>):Promise<T|Response>=>fn().catch(e=>{if(isSignInUnavailable(e))return unavailablePage();throw e});
 export const ownerPage=(request:Request,html:string)=>guarded(()=>ownerPageChecked(request,html));
-async function ownerPageChecked(request:Request,html:string){const auth=await ownerIdentity(request);if(!auth.owner){auth.headers.set('Location',auth.mfaRequired?'/security':'/login');return new Response(null,{status:303,headers:auth.headers})}auth.headers.set('Content-Type','text/html; charset=utf-8');markOwnerShell(auth.headers);return new Response(html,{headers:auth.headers})}
+async function ownerPageChecked(request:Request,html:string){const auth=await ownerIdentity(request);if(!auth.owner){auth.headers.set('Location','/login');return new Response(null,{status:303,headers:auth.headers})}auth.headers.set('Content-Type','text/html; charset=utf-8');markOwnerShell(auth.headers);return new Response(html,{headers:auth.headers})}
 // Coach pages: coaches, and the owner once they have added themselves as a coach (issue #190). An owner who has not
 // is sent to Coaches to do that. With ownerShell, the owner sees the page inside the owner shell (issue #261).
 export const coachPage=(request:Request,html:string,opts:{ownerWithoutCoach?:boolean,ownerShell?:boolean}={})=>guarded(()=>coachPageChecked(request,html,opts));
 async function coachPageChecked(request:Request,html:string,opts:{ownerWithoutCoach?:boolean,ownerShell?:boolean}={}){
- const auth=await strongAccount(request),access=await accountRole(auth.user);
+ const auth=await verifiedAccount(request),access=await accountRole(auth.user);
  const go=(to:string)=>{auth.headers.set('Location',to);return new Response(null,{status:303,headers:auth.headers})};
  if(access.role!=='coach'&&access.role!=='owner')return new Response('Coach access required.',{status:403,headers:auth.headers});
- if(!auth.strong)return go('/security');
- if(access.role==='owner'&&!opts.ownerWithoutCoach&&!(await coachAccess(auth.user,auth.strong)))return go('/staff#self');
+ if(access.role==='owner'&&!opts.ownerWithoutCoach&&!(await coachAccess(auth.user)))return go('/staff#self');
  auth.headers.set('Content-Type','text/html; charset=utf-8');if(opts.ownerShell&&access.role==='owner')markOwnerShell(auth.headers);return new Response(html,{headers:auth.headers});
 }
-// Signed-in family pages (the waiver and the Parent Consent Form): a confirmed account, and the authenticator code when
-// the family has turned one on.
+// Signed-in family pages (the waiver and the Parent Consent Form): a confirmed account.
 export const familyPage=(request:Request,html:string)=>guarded(()=>familyPageChecked(request,html));
 async function familyPageChecked(request:Request,html:string){
- const auth=await strongAccount(request),go=(to:string)=>{auth.headers.set('Location',to);return new Response(null,{status:303,headers:auth.headers})};
+ const auth=await verifiedAccount(request),go=(to:string)=>{auth.headers.set('Location',to);return new Response(null,{status:303,headers:auth.headers})};
  if(!auth.user?.email_confirmed_at)return go('/login');
- if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return go('/security');
  auth.headers.set('Content-Type','text/html; charset=utf-8');return new Response(html,{headers:auth.headers});
 }
 // The shared signing and owner document pages open on the waiver's wording; the other documents' routes swap in their

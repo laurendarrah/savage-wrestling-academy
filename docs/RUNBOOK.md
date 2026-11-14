@@ -14,7 +14,7 @@ Keep these six things in the password manager. Every fix below depends on at lea
 - [First, check site health](#first-check-site-health)
 - Site and updates: [site down](#the-site-is-down-or-shows-an-error-for-everyone) · [a deploy failed](#a-deploy-failed) · [GitHub Actions isn't running](#github-actions-isnt-running) · [roll back a bad update](#an-update-made-something-worse) · [data wrong or missing](#data-looks-wrong-or-is-missing)
 - Payments: [connecting Stripe](#connecting-the-academys-stripe-account) · [Stripe's notices aren't reaching the site](#stripes-notices-arent-reaching-the-site) · ["my payment didn't go through"](#a-family-says-their-payment-didnt-go-through) · [charged but unpaid](#a-family-was-charged-but-the-payment-shows-unpaid) · [a monthly payment failed](#a-monthly-payment-failed) · [refunds](#refunds) · [card fees missing](#card-fees-are-missing) · [test or live?](#test-or-live) · [offline payments](#offline-payments)
-- Sign-in: [nobody can sign in](#nobody-can-sign-in-or-sign-up) · [email limit reached](#sign-up-or-reset-emails-blocked-by-the-email-limit) · [the authenticator switch](#the-authenticator-switch-staff_mfa) · [lost authenticator](#someone-lost-the-phone-with-their-authenticator) · [owner locked out](#the-owner-is-locked-out)
+- Sign-in: [nobody can sign in](#nobody-can-sign-in-or-sign-up) · [email limit reached](#sign-up-or-reset-emails-blocked-by-the-email-limit) · [password only, no authenticator](#sign-in-is-a-password-only) · [owner locked out](#the-owner-is-locked-out)
 - Email: [families never got the email](#families-say-they-never-got-the-email) · [check alert emails arrive](#check-that-alert-emails-arrive)
 - [Who to call](#who-to-call)
 - Before launch: [the launch test pass](LAUNCH_TEST_PASS.md) (#24) · [the restore drill](RESTORE_DRILL.md) (#25)
@@ -235,7 +235,7 @@ Cash, check or Venmo goes in with **/payments → Record an offline payment**. A
 
 ## Sign-in
 
-Sign-in, sign-up, confirmation and password emails, and authenticators all run on Supabase. The rest of the site runs on Cloudflare, so `/api/health` can say `"ok":true` while nobody can sign in.
+Sign-in, sign-up, and confirmation and password emails all run on Supabase. The rest of the site runs on Cloudflare, so `/api/health` can say `"ok":true` while nobody can sign in.
 
 ### Nobody can sign in or sign up
 
@@ -269,22 +269,15 @@ Sign-in, sign-up, confirmation and password emails, and authenticators all run o
 
 **Who:** Justin or Lauren (Supabase), Justin (Resend, his own account; Lauren helps only if asked).
 
-### The authenticator switch (STAFF_MFA)
+### Sign-in is a password only
 
-The owner and coaches sign in with email and password only. Lauren and Justin decided this on Nov 13 (#306), replacing the earlier plan to require an authenticator before families join (#27).
+Everyone (the owner, coaches and families) signs in with an email and a password and nothing else. Lauren decided on Nov 14 (#347) that the site never asks for, offers or mentions an authenticator: "We never want to turn on the 2fa. At all." That goes one step past the Nov 13 decision that staff sign in with a password only (#306). The site has no authenticator feature. **/security** shows who is signed in and **Change password**.
 
-- **Default:** no `STAFF_MFA` setting means no authenticator is required. A deploy can't change that.
-- **Someone is still asked for a code:** they set up an authenticator at some point, and it stays in use. In **Supabase → Authentication → Users**, open their account and delete its **MFA factors**. They then sign in with their password only.
-- **To require authenticators again:** add `STAFF_MFA` with the value `on` in Cloudflare (**Workers & Pages → savage-wrestling-academy → Settings → Variables and Secrets**), as a **Secret**. The owner and coaches are then asked to set one up at their next sign-in.
-
-### Someone lost the phone with their authenticator
-
-**A coach or family:** the owner removes their access. For a coach, that's **Coaches (/staff) → remove**, then add them again so they set up a new authenticator. A family with an authenticator turned on needs the same reset as the owner, below.
-
-**The owner:** a password reset alone won't get past the authenticator check.
-1. If you added a backup authenticator (a second phone or a password manager), use it, then add a new one on **/security**.
-2. If not, a Supabase admin (Lauren) opens **Supabase → Authentication → Users**, finds `savagewrestlingclub@gmail.com` and removes its MFA factors. If the dashboard doesn't offer that, Supabase support can do it. The owner then signs in and sets up a new authenticator.
-3. Prevent this: right after setting up the first authenticator, add a backup one from **/security → Add a backup authenticator**.
+- **Nobody is asked for a code.** If someone says they are, they have an old page open: have them reload it.
+- **Leftover authenticators do nothing.** An account that set one up before Nov 14 may still have a factor saved in Supabase (**Authentication → Users → the user → Factors**). The site ignores it, and the owner can delete it whenever convenient.
+- **The `STAFF_MFA` setting is ignored.** If it still exists in Cloudflare (**Workers & Pages → savage-wrestling-academy → Settings → Variables and Secrets**), it can be deleted.
+- **A lost phone locks nobody out.** A forgotten password is reset by email from **/login → Forgot your password?**
+- **Bringing an authenticator back** takes a new decision from Lauren and Justin, recorded in an issue, and new code. There is no switch.
 
 ### The owner is locked out
 
@@ -293,8 +286,7 @@ Work down this list:
 2. **Forgot the password:** **/login → Forgot your password?** Open the reset link in the same browser you asked from. If the reset email doesn't arrive, see [the email limit](#sign-up-or-reset-emails-blocked-by-the-email-limit).
 3. **Email never confirmed:** **/login → Didn't get the confirmation email?** If that is blocked too, a Supabase admin uses the workaround above.
 4. **"Too many sign-in attempts":** wait a minute.
-5. **Lost authenticator:** see [the section above](#someone-lost-the-phone-with-their-authenticator).
-6. **Can't get into Supabase itself** (needed for 3 and 5): Lauren is a Supabase admin and can do those steps. If neither of you can sign in to Supabase, contact Supabase support.
+5. **Can't get into Supabase itself** (needed for 3): Lauren is a Supabase admin and can do those steps. If neither of you can sign in to Supabase, contact Supabase support.
 
 **Who:** Lauren (Supabase admin) for anything past step 4.
 
@@ -338,7 +330,7 @@ You can send 3 test alerts an hour. Each one is in **Security activity** ("Test 
 |---|---|---|
 | Site down or a bad update | Cloudflare | Justin (owner), Lauren (admin) |
 | A failed deploy, GitHub Actions, the site's code | GitHub | Lauren |
-| Sign-in, sign-up emails, authenticators | Supabase | Justin (owner), Lauren (admin) |
+| Sign-in, sign-up emails | Supabase | Justin (owner), Lauren (admin) |
 | Payments, refunds, webhooks, connecting Stripe | Stripe (Justin's own account), plus `/payment-setup` | Justin. Lauren only if asked |
 | Emails from the site to families and the owner | Resend (Justin's own account), plus Worker settings in Cloudflare | Justin. Lauren only if asked |
 | Domain and email for savagewrestling.com | GoDaddy | Justin |

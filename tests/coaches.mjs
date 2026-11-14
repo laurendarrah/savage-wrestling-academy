@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
-import {load, request, sqlite, users, levels} from './accounts.mjs';
+import {load, request, sqlite, users} from './accounts.mjs';
 
 const staff = load('app/api/staff/route.ts'), invites = load('app/api/coach-invite/route.ts'), coach = load('app/api/coach/route.ts');
 const profiles = load('app/api/coach-profile/route.ts'), lessons = load('app/api/lessons/route.ts'), auth = load('app/api/auth/route.ts');
@@ -16,23 +16,21 @@ const get = (route, path, who) => route.GET(request(path, 'GET', null, who)).the
 const OWNER = 'savagewrestlingclub@gmail.com', ORIGIN = 'https://register.savagewrestling.example';
 const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 const addDays = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
-const confirmed = '2026-10-15', totp = id => [{id, status: 'verified', factor_type: 'totp'}];
+const confirmed = '2026-10-15';
 const tokenOf = link => link.split('#invite=')[1];
 const row = (sql, ...a) => sqlite.prepare(sql).get(...a);
 const count = (sql, ...a) => Object.values(sqlite.prepare(sql).get(...a))[0];
 
-users.lee = {id: 'lee-uuid', email: 'coach.lee@example.test', email_confirmed_at: confirmed, factors: []};
-users.leeUnconfirmed = {id: 'lee-unconfirmed', email: 'coach.lee@example.test', factors: []};
-users.mallory = {id: 'mallory-uuid', email: 'mallory@example.test', email_confirmed_at: confirmed, factors: []};
-users.pat = {id: 'pat-uuid', email: 'pat.coach@example.test', email_confirmed_at: confirmed, factors: []};
-users.sam = {id: 'sam-uuid', email: 'sam.coach@example.test', email_confirmed_at: confirmed, factors: []};
-users.dana = {id: 'dana-uuid', email: 'dana.coach@example.test', email_confirmed_at: confirmed, factors: totp('dana-f')}; levels.dana = 'aal2';
-users.ownerWeak = {...users.owner}; // signed in with a password but no authenticator code this session
+users.lee = {id: 'lee-uuid', email: 'coach.lee@example.test', email_confirmed_at: confirmed};
+users.leeUnconfirmed = {id: 'lee-unconfirmed', email: 'coach.lee@example.test'};
+users.mallory = {id: 'mallory-uuid', email: 'mallory@example.test', email_confirmed_at: confirmed};
+users.pat = {id: 'pat-uuid', email: 'pat.coach@example.test', email_confirmed_at: confirmed};
+users.sam = {id: 'sam-uuid', email: 'sam.coach@example.test', email_confirmed_at: confirmed};
+users.dana = {id: 'dana-uuid', email: 'dana.coach@example.test', email_confirmed_at: confirmed};
 
 // ---------- Invitations ----------
 {
   assert.equal((await post(staff, '/api/staff', {action: 'invite', name: 'Coach Lee', email: 'coach.lee@example.test', programs: ['Elementary']}, 'alice')).status, 403, 'only the owner invites');
-  assert.equal((await post(staff, '/api/staff', {action: 'invite', name: 'Coach Lee', email: 'coach.lee@example.test', programs: ['Elementary']}, 'ownerWeak')).status, 403, 'owner needs the authenticator');
   assert.equal((await post(staff, '/api/staff', {action: 'invite', name: 'Me', email: OWNER, programs: []}, 'owner')).status, 400, 'owner email cannot be invited');
   assert.equal((await post(staff, '/api/staff', {action: 'invite', name: 'Coach Lee', email: 'coach.lee@example.test', programs: ['Elite']}, 'owner')).status, 400, 'unknown program');
   assert.equal((await post(staff, '/api/staff', {action: 'invite', name: ' ', email: 'coach.lee@example.test', programs: []}, 'owner')).status, 400, 'name required');
@@ -73,7 +71,7 @@ users.ownerWeak = {...users.owner}; // signed in with a password but no authenti
 
   // The invited coach accepts: access granted with the invite's name and programs, then straight to coach home (#306).
   r = await post(invites, '/api/coach-invite', {action: 'accept', token}, 'lee');
-  assert.equal(r.status, 200); assert.equal(r.body.redirect, '/coach', 'no authenticator step: coaches sign in with a password (#306)');
+  assert.equal(r.status, 200); assert.equal(r.body.redirect, '/coach', 'straight to coach home: coaches sign in with a password (#306, #347)');
   const granted = row("SELECT * FROM staff_access WHERE email='coach.lee@example.test'");
   assert.equal(granted.active, 1); assert.equal(granted.name, 'Coach Lee'); assert.equal(granted.programs, '["Elementary"]');
   const used = row('SELECT used_at,used_by FROM coach_invites WHERE id=?', made.body.invite.id);
@@ -83,12 +81,7 @@ users.ownerWeak = {...users.owner}; // signed in with a password but no authenti
   r = await post(invites, '/api/coach-invite', {action: 'accept', token}, 'lee');
   assert.equal(r.status, 410); assert.match(r.body.error, /already used/);
   assert.equal((await post(invites, '/api/coach-invite', {action: 'check', token}, '')).body.invite.status, 'used');
-  // Coach home opens with a password only (#306).
-  assert.equal((await get(coach, '/api/coach', 'lee')).status, 200);
-  // A coach who sets up an authenticator then needs its code: without it, refused; with it, in.
-  users.lee.factors = totp('lee-f');
-  assert.equal((await get(coach, '/api/coach', 'lee')).status, 403);
-  levels.lee = 'aal2';
+  // Coach home opens with a password only (#306, #347).
   r = await get(coach, '/api/coach', 'lee');
   assert.equal(r.status, 200); assert.equal(r.body.name, 'Coach Lee'); assert.deepEqual(r.body.programs, ['Elementary']); assert.equal(r.body.owner, false); assert.equal(r.body.maxWeeks, 12);
   assert.equal((await post(invites, '/api/coach-invite', {action: 'accept', token}, 'lee')).body.redirect, undefined);
@@ -169,7 +162,6 @@ users.ownerWeak = {...users.owner}; // signed in with a password but no authenti
   assert.equal(r.status, 200);
   assert.equal(row("SELECT bio,updated_by FROM coach_profiles WHERE email='coach.lee@example.test'").updated_by, 'owner-uuid');
   assert.equal((await get(profiles, '/api/coach-profile?email=nobody@example.test', 'owner')).status, 404);
-  assert.equal((await save(good, 'ownerWeak')).status, 403, 'owner edits need the authenticator');
   // The owner's list shows profiles.
   const list = (await get(staff, '/api/staff', 'owner')).body.staff;
   const lee = list.find(s => s.email === 'coach.lee@example.test');
@@ -189,13 +181,10 @@ users.ownerWeak = {...users.owner}; // signed in with a password but no authenti
   assert.equal((await get(coach, '/api/coach', 'owner')).status, 403, 'not a coach until they add themselves');
   const page = async who => { const r = await pages.coachPage(request('/coach', 'GET', null, who), '<p>coach</p>'); return [r.status, r.headers.get('location')]; };
   assert.deepEqual(await page('owner'), [303, '/staff#self'], 'Coach view asks the owner to add themselves first');
-  assert.equal((await post(staff, '/api/staff', {action: 'self', name: 'Justin', programs: ['Advanced']}, 'ownerWeak')).status, 403);
   assert.equal((await post(staff, '/api/staff', {action: 'self', name: 'Justin', programs: ['Elite']}, 'owner')).status, 400);
   assert.equal((await post(staff, '/api/staff', {action: 'self', name: 'Justin', programs: ['Advanced', 'Intermediate']}, 'owner')).status, 200);
   assert.deepEqual(await page('owner'), [200, null]);
-  assert.deepEqual(await page('ownerWeak'), [303, '/security'], 'the owner still needs the authenticator for Coach view');
   assert.deepEqual(await page('alice'), [403, null]);
-  assert.equal((await get(coach, '/api/coach', 'ownerWeak')).status, 403, 'owner MFA rules unchanged');
   let r = await get(coach, '/api/coach', 'owner');
   assert.equal(r.status, 200); assert.equal(r.body.owner, true); assert.equal(r.body.name, 'Justin'); assert.deepEqual(r.body.programs, ['Advanced', 'Intermediate']);
   // The owner keeps the owner role everywhere else.
@@ -341,4 +330,4 @@ const ok = body => ({ok: true, status: 200, json: async () => body});
   assert.match(navSource, /const COACH_TABS[^\n]*\{href: '\/staff', label: 'Coaches'\}[^\n]*\{href: '\/coach', label: 'Coach view'\}/);
   assert.match(navSource, /\{href: '\/coach', label: 'Coach view', leaves: true\}/);
 }
-console.log('Passed: coach invites (owner only, 256-bit single-use tokens stored hashed, 7-day expiry, wrong email refused, renew and cancel, access granted on accept, authenticator before coach home, sign-in and confirmation return to the invite), profiles (validation, own only, owner edits, families see name and bio but no phone or email), the owner as a coach (Coach view, openings, pay settings, owner checks unchanged), removal keeps lessons, payments, pay report and audit history, and weekly repeating openings (same format and spots, clashes skipped, 12-week cap).');
+console.log('Passed: coach invites (owner only, 256-bit single-use tokens stored hashed, 7-day expiry, wrong email refused, renew and cancel, access granted on accept, straight to coach home, sign-in and confirmation return to the invite), profiles (validation, own only, owner edits, families see name and bio but no phone or email), the owner as a coach (Coach view, openings, pay settings, owner checks unchanged), removal keeps lessons, payments, pay report and audit history, and weekly repeating openings (same format and spots, clashes skipped, 12-week cap).');

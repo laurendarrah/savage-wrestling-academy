@@ -25,7 +25,8 @@ export type SecurityNames = {
 export type SecurityEntry = {title: string; detail: string; who: string; at: string};
 
 const TITLES: Record<string, string> = {
-  mfa_verified: 'Authenticator code verified',
+  // Written until Nov 14 (issue #347), when the second sign-in step was removed. Nothing writes it now; old rows still read.
+  mfa_verified: 'Sign-in code verified (no longer used)',
   backup_exported: 'Backup downloaded',
   backup_restored: 'Backup restored',
   coach_opening_added: 'Lesson opening added',

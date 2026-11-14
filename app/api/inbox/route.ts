@@ -1,14 +1,13 @@
 // Family inbox (issue #72): announcements and the private thread with the academy.
-import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {announcementsPage, familyInbox, familyThreadPage, markRead, postMessage} from '../../../lib/messages';
 import {familyNotices} from '../../../lib/notify';
 import {rateLimited} from '../../../lib/rate-limit';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 async function family(request: Request) {
-  const auth = await strongAccount(request);
+  const auth = await verifiedAccount(request);
   if (!auth.user?.email_confirmed_at) return {auth, error: accountReply({error: 'Sign-in required.'}, 401, auth.headers)};
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return {auth, error: accountReply({error: 'Authenticator verification required.'}, 403, auth.headers)};
   return {auth, error: null};
 }
 export const GET = withApi(GET_); async function GET_(request: Request) {

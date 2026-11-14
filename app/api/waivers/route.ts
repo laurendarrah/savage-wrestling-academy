@@ -11,7 +11,7 @@ const kindOf = (k: unknown): Kind | null => k === undefined || k === null || k =
 
 export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
-  if (!auth.owner) return accountReply({error: 'Owner sign-in and authenticator verification required.'}, 403, auth.headers);
+  if (!auth.owner) return accountReply({error: 'Owner sign-in required.'}, 403, auth.headers);
   const q = new URL(request.url).searchParams, kind = kindOf(q.get('kind'));
   if (!kind) return accountReply({error: 'Choose a document.'}, 400, auth.headers);
   // The owner may also coach (issue #190) but does not sign a contract with the academy.
@@ -23,7 +23,7 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
-  if (!auth.owner) return reply({error: 'Owner sign-in and authenticator verification required.'}, 403);
+  if (!auth.owner) return reply({error: 'Owner sign-in required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return reply({error: 'JSON required.'}, 415);
   const raw = await request.text();

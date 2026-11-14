@@ -65,7 +65,7 @@ Logins do not move: the new Supabase project starts empty (#139). Families and t
 
 - [ ] Supabase → Authentication → URL Configuration: set the Site URL to the new address, and add `https://<new address>/auth/confirm` and `https://<new address>/auth/confirm?next=change` to the redirect URLs.
 - [ ] Supabase → Authentication → Sign In / Providers → Email: keep **Confirm email** on.
-- [ ] Supabase → Authentication → Multi-Factor: keep **Authenticator app (TOTP)** on, so anyone who wants an authenticator can add one. Staff don't need one (#306).
+- [ ] Supabase → Authentication → Multi-Factor: nothing to set. The site signs everyone in with a password only and has no authenticator feature (#306, #347); whatever this page is set to, the site never uses it.
 - [ ] Supabase → Authentication → Emails → Templates: paste the six Savage-branded emails from `docs/email-templates/`, each with its subject (steps in its README). Start with **Confirm sign up** and **Reset password**, the two families see. Paste them again whenever those files change (they were rewritten on Nov 14, #320). A sign-up email that arrives as a bare heading and a link means this step was not done in that Supabase project.
 - [ ] Leaked-password protection, if the Supabase plan allows it.
 - [ ] **Email sender.** Supabase's built-in sender delivers only to members of the Supabase project team, a few emails an hour. Testing with Lauren's and Justin's addresses works; families get no confirmation emails until a custom email sender (SMTP) is set under Authentication → Emails. This waits on the email decision (#87).
@@ -106,7 +106,7 @@ Daily card and waiver reminders now run every morning at 7:41 (8:41 in summer) N
 
 ## Rolling back
 
-The full guide for problems after launch (site down, failed deploys, bad update, lost data, payments and webhooks, sign-in and authenticators, emails) is `docs/RUNBOOK.md`.
+The full guide for problems after launch (site down, failed deploys, bad update, lost data, payments and webhooks, sign-in, emails) is `docs/RUNBOOK.md`.
 
 - **Before step 8:** nothing has changed for families. Fix and redeploy.
 - **A bad publish:** Cloudflare → Workers → the worker → Deployments → roll back to the previous version. Database changes are add-only, so the previous version keeps working.

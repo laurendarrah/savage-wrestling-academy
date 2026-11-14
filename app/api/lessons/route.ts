@@ -2,7 +2,7 @@
 // Signed-in families and the owner (for recording offline lesson payments) can read it. A family also gets the private
 // groups they organised (with each invite link), and with ?join=<code> the private group that link opens.
 // Private groups are never in the openings list a family sees, and invite codes are only ever shown to the organiser.
-import {strongAccount, ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, ownerIdentity, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {privateFormats, academyToday} from '../../../lib/public-schedule';
 import {lessonSettings, openLessons, familyGroups, openingByInvite, groupView, requestGroup, cancelGroup} from '../../../lib/lessons';
 import {checkoutKinds} from '../../../lib/checkout-config';
@@ -13,9 +13,8 @@ import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
-  const auth = await strongAccount(request);
+  const auth = await verifiedAccount(request);
   if (!auth.user?.email_confirmed_at) return {auth, error: accountReply({error: 'Sign-in required.'}, 401, auth.headers)};
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return {auth, error: accountReply({error: 'Authenticator verification required.'}, 403, auth.headers)};
   return {auth, error: null};
 }
 

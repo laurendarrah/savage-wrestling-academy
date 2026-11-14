@@ -31,7 +31,7 @@ function page(file, {fetch, search = '', hidden = []}) {
   assert.match(route, /auth\.user\?'\/family':'\/welcome'/, 'signed-out visitors go to /welcome');
   assert.match(route, /role==='coach'\?'\/coach'/, 'coaches still go to their own home');
   const welcomeRoute = readFileSync('app/welcome/route.ts', 'utf8');
-  assert.doesNotMatch(welcomeRoute, /strongAccount|ownerIdentity/, 'the welcome page is public');
+  assert.doesNotMatch(welcomeRoute, /verifiedAccount|ownerIdentity/, 'the welcome page is public');
   assert.match(welcomeRoute, /X-Content-Type-Options':'nosniff'/); assert.match(welcomeRoute, /frame-ancestors 'self'/);
 
   const programs = [

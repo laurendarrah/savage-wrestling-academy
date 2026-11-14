@@ -7,7 +7,7 @@ import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 const tooLarge=(e:BackupTooLarge)=>`The academy's records are too large for one backup download (${e.what}). No records were changed. Ask whoever maintains the site for a full database export.`;
 export const GET = withApi(GET_); async function GET_(request:Request){
- const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
+ const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in required.'},403);
  const params=new URL(request.url).searchParams;
  if(params.get('mode')==='preview')return reply({fingerprint:await fingerprint(await metadata())});
  // The site keeps the last 10 recovery snapshots (each saved in parts, issue #46).
@@ -43,7 +43,7 @@ export const GET = withApi(GET_); async function GET_(request:Request){
 const CHANGED='Records changed after preview. Preview the backup again before restoring.',UNSUPPORTED='This is not a supported backup for this academy.',FAILED='Restore could not finish or records changed during the restore. No partial restore was applied. Preview again before retrying.';
 const uploadId=(v:unknown):v is string=>typeof v==='string'&&/^[0-9a-f-]{36}$/.test(v);
 export const POST = withApi(POST_); async function POST_(request:Request){
- const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in and authenticator verification required.'},403);
+ const auth=await ownerIdentity(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);if(!auth.owner)return reply({error:'Owner sign-in required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>13000000)return reply({error:'Backup is too large.'},413);let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid backup.'},400)}

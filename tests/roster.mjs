@@ -22,8 +22,8 @@ function load(file) {
       require(name) {
         if (name === 'cloudflare:workers') return {env: {DB}};
         if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',
-          ownerIdentity: async () => ({owner: actor.kind === 'owner' && actor.strong !== false ? {userId: 'owner-id'} : null, mfaRequired: actor.kind === 'owner' && actor.strong === false, headers: new Headers()}),
-          strongAccount: async () => ({user: actor.kind === 'none' ? null : {id: actor.id ?? 'someone', email: 'x@example.test', email_confirmed_at: 'yes'}, strong: actor.strong !== false, headers: new Headers()}),
+          ownerIdentity: async () => ({owner: actor.kind === 'owner' ? {userId: 'owner-id'} : null, headers: new Headers()}),
+          verifiedAccount: async () => ({user: actor.kind === 'none' ? null : {id: actor.id ?? 'someone', email: 'x@example.test', email_confirmed_at: 'yes'}, headers: new Headers()}),
           sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin,
           accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name.endsWith('/access-control')) return {accountRole: async () => actor.kind === 'coach' ? {role: 'coach', staff: {email: 'coach@example.test', name: 'Coach', programs: actor.programs}} : {role: actor.kind === 'family' ? 'family' : 'anonymous', staff: null}};
@@ -142,10 +142,6 @@ assert.equal(sqlite.prepare("SELECT checked_in_by FROM attendance WHERE wrestler
 assert.equal((await post({action: 'checkin', date: tomorrow, sessionKey: key, userId: 'p1', wrestlerId: 'w1'})).status, 403);
 
 // --- Everyone else ---
-actor = {kind: 'coach', id: 'coach-id', programs: ['Intermediate'], strong: false};
-assert.equal((await get('')).status, 403, 'coach without authenticator refused');
-actor = {kind: 'owner', strong: false};
-assert.match((await get('')).body.error, /Authenticator/);
 actor = {kind: 'family', id: 'p1'};
 assert.equal((await get('')).status, 403, 'families cannot see rosters');
 assert.equal((await post({action: 'checkin', date: today, sessionKey: key, userId: 'p1', wrestlerId: 'w1'})).status, 403);

@@ -2,7 +2,7 @@
 // who is signed in; "accept" grants coach access to the signed-in person if the invite is open and for their email.
 // The token travels in the request body, never in a URL. With no token, the signed-in person's own open invite is
 // used: email confirmation and sign-in bring a new coach back to /coach-join without the link.
-import {verifiedAccount, strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {findInvite, acceptInvite, inviteStatus, validToken} from '../../../lib/coach-invites';
 import {rateLimited} from '../../../lib/rate-limit';
 import {withApi} from '../../../lib/api';
@@ -27,11 +27,10 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
     return accountReply({invite, signedIn: user ? {email: user.email, matches: !!row && row.email === user.email!.toLowerCase()} : null}, token && !row ? 404 : 200, auth.headers);
   }
   if (input?.action === 'accept') {
-    const auth = await strongAccount(request);
+    const auth = await verifiedAccount(request);
     const r = await acceptInvite(auth.user, token);
     if (r.status !== 200) return accountReply({error: r.error}, r.status, auth.headers);
-    // Coaches need an authenticator: set it up (or enter a code) first, then coach home.
-    return accountReply({ok: true, name: r.name, redirect: auth.strong ? '/coach' : '/security'}, 200, auth.headers);
+    return accountReply({ok: true, name: r.name, redirect: '/coach'}, 200, auth.headers);
   }
   return accountReply({error: 'Unknown action.'}, 400);
 }

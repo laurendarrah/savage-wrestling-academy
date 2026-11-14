@@ -42,7 +42,7 @@ Recommendation for 6 and 7: launch on the current address and current hosting. C
 | Item | From | Why |
 |---|---|---|
 | A way to publish GitHub changes to the live Site | Justin | Fixes and new features only reach families once published |
-| A separate development Supabase project | Justin or owner | Test sign-up, email links and MFA without touching real accounts |
+| A separate development Supabase project | Justin or owner | Test sign-up and email links without touching real accounts |
 | Supabase production project | Lauren (done) | The old project can't be reached, so a new academy-owned project replaces it; Justin is invited as Owner (#139) |
 | ~~Stripe test-mode team access~~ Justin's own Stripe account, connected with a restricted test key on `/payment-setup` (#4, #255) | Justin | Build and test checkout |
 | Read access to the live database, or an export | Justin | Know how many real families and scholarships exist before changing anything |
@@ -166,7 +166,7 @@ Drafts based on what the platform does are in [docs/policies](policies/README.md
 - **Two copies of the code.** If anyone edits in ChatGPT Sites after GitHub becomes the source, changes get lost. Decision 8 prevents this.
 - **Terms not final.** Resolved Nov 13 (#2): memberships are month to month, and the terms on `/membership-terms` are final (#314). Memberships open once `monthly` is added to `CHECKOUT_KINDS` after a Stripe test-card run. A future price increase for existing members needs written notice 5 to 30 days ahead and their consent or a chance to cancel (GBL §527-a); nothing for it is built.
 - **No staging today.** The Wednesday test environment must exist before any live key is added.
-- **One owner login, password only.** Only one email can manage the academy, and since Nov 13 it signs in with a password alone (#306). A strong, unique password in a password manager is the main protection for family and payment data. A lost password is reset by email.
+- **One owner login, password only.** Only one email can manage the academy, and since Nov 13 it signs in with a password alone (#306). A strong, unique password in a password manager is the main protection for family and payment data. A lost password is reset by email. **Update Nov 14 (#347):** Lauren decided the site never asks for, offers or mentions an authenticator ("We never want to turn on the 2fa. At all."). The set-up page, the code step for accounts that had one and the `STAFF_MFA` setting are gone; `/security` shows who is signed in and Change password. Bringing one back takes a new decision from Lauren and Justin.
 - **Sample data looks real.** Resolved November 6 (#147): the owner workspace has no sample screens left.
 - **No programs on a new site.** Families see no programs until the owner chooses Publish the programs on the launch checklist. Check the practice days and times under Schedules before launch.
 - **Cloudflare plan (added November 8, #274).** The free Workers plan's limit of about 50 database queries per run is reached by the morning reminders at about 650 families with email on and by the Backups page at about 700. The recommendation is now Workers Paid ($5/month) before launch rather than waiting for a warning sign; [GO_LIVE](GO_LIVE.md) step 1 says why.

@@ -1,17 +1,17 @@
 // A coach's own hours and time off (issue #193): clock in and out, see and correct the month, send it, ask for time off.
-// Coaches, and the owner once they have added themselves as a coach, with the same authenticator rule as coach home.
-import {strongAccount, sameOrigin, accountReply} from '../../../lib/account-auth';
+// Coaches, and the owner once they have added themselves as a coach, as on coach home.
+import {verifiedAccount, sameOrigin, accountReply} from '../../../lib/account-auth';
 import {coachAccess} from '../../../lib/access-control';
 import {coachMonth, choicesFor, clockIn, clockOut, fixTimes, addShift, removeShift, submitMonth} from '../../../lib/coach-timesheets';
 import {myTimeOff, coachNotices, requestTimeOff, withdrawTimeOff} from '../../../lib/coach-time-off';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
-async function coach(request: Request) { const auth = await strongAccount(request); return {auth, staff: await coachAccess(auth.user, auth.strong)}; }
+async function coach(request: Request) { const auth = await verifiedAccount(request); return {auth, staff: await coachAccess(auth.user)}; }
 
 export const GET = withApi(GET_); async function GET_(request: Request) {
   const {auth, staff} = await coach(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
-  if (!staff) return reply({error: 'Coach access and authenticator verification required.'}, 403);
+  if (!staff) return reply({error: 'Coach access required.'}, 403);
   const q = new URL(request.url).searchParams;
   if (q.has('date')) { const r = await choicesFor(staff, q.get('date')); return r.status === 200 ? reply(r) : reply({error: r.error}, r.status); }
   const month = await coachMonth(staff, q.get('month'));
@@ -20,7 +20,7 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
   const {auth, staff} = await coach(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
-  if (!staff) return reply({error: 'Coach access and authenticator verification required.'}, 403);
+  if (!staff) return reply({error: 'Coach access required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return reply({error: 'JSON required.'}, 415);
   const raw = await request.text();

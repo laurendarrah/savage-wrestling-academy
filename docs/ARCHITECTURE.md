@@ -36,16 +36,16 @@ A daily Cron Trigger (12:41 UTC, set in `vite.config.ts`) sends card and waiver 
 
 ## Who can do what
 
-`lib/account-auth.ts` builds the Supabase server client and checks the session with one `getUser()` per request (memoised; the authenticator level comes from the session token, #274). `lib/access-control.ts` turns the signed-in user into a role:
+`lib/account-auth.ts` builds the Supabase server client and checks the session with one `getUser()` per request (memoised, #274). `lib/access-control.ts` turns the signed-in user into a role:
 
 | Role | Who | How |
 |---|---|---|
-| Owner | The one verified email `OWNER_EMAIL` in `lib/account-auth.ts` | Password only; an authenticator only if one was set up, or if `STAFF_MFA=on` (#306) |
-| Coach | An active row in `staff_access`, granted by an owner invite (`lib/coach-invites.ts`) | Needs AAL2. The owner can add himself as a coach |
-| Family | Any other verified account | Optional authenticator; once set up it is always required |
+| Owner | The one verified email `OWNER_EMAIL` in `lib/account-auth.ts` | A session for that address with its email confirmed |
+| Coach | An active row in `staff_access`, granted by an owner invite (`lib/coach-invites.ts`) | Checked on every request. The owner can add himself as a coach |
+| Family | Any other verified account | Scoped to its own records by the verified user id |
 | Anonymous | Signed out | Public pages only |
 
-Staff sign in without an authenticator unless `STAFF_MFA=on` is set on the Worker (#204, #306, `lib/mfa-policy.ts`). Off is the default, so a deploy that drops the setting can't bring the requirement back. `lib/protected-page.ts` holds the page guards (`ownerPage`, `coachPage`). Hidden links never grant access: every route checks again on the server. Mutations are same-origin JSON, rate-limited per feature (`lib/rate-limit.ts`), and sensitive actions are written to `security_events` (`/security-log`).
+Sign-in is a confirmed email and a password for every role, permanently (#306, #347). There is no authenticator or other second step, no setting that adds one, and an account that still has a factor saved in Supabase is treated like any other. `lib/protected-page.ts` holds the page guards (`ownerPage`, `coachPage`, `familyPage`). Hidden links never grant access: every route checks again on the server. Mutations are same-origin JSON, rate-limited per feature (`lib/rate-limit.ts`), and sensitive actions are written to `security_events` (`/security-log`).
 
 ## The data
 

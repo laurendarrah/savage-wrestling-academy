@@ -29,7 +29,7 @@ function load(file) {
         if (name === 'cloudflare:workers') return {env};
         if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',
           ownerIdentity: async () => ({owner: actor.owner ? {userId: actor.id} : null, headers: new Headers()}),
-          strongAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
+          verifiedAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, headers: new Headers()}),
           sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name.endsWith('/rate-limit')) return {rateLimited: async () => false};
         if (name.endsWith('/access-control')) return {coachAccess: async () => actor.coach ? {email: actor.coach, name: 'Coach Dana', programs: actor.programs ?? ['Intermediate'], owner: false} : null, accountRole: async () => actor.coach ? {role: 'coach', staff: {email: actor.coach, name: 'Coach Dana', programs: ['Intermediate']}} : {role: 'family', staff: null}};
@@ -421,7 +421,7 @@ const myGroup = {id: 'pg', date: '2026-11-10', start: '09:30', end: '10:30', coa
 assert.match(readFileSync('app/lesson-settings/screen.html', 'utf8'), /<h2>Price per wrestler<\/h2>[\s\S]*\(\$ per wrestler\)/);
 assert.match(readFileSync('app/coach-pay/screen.html', 'utf8'), /c\.wrestlers>c\.lessons\?' · '\+c\.wrestlers\+' wrestlers'/);
 // Sign-in keeps an invite link.
-assert.match(readFileSync('app/lesson/route.ts', 'utf8'), /redirect='\/login\?next='\+next/);
+assert.match(readFileSync('app/lesson/route.ts', 'utf8'), /'Location','\/login\?next='\+next/);
 assert.match(readFileSync('public/registration-return.js', 'utf8'), /\['\/register','\/booking','\/lesson'\]/);
 
 console.log('Group lesson tests passed');

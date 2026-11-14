@@ -1,15 +1,14 @@
 // A family books a walk-in or an extra practice to pay cash at the academy, or cancels one before it starts (issue #248).
 // The amount due comes from lib/quotes.ts on the server; any amount the browser sends is ignored.
-import {strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {bookCash, cancelByFamily, familyCashBookings} from '../../../lib/cash-bookings';
 import {rateLimited} from '../../../lib/rate-limit';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 async function family(request: Request) {
-  const auth = await strongAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
+  const auth = await verifiedAccount(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);
   if (!auth.user?.email_confirmed_at || !auth.user.email) return {auth, reply, error: reply({error: 'Sign-in required.'}, 401)};
-  if (auth.user.factors?.some(f => f.status === 'verified') && !auth.strong) return {auth, reply, error: reply({error: 'Authenticator verification required.'}, 403)};
   return {auth, reply, error: null};
 }
 

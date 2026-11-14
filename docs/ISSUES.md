@@ -14,7 +14,7 @@ The November 5, 2026 handoff review listed 21 findings about the ChatGPT Sites v
 | **DEMO-01** Sample camp review threw a ReferenceError | P1 | **Gone.** The sample screens were removed (#147) |
 | **DEMO-02** Sample grade rules disagreed with the server | P1 | **Gone** with the sample screens. The workspace's rules are typed modules checked against `lib/program-approval.ts` (#45) |
 | **SEC-02** Leaked-password protection off in Supabase | P1 | **Moved** to the new Supabase project's settings in [GO_LIVE](GO_LIVE.md) §6 (#11 closed as not applicable, #139) |
-| **AUTH-02** One hard-coded owner, no tested recovery | P1 | **Open by design.** Still one owner email. Backup authenticator on the launch checklist (#167) and when the authenticator is switched back on (#27); recovery steps in [RUNBOOK](RUNBOOK.md) ("The owner is locked out") |
+| **AUTH-02** One hard-coded owner, no tested recovery | P1 | **Open by design.** Still one owner email. Sign-in is a password only by decision (#306, #347), so recovery is a password reset by email; steps in [RUNBOOK](RUNBOOK.md) ("The owner is locked out") |
 | **BOOK-01** Capacity and lessons were not real bookings | P1 | **Fixed.** Seat limits enforced through checkout and the webhook (#36); lessons booked against real coach openings (#70, #177). Waitlists were later removed (#210) |
 | **ATT-01** No real QR attendance, waiver or card evidence | P1 | **Fixed.** Attendance (#22), QR passes (#71), waivers (#69), USA Wrestling cards (#68, #202) |
 | **MSG-01** Messages had no delivery | P1 | **Built in-app** (#72). Email waits on Resend being set up (#35) |

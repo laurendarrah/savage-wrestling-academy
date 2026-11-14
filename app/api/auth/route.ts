@@ -1,5 +1,3 @@
-import {env} from 'cloudflare:workers';
-import {mfaSwitchedOff} from '../../../lib/mfa-policy';
 import { rateLimited } from '../../../lib/rate-limit';
 import { accountRole,roleDestination } from '../../../lib/access-control';
 import { accountClient, accountReply, sameOrigin, appOrigin, sessionClaims, verifiedAccount } from '../../../lib/account-auth';
@@ -52,14 +50,10 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  return reply({error:'The sign-in service is temporarily unavailable. Your password has not been checked. Please try again shortly.'},503);
  }
  const {role}=await accountRole(data.user);
- // Someone invited as a coach goes back to accept the invite first (issue #190); it then asks for the authenticator.
+ // Someone invited as a coach goes back to accept the invite first (issue #190).
  if(role==='family'&&data.user.email_confirmed_at&&await hasOpenInvite(data.user.email))return reply({redirect:'/coach-join'});
- // The authenticator level comes from the new session's own token (issue #274), not another call to Supabase.
- const aal2=(await sessionClaims(auth.client))?.aal==='aal2';
- const hasFactor=!!data.user.factors?.some(f=>f.status==='verified');
- // Staff need the authenticator unless STAFF_MFA=off (issue #204); anyone who set one up always uses it.
- const staffNeedCode=(role==='owner'||role==='coach')&&!mfaSwitchedOff((env as {STAFF_MFA?:string}).STAFF_MFA);
- return reply({redirect:((staffNeedCode||hasFactor)&&!aal2)?'/security':roleDestination(role)});
+ // The password is the whole sign-in (issues #306, #347): everyone goes straight to their own home.
+ return reply({redirect:roleDestination(role)});
  }
  if(action==='reset'){
  const {error}=await auth.client.auth.resetPasswordForEmail(email,{redirectTo:appOrigin()+'/auth/confirm?next=change'});
@@ -72,7 +66,6 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  return reply({message:'If confirmation is needed, a confirmation email has been requested. Please check your inbox.'});
  }
  const {data:{user},error}=await auth.client.auth.getUser();if(error||!user)return reply({error:'Open the password reset link from your email first.'},401);
- if(user.factors?.some(f=>f.status==='verified')){const claims=await sessionClaims(auth.client);if(claims?.aal!=='aal2')return reply({error:'Verify your authenticator at Security before changing your password.'},403)}
  const result=await auth.client.auth.updateUser({password:input.password});if(result.error)return reply({error:'Password could not be changed. Use a different password or request a new reset link.'},400);
  await auth.client.auth.signOut({scope:'others'});
  return reply({message:'Password updated. You can now sign in with your new password.'});

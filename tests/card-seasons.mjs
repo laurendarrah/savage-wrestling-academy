@@ -29,7 +29,7 @@ function load(file) {
         if (name.endsWith('/public-schedule')) return {academyToday: () => today};
         if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',
           ownerIdentity: async () => ({owner: {userId: 'owner-id'}, headers: new Headers()}),
-          strongAccount: async () => ({user: {id: 'p1', email: 'p1@example.test', email_confirmed_at: 'y'}, strong: true, headers: new Headers()}),
+          verifiedAccount: async () => ({user: {id: 'p1', email: 'p1@example.test', email_confirmed_at: 'y'}, headers: new Headers()}),
           sameOrigin: () => true, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name.startsWith('.')) return load(path.resolve(path.dirname(file), name + '.ts'));
         throw Error('unexpected import ' + name);

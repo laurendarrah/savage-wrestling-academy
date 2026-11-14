@@ -12,17 +12,16 @@ import {portalCode} from './fixtures/portal-script.mjs';
 
 const OWNER = 'savagewrestlingclub@gmail.com';
 const users = {
-  owner: {id: 'u-owner', email: OWNER, email_confirmed_at: '2026-01-01', factors: [{status: 'verified', factor_type: 'totp'}]},
-  coach: {id: 'u-coach', email: 'coach@example.test', email_confirmed_at: '2026-01-01', factors: [{status: 'verified', factor_type: 'totp'}]},
-  family: {id: 'u-family', email: 'family@example.test', email_confirmed_at: '2026-01-01', factors: []},
+  owner: {id: 'u-owner', email: OWNER, email_confirmed_at: '2026-01-01'},
+  coach: {id: 'u-coach', email: 'coach@example.test', email_confirmed_at: '2026-01-01'},
+  family: {id: 'u-family', email: 'family@example.test', email_confirmed_at: '2026-01-01'},
 };
 let as = 'owner';
 const auth = {
   OWNER_EMAIL: OWNER, appOrigin: () => 'https://academy.test', sameOrigin: () => true,
   verifiedOwner: u => u?.email === OWNER,
   verifiedAccount: async () => ({user: users[as], headers: new Headers({'Cache-Control': 'private, no-store'})}),
-  strongAccount: async () => ({user: users[as], strong: true, headers: new Headers({'Cache-Control': 'private, no-store'})}),
-  ownerIdentity: async () => ({user: users[as], strong: true, mfaRequired: false, headers: new Headers({'Cache-Control': 'private, no-store'}),
+  ownerIdentity: async () => ({user: users[as], headers: new Headers({'Cache-Control': 'private, no-store'}),
     owner: as === 'owner' ? {userId: 'supabase:u-owner', displayName: OWNER} : null}),
 };
 const access = {accountRole: async () => ({role: as}), coachAccess: async () => true};

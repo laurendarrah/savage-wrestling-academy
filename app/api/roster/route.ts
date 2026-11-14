@@ -1,6 +1,6 @@
 // Real roster and check-in (issue #22). Owner: any date, every session. Coach: today, their own programs' practices and
 // every extra practice (issue #250).
-import {ownerIdentity, strongAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
+import {ownerIdentity, verifiedAccount, accountReply, sameOrigin} from '../../../lib/account-auth';
 import {accountRole} from '../../../lib/access-control';
 import {academyToday} from '../../../lib/public-schedule';
 import {rosterFor, checkIn, undoCheckIn, validDate, type Scope} from '../../../lib/roster';
@@ -14,21 +14,20 @@ export const dynamic = 'force-dynamic';
 
 // collector: who taps Cash received (issue #248), kept on the payment as who collected it. A coach is named by their
 // profile display name, else their name on Coaches, never their email (issue #250). Only an active coach gets here.
-async function staff(request: Request): Promise<{scope: Scope | null; actor: string | null; headers: Headers; mfa: boolean; collector?: () => Promise<Collector>}> {
+async function staff(request: Request): Promise<{scope: Scope | null; actor: string | null; headers: Headers; collector?: () => Promise<Collector>}> {
   const owner = await ownerIdentity(request);
-  if (owner.owner) return {scope: {role: 'owner'}, actor: owner.owner.userId, headers: owner.headers, mfa: false, collector: async () => ownerCollector(owner.owner!.userId)};
-  const auth = await strongAccount(request), access = await accountRole(auth.user);
+  if (owner.owner) return {scope: {role: 'owner'}, actor: owner.owner.userId, headers: owner.headers, collector: async () => ownerCollector(owner.owner!.userId)};
+  const auth = await verifiedAccount(request), access = await accountRole(auth.user);
   if (access.role === 'coach' && access.staff) {
-    if (!auth.strong) return {scope: null, actor: null, headers: auth.headers, mfa: true};
-    return {scope: {role: 'coach', programs: access.staff.programs}, actor: auth.user!.id, headers: auth.headers, mfa: false,
+    return {scope: {role: 'coach', programs: access.staff.programs}, actor: auth.user!.id, headers: auth.headers,
       collector: () => coachCollector(auth.user!.id, access.staff!)};
   }
-  return {scope: null, actor: null, headers: auth.headers, mfa: !!owner.mfaRequired};
+  return {scope: null, actor: null, headers: auth.headers};
 }
 
 export const GET = withApi(GET_); async function GET_(request: Request) {
   const s = await staff(request), reply = (b: unknown, st = 200) => accountReply(b, st, s.headers);
-  if (!s.scope) return reply({error: s.mfa ? 'Authenticator verification required.' : 'Staff access required.'}, 403);
+  if (!s.scope) return reply({error: 'Staff access required.'}, 403);
   const today = academyToday(), date = new URL(request.url).searchParams.get('date') || today;
   if (!validDate(date)) return reply({error: 'Choose a valid date.'}, 400);
   if (s.scope.role === 'coach' && date !== today) return reply({error: 'Coaches can open today\'s roster only.'}, 403);
@@ -37,7 +36,7 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
   const s = await staff(request), reply = (b: unknown, st = 200) => accountReply(b, st, s.headers);
-  if (!s.scope || !s.actor) return reply({error: s.mfa ? 'Authenticator verification required.' : 'Staff access required.'}, 403);
+  if (!s.scope || !s.actor) return reply({error: 'Staff access required.'}, 403);
   if (!sameOrigin(request)) return reply({error: 'Invalid request origin.'}, 403);
   if (!request.headers.get('content-type')?.includes('application/json')) return reply({error: 'JSON required.'}, 415);
   const raw = await request.text();

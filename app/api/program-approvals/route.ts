@@ -1,13 +1,12 @@
 import {env} from 'cloudflare:workers';
-import {strongAccount,accountReply,sameOrigin} from '../../../lib/account-auth';
+import {verifiedAccount,accountReply,sameOrigin} from '../../../lib/account-auth';
 import {familyProfile,requiresApproval,approvalApplies} from '../../../lib/program-approval';
 import {securityEvent} from '../../../lib/security-events';
 import {rateLimited} from '../../../lib/rate-limit';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 export const GET = withApi(GET_); async function GET_(request:Request){
- const auth=await strongAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
- if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return accountReply({error:'Authenticator verification required.'},403,auth.headers);
+ const auth=await verifiedAccount(request);if(!auth.user?.email_confirmed_at)return accountReply({error:'Sign-in required.'},401,auth.headers);
  const profile=await familyProfile(auth.user.id);
  const rows=await env.DB!.prepare("SELECT id,wrestler_id,wrestler_name,grade,status FROM program_approvals WHERE user_id=? AND program='Advanced'").bind(auth.user.id).all<{id:string;wrestler_id:string;wrestler_name:string;grade:string;status:string}>();
  // A decision follows the wrestler through a grade change within 7–12 (issue #271); `grade` is the grade they asked
@@ -17,9 +16,8 @@ export const GET = withApi(GET_); async function GET_(request:Request){
  return accountReply({approvals:list},200,auth.headers);
 }
 export const POST = withApi(POST_); async function POST_(request:Request){
- const auth=await strongAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
+ const auth=await verifiedAccount(request),reply=(b:unknown,s=200)=>accountReply(b,s,auth.headers);
  if(!auth.user?.email_confirmed_at)return reply({error:'Sign-in required.'},401);
- if(auth.user.factors?.some(f=>f.status==='verified')&&!auth.strong)return reply({error:'Authenticator verification required.'},403);
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large.'},413);let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}

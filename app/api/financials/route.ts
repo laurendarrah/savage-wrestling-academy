@@ -8,7 +8,7 @@ import {feesWaiting, recordStripeFees} from '../../../lib/stripe-fees';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
-const OWNER_ONLY = 'Owner sign-in and authenticator verification required.';
+const OWNER_ONLY = 'Owner sign-in required.';
 
 export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request), reply = (b: unknown, s = 200) => accountReply(b, s, auth.headers);

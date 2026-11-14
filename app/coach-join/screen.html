@@ -64,7 +64,7 @@ async function load(){
  if(me){$('intro').textContent='This invitation is for a different email.';$('otherEmail').textContent=me.email;$('otherFor').textContent=invite.email;show('otherBox');steps(1);return}
  $('intro').textContent='Welcome, '+invite.name+'. Create your coach account to get started.';$('signupEmail').value=$('signinEmail').value=invite.email;show('signupForm');steps(1);
 }
-async function acceptAndGo(){const r=await post('/api/coach-invite',{action:'accept',token});say('Coach access added. '+(r.redirect==='/security'?'Next, set up your authenticator app.':'Opening coach home…'));location.assign(r.redirect)}
+async function acceptAndGo(){const r=await post('/api/coach-invite',{action:'accept',token});say('Coach access added. Opening coach home…');location.assign(r.redirect)}
 $('acceptInvite').onclick=async()=>{$('acceptInvite').disabled=true;try{await acceptAndGo()}catch(e){say(e.message);$('acceptInvite').disabled=false}};
 $('switchAccount').onclick=async()=>{try{await post('/api/auth',{action:'logout'});location.reload()}catch(e){say(e.message)}};
 $('toSignin').onclick=()=>{show('signinForm');say('');$('signinPassword').focus()};
