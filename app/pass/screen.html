@@ -1,12 +1,16 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entry pass | Savage Wrestling Academy</title><style>
-/* The entry pass (redesign Phase 2, issue #282): the wrestler's pass card at full brightness on the dark page, the
-   name at 42px and the next session beneath the code, nothing else. Replacing a pass is a quiet line under the card. */
+/* The entry pass (redesign Phase 2, issue #282; design pass, issue #340): the wrestler's pass card at full brightness
+   on the dark page, the name at 42px and the next session beneath the code as the academy's practice box (the day,
+   then the session in caps with the time larger under it). Replacing a pass is a quiet line under the card. */
 *{box-sizing:border-box}body{margin:0}main{max-width:460px;margin:auto;padding:var(--swa-s-16) 16px 60px}
 .pass{background:var(--swa-surface);border-radius:var(--swa-r-card);padding:var(--swa-s-24) var(--swa-s-16);margin:var(--swa-s-16) 0 var(--swa-s-8);text-align:center}
 .pass h2{overflow-wrap:anywhere}
 .qr{max-width:300px;margin:var(--swa-s-16) auto}.qr svg{width:100%;height:auto;display:block}
 .pass .next{margin:0;font-size:var(--swa-t-15);color:var(--swa-muted);line-height:1.4}
-.pass .next b{display:block;color:var(--swa-ink);font-size:var(--swa-t-17)}
+.pass .swa-day{margin:var(--swa-s-8) 0}
+.pass .swa-practice{max-width:300px;margin:0 auto}
+html body .pass .swa-practice__time{font-size:var(--swa-t-29)}
+html body #passes>.empty{color:var(--swa-dark-muted)}
 .pass-tools{margin:0 0 var(--swa-s-24);text-align:center;font-size:var(--swa-t-13);color:var(--swa-dark-muted)}
 html body .pass-tools button.quiet{color:var(--swa-dark-text);text-decoration-color:var(--swa-dark-muted);font-size:var(--swa-t-15)}
 #status{font-weight:600;min-height:1.5em}
@@ -18,7 +22,7 @@ const today=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/New_Yor
 const dayName=d=>d===today()?'Today':new Date(Date.parse(today()+'T12:00:00Z')+864e5).toISOString().slice(0,10)===d?'Tomorrow':new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
 const shown=()=>{const only=new URLSearchParams(location.search).get('wrestler');return passes.filter(p=>!only||p.wrestlerId===only)};
 // The next session under the code: "Today · 6:00 PM · SWA Intermediate", from the wrestler view's own list.
-function nextLine(p){const n=next[p.wrestlerId];if(n===undefined)return '';if(!n)return '<p class="next">Nothing booked in the next three weeks.</p>';return '<p class="next">Next up<b>'+esc(dayName(n.date))+' · '+esc(clock(n.start))+' · '+esc(n.title)+'</b></p>'}
+function nextLine(p){const n=next[p.wrestlerId];if(n===undefined)return '';if(!n)return '<p class="next">Nothing booked in the next three weeks.</p>';const day=dayName(n.date);return '<p class="swa-day">Next up'+(day==='Today'?'<b class="today">Today</b>':' · '+esc(day))+'</p><div class="swa-practice"><p class="swa-practice__name">'+esc(n.title)+'</p><p class="swa-practice__time">'+esc(clock(n.start))+'</p></div>'}
 function render(){
  const list=shown();
  $('passes').innerHTML=list.map(p=>`<section class="pass" aria-label="Entry pass for ${esc(p.name)}"><div class="brand">Savage Wrestling Academy</div><h2>${esc(p.name)}</h2><div class="qr">${window.qrSvg(p.code,'Entry pass for '+p.name)}</div>${nextLine(p)}</section><p class="pass-tools">Issued ${esc(new Date(p.createdAt).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}))} · <button type="button" class="quiet" data-replace="${esc(p.wrestlerId)}">Replace this pass</button><br>Replace it if a screenshot was shared or a phone was lost. The old pass stops working at once.</p>`).join('')||'<div class="empty"><p>Add a wrestler in your family account to get a pass.</p><a class="button" href="/family">Family account</a></div>';

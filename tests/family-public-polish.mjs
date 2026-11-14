@@ -40,10 +40,11 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(css, /body\{background:var\(--swa-ground\)/); assert.match(css, /main\{max-width:var\(--swa-width-wide\)/);
   assert.doesNotMatch(css, /billing-pill/, 'the shared .pill');
   assert.doesNotMatch(css, /#C4222C|#F4F5F7/i, 'red and the page ground come from tokens');
-  // The pill beside Memberships starts hidden.
-  assert.match(html, /<span class="pill ok" id="paymentsPill" hidden>Paid<\/span>/);
+  // No pill floats beside the Memberships heading (issue #340): each membership says its own state on its card.
+  assert.doesNotMatch(html, /paymentsPill/);
+  assert.match(html, /<h2 id="membershipsHeading" class="swa-label">Memberships<\/h2>/);
 }
-// The "Paid" pill shows only while a wrestler has an active membership in good standing.
+// A membership's state is on its own card, and only for a membership (issue #231): a paid lesson is not one.
 {
   const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
   const later = new Date(Date.now() + 200 * 864e5).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
@@ -56,20 +57,50 @@ const json = body => ({ok: true, status: 200, json: async () => body});
       if (url.startsWith('/api/family')) return json({email: 'pat@example.test', data: {parentName: 'Pat', phone: '1', wrestlers: [{id: 'w-1', name: 'Sam Example', grade: '8'}]}, revision: 1, updatedAt: today + 'T12:00:00Z'});
       return json({});
     }});
-    el('paymentsPill').hidden = true; // as in the page's markup
     await settle(); return el;
   };
+  const cards = el => el('membershipCards').innerHTML;
   let el = await open([lesson]);
-  assert.equal(el('paymentsPill').hidden, true, 'a paid lesson is not a membership: no "Paid" beside Memberships');
+  assert.match(cards(el), /<span class="pill neutral">Not enrolled<\/span>/, 'a paid lesson is not a membership');
+  assert.doesNotMatch(cards(el), /Active membership/);
+  assert.equal(el('membershipsNote').hidden, false, 'with no membership yet, the line that says what will show here stays');
   assert.match(el('purchaseList').innerHTML, /Private lesson/, 'the lesson is still under Purchases');
   el = await open([]);
-  assert.equal(el('paymentsPill').hidden, true, 'nothing paid: no pill');
+  assert.match(cards(el), /Not enrolled/, 'nothing paid: not enrolled');
   el = await open([lesson, membership({})]);
-  assert.equal(el('paymentsPill').hidden, false, 'an active membership shows "Paid"');
+  assert.match(cards(el), /<span class="pill ok">Active membership<\/span>/, 'an active membership says so on its card');
+  assert.equal(el('membershipsNote').hidden, true, 'the explaining line goes once a membership shows');
   el = await open([membership({subscription_status: 'past_due'})]);
-  assert.equal(el('paymentsPill').hidden, true, 'a past-due membership says "Payment needs attention" on its card instead');
+  assert.match(cards(el), /<span class="pill warn">Payment needs attention<\/span>/, 'a past-due membership says "Payment needs attention" on its card');
+  assert.doesNotMatch(cards(el), /Active membership/);
   el = await open([membership({term_start: '2024-01-01', term_end: '2025-01-01'})]);
-  assert.equal(el('paymentsPill').hidden, true, 'an ended membership is not active');
+  assert.match(cards(el), /Not enrolled/, 'an ended membership is not active');
+}
+// Purchases (issue #340): the latest five paid purchases show, the rest wait behind "Show all"; what is still due at the
+// academy always shows.
+{
+  const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
+  const order = n => ({id: 'o' + n, kind: 'event', program: null, item_label: 'Clinic ' + n, wrestler_id: 'w-1', wrestler_name: 'Sam Example', dates: [today], amount_cents: 6000, discount_cents: 0, status: 'paid', created_at: today + 'T12:00:00Z', paid_at: today + 'T12:00:00Z'});
+  const due = {id: 'c1', kind: 'walkin', item: 'SWA Intermediate walk-in', wrestler: 'Sam Example', date: today, start: '18:00', amountCents: 4000, label: 'Pay at the academy: $40.00 due', cancellable: true};
+  const open = async (orders, cashBookings = []) => {
+    const page = run('app/family/screen.html', {fetch: async url => {
+      if (url === '/api/orders') return json({orders, cashBookings, checkoutOpen: false});
+      if (url === '/api/scholarship') return json({awards: []});
+      if (url.startsWith('/api/family')) return json({email: 'pat@example.test', data: {parentName: 'Pat', phone: '1', wrestlers: [{id: 'w-1', name: 'Sam Example', grade: '8'}]}, revision: 1, updatedAt: today + 'T12:00:00Z'});
+      return json({});
+    }});
+    await settle(); return page;
+  };
+  let page = await open([1, 2, 3, 4, 5].map(order));
+  assert.doesNotMatch(page.el('purchaseList').innerHTML, /Show all/, 'five purchases need no "Show all"');
+  page = await open([1, 2, 3, 4, 5, 6, 7].map(order), [due]);
+  let list = page.el('purchaseList').innerHTML;
+  assert.match(list, /Clinic 5/); assert.doesNotMatch(list, /Clinic 6/, 'the sixth and later wait');
+  assert.match(list, /<button type="button" class="quiet" data-action="all-purchases">Show all 7 purchases<\/button>$/);
+  assert.match(list, /Pay at the academy/, 'what is due always shows');
+  vm.runInContext('ACTIONS["all-purchases"]()', page.ctx);
+  list = page.el('purchaseList').innerHTML;
+  assert.match(list, /Clinic 7/); assert.doesNotMatch(list, /Show all/, 'every purchase after choosing "Show all"');
 }
 
 // ---------- Family profile: disabled until the saved profile is in, and while it saves ----------
@@ -202,7 +233,10 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(style(html), /a\.copy\{display:inline-flex;align-items:center;min-height:44px\}/);
   assert.match(html, /<a class="copy" href="\/waiver-copy\?id='\+encodeURIComponent\(s\.id\)\+'" target="_blank" rel="noopener">View \/ print<\/a>/);
   assert.match(html, /<a class="copy" href="\/waiver-copy\?id='\+encodeURIComponent\(s\.id\)\+'" target="_blank" rel="noopener">View copy<\/a>/);
-  assert.match(style(html), /\.pill\.warn\{background:var\(--swa-warn-bg\);color:var\(--swa-warn-ink\)\}/);
+  // The amber "Not signed" pill is the shared .pill.warn (public/savage.css); the page keeps no copy of it (issue #340).
+  assert.doesNotMatch(style(html), /\.pill\b/);
+  assert.match(read('public/savage.css'), /:is\(\.badge,\.pill,\.tag,\.billing-pill\):is\(\.warn,[^)]*\)\{background:var\(--swa-warn-bg\);border-color:transparent;color:var\(--swa-warn-ink\)\}/);
+  assert.match(html, /<span class="pill warn">/);
   // /consent is the same page.
   assert.match(read('app/consent/route.ts'), /import html from '\.\.\/waiver\/screen\.html\?raw'/);
 }

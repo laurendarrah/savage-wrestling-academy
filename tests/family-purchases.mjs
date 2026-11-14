@@ -76,9 +76,9 @@ async function openFamily({search = '', orderStatuses = ['paid']}) {
   const list = el('purchaseList').innerHTML;
   assert.match(list, /Takedown Camp/); assert.match(list, /\$144\.00/); assert.match(list, /Includes \$16\.00 discount/);
   assert.match(list, /Checkout not finished/); assert.match(list, /Nothing has been charged/);
-  // "Paid", not "online": a payment may have been recorded offline (issue #101). Shown only for an active membership (#231).
-  assert.equal(el('paymentsPill').hidden, false, 'an active membership in good standing shows "Paid"');
-  assert.match(readFileSync('app/family/screen.html', 'utf8'), /id="paymentsPill" hidden>Paid<\/span>/);
+  // The membership's state is on its card (issue #340); the heading carries no "Paid" pill of its own any more.
+  assert.match(cards, /<span class="pill ok">Active membership<\/span>/, 'an active membership in good standing says so on its card');
+  assert.doesNotMatch(readFileSync('app/family/screen.html', 'utf8'), /paymentsPill/);
   assert.match(el('editorNotice').textContent, /pay online/); assert.doesNotMatch(el('editorNotice').textContent, /still being connected/);
   // The purchases table (#282): the purchase, the wrestler, the status and the amount in one row each.
   assert.match(list, /<table class="swa-table"><thead><tr><th>Purchase<\/th><th>Wrestler<\/th><th>Status<\/th><th class="num">Amount<\/th><\/tr><\/thead>/);

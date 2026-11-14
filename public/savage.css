@@ -442,3 +442,33 @@ html body .pager-note{margin:var(--swa-s-12) 0 0;padding:var(--swa-s-12) var(--s
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}html body .swa-toast{opacity:1;transform:none}html body .swa-toast.hide{opacity:0}}
 @media print{.swa-bar,#swa-toast{display:none}}
+
+/* ==========================================================================================================
+   Family and public screens: the design pass of Nov 14 (issue #340). Everything this pass adds to the shared
+   stylesheet is in this one block, so the coach and owner passes merge beside it.
+   ========================================================================================================== */
+/* Red as text on the dark set: the brand red lightened until it passes AA on near-black */
+:root{--swa-red-on-dark:#F0505A}
+/* The practice box, from the academy's own posts: a thin outline with a solid red bar down its left edge, the session
+   in bold letter-spaced caps and the time larger under it. Square corners, as on the posts. It marks the one session
+   that matters on a page (next up, the practice being booked); lists and calendars keep the program-colored cards.
+   On a dark card the outline is translucent white. */
+html body .swa-practice{border:1px solid #C9CCD2;border-left:6px solid var(--swa-red);border-radius:0;padding:var(--swa-s-12) var(--swa-s-16);min-width:0;text-align:left}
+html body .card.dark .swa-practice,html body .swa-practice.dark{border-color:rgba(255,255,255,.3);border-left-color:var(--swa-red);color:#FFFFFF}
+html body .swa-practice__name{margin:0;font-family:var(--swa-body);font-weight:700;font-size:var(--swa-t-15);letter-spacing:1.2px;text-transform:uppercase;line-height:1.3;overflow-wrap:anywhere}
+html body .swa-practice__time{margin:var(--swa-s-4) 0 0;font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-35);line-height:1;letter-spacing:-.3px;text-transform:uppercase;font-variant-numeric:tabular-nums}
+html body .swa-practice__time small{display:block;margin-top:var(--swa-s-4);font-family:var(--swa-body);font-weight:400;font-size:var(--swa-t-13);letter-spacing:0;text-transform:none;line-height:1.35;color:var(--swa-muted)}
+html body .card.dark .swa-practice__time small,html body .swa-practice.dark .swa-practice__time small{color:var(--swa-dark-muted)}
+@media (min-width:900px){html body .swa-practice__time{font-size:var(--swa-t-42)}}
+/* The day over a practice box: grey letter-spaced caps, or the one red caps line when it is today */
+html body .swa-day{margin:0 0 var(--swa-s-12);font-family:var(--swa-body);font-weight:700;font-size:var(--swa-t-13);letter-spacing:1.6px;text-transform:uppercase;line-height:1.3;color:var(--swa-muted)}
+html body .swa-day .today{display:block;font-size:var(--swa-t-20);letter-spacing:1.2px;line-height:1.2;color:var(--swa-red)}
+html body .card.dark .swa-day{color:var(--swa-dark-muted)}
+html body .card.dark .swa-day .today{color:var(--swa-red-on-dark)}
+/* The wrestler's page: "Next up" is a dark card with the practice box, not a red fill */
+html body[data-swa-page="/wrestler"] main>section.card.next{background:var(--swa-dark-2);border:1px solid var(--swa-dark-line);box-shadow:none;color:var(--swa-dark-text)}
+html body[data-swa-page="/wrestler"] .card.next h2.swa-label{color:var(--swa-dark-muted)}
+/* Sign in: the heading is the page's ordinary size, so "Create your account" and "Choose a new password" fit the card */
+html body[data-swa-page="/login"] h1{font-size:var(--swa-t-35);letter-spacing:-.3px}
+html body[data-swa-page="/login"] main>section.card{padding:var(--swa-s-24)}
+html body[data-swa-page="/login"] main::before{margin:0 auto var(--swa-s-16)}
