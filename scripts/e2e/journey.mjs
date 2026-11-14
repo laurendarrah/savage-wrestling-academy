@@ -828,7 +828,7 @@ await step('a family starts a private partner lesson; a second family joins thro
   const joined = await api(family2, '/api/lessons?join=' + link.split('join=')[1]);
   expect(joined.body.invite?.spotsLeft === 0, 'the lesson is full: ' + JSON.stringify(joined.body.invite));
   await coach.goto(BASE + '/coach');
-  await waitText(coach, '#slots', /Partner lesson[\s\S]*0 of 2 spots left[\s\S]*Family-requested private group, organised by Pat Example[\s\S]*Riley Two[\s\S]*Sam Example/);
+  await waitText(coach, '#slots', /Partner lesson[\s\S]*0 of 2 spots left[\s\S]*Family-requested private group, organized by Pat Example[\s\S]*Riley Two[\s\S]*Sam Example/);
 });
 
 // ---------- Transfers ----------
@@ -904,7 +904,8 @@ await step('owner invites a coach; the coach accepts and lands on coach home, th
 });
 await step('the new coach writes a profile and posts a weekly opening; families see the bio beside the times', async () => {
   // The form stays disabled until the saved profile is in, so nothing typed is overwritten by the load (issue #220).
-  await lee.goto(BASE + '/coach'); await lee.click('text=Your profile'); await lee.waitForSelector('#profileFields:not([disabled])');
+  // Profile, contract, help and security are in coach home's Account menu, as on the family home.
+  await lee.goto(BASE + '/coach'); await lee.click('#accountMenu summary'); await lee.click('#accountMenu a:has-text("Your profile")'); await lee.waitForSelector('#profileFields:not([disabled])');
   await at(lee, '#saved', /^Not saved yet$/);
   await lee.fill('#displayName', 'Lee Tran'); await lee.fill('#bio', 'Ten years coaching folkstyle. Former state qualifier.');
   await lee.fill('#specialties', 'Takedowns, Mat returns'); await lee.fill('#phone', '(631) 555-0199');
@@ -1036,7 +1037,8 @@ await step('the coach adds a missed shift for last month and sends it; the owner
 await step('a coach asks for time off; the owner approves; only coaches in the same program are told and practices are listed for cover', async () => {
   // Lee coaches SWA Intermediate with Dana for this step; the owner coaches SWA Advance only.
   expect((await api(owner, '/api/staff', {action: 'grant', email: 'coach.lee@example.test', name: 'Coach Lee', programs: ['Elementary', 'Intermediate']})).status === 200, 'Lee joins SWA Intermediate');
-  await coach.goto(BASE + '/coach-time'); await coach.waitForSelector('#offForm');
+  // The request form is behind "Ask for time off"; coach home's Time off door opens the page with it open.
+  await coach.goto(BASE + '/coach'); await coach.click('.swa-doors a[href="/coach-time#timeOff"]'); await coach.waitForSelector('#offBox[open] #offForm');
   await coach.fill('#offForm [name=start]', ny(30)); await coach.fill('#offForm [name=end]', ny(31)); await coach.fill('#offForm [name=reason]', 'Family wedding');
   await coach.click('#offForm button[type=submit]'); await toast(coach, /Time off requested/);
   await at(coach, '#offList', /Waiting for the academy/);
@@ -1149,7 +1151,7 @@ await step('owner shares a practice plan; the coach sees it', async () => {
   await owner.fill('#planForm [name=title]', 'Leg attacks and finishes');
   if (!(await owner.locator('#sections input, #sections textarea').count())) await owner.click('#resetOrder');
   await owner.click('#save'); await at(owner, '#status', /saved|shared|published/i);
-  await coach.goto(BASE + '/coach'); await coach.click('text=Your month and practice plans');
+  await coach.goto(BASE + '/coach'); await coach.click('.swa-doors a[href="/practice-plans"]');
   await coach.waitForFunction(() => /Leg attacks and finishes/.test(document.body.textContent), null, {timeout: 10000});
 });
 // ---------- The coach's month calendar (issue #191) ----------
@@ -1428,7 +1430,7 @@ await step('owner deletes a test family account; a family with a lesson still to
 // ---------- Guides ----------
 await step('each role has a guide linked from its home page; guides are role-only', async () => {
   await family.goto(BASE + '/family'); await family.click('#accountMenu summary'); await family.click('#accountMenu a:has-text("Help")'); await waitText(family, 'h1', /Help for families/);
-  await coach.goto(BASE + '/coach'); await coach.click('text=Coach help'); await waitText(coach, 'h1', /Help for coaches/);
+  await coach.goto(BASE + '/coach'); await coach.click('#accountMenu summary'); await coach.click('#accountMenu a:has-text("Coach help")'); await waitText(coach, 'h1', /Help for coaches/);
   await owner.goto(BASE + '/'); await owner.click('.os-fold summary'); await owner.click('.os-nav a[href="/help/owner"]'); await waitText(owner, 'h1', /Owner guide/);
   const fc = await family.request.get(BASE + '/help/coach', {maxRedirects: 0}); expect(fc.status() !== 200, 'family opened the coach guide');
   const fo = await family.request.get(BASE + '/help/owner', {maxRedirects: 0}); expect(fo.status() !== 200, 'family opened the owner guide');

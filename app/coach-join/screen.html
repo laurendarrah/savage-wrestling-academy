@@ -10,7 +10,8 @@ button{font:inherit;cursor:pointer;padding:10px 14px;border:1px solid #ccc;borde
 .switch{margin:14px 0 0}.switch button{border:0;background:none;padding:0;min-height:44px;color:#c4222c;text-decoration:underline;font-size:16px}
 #message{margin-top:16px;padding:12px 14px;border-radius:6px;background:#f4f5f7;font-weight:600}#message:empty{display:none}
 .notice{border-left:4px solid #c4222c;padding:10px 14px;background:#fff7f7;border-radius:0 6px 6px 0}
-footer{margin-top:20px;font-size:14px}[hidden]{display:none!important}
+footer{margin-top:20px;font-size:15px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 16px}[hidden]{display:none!important}
+#signinBox{margin:16px 0 0}#signinBox a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 html body[data-swa-page="/coach-join"]{background:var(--swa-texture) fixed}
 html body[data-swa-page="/coach-join"] main::before{content:"";display:block;width:88px;height:88px;margin:4px auto 16px;background:url(/brand/savage-logo-256.png) center/contain no-repeat}
 html body[data-swa-page="/coach-join"] main>section.card{border:0;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
@@ -20,7 +21,7 @@ html body[data-swa-page="/coach-join"] .switch button.link{font-family:var(--swa
 <p class="eyebrow muted">Coach invitation</p>
 <h1 id="heading">Join the coaching staff</h1>
 <p id="intro">Checking your invitation…</p>
-<ol class="steps" id="steps" aria-label="Steps to join"><li id="step1">Your account</li><li id="step2">Confirm email</li><li id="step3">Authenticator</li><li id="step4">Coach home</li></ol>
+<ol class="steps" id="steps" aria-label="Steps to join"><li id="step1">Your account</li><li id="step2">Confirm email</li><li id="step3">Accept</li><li id="step4">Coach home</li></ol>
 <div class="who" id="details" hidden></div>
 <div id="acceptBox" hidden><p>You’re signed in as <b id="signedAs"></b>. Accept to add coach access to this account.</p><button class="primary" id="acceptInvite" type="button">Accept and continue</button></div>
 <div id="otherBox" class="notice" hidden><p>You’re signed in as <b id="otherEmail"></b>, but this invitation is for <b id="otherFor"></b>.</p><button type="button" id="switchAccount">Sign out and use the invited email</button></div>
@@ -36,8 +37,9 @@ html body[data-swa-page="/coach-join"] .switch button.link{font-family:var(--swa
 <label>Password<input id="signinPassword" type="password" maxlength="128" autocomplete="current-password" required></label>
 <button class="primary" id="signinButton">Sign in and accept</button>
 <p class="switch"><button type="button" class="link" id="toSignup">I need to create an account</button></p></form>
+<p id="signinBox" hidden><a class="button" href="/login">Sign in</a></p>
 <div id="message" role="status" aria-live="polite"></div>
-</section><footer>Savage Wrestling Academy · Huntington Station, NY · <a href="/login">Sign in</a></footer></main>
+</section><footer><span>Savage Wrestling Academy · Huntington Station, NY</span><a href="/login" id="footSignin">Sign in</a></footer></main>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const programName=id=>({Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'}[id]||id);
@@ -47,15 +49,17 @@ const token=((new URLSearchParams(location.hash.slice(1)).get('invite'))||'').tr
 let invite=null;
 async function post(path,body){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(!r.ok){const e=Error(data.error||'Something went wrong. Please try again.');e.data=data;throw e}return data}
 const say=t=>{$('message').textContent=t};
+// A dead end with a way on (no invitation here, or one already used) offers Sign in in the card, once: the footer's link steps back.
+function offerSignin(on){$('signinBox').hidden=!on;$('footSignin').hidden=on}
 function steps(at){['step1','step2','step3','step4'].forEach((id,i)=>{$(id).className=i+1<at?'done':i+1===at?'on':''})}
 function show(box){['acceptBox','otherBox','signupForm','signinForm'].forEach(id=>{$(id).hidden=id!==box})}
 function detailsHtml(v){return `<p><b>${esc(v.name)}</b>, the academy invited you to coach${v.programs.length?' '+esc(v.programs.map(programName).join(', ')):''}.</p><p class="muted">For ${esc(v.email)} · ${v.status==='open'?'Works until '+esc(longDate(v.expiresAt)):''}</p>`}
 async function load(){
  let r;try{r=await post('/api/coach-invite',{action:'check',token})}catch(e){r=e.data||{};if(!r.invite){$('intro').textContent=e.message;show('');steps(1);return}}
  invite=r.invite;const me=r.signedIn;
- if(!invite){$('intro').textContent=me?'There is no open coach invitation for '+me.email+'. If the academy sent you a link, open it on this device.':'Open the invitation link the academy sent you. If it has stopped working, ask the academy for a new one.';show('');$('steps').hidden=true;return}
+ if(!invite){$('intro').textContent=me?'There is no open coach invitation for '+me.email+'. If the academy sent you a link, open it on this device.':'Open the invitation link the academy sent you. If it has stopped working, ask the academy for a new one.';show('');$('steps').hidden=true;offerSignin(true);return}
  $('details').innerHTML=detailsHtml(invite);$('details').hidden=false;
- if(invite.status!=='open'){$('steps').hidden=true;show('');$('intro').textContent={used:'This invitation was already used. Sign in to open coach home.',expired:'This invitation has expired. Ask the academy for a new link.',canceled:'This invitation was canceled. Ask the academy for a new one.'}[invite.status]||'This invitation isn’t working.';return}
+ if(invite.status!=='open'){$('steps').hidden=true;show('');offerSignin(invite.status==='used');$('intro').textContent={used:'This invitation was already used. Sign in to open coach home.',expired:'This invitation has expired. Ask the academy for a new link.',canceled:'This invitation was canceled. Ask the academy for a new one.'}[invite.status]||'This invitation isn’t working.';return}
  if(me&&me.matches){$('intro').textContent='Welcome, '+invite.name+'.';$('signedAs').textContent=me.email;show('acceptBox');steps(3);return}
  if(me){$('intro').textContent='This invitation is for a different email.';$('otherEmail').textContent=me.email;$('otherFor').textContent=invite.email;show('otherBox');steps(1);return}
  $('intro').textContent='Welcome, '+invite.name+'. Create your coach account to get started.';$('signupEmail').value=$('signinEmail').value=invite.email;show('signupForm');steps(1);

@@ -73,7 +73,11 @@ const row = (p, name) => { const out = p.el('sessions').innerHTML, at = out.inde
   }
   assert.equal(t.filter(x => x.tabindex === '0').length, 1, 'one tab in the tab order');
   assert.equal(p.el('status').textContent, '', 'no summary line: the count is on the tab and the title');
-  assert.match(p.el('sessions').innerHTML, /<div class="session-head"><h2>SWA Intermediate<\/h2><span class="count">1<small>\/ 4 in<\/small><\/span><\/div>/, 'the title and count on one line');
+  // The session's header is the academy's practice box: the name, the time under it, the count beside them.
+  assert.match(p.el('sessions').innerHTML, /<div class="session-head"><h2>SWA Intermediate<\/h2><p class="when">6:20 PM–7:20 PM<\/p><span class="count">1<small>\/ 4 in<\/small><\/span><\/div>/, 'the name, its time and the count in one box');
+  assert.match(p.el('sessions').innerHTML, /<h2>Friday Night Live<\/h2><p class="when">4:30 PM–5:30 PM<\/p>[\s\S]*?<p class="muted meta">Separate purchase<\/p>/, 'what kind of session it is, under the box');
+  assert.match(p.el('sessions').innerHTML, /<h2>SWA Advance<\/h2><p class="when">7:30 PM–9:00 PM<\/p>[\s\S]*?<p class="muted meta"><\/p>/, 'a plain practice has nothing to add (the empty line is hidden by the stylesheet)');
+  assert.equal(p.el('sessionBar').hidden, false); assert.equal(p.el('scanStart').hidden, false); assert.equal(p.el('scanDock').hidden, false); assert.equal(p.el('searchBox').hidden, false);
   assert.match(p.el('sessions').innerHTML, /Friday Night Live[\s\S]*Early Bird/, 'the other sessions are still in the page (the walkthrough reads them)');
   // A tab click opens its panel and moves the tab order; the arrow keys walk the tabs.
   await p.click('session', '2');
@@ -116,7 +120,19 @@ const row = (p, name) => { const out = p.el('sessions').innerHTML, at = out.inde
   assert.match(casey, /^<div class="row card-problem hold"/); assert.match(casey, /<span class="badge warn">No USA Wrestling card<\/span>/);
   assert.match(casey, /<details class="why"><summary>Why\?<\/summary><p class="block-reason" id="why1-2">Casey Morgan can&#39;t be checked in: there is no USA Wrestling card on file\. Ask the family to update the card, or the owner to allow an exception\.<\/p><\/details>/);
   assert.match(casey, /<button class="blocked" type="button" disabled aria-describedby="why1-2">Hold<\/button>/); assert.doesNotMatch(casey, /data-checkin/);
-  assert.match(p.el('sessions').innerHTML, /<p class="muted meta">[^<]*· 1 can’t be checked in until their USA Wrestling card is sorted out · 1 to pay at the academy \(\$40\.00 due\)<\/p>/);
+  assert.match(p.el('sessions').innerHTML, /<p class="muted meta">1 can’t be checked in until their USA Wrestling card is sorted out · 1 to pay at the academy \(\$40\.00 due\)<\/p>/);
+  p.ctx.s = {type: 'event', entries: []}; assert.equal(p.run('metaLine(s)'), 'Camp, clinic or event');
+}
+
+// ---------- Nothing scheduled: one sentence, and nothing that has no use (the tab bar, Scan, the search) ----------
+{
+  for (const [role, text] of [['coach', 'Nothing is on the mat for your programs today.'], ['owner', 'No practices, camps or sessions are scheduled for this date.']]) {
+    const p = page({role}); p.data().sessions = []; await p.settle();
+    assert.match(p.el('sessions').innerHTML, new RegExp('^<div class="empty"><svg[^>]*>[\\s\\S]*?</svg><p>' + text.replace(/\./g, '\\.') + '</p></div>$'), role);
+    assert.equal(p.el('status').textContent, '', 'said once, in the empty state, not also on the status line');
+    assert.equal(p.el('switcher').innerHTML, ''); assert.equal(p.el('sessionBar').hidden, true, 'no empty tab bar');
+    assert.equal(p.el('scanStart').hidden, true); assert.equal(p.el('scanDock').hidden, true); assert.equal(p.el('searchBox').hidden, true);
+  }
 }
 
 // ---------- Actions: the toast when it is there, the status line when it is not; the changed row's .enter frame ----------
@@ -145,7 +161,13 @@ const row = (p, name) => { const out = p.el('sessions').innerHTML, at = out.inde
   assert.match(html, /<div class="mat-bar"><div class="mat-bar__in"><a id="home" class="swa-back" href="\/">← Back<\/a><h1>Check-in<\/h1><button type="button" id="scanStart" class="scan">/);
   assert.match(html, /<div class="dock"><div class="dock__in"><button type="button" id="scanDock" class="primary big">Scan a pass<\/button><\/div><\/div>/, 'Scan a pass at the thumb');
   assert.match(script, /\$\('scanStart'\)\.onclick=startScan;\$\('scanDock'\)\.onclick=startScan;/, 'both Scan buttons open the same camera flow');
-  assert.match(html, /<div id="switcher"><div class="sessions__in" aria-hidden="true"><span class="skeleton"><\/span>/, 'skeleton tabs while loading');
+  assert.match(html, /<div class="sessions" id="sessionBar"><div id="switcher"><div class="sessions__in" aria-hidden="true"><span class="skeleton"><\/span>/, 'skeleton tabs while loading');
+  // The header box and the phone row (design pass): a thin outline with the red bar on the left; on a phone the name
+  // and the button share the first line and the state runs the full width under them, without dots.
+  assert.match(html, /body\[data-swa-page="\/roster"\] \.session-head\{[^}]*border:1px solid var\(--m-line-2\);border-left:4px solid var\(--swa-red\);/);
+  assert.match(html, /body\[data-swa-page="\/roster"\] \.row\{grid-template-areas:"name actions" "state state" "why why" "detail detail";/);
+  assert.match(html, /body\[data-swa-page="\/roster"\] \.row \.who\{display:contents\}/); assert.match(html, /body\[data-swa-page="\/roster"\] \.row \.state>\*:not\(:last-child\)::after\{content:none\}/);
+  assert.match(html, /\.row details\.detail>summary\{[^}]*font-size:var\(--swa-t-15\);[^}]*min-height:44px\}/, 'Contact and notes is readable and a full tap target');
   assert.match(html, /<div id="sessions"><div class="list" aria-hidden="true"><span class="skeleton row"><\/span>/, 'skeleton rows while loading');
   assert.match(html, /<details class="more"><summary aria-label="More actions">⋯<\/summary><div class="menu"><button id="refresh" type="button" class="quiet">Refresh<\/button><button type="button" id="printRoster" class="quiet">Print<\/button><\/div><\/details>/, 'Refresh and Print are quiet actions in a menu');
   assert.match(html, /<details class="how"><summary>How this works<\/summary><p>Wrestlers listed here have a paid membership/, 'the explanation is folded, not gone');

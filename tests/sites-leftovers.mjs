@@ -211,7 +211,7 @@ function page(file, {fetch, search = '', before = ''}) {
   const cards = p.el('slots').innerHTML.split('<article').slice(1);
   assert.match(cards[0], /class="booked"[\s\S]*Booked: One-on-one lesson[\s\S]*Kai Kim[\s\S]*tel:555-0101/, 'booked lessons first');
   assert.doesNotMatch(cards[0], /data-slot/, 'a booked lesson cannot be removed'); assert.match(cards[0], /data-edit="b1"/);
-  assert.match(cards[1], /Family-requested private group, organised by Robin Kim/); assert.doesNotMatch(cards[1], /data-edit/, 'a family’s group is theirs'); assert.match(cards[1], /data-slot="f1" data-family="1"/);
+  assert.match(cards[1], /Family-requested private group, organized by Robin Kim/); assert.doesNotMatch(cards[1], /data-edit/, 'a family’s group is theirs'); assert.match(cards[1], /data-slot="f1" data-family="1"/);
   assert.match(cards[2], /Open for families to book[\s\S]*data-slot="o1"/);
   // Adding sends the coach, the time, the type, the spots and the weeks; the result says what was skipped.
   Object.assign(p.el('date'), {value: '2026-12-01'}); Object.assign(p.el('start'), {value: '18:00'}); p.el('start').onchange(); assert.equal(p.el('end').value, '19:00', 'the end follows the start');

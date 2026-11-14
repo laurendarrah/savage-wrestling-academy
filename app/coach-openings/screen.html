@@ -1,21 +1,33 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lesson openings | Savage Wrestling Academy</title><style>
 *{box-sizing:border-box}body{margin:0}main{max-width:var(--swa-width-wide,1000px);margin:auto;padding:24px 16px 56px}
 html body main>section{margin:18px 0}h2{margin:0 0 8px}
-label{display:flex;flex-direction:column;gap:4px;font-weight:600;margin:12px 0}
+label{display:flex;flex-direction:column;gap:4px;font-weight:600;margin:0}
 input,select{font:inherit}input,select{width:100%;min-width:0}
-.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 16px}
-@media(max-width:620px){.pair,.three{grid-template-columns:1fr}}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* The opening form, as on coach home: the date and the two times across, then the type, spots and repeat. On a phone
+   the date takes a line and the two times share the next. */
+#openingForm{display:grid;gap:12px;max-width:720px}#openingForm p{margin:0}#openingForm button{justify-self:start}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.flow{display:flex;flex-wrap:wrap;gap:12px}.flow>label{flex:1 1 200px;min-width:0}.flow>label:first-child{flex:2 1 280px}.flow>#spotsLabel{flex:0 1 110px}
+@media(max-width:620px){.pair{grid-template-columns:1fr}.three{grid-template-columns:repeat(2,minmax(0,1fr))}.three>label:first-child{grid-column:1/-1}}
 .pick{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-end}.pick label{flex:1 1 260px;margin:0}
 #status{font-weight:600;min-height:1.5em}[hidden]{display:none!important}
-.list{display:grid;gap:12px;margin-top:12px}
-html body .list article{margin:0;padding:16px;border:1px solid var(--swa-line);border-radius:var(--swa-r-card,12px);background:var(--swa-surface,#fff)}
-html body .list article.booked{border-color:var(--swa-ok);box-shadow:inset 3px 0 0 var(--swa-ok)}
-.when{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.when h3{margin:0;font-size:var(--swa-t-17,17px)}.when p{margin:0;font-variant-numeric:tabular-nums}
-.spots{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.kind{margin:4px 0 0;font-size:15px}
-.roster{list-style:none;padding:0;margin:10px 0 0;border-top:1px solid var(--swa-line)}.roster li{padding:8px 0;border-bottom:1px solid var(--swa-line);overflow-wrap:anywhere}
+/* One lesson is one row, as on coach home: the day with its time on the left, then what it is and who is in it. */
+.list{display:grid;gap:8px;margin-top:12px}
+html body .list .empty{padding:0}
+html body .list article{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:0;padding:12px 16px;border:1px solid var(--swa-line);border-radius:var(--swa-r-control,8px);background:var(--swa-surface,#fff)}
+html body .list article.booked{box-shadow:inset 3px 0 0 var(--swa-ok)}
+.when{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px}.when h3{margin:0;font-size:var(--swa-t-17,17px)}.when p{margin:0;font-size:var(--swa-t-15,15px);color:var(--swa-muted);font-variant-numeric:tabular-nums}
+.what{min-width:0}.what>p{margin:0}
+.lesson-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:center}.lesson-head p{margin:0}
+.spots{font-variant-numeric:tabular-nums;white-space:nowrap}.kind{margin:2px 0 0;font-size:15px}
+.roster{list-style:none;padding:0;margin:8px 0 0}.roster li{padding:8px 0;border-top:1px solid var(--swa-line);overflow-wrap:anywhere}.roster li:last-child{padding-bottom:0}
 .tag{margin-left:6px}
-details.edit{margin-top:10px}details.edit summary{color:var(--swa-muted);font-size:15px}
-.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+details.edit{margin-top:4px}html body details.edit>summary{display:inline-flex;color:var(--swa-muted);font-size:15px}
+details.edit button{margin-top:12px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+@media(min-width:720px){html body .list article{grid-template-columns:132px minmax(0,1fr);gap:8px 24px;padding:16px}.when{flex-direction:column;gap:2px}}
+@media(max-width:640px){#slots a[href^="tel:"]{display:inline-flex;align-items:center;min-height:44px;padding:0 4px}}
 .note{margin:12px 0 0;padding:10px 14px;border-left:3px solid var(--swa-silver);background:var(--swa-surface-2,#F8F9FA);border-radius:0 6px 6px 0;font-size:var(--swa-t-15,15px)}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <a class="swa-back" href="/staff">← Coaches</a>
@@ -25,8 +37,8 @@ details.edit{margin-top:10px}details.edit summary{color:var(--swa-muted);font-si
 <section aria-label="Coach"><div class="pick"><label>Coach<select id="coach"></select></label><a id="profileLink" href="/coach-profile">Coach profile →</a></div><p class="muted" id="coachNote"></p></section>
 <section aria-labelledby="addTitle"><h2 id="addTitle">Add a one-hour opening</h2>
 <form id="openingForm"><div class="three"><label>Date<input id="date" type="date" required></label><label>Start time<input id="start" type="time" required></label><label>End time<input id="end" type="time" required></label></div>
-<div class="pair"><label>Lesson type<select id="format"><option value="">Open time: families choose</option><option value="one-on-one">One-on-one only</option><option value="partner">Partner lesson: 2 wrestlers</option><option value="small-group">Small group: 3 to 6 wrestlers</option></select></label><label id="spotsLabel" hidden>Spots<select id="spots"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label></div>
-<label>Repeat<select id="weeks"><option value="1">Just this date</option></select></label><p class="muted" id="repeatHelp" hidden></p>
+<div class="flow"><label>Lesson type<select id="format"><option value="">Open time: families choose</option><option value="one-on-one">One-on-one only</option><option value="partner">Partner lesson: 2 wrestlers</option><option value="small-group">Small group: 3 to 6 wrestlers</option></select></label><label id="spotsLabel" hidden>Spots<select id="spots"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+<label>Repeat<select id="weeks"><option value="1">Just this date</option></select></label></div><p class="muted" id="repeatHelp" hidden></p>
 <button class="primary" id="save">Save opening</button></form>
 <p class="note">An open time is booked as a one-on-one, or a family can ask for it as a private partner or small group and invite other families. A partner or small-group lesson is listed for every family, one spot per wrestler, until it fills. The coach gets an email when you add or remove their openings.</p></section>
 <section aria-labelledby="listTitle"><h2 id="listTitle">Coming up</h2><p class="muted">Booked lessons first, then open times. An opening can be removed until a family books it.</p><div id="slots" class="list"></div></section>
@@ -48,14 +60,14 @@ function slotHtml(s){
  const when=`<div class="when"><h3>${esc(dayDate(s.date))}</h3><p>${esc(clock(s.start))}–${esc(clock(s.end))}</p></div>`;
  let body;
  if(group){
-  const kind=s.hosted==='family'?'Family-requested private group, organised by '+esc(s.organizer)+'. Only families with their invite link can book it.':'Coach-hosted: listed for every family until it fills.';
-  body=`<div class="when"><p><strong>${esc(s.formatName)}</strong></p><span class="spots">${s.spotsLeft} of ${s.capacity} spot${s.capacity===1?'':'s'} left</span></div><p class="kind muted">${kind}</p>${roster.length?rosterHtml(roster):'<p class="muted">Nobody has booked yet.</p>'}`;
+  const kind=s.hosted==='family'?'Family-requested private group, organized by '+esc(s.organizer)+'. Only families with their invite link can book it.':'Coach-hosted: listed for every family until it fills.';
+  body=`<div class="lesson-head"><p><strong>${esc(s.formatName)}</strong></p><span class="pill neutral spots">${s.spotsLeft} of ${s.capacity} spot${s.capacity===1?'':'s'} left</span></div><p class="kind muted">${kind}</p>${roster.length?rosterHtml(roster):'<p class="muted">Nobody has booked yet.</p>'}`;
  }else if(roster.length){
   body=`<p><strong>Booked: ${esc(s.formatName)}</strong></p>${rosterHtml(roster)}`;
  }else body=`<p class="muted">${s.format==='one-on-one'?'Open for families to book a one-on-one.':'Open for families to book. A family can book a one-on-one or ask for a private partner or small group.'}</p>`;
  const edit=s.hosted==='family'?'':`<details class="edit"><summary>Change lesson type</summary><div class="pair"><label>Lesson type<select data-edit-format="${esc(s.id)}">${formatOptions(s.format)}</select></label><label>Spots (small group)<select data-edit-spots="${esc(s.id)}">${[3,4,5,6].map(n=>`<option${n===(s.format==='small-group'?s.capacity:4)?' selected':''}>${n}</option>`).join('')}</select></label></div><button type="button" data-edit="${esc(s.id)}">Save lesson type</button></details>`;
  const remove=taken?'':`<div class="actions"><button type="button" data-slot="${esc(s.id)}"${s.hosted==='family'?' data-family="1"':''}>Remove opening</button></div>`;
- return `<article${roster.length?' class="booked"':''}>${when}${body}${edit}${remove}</article>`;
+ return `<article${roster.length?' class="booked"':''}>${when}<div class="what">${body}${edit}${remove}</div></article>`;
 }
 function openingInput(){const f=$('format').value,w=Number($('weeks').value)||1;return {action:'add',email:coachEmail,date:$('date').value,start:$('start').value,end:$('end').value,format:f||null,...(f==='small-group'?{spots:Number($('spots').value)}:{}),...(w>1?{weeks:w}:{})}}
 function repeatOptions(max){const n=Number(max)||1,sel=$('weeks');if(sel.dataset.max===String(n))return;const keep=sel.value||'1';sel.dataset.max=String(n);

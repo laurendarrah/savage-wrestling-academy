@@ -179,7 +179,7 @@ console.log('Passed: check-in blocked for missing, expired, not valid, changed a
   assert.match(row('Vera Verified'), /Checked in/, 'already checked in');
   assert.match(row('Ned Unverified'), /Checked in/, 'checked in under the owner exception');
   assert.doesNotMatch(row('Ned Unverified'), /block-reason/);
-  assert.match(out, /· 3 can’t be checked in until their USA Wrestling card is sorted out/, 'Nico, Lou and Ira');
+  assert.match(out, /<p class="muted meta">3 can’t be checked in until their USA Wrestling card is sorted out<\/p>/, 'Nico, Lou and Ira');
   assert.match(html, /A wrestler can be checked in only with a USA Wrestling card the academy has verified/);
   console.log('Passed: roster page shows why a wrestler can’t be checked in, with no Check in button.');
 }
