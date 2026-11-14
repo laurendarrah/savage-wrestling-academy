@@ -27,22 +27,27 @@ assert.doesNotMatch(portal + shellCss, /fonts\.googleapis|\bInter\b/, 'no Inter 
 assert.match(shellCss, /\.os-brand small\{display:block;margin-top:4px;font:700 11px\/1\.2 var\(--os-body\);/, 'the brand label is Barlow at a readable size');
 assert.match(shellCss, /--os-body:Barlow,/);
 
-// The dashboard gets the owner shell but not savage.css, so it carries the savage.css tokens under the same names.
+// The dashboard loads savage.css like every other owner page (issue #341), so it defines no tokens and copies no
+// colors of its own: its sheet is layout, written with the shared tokens.
 const tokens = css => Object.fromEntries([...css.matchAll(/--(swa-(?:prog|warn)-[a-z-]+):\s*(#[0-9A-Fa-f]{3,6})/g)].map(m => [m[1], m[2].toUpperCase()]));
-const shared = tokens(savage), mirrored = tokens(portal);
+const shared = tokens(savage);
 assert.ok(Object.keys(shared).length >= 12, 'savage.css has the program and warning tokens');
-assert.deepEqual(mirrored, shared, 'the dashboard uses the same program and warning colors as savage.css');
+const portalCss = portal.match(/<style>([\s\S]*?)<\/style>/)[1];
+assert.doesNotMatch(portalCss, /--swa-[a-z0-9-]+:\s*[#\w]|@font-face|:root\{/, 'no token, font or :root block of its own');
+for (const token of ['--swa-s-16', '--swa-t-15', '--swa-r-card', '--swa-surface', '--swa-line', '--swa-muted', '--swa-red', '--swa-dark-3', '--swa-prog-event']) assert.ok(portalCss.includes(`var(${token})`) && savage.includes(token + ':'), token + ' comes from savage.css');
+assert.doesNotMatch(portalCss, /font-size:(?:\d|1[01])px|font:[^;}]*\s(?:\d|1[01])px/, 'no text under 12px');
 assert.match(portal, /\.notice\{[^}]*background:var\(--swa-warn-bg\);border:1px solid var\(--swa-warn-line\);[^}]*color:var\(--swa-warn-ink\)/, 'amber notes use the warning tokens');
 assert.match(read('public/responsive.css'), /\.event\.cal-advanced,[^{]*\{background:var\(--swa-prog-advance,#000\);color:var\(--swa-prog-advance-ink,#fff\)/, 'calendar cards use the program tokens');
 
 // Buttons are Barlow sentence case; only the primary is condensed capitals (issue #280). Calendar cards are read, not
 // pressed: they keep their own look, so "6:00 PM–7:30 PM" never breaks over four lines.
-assert.match(portal, /main button:not\(\.toollink\):not\(\.tool\):not\(\.event\):not\(\.mobile-practice\),main a\.button\{font-family:Barlow,[^}]*text-transform:none/);
-assert.match(portal, /main button\.primary,main a\.button\.primary,main \.primary\{font-family:'Barlow Condensed'[^}]*text-transform:uppercase/);
+assert.match(savage, /html body button,html body \.button,html body a\.button\{font-family:var\(--swa-body\);[^}]*text-transform:none/);
+assert.match(savage, /html body button\.primary,html body \.primary,[^{]*\{font-family:var\(--swa-display\);[^}]*text-transform:uppercase/);
+assert.doesNotMatch(portalCss, /Barlow|Impact|text-transform:uppercase[^}]*\}[^{]*button/, 'the dashboard has no button or font rules of its own');
 // The dashboard's title is a row on the ground, not a textured band with a watermark; h2 is Barlow sentence case.
 assert.doesNotMatch(portal, /--texture|main \.title::after|savage-logo-256/);
-assert.match(portal, /\nh2\{font:700 20px\/1\.2 Barlow,[^}]*text-transform:none/);
-assert.match(portal, /\.dayname\{[^}]*font-size:12px;[^}]*color:var\(--gray\)\}/, 'day names are dark enough to read');
+assert.match(savage, /html body h2\{font-family:var\(--swa-body\);font-weight:700;text-transform:none/);
+assert.match(portal, /\.dayname\{[^}]*font-size:12px;[^}]*color:var\(--swa-muted\)\}/, 'day names are dark enough to read');
 
 // Run the dashboard's own helpers.
 const grab = name => portal.match(new RegExp(`(?:const|function) ${name}\\b[\\s\\S]*?\\n(?=function |const |let |//)`))[0];
@@ -76,8 +81,8 @@ const phone = shellCss.match(/@media \(max-width:900px\)\{([\s\S]*?)\n\}/)[1];
 assert.match(phone, /html body \.os-menu\{display:inline-flex;align-items:center;gap:8px;min-height:44px;/);
 assert.match(phone, /html body \.os-crumbs,html body \.os-family-top\{display:none\}/); assert.match(phone, /html body \.os-family-drawer\{display:block;/);
 // Issue #283: the tools card is gone (the sidebar is the map); the dashboard's rows and tiles are full-size targets instead.
-assert.match(portal, /\.todo li\{display:grid;grid-template-columns:28px minmax\(0,1fr\) auto;gap:12px;align-items:center;padding:12px 0;/, 'to-do rows are full-size targets');
-assert.match(portal, /main \.todo button,main \.todo a\.button,[^{]*\{min-height:40px;/, 'row buttons keep a 40px height');
+assert.match(portal, /\.todo li\{display:grid;grid-template-columns:12px minmax\(0,1fr\) auto;gap:var\(--swa-s-12\);align-items:center;min-height:52px;/, 'to-do rows are one line each on a desk (issue #341)');
+assert.match(portal, /@media\(max-width:1000px\)\{[\s\S]*?html body \.todo \.button,html body \.todo button\{min-height:44px\}/, 'and their buttons are 44px targets on a phone');
 
 // ---------- No back link inside the owner shell (issue #261; one back link each before, issue #232) ----------
 const ownerPages = ['app/financials/screen.html', 'app/site-health/screen.html', 'app/messages/screen.html', 'app/cards/screen.html', 'app/payments/screen.html',
@@ -155,7 +160,7 @@ assert.equal(el('errorList').hidden, true, 'no table when there is nothing in it
 assert.match(el('now').innerHTML, /0 site errors in the last 24 hours/);
 el = await healthPage([{at: '2026-11-07T12:00:00Z', method: 'GET', path: '/x', status: 500, message: '<oops>'}]);
 assert.equal(el('errorList').hidden, false); assert.equal(el('noErrors').hidden, true);
-assert.match(el('rows').innerHTML, /<code>GET \/x<\/code><\/td><td><\/td><td>500<\/td><td>&lt;oops&gt;<\/td>/);
+assert.match(el('rows').innerHTML, /<code>GET \/x<\/code><\/td><td data-label="Who"><\/td><td data-label="Status">500<\/td><td data-label="Message">&lt;oops&gt;<\/td>/);
 assert.match(el('now').innerHTML, /1 site error in the last 24 hours/);
 
 // ---------- One month picker on /financials, /timesheets and /coach-time ----------

@@ -114,7 +114,7 @@ const html = await (await accounts.GET(request('/accounts', 'GET', null, 'owner'
 const cardOf = (page, email) => '<article ' + page.split('<article ').find(s => s.includes(email)).split('</article>')[0] + '</article>';
 const card = cardOf(html, 'bob@example.test');
 assert.match(card, /data-programs="Intermediate Elementary"/);
-assert.match(card, /Riley Two · Grade 10<\/span><span class="pill">SWA Intermediate<\/span><span class="pill alert">Medical note<\/span>/);
+assert.match(card, /Riley Two · Grade 10<\/span><span class="pill">SWA Intermediate<\/span><span class="pill bad">Medical note<\/span>/);
 // Each wrestler row ends with its links to approvals and transfers (issue #283).
 assert.match(card, /Kit Two · Kindergarten<\/span><span class="pill">SWA Development<\/span><span class="kid-links"><a href="\/approvals">Approvals<\/a><a href="\/transfers">Transfer<\/a><\/span><\/li>/, '"None" is not a medical note');
 assert.doesNotMatch(card, /Details missing/);

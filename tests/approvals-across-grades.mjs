@@ -89,12 +89,12 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
   vm.runInNewContext(script.slice(script.indexOf('const gradeOf='), script.indexOf('async function load()')) + ';this.requestCard=requestCard', ctx);
   const base = {id: 'a1', status: 'pending', wrestler_name: 'Sam Example', grade: '9', current_name: 'Sam Example', current_grade: '9', parent_name: 'Pat', email: 'pat@example.test', phone: '', created_at: 'x', applies: 1};
   let card = ctx.requestCard(base, 0);
-  assert.match(card, /PENDING<\/span><h2>Sam Example · Grade 9<\/h2>/); assert.match(card, /data-status="approved">Approve registration/); assert.doesNotMatch(card, /Requested as/);
+  assert.match(card, /^<article class="card request"><span class="pill warn">Pending<\/span><h2>Sam Example · Grade 9<\/h2>/, 'the status is a pill in sentence case'); assert.match(card, /data-status="approved">Approve registration/); assert.doesNotMatch(card, /Requested as/);
   card = ctx.requestCard({...base, current_grade: '10'}, 0);
-  assert.match(card, /PENDING · Grade changed<\/span><h2>Sam Example · Grade 10<\/h2><p class="grade-note">Requested as Grade 9, now Grade 10\./);
+  assert.match(card, /Pending · Grade changed<\/span><h2>Sam Example · Grade 10<\/h2><p class="grade-note">Requested as Grade 9, now Grade 10\./);
   assert.match(card, /data-status="approved">Approve registration/); assert.match(card, /data-status="declined">Decline request/);
   card = ctx.requestCard({...base, current_name: 'Alex Example', applies: 0}, 0);
-  assert.match(card, /PENDING · Profile changed/); assert.match(card, /name was changed to Alex Example/); assert.doesNotMatch(card, /data-status=/);
+  assert.match(card, /Pending · Profile changed/); assert.match(card, /data-chat="0">Open private conversation/, 'the conversation stays open to the owner'); assert.match(card, /name was changed to Alex Example/); assert.doesNotMatch(card, /data-status=/);
   card = ctx.requestCard({...base, current_grade: '6', applies: 0}, 0);
   assert.match(card, /now in Grade 6, outside grades 7–12/); assert.doesNotMatch(card, /data-status=/);
 }

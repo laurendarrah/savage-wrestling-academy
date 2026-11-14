@@ -26,7 +26,7 @@ let fetched = [];
 const location = {hash: '', href: ''};
 // The page reads the clock to mark a session "Now". Run it at 10 AM New York today, before any session, so the test
 // passes at any hour (it failed during practice time on Nov 13, issue #304).
-const fixedNow = Date.parse(today + 'T15:00:00Z');
+let fixedNow = Date.parse(today + 'T15:00:00Z');
 class FixedDate extends Date { constructor(...a) { super(...(a.length ? a : [fixedNow])); } static now() { return fixedNow; } }
 const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date: FixedDate, JSON, Set, FormData, Promise, location,
   document: {querySelector: node, getElementById: id => node('#' + id), addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {}, confirm: () => true,
@@ -39,8 +39,14 @@ vm.runInContext(code, ctx);
 
 // Live dashboard: the date in the title row, two quiet actions, the four tiles, and no tools card (the sidebar is the map).
 const page = vm.runInContext("page='Dashboard';dashboard()", ctx);
-assert.match(page, /<h1>[A-Z][a-z]+day, [A-Z][a-z]{2} \d{1,2}<\/h1><p class="muted"><span id="todayFacts">Loading today…<\/span><\/p><p class="sync" id="syncStatus" role="status" aria-live="polite">/, 'the date, the facts and the save status in the title row');
-assert.match(page, /<div class="title-actions"><a class="button" href="\/payments#record">Record a payment<\/a><a class="button" href="\/messages#announce">Send a message<\/a><\/div>/);
+assert.match(page, /^<div class="swa-title"><div class="swa-title__text"><h1>[A-Z][a-z]+day, [A-Z][a-z]{2} \d{1,2}<\/h1><p class="muted"><span id="todayFacts"><span class="swa-sr">Loading today…<\/span><span class="skeleton facts" aria-hidden="true"><\/span><\/span><\/p><p class="sync" id="syncStatus" role="status" aria-live="polite">/, 'the shared title row: the date, the facts and the save status');
+assert.match(page, /<div class="swa-title__actions"><a class="button" href="\/payments#record">Record a payment<\/a><a class="button" href="\/messages#announce">Send a message<\/a><\/div>/);
+// Issue #341: while the numbers load, every block is a skeleton with one line for screen readers; the word "Loading" is never on screen.
+assert.equal((page.match(/<div class="tile wait" aria-hidden="true">/g) || []).length, 4, 'four tile skeletons');
+for (const id of ['tonightBody', 'comingBody', 'monthBody']) assert.match(page, new RegExp(`id="${id}"><span class="swa-sr">Loading [^<]*…</span>(?:<span class="skeleton" aria-hidden="true"></span>){3}</div>`), id);
+assert.match(page, /<ul class="todo" id="needsNow"><li class="wait"><span class="swa-sr">Loading what needs you…<\/span>/);
+assert.equal(page.replace(/<span class="swa-sr">[^<]*<\/span>/g, '').includes('Loading'), false, 'no visible "Loading"');
+assert.match(page, /<p class="empty-line" id="needsNone" hidden>Nothing needs you right now\.<\/p>/, 'an empty "Needs you" says so');
 assert.match(page, /id="todayTiles"/); assert.match(page, /id="tonightBody"/); assert.match(page, /id="launch"[\s\S]*id="needsNow"[\s\S]*id="launchBody"/); assert.match(page, /id="comingBody"/); assert.match(page, /id="monthBody"/);
 assert.ok(!page.includes('Sample active members') && !page.includes('Run the academy'), 'no sample stats, no tools card');
 assert.equal((page.match(/class="button primary"|class="primary"/g) || []).length, 0, 'the one red button comes with tonight’s sessions');
@@ -49,30 +55,44 @@ assert.equal(node('#todayFacts').innerHTML, '3 sessions tonight · 2 coaches clo
 const tiles = node('#todayTiles').innerHTML;
 assert.deepEqual([...tiles.matchAll(/<a class="tile( hot)?" href="([^"]+)"><span class="l">([^<]+)<\/span><span class="v">([^<]+)<\/span><span class="d">([^<]+)<\/span><\/a>/g)].map(m => [m[2], m[3], m[4], m[5], !!m[1]]), [
   ['/roster', 'Checked in today', '2 / 4', '2 wrestlers still to arrive', false],
-  ['/payments#cash', 'Cash due at the door', '$50', 'Sam Example · SWA Intermediate walk-in and 1 more', true],
-  ['/payments', 'Collected in ' + new Date(monthKey + '-01T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', month: 'long'}), '$1,234.50', '7 payments · $2,854 this season', false],
+  ['/payments#cash', 'Cash due at the door', '$50.00', 'Sam Example · SWA Intermediate walk-in and 1 more', true],
+  ['/payments', 'Collected in ' + new Date(monthKey + '-01T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', month: 'long'}), '$1,234.50', '7 payments · $2,854.00 this season', false],
   ['/accounts', 'Families', '3', '4 wrestlers · 2 cards blocked', false],
 ], 'four tiles, each a link, cash due in red');
 assert.ok(fetched.some(u => /^\/api\/payments\?from=\d{4}-\d{2}-01$/.test(u)) && fetched.some(u => /^\/api\/payments\?from=\d{4}-09-01$/.test(u)), 'this month and the season');
 assert.ok(!tiles.includes('waitlist') && !fetched.includes('/api/waitlists'), 'no waitlist tile (#210)');
-// Tonight on the mat: sessions by time, the plan state, the count, and Open check-in as the one red button.
+// Tonight on the mat: sessions by time, each the academy's practice box (the group, its time larger under it, the plan
+// state), the count, and Open check-in as the one red button. At 10 AM the first session is next up: it gets the red bar.
 const tonight = node('#tonightBody').innerHTML;
-assert.match(tonight, /^<ul class="tl"><li><div class="t">4:00<\/div><div class="w">Friday Night Live<small>Extra practice<\/small><\/div><div class="r"><b>0<\/b> \/ 1<\/div><\/li><li><div class="t">6:00<\/div><div class="w">SWA Intermediate<small>Plan shared · Leg attacks and finishes<\/small><\/div><div class="r"><b>2<\/b> \/ 3<\/div><\/li><li><div class="t">6:00<\/div><div class="w">SWA Advance<small>No plan yet · Nobody registered yet<\/small><\/div><div class="r">—<\/div><\/li><\/ul><a class="button primary" href="\/roster">Open check-in<\/a>$/);
+assert.equal(tonight, '<ul class="tl"><li class="next"><div class="w"><b>Friday Night Live</b><span class="t">4:00–5:00 PM</span><small>Extra practice</small></div><div class="r"><b>0</b> / 1<small>checked in</small></div></li>'
+  + '<li><div class="w"><b>SWA Intermediate</b><span class="t">6:00–7:30 PM</span><small>Plan shared · Leg attacks and finishes</small></div><div class="r"><b>2</b> / 3<small>checked in</small></div></li>'
+  + '<li><div class="w"><b>SWA Advance</b><span class="t">6:00–7:30 PM</span><small>No plan yet · Nobody registered yet</small></div><div class="r"></div></li></ul><a class="button primary" href="/roster">Open check-in</a>');
+// At 6:30 PM the two 6:00 practices are on the mat: each says so in one red line and gets the red bar; the 4:00 one is over.
+{
+  const morning = fixedNow;
+  fixedNow = [22, 23].map(h => Date.parse(`${today}T${h}:30:00Z`)).find(t => new Date(t).toLocaleTimeString('en-GB', {timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit'}) === '18:30');
+  await vm.runInContext('loadToday()', ctx);
+  const evening = node('#tonightBody').innerHTML;
+  assert.match(evening, /^<ul class="tl"><li><div class="w"><b>Friday Night Live<\/b>/, 'a finished session has the quiet bar');
+  assert.equal((evening.match(/<li class="now"><div class="w"><span class="on">On the mat now<\/span><b>SWA (Intermediate|Advance)<\/b><span class="t">6:00–7:30 PM<\/span>/g) || []).length, 2);
+  assert.doesNotMatch(evening, /class="next"/, 'nothing is "next" while a session is on');
+  fixedNow = morning; await vm.runInContext('loadToday()', ctx);
+}
 // Needs you: failed payments, cards that stop a check-in, coach hours, documents, messages. Each row is one line and one action.
 const needs = node('#needsNow').innerHTML;
 assert.deepEqual([...needs.matchAll(/data-need="([^"]+)"/g)].map(m => m[1]), ['attention', 'cards', 'hours', 'unsent', 'timeoff', 'waiver', 'messages']);
-assert.match(needs, /<li data-need="attention"><span class="dot " aria-label="To do" title="To do">!<\/span><div><b>1 payment needs attention<\/b><span class="d">Monthly payments that failed at Stripe<\/span><\/div><a class="button" href="\/payments#attention">Open<\/a><\/li>/);
+assert.match(needs, /<li data-need="attention"><span class="dot " role="img" aria-label="To do" title="To do"><\/span><div class="txt"><b>1 payment needs attention<\/b><span class="d" title="Monthly payments that failed at Stripe">Monthly payments that failed at Stripe<\/span><\/div><a class="button sm" href="\/payments#attention">Open<\/a><\/li>/, 'a quiet dot, the line about it (whole on hover), one small button');
 assert.match(needs, /<b>2 can’t check in today<\/b>[\s\S]*?href="\/cards\?show=waiting"/);
-assert.match(needs, /<b>2 coach shifts waiting for approval<\/b>[\s\S]*?href="\/timesheets">Review<\/a>/); assert.match(needs, /<span class="dot amber"[^>]*>…<\/span><div><b>4 coach shifts not sent<\/b>/);
-assert.match(needs, /<b>1 time-off request<\/b><span class="d">Coach Dana<\/span>/); assert.match(needs, /<b>1 waiver not signed<\/b>/); assert.match(needs, /<b>3 unread family messages<\/b>/);
+assert.match(needs, /<b>2 coach shifts waiting for approval<\/b>[\s\S]*?href="\/timesheets">Review<\/a>/); assert.match(needs, /<span class="dot amber"[^>]*><\/span><div class="txt"><b>4 coach shifts not sent<\/b>/);
+assert.match(needs, /<b>1 time-off request<\/b><span class="d" title="Coach Dana">Coach Dana<\/span>/); assert.match(needs, /<b>1 waiver not signed<\/b>/); assert.match(needs, /<b>3 unread family messages<\/b>/);
 assert.ok(!needs.includes('site error') && !needs.includes('data request'), 'nothing wrong with the site, no data requests: no rows for them');
 // Coming up: the next extra practice, the camp with its seats, and time off that needs cover.
 const coming = node('#comingBody').innerHTML;
-assert.match(coming, /<li><div>Fri, Nov 13 · Friday Night Live<small>4:00 PM · \$10 members<\/small><\/div><span class="amt"><\/span><\/li>/);
-assert.match(coming, /<li><div>Nov 17–18 · Winter camp<small>Full · Camp<\/small><\/div><span class="amt">\$160<\/span><\/li>/);
-assert.match(coming, /<li><div>Dec 7 to Dec 8 · Coach Dana off<small>2 practices need cover<\/small><\/div><a class="button" href="\/timesheets">Cover<\/a><\/li>/);
+assert.match(coming, /<li><div>Fri, Nov 13 · Friday Night Live<small>4:00 PM · \$10\.00 members<\/small><\/div><span class="amt"><\/span><\/li>/);
+assert.match(coming, /<li><div>Nov 17–18 · Winter camp<small>Full · Camp<\/small><\/div><span class="amt">\$160\.00<\/span><\/li>/);
+assert.match(coming, /<li><div>Dec 7 to Dec 8 · Coach Dana off<small>2 practices need cover<\/small><\/div><a class="button sm" href="\/timesheets">Cover<\/a><\/li>/);
 // This month by category, with what is owed to coaches last.
-assert.equal(node('#monthBody').innerHTML, '<ul class="rows"><li><div>Private lessons</div><span class="amt">$220</span></li><li><div>Camps, clinics and events</div><span class="amt">$144</span></li><li><div>Walk-ins</div><span class="amt">$80</span></li><li><div><b>Owed to coaches</b><small>Lesson shares · 5 lessons</small></div><span class="amt">$143</span></li></ul>');
+assert.equal(node('#monthBody').innerHTML, '<ul class="rows"><li><div>Private lessons</div><span class="amt">$220.00</span></li><li><div>Camps, clinics and events</div><span class="amt">$144.00</span></li><li><div>Walk-ins</div><span class="amt">$80.00</span></li><li><div><b>Owed to coaches</b><small>Lesson shares · 5 lessons</small></div><span class="amt">$143.00</span></li></ul>', 'money reads $40.00 everywhere');
 // Something wrong with the site, or a data request, joins "Needs you"; a document that is not in force stays out.
 responses['/api/waivers'] = {current: null, wrestlers: []}; delete responses['/api/messages']; responses['/api/site-health'] = {last24h: 3, health: {ok: true}}; responses['/api/data-requests'] = {open: 1};
 await vm.runInContext('loadToday()', ctx);
@@ -93,11 +113,12 @@ responses['/api/launch-checklist'] = {ready: 1, total: 3, items: [
   {key: 'health', label: 'Site health', status: 'done', href: '/site-health', detail: 'No server errors'}]};
 await vm.runInContext('loadLaunch()', ctx);
 const launch = node('#launchBody').innerHTML;
-assert.match(launch, /^<ul class="todo" id="launchItems"><li data-launch="programs" data-status="todo"><span class="dot " aria-label="To do" title="To do">!<\/span><div><b>Programs on the welcome page and calendar<\/b><span class="d">Families see no programs yet\.<\/span><\/div><button type="button" onclick="publishPrograms\(\)">Publish the programs<\/button><\/li>/, 'publishing is a plain button: the one red button on the dashboard is Open check-in');
+assert.match(launch, /^<ul class="todo" id="launchItems"><li data-launch="programs" data-status="todo"><span class="dot " role="img" aria-label="To do" title="To do"><\/span><div class="txt"><b>Programs on the welcome page and calendar<\/b><span class="d" title="Families see no programs yet\.">Families see no programs yet\.<\/span><\/div><button type="button" class="sm" onclick="publishPrograms\(\)">Publish the programs<\/button><\/li>/, 'publishing is a plain button: the one red button on the dashboard is Open check-in');
 assert.match(launch, /data-launch="waiver"[\s\S]*?href="\/waivers">Open/);
 assert.match(launch, /<div class="prog"><span>Launch<\/span><span class="bar" role="progressbar" aria-label="Launch checklist progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="33"><i style="width:33%"><\/i><\/span><span id="launchCount">1 of 3 ready<\/span><\/div><details class="ready"><summary>Show 1 ready<\/summary><ul class="todo"><li data-launch="health" data-status="done">/, 'a thin progress line, then the ready items folded away');
-assert.doesNotMatch(launch.split('data-launch="health"')[1], /<a class="button"|<button/, 'a ready item has no button');
-assert.match(launch, /data-launch="waiver"[\s\S]*?<a class="button" href="\/waivers">Open<\/a>/, 'the academy’s own pages open in the same tab');
+assert.doesNotMatch(launch.split('data-launch="health"')[1], /<a class="button|<button/, 'a ready item has no button');
+assert.match(launch.split('data-launch="health"')[1], /^ data-status="done"><span class="dot ok" role="img" aria-label="Ready" title="Ready">✓<\/span>/, 'and a green check');
+assert.match(launch, /data-launch="waiver"[\s\S]*?<a class="button sm" href="\/waivers">Open<\/a>/, 'the academy’s own pages open in the same tab');
 // Issue #252: email waits on its setup, not a decision; the Launch board in GitHub opens in a new tab; a section opens on the dashboard.
 responses['/api/launch-checklist'] = {ready: 0, total: 1, items: [
   {key: 'email', label: 'Email notices', status: 'waiting', detail: 'Set up Resend on your account'},
@@ -107,10 +128,10 @@ responses['/api/launch-checklist'] = {ready: 0, total: 1, items: [
 await vm.runInContext('loadLaunch()', ctx);
 {
   const l = node('#launchBody').innerHTML;
-  assert.match(l, /data-launch="email" data-status="waiting"><span class="dot amber" aria-label="Waiting on setup"/); assert.ok(!l.includes('Waiting on a decision'));
-  assert.match(l, /data-launch="decisions"[\s\S]*?<a class="button" href="https:\/\/github\.com\/laurendarrah\/savage-wrestling-academy\/issues\/246" target="_blank" rel="noopener">Open<\/a>/);
-  assert.match(l, /data-launch="website"[\s\S]*?<a class="button" href="\/website">Open<\/a>/);
-  assert.match(l, /data-launch="events"[\s\S]*?<button type="button" onclick="go\('Camps &amp; events'\)">Open<\/button>/);
+  assert.match(l, /data-launch="email" data-status="waiting"><span class="dot amber" role="img" aria-label="Waiting on setup"/); assert.ok(!l.includes('Waiting on a decision'));
+  assert.match(l, /data-launch="decisions"[\s\S]*?<a class="button sm" href="https:\/\/github\.com\/laurendarrah\/savage-wrestling-academy\/issues\/246" target="_blank" rel="noopener">Open<\/a>/);
+  assert.match(l, /data-launch="website"[\s\S]*?<a class="button sm" href="\/website">Open<\/a>/);
+  assert.match(l, /data-launch="events"[\s\S]*?<button type="button" class="sm" onclick="go\('Camps &amp; events'\)">Open<\/button>/);
   assert.ok(l.indexOf('data-launch="website"') < l.indexOf('data-launch="email"'), 'to-dos come before waiting items');
   assert.match(l, /<span id="launchCount">0 of 1 ready<\/span>/);
   // For-your-information items fold away with the ready ones; the open list holds only to-dos and what waits on setup.

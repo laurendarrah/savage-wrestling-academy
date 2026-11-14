@@ -116,10 +116,12 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
   assert.ok(html.indexOf('<nav class="os-nav"') < html.indexOf('<header class="os-top"') && html.indexOf('<header class="os-top"') < html.indexOf('<main'), path + ': sidebar, header, then the page');
   assert.equal(count(html, `<script${nonce ? ` nonce="${nonce}"` : ''}>${SHELL_BOOT}</script>`), 1, path + ': the start-up script runs before the page is drawn');
 }
-// The dashboard keeps its own styles: the shell, but not savage.css, and none of its old sidebar markup.
+// The dashboard loads the design system like every other owner page (issue #341: it used to carry its own copy of the
+// buttons, cards and colors), then the shell's styles, and none of its old sidebar markup.
 {
   const {html} = await open('/');
-  assert.doesNotMatch(html, /href="\/savage\.css"/); assert.match(html, /href="\/owner-shell\.css"/);
+  assert.match(html, /<script src="\/toast\.js" defer><\/script><link rel="stylesheet" href="\/savage\.css"><link rel="stylesheet" href="\/owner-shell\.css">/);
+  assert.ok(html.indexOf('</style>') < html.indexOf('href="/savage.css"'), 'the shared sheet comes after the dashboard’s own layout rules');
   assert.doesNotMatch(html, /class="shell"|<aside|id="navToggle"/);
   assert.match(html, /<button type="button" class="os-item" onclick="closeOwnerTools\(\);reloadAcademy\(\)">Refresh saved data<\/button>/);
 }
@@ -259,7 +261,7 @@ console.log('Owner shell start-up: deep links mark their section and breadcrumb;
   // Following the sidebar's links on the dashboard: the hash changes, the section draws, the shell marks it and focus moves.
   run("page='Dashboard'"); location.hash = '#programs'; calls.length = 0;
   listeners.hashchange();
-  assert.equal(run('page'), 'Programs & pricing'); assert.match(get('#main').innerHTML, /PROGRAMS &amp; PRICING|PROGRAMS & PRICING/);
+  assert.equal(run('page'), 'Programs & pricing'); assert.match(get('#main').innerHTML, /<h1>Programs &amp; pricing<\/h1>/);
   assert.deepEqual(calls, ['scroll', 'mark', 'focus']);
   calls.length = 0; listeners.hashchange(); assert.deepEqual(calls, [], 'the same address draws nothing again');
   // Back to the dashboard without loading the page again (the shell's Dashboard link).
