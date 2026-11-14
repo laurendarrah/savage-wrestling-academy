@@ -91,7 +91,7 @@ assert.match(rules, /program==='Advanced'&&HIGH_SCHOOL\.includes/);
 // and nothing says sample, preview or demo. Sections open on the dashboard, each with its own address.
 const nav = JSON.parse(run('JSON.stringify(W.OWNER_NAV.flatMap(g=>g.items))'));
 assert.equal(nav.length, 21, 'four groups, about fourteen items plus the fold and two hidden section aliases (issue #283)');
-const editors = {Dashboard: /Launch checklist|id="launch"/, Calendar: /PLAN FROM YOUR CALENDAR/, Schedules: /Plan a semester/, 'Camps & events': /YOUR CAMPS &amp; CLINICS|YOUR CAMPS & CLINICS/, 'Programs & pricing': /PROGRAMS &amp; PRICING|PROGRAMS & PRICING/};
+const editors = {Dashboard: /Launch checklist|id="launch"/, Calendar: /<h1>Practice calendar<\/h1>/, Schedules: /<h1>Schedules<\/h1>[\s\S]*Plan a semester/, 'Camps & events': /<h1>Camps &amp; events<\/h1>/, 'Programs & pricing': /<h1>Programs &amp; pricing<\/h1>/};
 assert.deepEqual(nav.filter(i => i.section).map(i => i.section).sort(), Object.keys(editors).sort());
 for (const item of nav) {
   location.href = ''; run(`go(${JSON.stringify(item.section || item.label)})`);

@@ -1,10 +1,33 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Waivers | Savage Wrestling Academy</title><style>*{box-sizing:border-box}body{font:16px Arial,sans-serif;line-height:1.5;background:#f5f5f6;color:#18191c;margin:0}main{max-width:1100px;margin:auto;padding:20px 16px 60px}h1{line-height:1.15;margin:12px 0 4px}h2{margin:0 0 12px}a{color:#a92330}section{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;margin:18px 0}.muted{color:#626672}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}.tile{background:#fff;border:1px solid #ddd;border-radius:10px;padding:14px}.tile b{display:block;font-size:22px}label{display:flex;flex-direction:column;font-weight:bold;font-size:14px;gap:4px;margin:10px 0}input,textarea,select,button{font:inherit}input,textarea,select{padding:9px;border:1px solid #ccc;border-radius:6px;font-weight:normal}textarea{min-height:260px}button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer}button.primary{background:#d72732;border-color:#d72732;color:#fff}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.terms{white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;border:1px solid #eee;border-radius:6px;padding:12px;background:#fafafa}.table{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:8px;border-bottom:1px solid #eee;vertical-align:top}th{font-size:12px;text-transform:uppercase;color:#626672}.badge{display:inline-block;font-size:12px;font-weight:bold;border-radius:999px;padding:2px 8px;background:#eef0f3}.badge.ok{background:#dff3e3;color:#11632a}.badge.warn{background:#fde8e8;color:#8a1c1c}.notice{background:#fff7e6;border:1px solid #f0d49c;border-radius:8px;padding:12px}#status{font-weight:bold;min-height:1.5em}[hidden]{display:none!important}.exc{margin-top:8px;font-size:14px}.exc label{margin:4px 0}.exc summary{cursor:pointer;color:#a92330}html body .exc summary{min-height:36px;font-size:14px}.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}#current .terms{margin:8px 0 12px}html body #retire{min-height:40px;padding:0 12px;font-size:15px}</style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Waivers</h1><p class="muted" id="intro">While a waiver is in force, a wrestler cannot book anything until a parent or guardian signs it.</p><p id="status" role="status" aria-live="polite">Loading…</p>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Waivers | Savage Wrestling Academy</title><style>
+/* The owner's page for every signed document: the waiver, the Parent Consent Form and the coach contract (issue #195).
+   On the design system in public/savage.css (issue #341); this is the page's own layout: the text in force, three
+   number tiles, who has signed as the shared table, the publish form at a reading width, and the version history. */
+*{box-sizing:border-box}body{margin:0}main{max-width:1000px;margin:auto;padding:24px 16px 56px}
+main>section{margin:0 0 var(--swa-s-24)}h2{margin:0 0 var(--swa-s-12)}[hidden]{display:none!important}
+.muted{color:var(--swa-muted)}section p{margin:0 0 var(--swa-s-12)}section p:last-child{margin-bottom:0}
+#status{margin:0 0 var(--swa-s-16);font-weight:600;font-size:var(--swa-t-15)}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--swa-s-12);margin:0 0 var(--swa-s-24)}
+html body .tile .muted{color:inherit}
+label{display:flex;flex-direction:column;gap:6px;margin:0 0 var(--swa-s-12)}
+.row{display:flex;gap:var(--swa-s-12);flex-wrap:wrap;align-items:end;margin:0 0 var(--swa-s-12)}.row label{margin:0;flex:0 1 220px}.row label:last-child{flex:1 1 240px}.row input,.row select{width:100%}
+.terms{white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;margin:0 0 var(--swa-s-12);padding:var(--swa-s-12) var(--swa-s-16);border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface-2);font-size:var(--swa-t-15)}
+#current p:last-child{display:flex;flex-wrap:wrap;align-items:center;gap:var(--swa-s-8) var(--swa-s-12);font-size:var(--swa-t-15)}
+html body #retire{min-height:var(--swa-h-small);padding:4px 12px;font-size:var(--swa-t-15)}
+.table{overflow-x:auto}#rows td{font-size:var(--swa-t-15);line-height:1.5}#rows td .muted{font-size:var(--swa-t-13)}
+.notice{margin:0 0 var(--swa-s-16);padding:var(--swa-s-12) var(--swa-s-16);background:var(--swa-warn-bg);border:1px solid var(--swa-warn-line);color:var(--swa-warn-ink);font-size:var(--swa-t-15);line-height:1.5}
+#publishForm{max-width:720px}#publishForm input,#publishForm textarea{width:100%}textarea{min-height:260px;resize:vertical}
+/* Ask to sign again, allow booking anyway, carry a signature over: small disclosures inside a row */
+.exc{margin-top:var(--swa-s-8);font-size:var(--swa-t-15)}.exc label{margin:var(--swa-s-8) 0;font-size:var(--swa-t-13)}.exc input{width:100%;max-width:320px}
+html body .exc summary{min-height:36px;font-size:var(--swa-t-15);color:var(--swa-red)}
+html body .exc button{min-height:var(--swa-h-small);padding:4px 12px;font-size:var(--swa-t-15)}
+@media(max-width:640px){.tiles{gap:var(--swa-s-8)}html body .tile{padding:var(--swa-s-12)}html body .tile b{font-size:var(--swa-t-29)}#publishForm button{width:100%}.row label{flex:1 1 100%}}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Waivers</h1><p class="muted" id="intro">While a waiver is in force, a wrestler cannot book anything until a parent or guardian signs it.</p><p id="status" role="status" aria-live="polite">Loading…</p>
 <details class="how"><summary>How this works</summary><p id="howText">Publishing new text creates a new version that every family signs again. To ask one family to sign again, use Ask to sign again beside their signature. Earlier signed copies are kept.</p></details>
 <section id="currentBox"><h2 id="currentTitle">Waiver in force</h2><div id="current"></div></section>
 <div class="tiles" id="tiles" hidden><div class="tile"><span class="muted" id="tAllLabel">Wrestlers</span><b id="tAll">–</b></div><div class="tile"><span class="muted">Signed</span><b id="tSigned">–</b></div><div class="tile"><span class="muted" id="tMissingLabel">Not signed · blocked</span><b id="tMissing">–</b></div></div>
 <section id="whoBox" hidden><div class="row"><label>Show<select id="show"><option value="missing">Not signed</option><option value="all" id="showAll">Every wrestler</option></select></label><label>Search<input id="q" placeholder="Wrestler, parent or email"></label></div><div class="table"><table class="swa-table"><thead><tr><th id="colWho">Wrestler</th><th id="colFamily">Family</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div><div class="pager" id="pager" hidden><p id="shown" role="status" aria-live="polite"></p><button type="button" id="more">Show more</button></div></section>
 <section><h2 id="publishTitle">Publish waiver text</h2><p class="notice" id="publishNotice">Paste only text the academy's attorney has approved. Once published, families must sign it before booking. Published text cannot be edited; publish a corrected version instead.</p><form id="publishForm"><label>Title<input id="wTitle" maxlength="120" value="Participation waiver and release"></label><label><span id="bodyLabel">Waiver text</span><textarea id="wBody" maxlength="60000" placeholder="Paste the approved waiver text"></textarea></label><button class="primary" id="publish">Publish and require signatures</button></form></section>
-<section><details><summary><h2 style="display:inline">Version history</h2></summary><div class="table"><table class="swa-table"><thead><tr><th>Title</th><th>Published</th><th>Retired</th><th>Signatures</th></tr></thead><tbody id="versions"></tbody></table></div></details></section></main><script>
+<section><details><summary><h2>Version history</h2></summary><div class="table"><table class="swa-table"><thead><tr><th>Title</th><th>Published</th><th>Retired</th><th>Signatures</th></tr></thead><tbody id="versions"></tbody></table></div></details></section></main><script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const when=d=>d?new Date(d).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}):'—';
 // One owner page for every signed document (issue #195): the waiver at /waivers, the Parent Consent Form at
@@ -39,8 +62,8 @@ function exceptionControls(userId,wrestlerId,rule){
  return '<details class="exc"><summary>Allow booking anyway</summary><label>Until<input type="date" min="'+min+'" max="'+max+'" data-exc-until="'+key+'"></label><label>Reason<input maxlength="300" data-exc-reason="'+key+'" placeholder="'+(rule==='waiver'?'Renewal pending, paper waiver on file…':'Paper form on file…')+'"></label><button type="button" data-exc-grant="'+key+'">Allow</button></details>';
 }
 function wireExceptions(after){
- document.querySelectorAll('[data-exc-grant]').forEach(b=>b.onclick=async()=>{const [userId,wrestlerId,rule]=b.dataset.excGrant.split('|');try{const r=await fetch('/api/exceptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'grant',userId,wrestlerId,rule,endsOn:document.querySelector('[data-exc-until="'+b.dataset.excGrant+'"]').value,reason:document.querySelector('[data-exc-reason="'+b.dataset.excGrant+'"]').value})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not save.');exceptions=d.exceptions;after();$('status').textContent='Exception saved. This wrestler can book until the date you chose.'}catch(e){$('status').textContent=e.message}});
- document.querySelectorAll('[data-exc-remove]').forEach(b=>b.onclick=async()=>{if(!confirm('Remove this exception? Booking will be blocked again.'))return;try{const r=await fetch('/api/exceptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'remove',id:b.dataset.excRemove})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not remove.');exceptions=d.exceptions;after();$('status').textContent='Exception removed.'}catch(e){$('status').textContent=e.message}});
+ document.querySelectorAll('[data-exc-grant]').forEach(b=>b.onclick=async()=>{const [userId,wrestlerId,rule]=b.dataset.excGrant.split('|');try{const r=await fetch('/api/exceptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'grant',userId,wrestlerId,rule,endsOn:document.querySelector('[data-exc-until="'+b.dataset.excGrant+'"]').value,reason:document.querySelector('[data-exc-reason="'+b.dataset.excGrant+'"]').value})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not save.');exceptions=d.exceptions;after();say('Exception saved. This wrestler can book until the date you chose.')}catch(e){say(e.message,true)}});
+ document.querySelectorAll('[data-exc-remove]').forEach(b=>b.onclick=async()=>{if(!confirm('Remove this exception? Booking will be blocked again.'))return;try{const r=await fetch('/api/exceptions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'remove',id:b.dataset.excRemove})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not remove.');exceptions=d.exceptions;after();say('Exception removed.')}catch(e){say(e.message,true)}});
 }
 function setup(){
  document.title=DOC.title+' | Savage Wrestling Academy';
@@ -62,10 +85,15 @@ async function load(msg,more,keep){
  // The list is marked busy until the latest load has drawn it (issue #220), so a list about to be replaced is not used.
  const ticket=++loading,k=listKey(),rows=keep&&data?(data[k]||[]).length:0;$('rows').setAttribute('aria-busy','true');
  try{const r=await fetch(docsUrl(more?{cursor:data.next}:{limit:rows}),{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load the '+DOC.name+'.');await exceptionsReady;if(ticket!==loading)return;
-  data={...d,[k]:more?(data[k]||[]).concat(d[k]||[]):(d[k]||[])};render();$('status').textContent=msg||''}catch(e){if(ticket===loading)$('status').textContent=e.message}
+  data={...d,[k]:more?(data[k]||[]).concat(d[k]||[]):(d[k]||[])};render();say(msg||'')}catch(e){if(ticket===loading)say(e.message,true)}
  finally{if(ticket===loading)$('rows').removeAttribute('aria-busy')}
 }
+// What a change did shows in the status line under the title and, on the site, in a toast: the publish form and the
+// rows are far below that line (issue #341).
+function say(text,bad){$('status').textContent=text;if(text&&typeof swaToast==='function')swaToast(text,bad?{kind:'bad'}:undefined)}
 const search=()=>{clearTimeout(typing);typing=setTimeout(()=>load(),250)};
+// An empty list says why it is empty (issue #341): nobody matches the search, or everybody has signed.
+function noneText(all){const filtered=!!$('q').value.trim()||$('show').value==='all';if(DOC.coach)return !all?'No coaches yet. A coach you add under Coaches is asked to sign.':filtered?'No coaches match.':'Every coach has signed.';return filtered?'No wrestlers match.':'Every wrestler has a signature on file.'}
 function render(){
  const c=data.current;
  $('current').innerHTML=c?'<p><strong>'+esc(c.title)+'</strong> · published '+esc(when(c.publishedAt))+'</p><div class="terms">'+esc(c.body)+'</div><p><button type="button" id="retire">'+esc(DOC.retire)+'</button> <span class="muted">'+esc(DOC.retireNote)+'</span></p>':'<p>'+esc(DOC.none)+'</p>';
@@ -75,7 +103,7 @@ function render(){
   const w=peopleOf(DOC,data),t=data.totals||{all:w.length,signed:w.filter(x=>x.signed).length,missing:w.filter(x=>!x.signed).length},matched=data.matched??w.length,noun=DOC.coach?['coach','coaches']:['wrestler','wrestlers'];
   $('tAll').textContent=t.all;$('tSigned').textContent=t.signed;$('tMissing').textContent=t.missing;
   $('pager').hidden=!matched;$('shown').textContent='Showing '+w.length.toLocaleString('en-US')+' of '+matched.toLocaleString('en-US')+' '+noun[matched===1?0:1];$('more').hidden=!data.next;$('more').textContent='Show '+Math.min(PAGE,matched-w.length)+' more';
-  $('rows').innerHTML=w.map(x=>'<tr>'+personCells(DOC,x)+'<td>'+statusCell(DOC,x)+'</td></tr>').join('')||'<tr><td colspan="3" class="muted">'+(DOC.coach?(t.all?'No coaches match.':'No coaches yet.'):'No wrestlers match.')+'</td></tr>';
+  $('rows').innerHTML=w.map(x=>'<tr>'+personCells(DOC,x)+'<td>'+statusCell(DOC,x)+'</td></tr>').join('')||'<tr><td colspan="3" class="muted">'+esc(noneText(t.all))+'</td></tr>';
   wireExceptions(render);wireReissue();
  }
  $('versions').innerHTML=data.versions.map(v=>'<tr><td>'+esc(v.title)+'</td><td>'+esc(when(v.published_at))+'</td><td>'+esc(v.retired_at?when(v.retired_at):c&&c.id===v.id?'In force':'Replaced')+'</td><td>'+esc(v.signed)+'</td></tr>').join('')||'<tr><td colspan="4" class="muted">Nothing published yet.</td></tr>';
@@ -83,14 +111,14 @@ function render(){
 function wireReissue(){document.querySelectorAll('[data-reissue]').forEach(b=>b.onclick=()=>reissue(b.dataset.reissue));document.querySelectorAll('[data-carry]').forEach(b=>b.onclick=()=>carry(b.dataset.carry))}
 async function carry(id){const reason=(document.querySelector('[data-carry-reason="'+id+'"]')||{}).value||'';
  if(!confirm('Carry this signature over to the wrestler’s new name? Do this only if it is the same child.'))return;
- try{const d=await post({action:'carry',signatureId:id,reason});await load('Signature carried over to '+d.wrestler+'. It counts for booking again.',false,true)}catch(e){$('status').textContent=e.message}}
+ try{const d=await post({action:'carry',signatureId:id,reason});await load('Signature carried over to '+d.wrestler+'. It counts for booking again.',false,true)}catch(e){say(e.message,true)}}
 async function reissue(id){const reason=(document.querySelector('[data-reissue-reason="'+id+'"]')||{}).value||'';
  if(!confirm(DOC.coach?'Ask this coach to sign the contract again? Their signed copy is kept, marked replaced.':'Ask this family to sign again? Their signed copy is kept, marked replaced, and the wrestler can’t book until a parent signs again.'))return;
- try{await post({action:'reissue',signatureId:id,reason});await load(DOC.coach?'Asked to sign again. The coach was told why.':'Asked to sign again. The family was told why; booking is blocked until they sign.',false,true)}catch(e){$('status').textContent=e.message}}
+ try{await post({action:'reissue',signatureId:id,reason});await load(DOC.coach?'Asked to sign again. The coach was told why.':'Asked to sign again. The family was told why; booking is blocked until they sign.',false,true)}catch(e){say(e.message,true)}}
 async function post(body){const r=await fetch('/api/waivers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:DOC.kind,...body})}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not save.');return d}
 $('publishForm').onsubmit=async e=>{e.preventDefault();
  if(!confirm(DOC.publishAsk))return;
- $('publish').disabled=true;try{await post({action:'publish',title:$('wTitle').value,body:$('wBody').value});$('wBody').value='';await load(DOC.published)}catch(e){$('status').textContent=e.message}finally{$('publish').disabled=false}};
-async function retire(){if(!confirm(DOC.retireAsk))return;try{await post({action:'retire'});await load(DOC.retired)}catch(e){$('status').textContent=e.message}}
+ $('publish').disabled=true;try{await post({action:'publish',title:$('wTitle').value,body:$('wBody').value});$('wBody').value='';await load(DOC.published)}catch(e){say(e.message,true)}finally{$('publish').disabled=false}};
+async function retire(){if(!confirm(DOC.retireAsk))return;try{await post({action:'retire'});await load(DOC.retired)}catch(e){say(e.message,true)}}
 setup();$('show').onchange=()=>load();$('q').oninput=search;$('more').onclick=()=>load('',true);load();
 </script></body></html>
