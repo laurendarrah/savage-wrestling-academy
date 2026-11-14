@@ -5,10 +5,12 @@
 // messages quote the key, so only permission names (rak_…) are taken from them.
 export type KeyCheck = {id: string; label: string; needed: 'payments' | 'memberships' | 'fees'; ok: boolean; problem: string};
 
-type StripeError = {type?: unknown; statusCode?: unknown; code?: unknown; message?: unknown};
+type StripeError = {type?: unknown; statusCode?: unknown; code?: unknown; message?: unknown; param?: unknown};
 const info = (err: unknown) => {
   const e = (err ?? {}) as StripeError;
   return {type: typeof e.type === 'string' ? e.type : '', status: Number(e.statusCode) || 0, code: typeof e.code === 'string' ? e.code : '',
+    // The name of the request field Stripe rejected (for example expires_at): a field path, never a value.
+    param: typeof e.param === 'string' && /^[A-Za-z0-9_.\[\]]{1,80}$/.test(e.param) ? e.param : '',
     names: [...new Set((typeof e.message === 'string' ? e.message : '').match(/\brak_[a-z0-9_]+\b/g) ?? [])].slice(0, 6)};
 };
 
@@ -20,7 +22,7 @@ export function stripeReason(err: unknown): string {
   if (e.type === 'StripeAuthenticationError' || e.status === 401) return 'Stripe no longer recognizes the saved key (deleted or rolled)';
   if (e.type === 'StripeConnectionError' || e.type === 'StripeAPIError' || e.status >= 500) return 'Stripe could not be reached';
   if (e.type === 'StripeRateLimitError' || e.status === 429) return 'Stripe was busy (rate limit)';
-  if (e.type === 'StripeInvalidRequestError' || e.status === 400) return `Stripe did not accept the request${e.code ? ` (${e.code})` : ''}`;
+  if (e.type === 'StripeInvalidRequestError' || e.status === 400) { const why = [e.code, e.param && `field ${e.param}`].filter(Boolean).join(', '); return `Stripe did not accept the request${why ? ` (${why})` : ''}`; }
   return 'an unexpected error';
 }
 

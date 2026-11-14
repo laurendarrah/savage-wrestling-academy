@@ -10,6 +10,11 @@ import {withinCapacity} from './capacity';
 export {ONLINE_KINDS, checkoutKinds} from './checkout-config';
 export const MIN_CHARGE_CENTS = 50;
 const SESSION_MINUTES = 30;
+// Stripe refuses a Checkout Session that expires less than 30 minutes after Stripe itself creates it. Asking for exactly
+// 30 minutes arrives a moment short and every checkout fails (found on the live site, Nov 13). stripe-mock doesn't
+// enforce it, so keep this margin.
+export const SESSION_MARGIN_SECONDS = 120;
+export const sessionExpiry = (nowMs: number) => Math.floor(nowMs / 1000) + SESSION_MINUTES * 60 + SESSION_MARGIN_SECONDS;
 
 export class CheckoutError extends Error {
   // `reason` is for the owner's Site health page only (issue #315); the family sees `message`.
@@ -56,7 +61,7 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
       metadata: {order_id: id, kind: charge.kind, wrestler_id: wrestler.id},
       success_url: `${origin}/family?checkout=success&order=${id}`,
       cancel_url: `${origin}/family?checkout=canceled&order=${id}`,
-      expires_at: Math.floor(Date.now() / 1000) + SESSION_MINUTES * 60
+      expires_at: sessionExpiry(Date.now())
     };
     const product = {name: charge.itemLabel, description: `For ${wrestler.name}`};
     session = await stripe.checkout.sessions.create(charge.kind === 'monthly'
