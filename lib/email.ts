@@ -1,10 +1,19 @@
 // Outgoing email (issue #72). Off until both EMAIL_API_KEY and MAIL_FROM are set; until then messages are in-app only
 // and each recipient is marked "skipped". The adapter speaks Resend's batch API; the provider is decided on #87.
+//
+// Every email goes out in the Savage layout (issue #320): callers write plain text, and this adapter adds the HTML
+// version from lib/email-brand.ts and keeps the plain text, exactly as written, as the text alternative. Nothing else
+// sends email, so no message can miss the layout.
 import {env} from 'cloudflare:workers';
+import {appOrigin, OWNER_EMAIL} from './account-auth';
+import {brandedEmail, type BrandAudience} from './email-brand';
 import {EMAIL_TIMEOUT_MS, timeoutSignal} from './net';
 
 type Env = Cloudflare.Env & {EMAIL_API_KEY?: string; MAIL_FROM?: string};
-export type Outgoing = {to: string; subject: string; text: string};
+// `audience` is optional and only picks the footer's "why you got this" line: 'invite' for someone without an account
+// yet, 'owner' for the site's alerts. Left out, email to the owner address gets the owner line and everyone else the
+// account line.
+export type Outgoing = {to: string; subject: string; text: string; audience?: BrandAudience};
 export type EmailStatus = 'sent' | 'failed' | 'skipped';
 // Why an email did not send (issue #35), stored as a short code in email_error next to email_status.
 export type EmailFailure = 'setup' | 'refused' | 'busy' | 'unreachable';
@@ -34,18 +43,39 @@ export function failureWords(reason: string | null | undefined) {
   return WORDS[reason as EmailFailure] ?? 'The email service didn’t accept it.';
 }
 
+// What the provider is sent for one message: the Savage HTML and the caller's plain text. The site address (for the
+// logo and for telling the site's own links from others) comes from appOrigin(); without one the email still goes,
+// with no logo and no button. If the layout ever fails, the plain text goes alone rather than nothing.
+// An announcement is the same message to every family, so the layout is built once per message, not once per person.
+function emailPayload(m: Outgoing, from: string | undefined, origin: string | null, built: Map<string, string>) {
+  const base = {from, to: [m.to], subject: m.subject, text: m.text};
+  try {
+    const audience = m.audience ?? (OWNER_EMAIL && String(m.to).trim().toLowerCase() === OWNER_EMAIL ? 'owner' : 'account');
+    const key = `${audience}\n${m.subject}\n${m.text}`;
+    let html = built.get(key);
+    if (html === undefined) { html = brandedEmail({subject: m.subject, text: m.text, origin, audience}).html; built.set(key, html); }
+    return {...base, html};
+  } catch (error) {
+    console.error('email layout failed', error);
+    return base;
+  }
+}
+
 // Sends in batches of up to 100. Returns one result per message, in order. Never throws.
 export async function sendEmailsDetailed(list: Outgoing[]): Promise<EmailResult[]> {
   if (!list.length) return [];
   if (!emailConfigured()) return list.map(() => ({status: 'skipped', reason: null}));
   const e = env as Env, out: EmailResult[] = [];
+  let origin: string | null = null;
+  try { origin = appOrigin(); } catch { origin = null; }
+  const built = new Map<string, string>();
   for (let i = 0; i < list.length; i += 100) {
     const chunk = list.slice(i, i + 100);
     let result: EmailResult;
     try {
       const r = await fetch('https://api.resend.com/emails/batch', {
         method: 'POST', headers: {Authorization: 'Bearer ' + e.EMAIL_API_KEY, 'Content-Type': 'application/json'},
-        body: JSON.stringify(chunk.map(m => ({from: e.MAIL_FROM, to: [m.to], subject: m.subject, text: m.text}))),
+        body: JSON.stringify(chunk.map(m => emailPayload(m, e.MAIL_FROM, origin, built))),
         // A provider that hangs counts as unreachable after a few seconds (issue #274) instead of holding the request.
         signal: timeoutSignal(EMAIL_TIMEOUT_MS)
       });

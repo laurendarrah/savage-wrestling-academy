@@ -96,6 +96,20 @@ assert.equal(sentRequest.init.headers.Authorization, 'Bearer test-key');
 const mail = JSON.parse(sentRequest.init.body);
 assert.equal(mail.length, 1); assert.equal(mail[0].from, 'SWA <academy@swa.example>'); assert.deepEqual(mail[0].to, ['p2@example.test']);
 assert.match(mail[0].text, /Practice starts at 6:30 tonight\.[\s\S]*https:\/\/swa\.example\/inbox/, 'body plus a link built from appOrigin');
+// Issue #320: the same message in the Savage layout, with the plain text kept exactly as written.
+assert.equal(mail[0].text, 'Practice starts at 6:30 tonight.\n\n—\nSavage Wrestling Academy\nRead and reply in your family account: https://swa.example/inbox');
+assert.deepEqual(Object.keys(mail[0]).sort(), ['from', 'html', 'subject', 'text', 'to']); assert.equal(mail[0].subject, 'Camp packing list');
+assert.match(mail[0].html, /^<!doctype html>/); assert.match(mail[0].html, />Savage<\/div>/); assert.match(mail[0].html, /20 Railroad St, Huntington Station, NY 11746/);
+assert.match(mail[0].html, /<h1[^>]*>Camp packing list<\/h1>\n<p[^>]*>Practice starts at 6:30 tonight\.<\/p>/);
+assert.match(mail[0].html, /<a href="https:\/\/swa\.example\/inbox" style="[^"]*">Read your messages<\/a>/, 'the inbox link is the button');
+// What the owner types is escaped in the email.
+r = await announce({type: 'event', eventId: 'camp'}, {subject: 'Bring <b>two</b> & "more"', body: 'Hi <script>alert(1)</script>\nSee https://example.test/list?a=1&b=2 today.'});
+const typed = JSON.parse(sentRequest.init.body)[0];
+assert.equal(typed.subject, 'Bring <b>two</b> & "more"'); assert.ok(typed.text.startsWith('Hi <script>alert(1)</script>\nSee https://example.test/list?a=1&b=2 today.'));
+assert.doesNotMatch(typed.html, /<script|<b>/); assert.match(typed.html, /<h1[^>]*>Bring &lt;b&gt;two&lt;\/b&gt; &amp; &quot;more&quot;<\/h1>/);
+assert.match(typed.html, /Hi &lt;script&gt;alert\(1\)&lt;\/script&gt;<br>See <a href="https:\/\/example\.test\/list\?a=1&amp;b=2" class="swa-link"/);
+sqlite.prepare("DELETE FROM announcement_recipients WHERE announcement_id IN (SELECT id FROM announcements WHERE subject LIKE 'Bring %')").run();
+sqlite.prepare("DELETE FROM announcements WHERE subject LIKE 'Bring %'").run();
 fetchMock = async () => new Response('nope', {status: 500});
 r = await announce({type: 'event', eventId: 'camp'}, {subject: 'Again'}); assert.equal(r.status, 200, 'saved even if email fails'); assert.equal(r.body.emailed, 0);
 assert.equal(sqlite.prepare("SELECT count(*) n FROM announcement_recipients WHERE email_status='failed'").get().n, 1);
@@ -106,6 +120,8 @@ as('owner'); r = await call(owner, 'POST', {action: 'message', userId: 'p1', bod
 assert.equal(r.status, 200); assert.equal(r.body.thread.length, 1);
 const notice = JSON.parse(sentRequest.init.body)[0];
 assert.ok(!notice.text.includes('weight class'), 'the email is a notice; the message stays in the account');
+assert.ok(!notice.html.includes('weight class'), 'in the Savage layout too (issue #320)'); assert.match(notice.html, />Savage<\/div>/);
+assert.match(notice.html, /<h1[^>]*>New message from Savage Wrestling Academy<\/h1>\n<p[^>]*>You have a new message from the academy\.<\/p>\n<table[^>]*><tr><td[^>]*><a href="https:\/\/swa\.example\/inbox"[^>]*>Read your messages<\/a>/);
 b = await box('p1'); assert.equal(b.thread[0].from, 'academy'); assert.equal(b.unread, 1);
 assert.equal((await box('p2')).thread.length, 0, 'threads are private');
 as('p1'); await call(inbox, 'POST', {action: 'read', thread: true}); assert.equal((await box('p1')).unread, 0);

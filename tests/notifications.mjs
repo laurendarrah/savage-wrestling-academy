@@ -130,6 +130,13 @@ assert.match(notices('p1', 'lesson_booked')[0].body, /is booked for [A-Z][a-z]{2
 assert.match(coachNotice.subject, /^New lesson: Sam, [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · 3:00 PM$/);
 assert.ok(!/15:00/.test(coachNotice.body + coachNotice.subject), 'no 24-hour clock in lesson notices');
 assert.ok(sent.every(m => m.text.includes('https://swa.example/')), 'links use appOrigin');
+// Issue #320: every notice is emailed in the Savage layout, with the saved notice text as the plain-text part.
+assert.ok(sent.length >= 2 && sent.every(m => m.html.startsWith('<!doctype html>') && m.html.includes('>Savage</div>') && m.html.includes('20 Railroad St, Huntington Station, NY 11746')), 'every notice email has the brand header and footer');
+assert.ok(sent.every(m => m.text.endsWith('\n\n—\nSavage Wrestling Academy\nhttps://swa.example' + (m.to[0] === 'dana@example.test' ? '/coach' : '/wrestler?id=w1'))), 'the plain text is unchanged');
+const coachMail = sent.find(m => m.to[0] === 'dana@example.test'), familyMail = sent.find(m => /^Lesson booked/.test(m.subject));
+assert.equal(coachMail.text, coachNotice.body + '\n\n—\nSavage Wrestling Academy\nhttps://swa.example/coach');
+assert.match(coachMail.html, /<a href="https:\/\/swa\.example\/coach" style="[^"]*">Open coach home<\/a>/); assert.ok(coachMail.html.includes(`<h1 class="swa-h"`) && coachMail.html.includes('>New lesson: Sam, '));
+assert.match(familyMail.html, /<a href="https:\/\/swa\.example\/wrestler\?id=w1" style="[^"]*">Open the wrestler view<\/a>/);
 // The same webhook again does nothing more.
 const before = sqlite.prepare('SELECT count(*) n FROM notifications').get().n;
 await webhook.applyStripeEvent({id: 'evt_L1', type: 'checkout.session.completed', data: {object: {id: 'cs_L1', client_reference_id: 'L1', payment_status: 'paid', livemode: false, amount_total: 6000, currency: 'usd'}}});
