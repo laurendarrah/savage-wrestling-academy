@@ -27,6 +27,16 @@ export async function setupStatus(db: D1Database, settings: Settings, today: str
     const m = since ? null : row?.message.match(/^Card checkout could not start: ([A-Za-z0-9 ,.:()_\[\]-]{1,240}?)\. Check the key/);
     checkoutProblem = m ? m[1] : null;
   } catch { checkoutProblem = null; }
+  // Which Stripe notices arrived in the last day and what the site did with each (issue #337): the event type, the site's
+  // own outcome word and a count. Never an id, an amount or a person. Shows at a glance whether, say, a refund notice
+  // arrived at all.
+  let webhooks: {type: string; outcome: string; count: number}[] = [];
+  try {
+    const rows = (await db.prepare('SELECT type,outcome,COUNT(*) AS n FROM stripe_events WHERE received_at>=? GROUP BY type,outcome ORDER BY MAX(received_at) DESC LIMIT 30')
+      .bind(new Date(now - 86400000).toISOString()).all<{type: string; outcome: string; n: number}>()).results;
+    const safe = (v: string) => /^[A-Za-z0-9_.:-]{1,80}$/.test(v) ? v : 'other';
+    webhooks = rows.map(r => ({type: safe(String(r.type)), outcome: safe(String(r.outcome)), count: Number(r.n)}));
+  } catch { webhooks = []; }
   return {
     steps,
     stripe: {
@@ -37,6 +47,7 @@ export async function setupStatus(db: D1Database, settings: Settings, today: str
       liveKey: await saved('stripe-live'),
       liveWebhook: !!settings.STRIPE_LIVE_WEBHOOK_SECRET,
       checkoutProblem,
+      webhooks,
     },
     checkoutOpen: kinds.length ? kindList(kinds) : 'nothing',
   };
