@@ -120,7 +120,7 @@ for (const [path, current] of Object.entries(ownerRoutes)) {
 // buttons, cards and colors), then the shell's styles, and none of its old sidebar markup.
 {
   const {html} = await open('/');
-  assert.match(html, /<script src="\/toast\.js" defer><\/script><link rel="stylesheet" href="\/savage\.css"><link rel="stylesheet" href="\/owner-shell\.css">/);
+  assert.match(html, /<script src="\/toast\.js" defer><\/script><link rel="stylesheet" href="\/savage\.css"><style>@media \(prefers-reduced-motion:no-preference\)\{@view-transition\{navigation:auto\}\}<\/style><link rel="stylesheet" href="\/owner-shell\.css">/);
   assert.ok(html.indexOf('</style>') < html.indexOf('href="/savage.css"'), 'the shared sheet comes after the dashboard’s own layout rules');
   assert.doesNotMatch(html, /class="shell"|<aside|id="navToggle"/);
   assert.match(html, /<button type="button" class="os-item" onclick="closeOwnerTools\(\);reloadAcademy\(\)">Refresh saved data<\/button>/);
