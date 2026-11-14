@@ -29,7 +29,7 @@ assert.match(shell, /html body\[data-swa-shell\] \.swa-table:has\(tbody>tr:only-
 
 // ---------- Every owner page is on the design system: no font, color or button of its own ----------
 const pages = ['app/portal.html', 'app/payment-setup/screen.html', 'app/backups/screen.html', 'app/site-health/screen.html', 'app/data-requests/screen.html', 'app/transfers/screen.html',
-  'app/scholarships/screen.html', 'app/waivers/screen.html', 'app/approvals/screen.html', 'app/cards/screen.html', 'app/website/screen.html', 'app/accounts/route.ts', 'app/security-log/route.ts', 'app/account-setup/route.ts'];
+  'app/scholarships/screen.html', 'app/waivers/screen.html', 'app/approvals/screen.html', 'app/cards/screen.html', 'app/website/screen.html', 'app/help/owner/screen.html', 'app/accounts/route.ts', 'app/security-log/route.ts', 'app/account-setup/route.ts'];
 for (const f of pages) {
   const css = styleOf(read(f));
   assert.ok(css.length > 200, f + ': has a stylesheet');
@@ -39,6 +39,13 @@ for (const f of pages) {
   assert.deepEqual(raw, [], f + ': colors come from the tokens');
   assert.match(css, /var\(--swa-s-\d+\)/, f + ': spacing from the scale');
   assert.doesNotMatch(css, /font-size:\d+px(?<!font-size:12px)/, f + ': type from the scale (12px only for calendar cards and day names)');
+}
+// The pages redesigned in issue #283 dropped their leftover base rules too: the shared sheet gives them their font, links,
+// cards, fields and buttons, and their type sizes are the scale's.
+for (const f of ['app/payments/screen.html', 'app/staff/screen.html', 'app/lesson-settings/screen.html', 'app/timesheets/screen.html', 'app/financials/screen.html', 'app/coach-pay/screen.html', 'app/messages/screen.html']) {
+  const css = styleOf(read(f));
+  assert.doesNotMatch(css, /body\{font:|font:1[56]px Arial|(^|[};\n])a\{color:#|(^|[};\n])\.primary\{background:#|font:inherit/, f + ': no base font, link color or button color of its own');
+  assert.doesNotMatch(css, /font-size:\d+px/, f + ': type from the scale');
 }
 // The pages that had their own look keep every id their scripts and the walkthrough use.
 for (const [f, ids] of [['app/payment-setup/screen.html', ['setupTitle', 'modePill', 'accountLine', 'status', 'keyForm', 'testKey', 'save', 'keyNote', 'confirmBox', 'confirmText', 'confirmYes', 'confirmNo', 'checkSection', 'checkKey', 'checkNote', 'checkList', 'changeSection', 'changeAccount', 'resetBox', 'resetText', 'resetYes', 'resetNo', 'liveSection', 'liveForm', 'liveKey', 'saveLive', 'liveNote', 'catalogNote', 'nextNotice']],

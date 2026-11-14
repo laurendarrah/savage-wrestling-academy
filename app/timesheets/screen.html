@@ -1,9 +1,9 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach hours | Savage Wrestling Academy</title><style>
-*{box-sizing:border-box}body{font:16px Arial,sans-serif;line-height:1.5;background:#f5f5f6;color:#18191c;margin:0}main{max-width:1000px;margin:auto;padding:20px 16px 60px}
-h1{line-height:1.15;margin:12px 0 4px}h2{margin:0 0 6px;font-size:var(--swa-t-20)}h3{margin:0;font-size:var(--swa-t-17)}a{color:#a92330}section{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;margin:18px 0}
-.muted{color:#626672}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{display:flex;flex-direction:column;font-weight:bold;font-size:var(--swa-t-15);gap:4px}
-input,button,select{font:inherit}input,select{padding:9px;border:1px solid #ccc;border-radius:6px;font-weight:normal}
-button,a.button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#18191c;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}.primary{background:#c4222c;color:#fff;border-color:#c4222c}
+*{box-sizing:border-box}body{margin:0}main{max-width:1000px;margin:auto;padding:20px 16px 60px}
+h1{line-height:1.15;margin:12px 0 4px}h2{margin:0 0 6px;font-size:var(--swa-t-20)}h3{margin:0;font-size:var(--swa-t-17)}section{margin:0 0 var(--swa-s-24)}
+.muted{color:var(--swa-muted)}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{display:flex;flex-direction:column;font-weight:bold;font-size:var(--swa-t-15);gap:4px}
+
+button,a.button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#18191c;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}.tile{background:#fff;border:1px solid #ddd;border-radius:10px;padding:14px}.tile b{display:block;font-size:var(--swa-t-24)}
 .row .month-picker{flex:0 1 320px}
 .head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;align-items:baseline}
@@ -12,7 +12,7 @@ button,a.button{padding:10px 14px;border:1px solid #ccc;border-radius:6px;backgr
 /* One row per shift (issue #283): the day, what and how long on one line, the state at the right, and Correct · Void ·
    History as one menu underneath. */
 .shift{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:start;padding:10px 0;border-top:1px solid #e4e6ea}.shift:first-of-type{border-top:0}.shift.voided{opacity:.6}.shift.voided .what{text-decoration:line-through}.shift p{margin:0;font-size:var(--swa-t-15)}
-.shift .line{display:flex;flex-wrap:wrap;gap:0 8px;align-items:baseline}.shift .line b{font-size:var(--swa-t-17)}.shift .muted{color:#626672}.shift .state{grid-column:2;grid-row:1}.shift .menu{grid-column:1/-1;margin:0}
+.shift .line{display:flex;flex-wrap:wrap;gap:0 8px;align-items:baseline}.shift .line b{font-size:var(--swa-t-17)}.shift .muted{color:var(--swa-muted)}.shift .state{grid-column:2;grid-row:1}.shift .menu{grid-column:1/-1;margin:0}
 .shift .menu summary{min-height:36px;font-size:var(--swa-t-15);color:#626672;font-weight:600}.shift .menu[open] summary{color:#18191c}.shift .menu h4{margin:12px 0 4px;font-size:var(--swa-t-15)}
 .flags{margin:8px 0 0;padding:8px 12px 8px 28px;background:var(--swa-warn-bg,#FFF7E6);border-radius:8px;color:var(--swa-warn-ink,#5C3B00);font-size:var(--swa-t-15)}.flags li+li{margin-top:4px}
 details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;color:#a92330}
