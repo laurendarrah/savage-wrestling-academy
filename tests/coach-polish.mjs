@@ -1,5 +1,5 @@
 // Issue #223, design polish on the coach pages: one hours-and-minutes formatter for every duration (server flags and
-// page scripts agree), coach home shortcuts, the /coach-time Send button and tiles, /timesheets labels, the coach
+// page scripts agree), coach home's doors and Account menu, the /coach-time Send button and tiles, /timesheets labels, the coach
 // profile preview that reuses the team page's card, and one back link per page. The page scripts run in a fake DOM
 // (inline JavaScript is not typechecked). The month calendar's folding is tested in coach-month-calendar.mjs.
 import assert from 'node:assert/strict';
@@ -72,7 +72,9 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   p.run('render(m)');
   assert.equal(p.el('tMinutes').textContent, '3 h 44 min'); assert.match(p.el('breakdown').innerHTML, /3 h 44 min · \$149\.33/);
   assert.match(p.el('shifts').innerHTML, /Paid 3 h 44 min · \$149\.33/); assert.doesNotMatch(p.el('shifts').innerHTML + p.el('breakdown').innerHTML, /\b224 min/);
-  assert.equal(p.el('submit').disabled, true); assert.equal(p.el('submit').textContent, 'Send November 2026 to the academy');
+  // The button names the month; the line under it says who it goes to (a long label wrapped to two lines of caps on a phone).
+  assert.equal(p.el('submit').disabled, true); assert.equal(p.el('submit').textContent, 'Send November 2026');
+  assert.match(s, /html body \.send button\.primary:disabled[^{]*\{[^}]*text-transform:none\}/, 'not open yet reads in plain words, not caps');
   assert.equal(p.el('submitHelp').textContent, 'You can send November 2026 from Nov 30, 2026, its last day.');
 }
 
@@ -88,23 +90,35 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(h, /1 shift · 3 h 44 min paid/); assert.match(h, /Clocked 6:00 PM – 9:44 PM \(3 h 44 min\)/); assert.match(h, /Paid 3 h 44 min at \$40\.00 an hour/); assert.doesNotMatch(h, /\b224 min/);
 }
 
-// ---------- 4. Coach home: tonight first, then two rows, the opening form behind the lessons (issue #286) ----------
+// ---------- 4. Coach home: tonight first, then four doors, the week, and the opening form behind the lessons ----------
+// (issue #286; the doors and the Account menu replaced the two rows and the More links in the design pass)
 {
   const s = read('app/coach/screen.html');
   const at = re => { const m = s.search(re); assert.ok(m >= 0, 'coach home has ' + re); return m; };
-  // Order on the page: the title, the notices, the dark Today card (its sessions, the clock, the actions), the two
-  // rows, the week, the lessons with the opening form behind them, then More.
-  const order = [/<h1 id="heading">/, /<p id="contractTodo" class="owner-note" hidden><\/p>/, /<section class="dark tonight" id="tonight"/, /<div id="sessions">/,
+  // Order on the page: the title with the Account menu, the notices, the dark Today card (its sessions, the clock, the
+  // actions), the four doors, the week, then the lessons with the opening form behind them.
+  const order = [/<h1 id="heading">/, /<details class="account-menu" id="accountMenu"><summary>Account<\/summary>/, /<p id="contractTodo" class="owner-note" hidden><\/p>/, /<section class="dark tonight" id="tonight"/, /<div id="sessions">/,
     /<section id="clockCard" data-coach-clock aria-labelledby="clockCardTitle">/, /<a class="button" id="openCheckin" href="\/roster">Open check-in<\/a>/,
-    /<nav class="rows" aria-label="Lessons and hours">/, /<section aria-labelledby="weekTitle">/, /<section id="lessons" aria-labelledby="lessonsTitle">/, /<div id="slots">/,
-    /<details class="add" id="openingBox"><summary>Add a one-hour opening<\/summary><form id="opening">/, /<h2 id="moreTitle">More<\/h2>/];
+    /<nav class="swa-doors four" aria-label="Lessons, hours, plans and time off">/, /<section aria-labelledby="weekTitle">/, /<section id="lessons" aria-labelledby="lessonsTitle">/, /<div id="slots">/,
+    /<details class="add" id="openingBox"><summary>Add a one-hour opening<\/summary><form id="opening">/];
   order.reduce((prev, re) => { const i = at(re); assert.ok(i > prev, re + ' comes after the one before it'); return i; }, -1);
-  // The two rows and the More links. No grid of shortcuts; the contract to-do is a notice, never the primary button.
-  const rows = s.match(/<nav class="rows"[\s\S]*?<\/nav>/)[0];
-  deq([...rows.matchAll(/<a href="([^"]+)"><span><b>([^<]+)<\/b>/g)].map(m => [m[2], m[1]]), [['Lessons', '#lessons'], ['Your hours', '/coach-time']]);
-  const more = s.match(/<div class="more">([\s\S]*?)<\/div>/)[1];
-  deq([...more.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)].map(m => [m[2], m[1]]),
-    [['Your month and practice plans →', '/practice-plans'], ['Your profile →', '/coach-profile'], ['Coach help →', '/help/coach'], ['Your contract →', '/contract'], ['Time off →', '/coach-time'], ['Account security →', '/security']]);
+  // The four doors (the shared .swa-door, as on the family calendar): where a coach goes next, each with one line.
+  const doors = s.match(/<nav class="swa-doors four"[\s\S]*?<\/nav>/)[0];
+  deq([...doors.matchAll(/<a class="swa-door" href="([^"]+)"><svg[^>]*>[\s\S]*?<\/svg>([^<]+)<small(?: id="\w+")?>([^<]+)<\/small><\/a>/g)].map(m => [m[2], m[1], m[3]]),
+    [['Lessons', '#lessons', 'Booked lessons and open times'], ['Your hours', '/coach-time', 'Check your month and send it'], ['Practice plans', '/practice-plans', 'Your month and shared plans'], ['Time off', '/coach-time#timeOff', 'Ask for days away']]);
+  // The Account menu, as on the family home: the pages a coach opens now and then, and Sign out. No "More" row of loose links.
+  const menu = s.match(/<details class="account-menu" id="accountMenu">([\s\S]*?)<\/details>/)[1];
+  deq([...menu.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)].map(m => [m[2], m[1]]), [['Your profile', '/coach-profile'], ['Your contract', '/contract'], ['Coach help', '/help/coach'], ['Account security', '/security']]);
+  assert.match(menu, /<span class="sep"><\/span><button type="button" id="signout">Sign out<\/button><\/span>$/, 'Sign out closes the menu');
+  assert.doesNotMatch(s, /id="moreTitle"|class="more"|<nav class="rows"/, 'the two rows and the More links are gone');
+  // The title row is one block the Worker turns into the shared title row, with the menu as its action; the block
+  // must hold no <div> of its own (the Worker reads up to the first closing div).
+  const top = s.match(/<main>\n?<div class="top">([\s\S]*?)<\/div>/)[1];
+  assert.match(top, /^<h1 id="heading">Coach home<\/h1><p id="programs" class="muted"><\/p><details class="account-menu" id="accountMenu">/); assert.doesNotMatch(top, /<div/);
+  {
+    const chrome = load('lib/page-chrome.ts'), out = chrome.decoratePage(s, '/coach');
+    assert.match(out, /<div class="swa-title"><div class="swa-title__text"><h1 id="heading">Coach home<\/h1><p id="programs" class="muted"><\/p><\/div><div class="swa-title__actions"><details class="account-menu" id="accountMenu">[\s\S]*?<\/details><\/div><\/div>\n?<p id="ownerNote"/);
+  }
   assert.doesNotMatch(s, /quickContract|class="quick"|Sign your contract/, 'no shortcut grid and no primary contract button');
   assert.doesNotMatch(s, /<a class="button primary"/, 'the one red action before the clock state is known is the clock-in button');
   // The dark card restates the clock card's colors, and once the coach is on the clock, check-in turns red and Clock
@@ -173,4 +187,4 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   // Owner pages have the owner shell's sidebar instead of a back link (issue #261).
   assert.doesNotMatch(read('app/timesheets/screen.html'), /class="swa-back"/);
 }
-console.log('Coach polish tests passed: one hours-and-minutes formatter on pages and in flags, /coach-time tiles and the grey Send button with when it opens, /timesheets labels, coach home with tonight first and the opening form behind the lessons, the profile preview is the team page card with its styles, one back link per page.');
+console.log('Coach polish tests passed: one hours-and-minutes formatter on pages and in flags, /coach-time tiles and the grey Send button with when it opens, /timesheets labels, coach home with tonight first, the four doors, the Account menu and the opening form behind the lessons, the profile preview is the team page card with its styles, one back link per page.');

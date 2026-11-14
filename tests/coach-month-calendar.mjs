@@ -103,7 +103,8 @@ coach.el('thisMonth').onclick();await coach.settle();assert.equal(await coach.ru
  assert.match(html,/<button type="button" class="cal-earlier" data-earlier aria-expanded="false">Show the whole month \(3 more days\)<\/button>/,'three days outside this week have something on');
  assert.deepEqual([...html.matchAll(/<div class="cal-day[^"]*folded[^"]*"[^>]*><h3><span class="d-num">(\d+)/g)].map(m=>+m[1]),[1,9,10],'days outside this week with something on are folded, before and after');
  assert.doesNotMatch(html,/class="cal-day[^"]*folded[^"]*"[^>]*aria-current/,'today is never folded');
- assert.match(html,/<div class="cal-day empty"><h3><span class="d-num">2</,'a quiet day stays a quiet day');
+ assert.match(html,/<div class="cal-day is-clear"><h3><span class="d-num">2</,'a quiet day stays a quiet day');
+ assert.doesNotMatch(html,/class="cal-day[^"]* empty/,'never the class name "empty": the empty-state block\'s padding would push the date down');
  assert.ok(html.indexOf('cal-earlier')>html.lastIndexOf('cal-day'),'the toggle comes after the week');
  assert.equal((await coach.run('otherDays(cal,d=>d.items.filter(i=>i.program!=="Advanced"))')).length,3,'the program filter changes what folds');
  assert.equal((await coach.run('otherDays(cal,d=>d.items.filter(i=>i.program==="Advanced"))')).length,1,'with only SWA Advance shown, just the holiday folds');
@@ -130,10 +131,16 @@ coach.el('thisMonth').onclick();await coach.settle();assert.equal(await coach.ru
  }
  // CSS: folded days and the toggle only on phones; the shared-plan mark everywhere.
  const css=readFileSync('app/practice-plans/screen.html','utf8');
- assert.match(css,/@media\(max-width:760px\)\{\.cal\{grid-template-columns:1fr\}\.cal-dow,\.cal-blank,\.cal-day\.empty,\.cal-day\.folded\{display:none\}html body \.cal \.cal-earlier\{display:flex/);
+ assert.match(css,/@media\(max-width:760px\)\{\.cal\{grid-template-columns:1fr\}\.cal-dow,\.cal-blank,\.cal-day\.is-clear,\.cal-day\.folded\{display:none\}html body \.cal \.cal-earlier\{display:flex/);
  assert.match(css,/html body \.cal \.cal-earlier\{display:none\}/);assert.match(css,/html body \.cal \.cal-item\.has-plan\{border-color:var\(--swa-red\)/);
  assert.doesNotMatch(css,/id="reload"|Refresh plans/,'no Refresh button for coaches');
+ // The design pass: day cells are only as tall as a line or two; a chip reads name first, then its time; the plan a
+ // coach reads and the month's list are cards; a coach with no plans is told once, in the list.
+ assert.match(css,/\.cal-day\{[^}]*min-height:76px/);assert.doesNotMatch(css,/min-height:118px|cal-day\.empty/);
+ assert.match(css,/html body \.cal \.cal-item\.has-plan>span:not\(\.vh\),html body \.cal \.cal-item\.p-extra>span\{order:-1;font-weight:700\}/);
+ assert.match(css,/<section id="planList" aria-labelledby="listHeading"><h2 id="listHeading">/);assert.match(css,/a practice is canceled only when the academy marks a day off/);
+ assert.equal(coach.el('status').textContent,'','no second sentence above the calendar');assert.equal(coach.el('planList').hidden,false);
 }
 // The owner's plan editor shows no coach calendar.
-const owner=await page('owner','?program=Elementary&date=2026-12-07');assert.equal(owner.el('calendarSection').hidden,true);assert.equal(owner.el('ownerEditor').hidden,false);
+const owner=await page('owner','?program=Elementary&date=2026-12-07');assert.equal(owner.el('calendarSection').hidden,true);assert.equal(owner.el('ownerEditor').hidden,false);assert.equal(owner.el('planList').hidden,true);
 console.log('Passed: coach month calendar with their practices, shared-plan links, extra practices, camps and clinics with times, holidays and today; program filter; month paging; owner and coach access unchanged.');

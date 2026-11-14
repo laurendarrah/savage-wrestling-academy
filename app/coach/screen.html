@@ -1,53 +1,64 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach home | Savage Wrestling Academy</title><style>*{box-sizing:border-box}body{margin:0}main{max-width:var(--swa-width-wide,1000px);margin:auto;padding:24px 16px 48px}
 html body main>section{margin:16px 0}h2{margin:0 0 12px}
-label{display:block;font-size:15px;font-weight:600;margin:14px 0}input,select{display:block;width:100%;margin-top:6px}
+label{display:block;font-size:15px;font-weight:600;margin:0}input,select{display:block;width:100%;margin-top:6px}
 [hidden]{display:none!important}
+/* The title row: the coach's name and programs, with the Account menu on the right, as on the family home. The
+   menu holds the pages a coach opens now and then (profile, contract, help, security) and Sign out. */
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+html body main .swa-title{flex-wrap:nowrap;align-items:flex-start;margin-bottom:16px}
+html body main .swa-title__text{flex:1 1 auto}
+html body main .swa-title__actions{flex:none;width:auto}html body main .swa-title__actions>*{flex:none}
+.account-menu{position:relative;flex:none}
+html body .account-menu>summary{min-height:44px;padding:0 14px;border:1px solid #CDD0D6;border-radius:var(--swa-r-control,8px);background:var(--swa-surface,#fff);color:var(--swa-ink,#111113);box-shadow:var(--swa-shadow-sm)}
+html body .account-menu>summary:hover,html body .account-menu[open]>summary{border-color:var(--swa-ink,#111113)}
+.account-menu .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;display:flex;flex-direction:column;min-width:230px;padding:6px;background:var(--swa-surface,#fff);border:1px solid var(--swa-hair,rgba(17,17,19,.08));border-radius:var(--swa-r-card,12px);box-shadow:var(--swa-shadow)}
+html body .account-menu .menu a,html body .account-menu .menu button{display:flex;align-items:center;width:100%;min-height:44px;padding:0 12px;border:0;border-radius:6px;background:none;box-shadow:none;color:var(--swa-ink,#111113);font-weight:600;font-size:var(--swa-t-15,15px);text-align:left;text-decoration:none}
+html body .account-menu .menu a:hover,html body .account-menu .menu button:hover{background:var(--swa-ground,#F3F4F6);color:var(--swa-ink,#111113)}
+.account-menu .menu .sep{border-top:1px solid var(--swa-line,#E4E6EA);margin:4px 0}
 /* Notices under the title (the owner in Coach view, the profile nudge, the contract to-do): one calm shape, never a button. */
 .owner-note{margin:0 0 12px;padding:10px 14px;border-left:3px solid var(--swa-silver,#B9C4C9);background:var(--swa-surface,#fff);border-radius:0 8px 8px 0;font-size:var(--swa-t-15,15px)}
 html body .owner-note a{color:var(--swa-ink,#111113);font-weight:600}
-/* Today on the mat (issue #286): the dark "now" card holds today's sessions, the clock and the two actions. */
+/* Today on the mat (issue #286): the dark "now" card holds today's sessions, the clock and the two actions. It follows
+   the academy's own practice posts: a white caps title with a thin rule under it, the day in grey caps, and each
+   practice in a thin outlined box with a red bar down its left edge, its name in caps and its time larger under it. */
 html body main>section.tonight{padding:16px;margin-top:0}
-.tonight .eyebrow{margin:0 0 8px;color:var(--swa-dark-muted,#A6A9B0)}
-.session{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--swa-dark-line,rgba(255,255,255,.08))}.session:first-of-type{border-top:0}
-.session .time{min-width:96px;font-weight:700;font-variant-numeric:tabular-nums}.session .name{flex:1;min-width:0;font-weight:700}.session .count{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--swa-dark-muted,#A6A9B0)}
-@media(max-width:560px){.session{flex-wrap:wrap;gap:2px 12px}.session .time{min-width:0}.session .name{flex:1 1 60%}.session .count{flex-basis:100%;color:#c9cdd3;font-size:15px}}
-#sessions{margin:0 0 12px;padding:0 0 4px;border-bottom:1px solid var(--swa-dark-line,rgba(255,255,255,.08))}
-#sessions>p{margin:0 0 8px}
+html body .tonight h2.tonight__title{margin:0;padding:0 0 10px;border-bottom:1px solid rgba(255,255,255,.28);font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-29,29px);line-height:1;letter-spacing:.2px;text-transform:uppercase;color:#fff}
+html body .tonight .eyebrow{margin:10px 0 0;color:var(--swa-dark-muted,#A6A9B0)}.tonight .eyebrow:empty{display:none}
+#sessions{display:grid;gap:8px;margin:12px 0 0}
+#sessions>p{margin:0}
+.session{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 12px;padding:10px 14px;border:1px solid rgba(255,255,255,.24);border-left:4px solid var(--swa-red,#C4222C);border-radius:var(--swa-r-control,8px)}
+.session .name{grid-column:1;font-weight:700;font-size:var(--swa-t-13,13px);line-height:1.3;letter-spacing:1.2px;text-transform:uppercase;color:#fff;overflow-wrap:anywhere}
+.session .time{grid-column:1;font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-29,29px);line-height:1.05;letter-spacing:.2px;font-variant-numeric:tabular-nums;color:#fff}
+.session .count{grid-column:2;grid-row:1/3;text-align:right;font-size:var(--swa-t-13,13px);line-height:1.3;color:var(--swa-dark-muted,#A6A9B0);white-space:nowrap}
+.session .count b{display:block;font-size:var(--swa-t-20,20px);line-height:1.1;color:#fff;font-variant-numeric:tabular-nums}
 /* The clock card inside the dark card: its own colors came from the light page, so the dark set is restated here. */
-html body #clockCard{background:none;border:0;box-shadow:none;padding:0;margin:0}
-html body #clockCard h2{color:#fff;margin:8px 0 4px}
-html body #clockCard .cc-eyebrow{color:#FF8A90}
+html body #clockCard{background:none;border:0;box-shadow:none;padding:0;margin:16px 0 0}
+html body #clockCard h2{color:#fff;margin:0 0 4px}
+html body #clockCard .cc-eyebrow{color:#FF7B82}
 html body #clockCard .cc-note,html body #clockCard .cc-foot,html body #clockCard .cc-status,html body #clockCard .muted,html body #clockCard .cc-role legend{color:var(--swa-dark-muted,#A6A9B0)}
 html body #clockCard .cc-status{color:#FFD27A}
 html body #clockCard .cc-role button[aria-pressed=true]{background:#fff;color:var(--swa-ink,#111113);border-color:#fff}
 html body #clockCard .cc-foot a{color:#fff}
+/* On the clock: the same outlined box with the red bar. */
+html body #clockCard .cc-on{padding:10px 14px;border:1px solid rgba(255,255,255,.24);border-left:4px solid var(--swa-red,#C4222C);border-radius:var(--swa-r-control,8px)}
 /* Once the coach is on the clock, check-in is the one red action and Clock out steps back to the quiet shape. */
 html body .tonight.on #clockCard .cc-big[data-cc="out"]{background:transparent;border-color:rgba(255,255,255,.3);color:#fff;box-shadow:none;font-family:var(--swa-body);font-weight:600;font-size:var(--swa-t-20,20px);letter-spacing:0;text-transform:none}
 .tonight .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-html body .tonight .actions a.button{flex:1 1 180px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;min-height:var(--swa-h-big,56px)}
+html body .tonight .actions a.button{flex:2 1 120px;display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;text-decoration:none;white-space:nowrap;min-height:var(--swa-h-big,56px)}
+html body .tonight .actions a#openCheckin{flex:3 1 170px}
 .tonight .plan{margin:12px 0 0;font-size:var(--swa-t-15,15px);color:var(--swa-dark-muted,#A6A9B0)}.tonight .plan:empty{display:none}
 .tonight .plan b{color:#fff}
-/* Two rows: Lessons and Your hours. One line each, a chevron, 56px tall. */
-.rows{display:grid;gap:8px;margin:16px 0}
-html body .rows a{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:8px 16px;border-radius:var(--swa-r-card,12px);background:var(--swa-surface,#fff);border:1px solid var(--swa-hair,rgba(17,17,19,.08));box-shadow:var(--swa-shadow);color:var(--swa-ink,#111113);text-decoration:none}
-html body .rows a:hover{border-color:var(--swa-ink,#111113);color:var(--swa-ink,#111113)}
-.rows a span:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
-.rows b{font-size:var(--swa-t-17,17px)}.rows small{font-size:var(--swa-t-15,15px);color:var(--swa-muted,#55585F)}
-.rows .chev{flex:none;width:8px;height:8px;border-right:2px solid var(--swa-muted,#55585F);border-bottom:2px solid var(--swa-muted,#55585F);transform:rotate(-45deg);margin-right:4px}
-@media(min-width:720px){.rows{grid-template-columns:1fr 1fr}}
-/* Lessons: booked first, then open times; the opening form folds under the list. */
-article{background:var(--swa-surface,#fff);border:1px solid var(--swa-line,#E4E6EA);border-radius:var(--swa-r-card,12px);padding:16px;margin:12px 0}article.booked{border-color:var(--swa-ok,#1F6F3A);box-shadow:inset 3px 0 0 var(--swa-ok,#1F6F3A)}
-.lesson-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}.lesson-head p{margin:0}
-.spots{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}.kind{margin:4px 0 0;font-size:15px}
-.roster{list-style:none;padding:0;margin:12px 0 0;border-top:1px solid var(--swa-line,#E4E6EA)}.roster li{padding:10px 0;border-bottom:1px solid var(--swa-line,#E4E6EA);overflow-wrap:anywhere}
-.tag{margin-left:6px}
-details.edit{margin-top:12px}details.edit summary{color:var(--swa-muted,#55585F);font-size:15px}
-.pair{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}@media (max-width:520px){.pair{grid-template-columns:1fr}}
-details.add{margin-top:16px;padding-top:4px;border-top:1px solid var(--swa-line,#E4E6EA)}details.add>summary{font-size:var(--swa-t-17,17px)}
-details.add>p{margin:12px 0 0}
-.more{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}html body .more a{min-height:44px;display:inline-flex;align-items:center;color:var(--swa-ink,#111113);font-weight:600;font-size:var(--swa-t-15,15px)}html body .more a:hover{color:var(--swa-red,#C4222C)}
+/* A desktop is not a stretched phone: today's practices and the two actions on the left, the clock on the right. */
+@media(min-width:900px){
+html body main>section.tonight{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto auto 1fr;column-gap:32px;align-items:start;padding:24px}
+.tonight>*{grid-column:1}
+html body #clockCard{grid-column:2;grid-row:1/-1;align-self:stretch;margin:0;padding:0 0 0 32px;border-left:1px solid var(--swa-dark-line,rgba(255,255,255,.08))}
+}
+/* The ways on from here, as doors (the family calendar's): lessons, hours, practice plans and time off. */
+html body .swa-doors{margin:16px 0}
 /* This week (issue #189): a date grid with today ringed in red and holidays as a label. Program colors match the public calendar. */
 .week-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px}.week-head h2{margin:0}.week-nav{display:flex;gap:6px}.week-nav button{min-height:44px}
+.week-range{margin:6px 0 0}.week-note{margin:12px 0 0;font-size:var(--swa-t-15,15px);max-width:80ch}
 .week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:16px;align-items:start}
 /* Issue #336: every day starts at the same line and is only as tall as what's on it. A day with nothing says so in one
    quiet line. (The old class name "empty" picked up the design system's empty-state padding and pushed labels down.) */
@@ -65,22 +76,55 @@ details.add>p{margin:12px 0 0}
 .week-none{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:16px;border:1px dashed var(--swa-line,#E4E6EA);border-radius:10px;background:var(--swa-surface-2,#F8F9FA)}
 .week-none p{margin:0}.week-none strong{display:block}.week-none span{color:var(--swa-muted,#55585F);font-size:15px}
 @media(max-width:760px){.week{grid-template-columns:1fr}.wday.is-clear{display:none}.wday{flex-direction:column}.witem{font-size:15px}}
+/* Lessons: booked first, then open times. One lesson is one row: the day with its time on the left, then what it is,
+   who is in it and how to reach their parents. The opening form folds under the list. */
+#lessons .lede{margin:0 0 12px;font-size:var(--swa-t-15,15px);max-width:80ch}
+#slots{display:grid;gap:8px}
+#slots .skeleton{margin:0}
+html body #slots .empty{padding:var(--swa-s-8,8px) 0 0}
+article.lesson{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:0;padding:12px 16px;border:1px solid var(--swa-line,#E4E6EA);border-radius:var(--swa-r-control,8px);background:var(--swa-surface,#fff)}
+article.lesson.booked{box-shadow:inset 3px 0 0 var(--swa-ok,#1F6F3A)}
+.lesson .when{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;margin:0}
+.lesson .when b{font-size:var(--swa-t-17,17px)}.lesson .when span{font-size:var(--swa-t-15,15px);color:var(--swa-muted,#55585F);font-variant-numeric:tabular-nums}
+.lesson .what{min-width:0}.lesson .what>p{margin:0}
+.lesson-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:center}.lesson-head p{margin:0}
+.spots{font-variant-numeric:tabular-nums;white-space:nowrap}.lesson .kind{margin:2px 0 0;font-size:var(--swa-t-15,15px)}
+.roster{list-style:none;padding:0;margin:8px 0 0}.roster li{padding:8px 0;border-top:1px solid var(--swa-line,#E4E6EA);overflow-wrap:anywhere}.roster li:last-child{padding-bottom:0}
+.tag{margin-left:6px}
+details.edit{margin-top:4px}html body details.edit>summary{display:inline-flex;color:var(--swa-muted,#55585F);font-size:var(--swa-t-15,15px)}
+details.edit button,.lesson .actions{margin-top:12px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:520px){.pair{grid-template-columns:1fr}}
+@media(min-width:720px){article.lesson{grid-template-columns:132px minmax(0,1fr);gap:8px 24px;padding:16px}.lesson .when{flex-direction:column;gap:2px}}
+/* Phones: a parent's number is a full-size tap target. */
+@media(max-width:640px){#slots a[href^="tel:"]{display:inline-flex;align-items:center;min-height:44px;padding:0 4px}}
+/* Add an opening: a secondary button that opens the form in place. Three fields across on a desktop; on a phone the
+   date, then the two times side by side. */
+details.add{margin-top:16px}
+html body details.add>summary{display:inline-flex;min-height:var(--swa-h-control,48px);padding:0 16px;border:1px solid #CDD0D6;border-radius:var(--swa-r-control,8px);background:var(--swa-surface,#fff);box-shadow:var(--swa-shadow-sm);font-size:var(--swa-t-17,17px)}
+html body details.add>summary:hover{border-color:var(--swa-ink,#111113)}
+#opening{display:grid;gap:12px;max-width:720px;margin-top:16px}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.fields .wide{grid-column:1/-1}
+@media(min-width:640px){.fields{grid-template-columns:repeat(3,minmax(0,1fr))}.fields .wide{grid-column:auto}}
+.fields.flow{display:flex;flex-wrap:wrap}.fields.flow>label{flex:1 1 200px;min-width:0}.fields.flow>label:first-child{flex:2 1 280px}.fields.flow>#spotsLabel{flex:0 1 110px}
+#opening p{margin:0}#opening button{justify-self:start}
+#openingNote{font-weight:600}#openingNote:empty{display:none}
+details.add>p{margin:12px 0 0;font-size:var(--swa-t-15,15px);max-width:80ch}
+html body #status{margin:12px 0 0;font-weight:600}
 main>section{scroll-margin-top:76px}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
-<h1 id="heading">Coach home</h1><p id="programs" class="muted"></p>
+<div class="top"><h1 id="heading">Coach home</h1><p id="programs" class="muted"></p><details class="account-menu" id="accountMenu"><summary>Account</summary><span class="menu"><a href="/coach-profile">Your profile</a><a href="/contract">Your contract</a><a href="/help/coach">Coach help</a><a href="/security">Account security</a><span class="sep"></span><button type="button" id="signout">Sign out</button></span></details></div>
 <p id="ownerNote" class="owner-note" hidden>You’re in Coach view with your owner account. <a href="/">Back to the owner dashboard</a></p><p id="profileNudge" class="owner-note" hidden>Families see your name and bio beside your lesson times. <a href="/coach-profile">Add a short bio →</a></p><p id="contractTodo" class="owner-note" hidden></p>
-<section class="dark tonight" id="tonight" aria-labelledby="todayTitle"><p class="eyebrow" id="todayTitle">Today on the mat</p><div id="sessions"><p class="muted">Loading today’s practices…</p></div>
+<section class="dark tonight" id="tonight" aria-labelledby="todayTitle"><h2 class="tonight__title" id="todayTitle">Today on the mat</h2><p class="eyebrow" id="todayDate"></p><div id="sessions"><p class="muted">Loading today’s practices…</p></div>
 <section id="clockCard" data-coach-clock aria-labelledby="clockCardTitle"><h2 id="clockCardTitle">Clock in</h2><p class="muted">Loading your clock…</p></section>
 <div class="actions"><a class="button" id="openCheckin" href="/roster">Open check-in</a><a class="button" id="planLink" href="/practice-plans">Today’s plan</a></div><p id="planLine" class="plan"></p></section>
-<nav class="rows" aria-label="Lessons and hours"><a href="#lessons"><span><b>Lessons</b><small id="lessonsSummary">Loading…</small></span><span class="chev" aria-hidden="true"></span></a><a href="/coach-time"><span><b>Your hours</b><small>Clock in, check the month, send it</small></span><span class="chev" aria-hidden="true"></span></a></nav>
-<section aria-labelledby="weekTitle"><div class="week-head"><h2 id="weekTitle">This week</h2><div class="week-nav"><button type="button" id="weekPrev" aria-label="Previous week">←</button><button type="button" id="weekNow">This week</button><button type="button" id="weekNext" aria-label="Next week">→</button></div></div><p class="muted" id="weekRange" style="margin:6px 0 0"></p><div id="week" class="week"><p class="muted">Loading the week…</p></div><p class="muted" style="margin:12px 0 0;font-size:15px">Practices for your programs, plus every camp, clinic, event and extra practice. Holidays are shown for information only: a practice is canceled only when the academy marks a day off. New York time.</p></section>
-<section id="lessons" aria-labelledby="lessonsTitle"><h2 id="lessonsTitle">Your private lessons</h2><p class="muted">Each lesson shows who is booked, how to reach their parents and how many spots are left. Each family pays for their own wrestler. You can remove an open time until a family books it.</p><div id="slots"></div>
-<details class="add" id="openingBox"><summary>Add a one-hour opening</summary><form id="opening"><label>Date<input name="date" type="date" required></label><label>Start time<input name="start" type="time" required></label><label>End time<input name="end" type="time" required></label>
-<div class="pair"><label>Lesson type<select name="format" id="format"><option value="">Open time: families choose</option><option value="one-on-one">One-on-one only</option><option value="partner">Partner lesson: 2 wrestlers</option><option value="small-group">Small group: 3 to 6 wrestlers</option></select></label><label id="spotsLabel" hidden>Spots<select name="spots" id="spots"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label></div>
-<label>Repeat<select name="weeks" id="weeks"><option value="1">Just this date</option></select></label><p class="muted" id="repeatHelp" hidden></p>
-<button type="submit">Save opening</button></form><p class="muted">Times are New York time. An open time is booked as a one-on-one, or a family can ask for it as a private partner or small group and invite other families. A partner or small-group lesson you post is listed for every family, one spot per wrestler, until it fills.</p></details></section>
-<section aria-labelledby="moreTitle"><h2 id="moreTitle">More</h2><div class="more"><a href="/practice-plans">Your month and practice plans →</a><a href="/coach-profile">Your profile →</a><a href="/help/coach">Coach help →</a><a href="/contract">Your contract →</a><a href="/coach-time">Time off →</a><a href="/security">Account security →</a><button type="button" id="signout" class="quiet">Sign out</button></div></section>
-<p id="status" role="status" aria-live="polite"></p></main>
+<nav class="swa-doors four" aria-label="Lessons, hours, plans and time off"><a class="swa-door" href="#lessons"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>Lessons<small id="lessonsSummary">Booked lessons and open times</small></a><a class="swa-door" href="/coach-time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Your hours<small>Check your month and send it</small></a><a class="swa-door" href="/practice-plans"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Practice plans<small>Your month and shared plans</small></a><a class="swa-door" href="/coach-time#timeOff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>Time off<small>Ask for days away</small></a></nav>
+<section aria-labelledby="weekTitle"><div class="week-head"><h2 id="weekTitle">This week</h2><div class="week-nav"><button type="button" id="weekPrev" aria-label="Previous week">←</button><button type="button" id="weekNow">This week</button><button type="button" id="weekNext" aria-label="Next week">→</button></div></div><p class="muted week-range" id="weekRange"></p><div id="week" class="week"><p class="muted">Loading the week…</p></div><p class="muted week-note">Practices for your programs, plus every camp, clinic, event and extra practice. Holidays are shown for information only: a practice is canceled only when the academy marks a day off. New York time.</p></section>
+<section id="lessons" aria-labelledby="lessonsTitle"><h2 id="lessonsTitle">Your private lessons</h2><p class="muted lede" id="lessonsLede">Each lesson shows who is booked, how to reach their parents and how many spots are left. Each family pays for their own wrestler. You can remove an open time until a family books it.</p><div id="slots"><span class="skeleton row"></span><span class="skeleton row"></span></div><p id="status" role="status" aria-live="polite"></p>
+<details class="add" id="openingBox"><summary>Add a one-hour opening</summary><form id="opening"><div class="fields"><label class="wide">Date<input name="date" type="date" required></label><label>Start time<input name="start" type="time" required></label><label>End time<input name="end" type="time" required></label></div>
+<div class="fields flow"><label>Lesson type<select name="format" id="format"><option value="">Open time: families choose</option><option value="one-on-one">One-on-one only</option><option value="partner">Partner lesson: 2 wrestlers</option><option value="small-group">Small group: 3 to 6 wrestlers</option></select></label><label id="spotsLabel" hidden>Spots<select name="spots" id="spots"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+<label>Repeat<select name="weeks" id="weeks"><option value="1">Just this date</option></select></label></div><p class="muted" id="repeatHelp" hidden></p>
+<button type="submit">Save opening</button><p id="openingNote" role="status" aria-live="polite"></p></form><p class="muted">Times are New York time. An open time is booked as a one-on-one, or a family can ask for it as a private partner or small group and invite other families. A partner or small-group lesson you post is listed for every family, one spot per wrestler, until it fills.</p></details></section>
+</main>
 <script src="/hours-text.js"></script>
 <script src="/coach-clock.js"></script>
 <script>const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const dayDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'}):String(d??''),clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1]%12||12)+':'+m[2]+' '+(+m[1]<12?'AM':'PM'):String(t??'')};const programName=id=>({Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'}[id]||id);async function call(path,body){const r=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error((data.error||'Something went wrong. Please try again.')+(data.requestId?' (reference '+String(data.requestId).slice(0,8)+')':''));return data}
@@ -89,7 +133,9 @@ main>section{scroll-margin-top:76px}
 const say=(text,kind)=>{if(typeof swaToast==='function')swaToast(text,{kind});else $('status').textContent=text};
 // Today's practices for this coach's programs, with how many wrestlers are checked in (issue #133). When every session
 // starts in the late afternoon or later, the card says "Tonight".
-function todayHtml(sessions){if(!Array.isArray(sessions)||!sessions.length)return '<p class="muted">Nothing is on the mat for your programs today.</p>';return sessions.map(s=>{const all=(s.entries||[]).length,inn=s.checkedIn||0;return '<div class="session"><span class="time">'+esc(clock(s.start))+'</span><span class="name">'+esc(s.title)+'</span><span class="count">'+inn+' of '+all+' checked in</span></div>'}).join('')}
+function todayHtml(sessions){if(!Array.isArray(sessions)||!sessions.length)return '<p class="muted">Nothing is on the mat for your programs today.</p>';return sessions.map(s=>{const all=(s.entries||[]).length,inn=s.checkedIn||0,when=s.start?clock(s.start)+(s.end?'–'+clock(s.end):''):s.type==='event'?'Time to be announced':'All day';return '<div class="session"><span class="name">'+esc(s.title)+'</span><span class="time">'+esc(when)+'</span><span class="count"><b>'+inn+' of '+all+'</b> checked in</span></div>'}).join('')}
+// The day under the card's title, as the academy writes it on its practice posts: "Saturday, Nov 14".
+const longDay=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long',month:'short',day:'numeric'}):'';
 const tonightWord=sessions=>Array.isArray(sessions)&&sessions.length&&sessions.every(s=>/^(1[6-9]|2\d):/.test(s.start||''))?'Tonight on the mat':'Today on the mat';
 // Each lesson with its roster (issue #177): who is booked, their parent's name and phone, spots left, and whether the
 // coach posted it or a family asked for it as a private group.
@@ -97,20 +143,22 @@ const statusTag={paying:'Paying now',kept:'Not paid yet'};
 const formatOptions=f=>[['','Open time'],['one-on-one','One-on-one only'],['partner','Partner lesson: 2 wrestlers'],['small-group','Small group']].map(([v,n])=>`<option value="${v}"${v===(f||'')?' selected':''}>${n}</option>`).join('');
 function rosterHtml(list){return '<ul class="roster">'+list.map(r=>`<li><b>${esc(r.wrestler)}</b>${statusTag[r.status]?' <span class="tag pill warn">'+statusTag[r.status]+'</span>':''}<br>Parent: ${esc(r.parent||'Not saved')}${r.phone?' · <a href="tel:'+esc(r.phone)+'">'+esc(r.phone)+'</a>':''}${r.email?' · '+esc(r.email):''}</li>`).join('')+'</ul>'}
 function slotHtml(item){const s=item;
- const roster=s.roster||[],taken=roster.some(r=>r.status!=='kept'),group=s.capacity>1,when=`<b>${esc(dayDate(s.date))}</b><p>${esc(clock(s.start))}–${esc(clock(s.end))}</p>`;
+ const roster=s.roster||[],taken=roster.some(r=>r.status!=='kept'),group=s.capacity>1,when=`<p class="when"><b>${esc(dayDate(s.date))}</b><span>${esc(clock(s.start))}–${esc(clock(s.end))}</span></p>`;
  let body;
  if(group){
-  const kind=s.hosted==='family'?'Family-requested private group, organised by '+esc(s.organizer)+'. Only families with their invite link can book it.':'Coach-hosted: listed for every family until it fills.';
-  body=`<div class="lesson-head"><p><strong>${esc(s.formatName)}</strong></p><span class="spots">${s.spotsLeft} of ${s.capacity} spot${s.capacity===1?'':'s'} left</span></div><p class="kind muted">${kind}</p>${roster.length?rosterHtml(roster):'<p class="muted">Nobody has booked yet.</p>'}`;
+  const kind=s.hosted==='family'?'Family-requested private group, organized by '+esc(s.organizer)+'. Only families with their invite link can book it.':'Coach-hosted: listed for every family until it fills.';
+  body=`<div class="lesson-head"><p><strong>${esc(s.formatName)}</strong></p><span class="pill neutral spots">${s.spotsLeft} of ${s.capacity} spot${s.capacity===1?'':'s'} left</span></div><p class="kind muted">${kind}</p>${roster.length?rosterHtml(roster):'<p class="muted">Nobody has booked yet.</p>'}`;
  }else if(roster.length){const r=roster[0];
   body=`<p><strong>Booked: ${esc(s.formatName)} with ${esc(r.wrestler)}</strong>${statusTag[r.status]?' <span class="tag pill warn">'+statusTag[r.status]+'</span>':''}${s.partners?'<br>Training partners: '+esc(s.partners):''}<br>Parent: ${esc(r.parent||'Not saved')}${r.phone?' · <a href="tel:'+esc(r.phone)+'">'+esc(r.phone)+'</a>':''}${r.email?' · '+esc(r.email):''}</p>`;
  }else body=`<p class="muted">${s.format==='one-on-one'?'Open for families to book a one-on-one.':'Open for families to book. A family can book a one-on-one or ask for a private partner or small group.'}</p>`;
  // The coach can change the type of their own lesson; once anyone is booked the type stays and spots can only cover them.
  const edit=s.hosted==='family'?'':`<details class="edit"><summary>Change lesson type</summary><div class="pair"><label>Lesson type<select data-edit-format="${esc(s.id)}">${formatOptions(s.format)}</select></label><label>Spots (small group)<select data-edit-spots="${esc(s.id)}">${[3,4,5,6].map(n=>`<option${n===(s.format==='small-group'?s.capacity:4)?' selected':''}>${n}</option>`).join('')}</select></label></div><button type="button" data-edit="${esc(s.id)}">Save lesson type</button></details>`;
  const remove=taken?'':`<button type="button" data-slot="${esc(s.id)}"${s.hosted==='family'?' data-family="1"':''}>Remove opening</button>`;
- return `<article${roster.length?' class="booked"':''}>${when}${body}${edit}${remove?'<div class="actions" style="margin-top:12px">'+remove+'</div>':''}</article>`;
+ return `<article class="lesson${roster.length?' booked':''}">${when}<div class="what">${body}${edit}${remove?'<div class="actions">'+remove+'</div>':''}</div></article>`;
 }
-// The Lessons row's one line: how many are booked and how many open times are listed.
+// No lessons and no open times: one sentence that says what will show here; the button under it adds the first one.
+const NO_LESSONS='<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></svg><p>You have no lessons or open times yet. Add a one-hour opening and families can book it.</p></div>';
+// The Lessons door's one line: how many are booked and how many open times are listed.
 function lessonsSummary(openings){const booked=openings.filter(s=>(s.roster||[]).length).length,open=openings.length-booked;if(!openings.length)return 'No lessons or open times yet';return [booked?booked+' booked':'',open?open+' open time'+(open===1?'':'s'):''].filter(Boolean).join(' · ')}
 // This week (issue #189): the coach's own practices, every camp, clinic, event and extra practice, holidays as a label
 // (never a "No practice" card) and today ringed in red, all from the public schedule and its New York date.
@@ -137,12 +185,12 @@ async function offerNextBusyWeek(from){try{let start=addDays(from,7);for(let i=0
   if(weekBusy(start,schedules,coachPrograms)){const first=Array.from({length:7},(_,k)=>addDays(start,k)).find(d=>weekDay(d,schedules,coachPrograms).items.length),b=$('weekJump');if(!b)return;b.textContent='Next: '+dayDate(first)+' →';b.hidden=false;b.onclick=()=>{weekStart=start;renderWeek()};return}}}catch(e){}}
 async function showWeek(delta){try{if(!academyDay){const now=await call('/api/public-schedule');schedules[now.month]=now;academyDay=now.today}const start=delta&&weekStart?addDays(weekStart,7*delta):mondayOf(academyDay);await scheduleFor(start.slice(0,7));await scheduleFor(addDays(start,6).slice(0,7));weekStart=start;renderWeek()}catch(e){$('week').innerHTML='<p class="muted">The week could not be loaded. Refresh the page to try again.</p>'}}
 $('weekPrev').onclick=()=>showWeek(-1);$('weekNext').onclick=()=>showWeek(1);$('weekNow').onclick=()=>showWeek(0);
-async function loadToday(){try{const r=await call('/api/roster');$('sessions').innerHTML=todayHtml(r.sessions);$('todayTitle').textContent=tonightWord(r.sessions)}catch(e){$('sessions').innerHTML='<p class="muted">Today’s practices could not be loaded. Open check-in to see them.</p>'}}
+async function loadToday(){try{const r=await call('/api/roster');$('sessions').innerHTML=todayHtml(r.sessions);$('todayTitle').textContent=tonightWord(r.sessions);$('todayDate').textContent=longDay(r.today||r.date)}catch(e){$('sessions').innerHTML='<p class="muted">Today’s practices could not be loaded. Open check-in to see them.</p>'}}
 // Today's plan, when the academy shared one for a program this coach runs (lib/practice-plans, issue #191): its title
 // and a link straight to it; otherwise the link opens the month.
 function planLine(d){const plans=(d&&Array.isArray(d.plans)?d.plans:[]).filter(p=>p.date===d.today&&p.published);if(!plans.length)return '';return 'Plan shared for today: '+plans.map(p=>'<b>'+esc(p.title||'Practice plan')+'</b>').join(', ')}
 async function loadPlan(){try{const d=await call('/api/practice-plans?summary=1');const line=planLine(d);$('planLine').innerHTML=line;if(line)$('planLink').href='/practice-plans?date='+encodeURIComponent(d.today)}catch{}}
-async function load(){try{const data=await call('/api/coach');$('heading').textContent=data.name;$('ownerNote').hidden=!data.owner;$('profileNudge').hidden=data.profileSaved!==false;repeatOptions(data.maxWeeks);coachPrograms=data.programs;renderWeek();$('programs').textContent=data.programs.length?'You coach '+data.programs.map(programName).join(', ')+'.':'You have no programs yet. Ask the owner to assign yours.';const booked=data.openings.filter(s=>(s.roster||[]).length),open=data.openings.filter(s=>!(s.roster||[]).length);$('lessonsSummary').textContent=lessonsSummary(data.openings);$('slots').innerHTML=[...booked,...open].map(slotHtml).join('')||'<p class="empty">You have no lessons or open times yet. Add an opening below.</p>';document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=async()=>{if(b.dataset.family&&!confirm('A family asked for this time as a private group. Remove it and tell them it is called off?'))return;try{await call('/api/coach',{action:'remove',id:b.dataset.slot});await load();say('Opening removed.','ok')}catch(e){$('status').textContent=e.message}});document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=async()=>{const id=b.dataset.edit,f=document.querySelector('[data-edit-format="'+id+'"]').value,n=Number(document.querySelector('[data-edit-spots="'+id+'"]').value);try{await call('/api/coach',{action:'update',id,format:f||null,spots:f==='small-group'?n:undefined});await load();say('Lesson type saved.','ok')}catch(e){$('status').textContent=e.message}})}catch(e){$('status').textContent=e.message;if(coachPrograms===null){coachPrograms=[];renderWeek()}}}
+async function load(){try{const data=await call('/api/coach');$('heading').textContent=data.name;$('ownerNote').hidden=!data.owner;$('profileNudge').hidden=data.profileSaved!==false;repeatOptions(data.maxWeeks);coachPrograms=data.programs;renderWeek();$('programs').textContent=data.programs.length?'You coach '+data.programs.map(programName).join(', ')+'.':'You have no programs yet. Ask the owner to assign yours.';const booked=data.openings.filter(s=>(s.roster||[]).length),open=data.openings.filter(s=>!(s.roster||[]).length);$('lessonsSummary').textContent=lessonsSummary(data.openings);$('slots').innerHTML=[...booked,...open].map(slotHtml).join('')||NO_LESSONS;$('lessonsLede').hidden=!data.openings.length;$('status').textContent='';document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=async()=>{if(b.dataset.family&&!confirm('A family asked for this time as a private group. Remove it and tell them it is called off?'))return;try{await call('/api/coach',{action:'remove',id:b.dataset.slot});await load();say('Opening removed.','ok')}catch(e){$('status').textContent=e.message}});document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=async()=>{const id=b.dataset.edit,f=document.querySelector('[data-edit-format="'+id+'"]').value,n=Number(document.querySelector('[data-edit-spots="'+id+'"]').value);try{await call('/api/coach',{action:'update',id,format:f||null,spots:f==='small-group'?n:undefined});await load();say('Lesson type saved.','ok')}catch(e){$('status').textContent=e.message}})}catch(e){$('status').textContent=e.message;if(/skeleton/.test($('slots').innerHTML))$('slots').innerHTML='<p class="muted">Your lessons could not be loaded. Refresh the page to try again.</p>';if(coachPrograms===null){coachPrograms=[];renderWeek()}}}
 function openingInput(form){const v=Object.fromEntries(new FormData(form));return {action:'add',date:v.date,start:v.start,end:v.end,format:v.format||null,...(v.format==='small-group'?{spots:Number(v.spots)}:{}),...(Number(v.weeks)>1?{weeks:Number(v.weeks)}:{})}}
 // Repeat weekly (issue #190): the same time, lesson type and spots on the same weekday, up to the academy's limit.
 function repeatOptions(max){const n=Number(max)||1,sel=$('weeks');if(!sel||sel.dataset.max===String(n))return;const keep=sel.value||'1';sel.dataset.max=String(n);
@@ -152,7 +200,10 @@ function repeatHelp(){const f=$('opening').querySelector('[name=date]'),w=Number
 const savedText=r=>{const n=(r.created||[]).length,skip=(r.skipped||[]);return (n>1?n+' openings saved.':'Opening saved.')+(skip.length?' Skipped '+skip.map(dayDate).join(', ')+': '+(skip.length===1?'it overlaps':'they overlap')+' one of your openings.':'')};
 $('format').onchange=()=>{$('spotsLabel').hidden=$('format').value!=='small-group'};
 $('weeks').onchange=repeatHelp;{const f=$('opening').querySelector('[name=date]');if(f)f.addEventListener('change',repeatHelp)}
-$('opening').onsubmit=async e=>{e.preventDefault();try{const r=await call('/api/coach',openingInput(e.target));await load();say(savedText(r),'ok')}catch(error){$('status').textContent=error.message}};async function signout(){try{await call('/api/auth',{action:'logout'});location.href='/login'}catch(e){$('status').textContent=e.message}}$('signout').onclick=signout;load();loadToday();loadPlan();showWeek(0);loadContract();
+$('opening').onsubmit=async e=>{e.preventDefault();$('openingNote').textContent='';try{const r=await call('/api/coach',openingInput(e.target));await load();say(savedText(r),'ok')}catch(error){$('openingNote').textContent=error.message}};
+// The Account menu closes on a tap outside it and on Escape.
+if(document.addEventListener){document.addEventListener('click',e=>{const m=$('accountMenu');if(m.open&&!(e.target&&e.target.closest&&e.target.closest('#accountMenu')))m.open=false});document.addEventListener('keydown',e=>{if(e.key==='Escape')$('accountMenu').open=false})}
+async function signout(){try{await call('/api/auth',{action:'logout'});location.href='/login'}catch(e){$('status').textContent=e.message}}$('signout').onclick=signout;load();loadToday();loadPlan();showWeek(0);loadContract();
 // On the clock, check-in becomes the red action and Clock out the quiet one (the card redraws itself, so watch it).
 function syncTonight(){const on=!!(document.querySelector&&document.querySelector('#clockCard [data-cc="out"]'));$('tonight').classList?.toggle('on',on);$('openCheckin').classList?.toggle('primary',on)}
 if(typeof MutationObserver==='function')new MutationObserver(syncTonight).observe($('clockCard'),{childList:true,subtree:true});

@@ -1,13 +1,18 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach profile | Savage Wrestling Academy</title><style>
-*{box-sizing:border-box}body{margin:0}main{max-width:var(--swa-width-narrow,760px);margin:auto;padding:24px 16px 48px}
-html body main>section{margin:16px 0}h2{margin:0 0 12px}
+*{box-sizing:border-box}body{margin:0}main{max-width:var(--swa-width-wide,1000px);margin:auto;padding:24px 16px 48px}
+h2{margin:0 0 12px}
 label{display:block;font-weight:600;margin:16px 0}input,textarea{display:block;width:100%;margin-top:6px}textarea{min-height:140px;resize:vertical}
+/* A phone reads top to bottom: the form, then what families see. On a desktop the two sit side by side and the card
+   stays in view while the coach types. */
+.cols{display:grid;gap:24px}.cols>section{min-width:0}
+@media(min-width:900px){.cols{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);align-items:start}.cols>.preview{position:sticky;top:84px}}
+.preview h2{margin:0 0 4px}.preview>p{margin:0;font-size:var(--swa-t-15,15px)}
 .hint{display:block;font-weight:400;font-size:var(--swa-t-15,15px);color:var(--swa-muted,#55585F);margin-top:4px}.count{float:right;font-weight:400;font-size:var(--swa-t-13,13px);color:var(--swa-muted,#55585F);font-variant-numeric:tabular-nums}
 /* Who this is: the initials in the brand's black disc with the red ring, the name, the sign-in email. */
 .who{display:flex;gap:16px;align-items:center}.avatar{flex:none;width:72px;height:72px;border-radius:50%;background:var(--swa-dark-0,#0D0D0F);color:#fff;display:grid;place-items:center;font:800 28px/1 var(--swa-display,'Barlow Condensed','Arial Narrow',Arial,sans-serif);letter-spacing:.5px;text-transform:uppercase;border:2px solid var(--swa-red,#C4222C)}
 .who p{margin:0}.who b{font-size:var(--swa-t-20,20px)}
 /* What families see (issue #223): the team page's own coach card. Its styles come from lib/website.ts with the route. */
-.coaches{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:12px}#previewNote{margin:12px 0 0}
+.coaches{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:12px;max-width:420px}html body #previewNote{margin:12px 0 0}
 <!--slot:coachcss-->
 #status{font-weight:600}.actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:24px}[hidden]{display:none!important}
 fieldset{border:0;margin:0;padding:0;min-width:0}
@@ -15,7 +20,7 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 <a href="/coach" id="back" class="swa-back">← Coach home</a>
 <h1 id="heading">Your coach profile</h1>
 <p id="intro">Families see your name, bio and specialties next to your private lesson times. Your phone number stays with the academy.</p>
-<section aria-labelledby="aboutTitle"><h2 id="aboutTitle">About you</h2>
+<div class="cols"><section class="card" aria-labelledby="aboutTitle"><h2 id="aboutTitle">About you</h2>
 <div class="who"><div class="avatar" id="avatar" aria-hidden="true"></div><div><p><b id="whoName"></b></p><p class="muted swa-secondary" id="whoEmail"></p></div></div>
 <form id="profileForm"><fieldset id="profileFields" disabled>
 <label for="displayName">Name families see <span class="count" id="nameCount"></span><input id="displayName" name="displayName" maxlength="60" required autocomplete="name"></label>
@@ -24,7 +29,7 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 <label for="phone">Phone<span class="hint">Only the academy sees this.</span><input id="phone" name="phone" type="tel" maxlength="20" autocomplete="tel"></label>
 <div class="actions"><button class="primary" id="saveProfile">Save profile</button><span id="saved" class="muted swa-secondary"></span></div>
 </fieldset></form></section>
-<section class="plain" aria-labelledby="previewTitle"><h2 id="previewTitle">What families see</h2><p class="muted">Your card as the team page shows it when the academy lists you there.</p><div class="coaches" id="preview"></div><p class="muted" id="previewNote" hidden>No bio yet, so families see your name and specialties only.</p></section>
+<section class="preview" aria-labelledby="previewTitle"><h2 id="previewTitle">What families see</h2><p class="muted">Your card as the team page shows it when the academy lists you there.</p><div class="coaches" id="preview"></div><p class="muted" id="previewNote" hidden>No bio yet, so families see your name and specialties only.</p></section></div>
 <p id="status" role="status" aria-live="polite"></p></main>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

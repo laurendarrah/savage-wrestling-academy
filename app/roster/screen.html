@@ -6,9 +6,9 @@
    outrank the shared stylesheet, which loads after this one. */
 *{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:0 auto;padding:0 16px 112px}
 [hidden]{display:none!important}
-body[data-swa-page="/roster"]{--m-ground:var(--swa-ground);--m-surface:var(--swa-surface);--m-surface-in:var(--swa-ok-bg);--m-raise:var(--swa-surface-2);--m-line:var(--swa-hair);--m-line-2:#CDD0D6;--m-text:var(--swa-ink);--m-strong:var(--swa-ink);--m-muted:var(--swa-muted);--m-ok:var(--swa-ok);--m-warn:var(--swa-warn);--m-bad:var(--swa-bad);--m-ok-line:rgba(31,111,58,.45);--m-bad-line:rgba(196,34,44,.6);--m-field:#FBFBFC;--m-tab:var(--swa-surface);--m-tab-line:#CDD0D6;--m-tab-on:var(--swa-ink);--m-tab-on-text:#FFFFFF;--m-tab-on-sub:#C9CED4;--m-alert-bg:var(--swa-red-soft);--m-alert-ink:var(--swa-ink);--m-shadow:var(--swa-shadow-sm)}
+body[data-swa-page="/roster"]{--m-ground:var(--swa-ground);--m-surface:var(--swa-surface);--m-surface-in:var(--swa-ok-bg);--m-raise:var(--swa-surface-2);--m-line:var(--swa-hair);--m-line-2:#CDD0D6;--m-text:var(--swa-ink);--m-strong:var(--swa-ink);--m-muted:var(--swa-muted);--m-ok:var(--swa-ok);--m-warn:var(--swa-warn);--m-bad:var(--swa-bad);--m-ok-line:rgba(31,111,58,.45);--m-bad-line:rgba(196,34,44,.6);--m-field:#FBFBFC;--m-tab:var(--swa-surface);--m-tab-line:#CDD0D6;--m-tab-on:var(--swa-ink);--m-tab-on-text:#FFFFFF;--m-tab-on-sub:#C9CED4;--m-alert-bg:var(--swa-red-soft);--m-alert-ink:var(--swa-ink);--m-shadow:var(--swa-shadow-sm);--m-box:var(--swa-surface)}
 /* A coach's mat: the dark set. Depth is a lighter layer, text is off-white, the site bar gives way to the compact bar. */
-body[data-swa-page="/roster"]:not([data-swa-shell]){background:var(--swa-dark-0);color:var(--swa-dark-text);--m-ground:var(--swa-dark-0);--m-surface:var(--swa-dark-1);--m-surface-in:var(--swa-dark-2);--m-raise:var(--swa-dark-3);--m-line:var(--swa-dark-line);--m-line-2:rgba(255,255,255,.3);--m-text:var(--swa-dark-text);--m-strong:#FFFFFF;--m-muted:var(--swa-dark-muted);--m-ok:#8FD3A4;--m-warn:#FFD27A;--m-bad:#FF7B82;--m-ok-line:rgba(143,211,164,.45);--m-bad-line:rgba(255,123,130,.6);--m-field:var(--swa-dark-1);--m-tab:var(--swa-dark-1);--m-tab-line:var(--swa-dark-line);--m-tab-on:#FFFFFF;--m-tab-on-text:var(--swa-ink);--m-tab-on-sub:var(--swa-muted);--m-alert-bg:var(--swa-red-soft);--m-alert-ink:var(--swa-ink);--m-shadow:none}
+body[data-swa-page="/roster"]:not([data-swa-shell]){background:var(--swa-dark-0);color:var(--swa-dark-text);--m-ground:var(--swa-dark-0);--m-surface:var(--swa-dark-1);--m-surface-in:var(--swa-dark-2);--m-raise:var(--swa-dark-3);--m-line:var(--swa-dark-line);--m-line-2:rgba(255,255,255,.3);--m-text:var(--swa-dark-text);--m-strong:#FFFFFF;--m-muted:var(--swa-dark-muted);--m-ok:#8FD3A4;--m-warn:#FFD27A;--m-bad:#FF7B82;--m-ok-line:rgba(143,211,164,.45);--m-bad-line:rgba(255,123,130,.6);--m-field:var(--swa-dark-1);--m-tab:var(--swa-dark-1);--m-tab-line:var(--swa-dark-line);--m-tab-on:#FFFFFF;--m-tab-on-text:var(--swa-ink);--m-tab-on-sub:var(--swa-muted);--m-alert-bg:var(--swa-red-soft);--m-alert-ink:var(--swa-ink);--m-shadow:none;--m-box:transparent}
 body[data-swa-page="/roster"]:not([data-swa-shell]) .swa-bar{display:none}
 
 /* The compact bar: back, the title, Scan. Sticky for a coach; a plain title row inside the owner shell. */
@@ -59,13 +59,18 @@ body[data-swa-page="/roster"] .how{margin:8px 0 0}
 body[data-swa-page="/roster"] .how>summary,body[data-swa-page="/roster"] .how>p{color:var(--m-muted)}
 body[data-swa-page="/roster"] .how>summary:hover{color:var(--m-strong)}
 
-/* One session: its name and the count on one line, a meta line, then the rows. */
+/* One session: its header, a meta line, then the rows. The header is the academy's practice box, as on its own
+   practice posts: a thin outline with a red bar down the left edge, the name in caps and the time larger under it,
+   with the count on the right. On the owner's light page the same box is white. */
 body[data-swa-page="/roster"] .session{padding:0;margin:0 0 24px;background:none;border:0;box-shadow:none;border-radius:0}
-body[data-swa-page="/roster"] .session-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 2px}
-body[data-swa-page="/roster"] .session .session-head h2{margin:0;color:var(--m-strong)}
-body[data-swa-page="/roster"] .count{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-29);line-height:1;color:var(--m-strong);font-variant-numeric:tabular-nums;white-space:nowrap}
+body[data-swa-page="/roster"] .session-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 12px;margin:0 0 8px;padding:10px 14px;border:1px solid var(--m-line-2);border-left:4px solid var(--swa-red);border-radius:var(--swa-r-control);background:var(--m-box)}
+body[data-swa-page="/roster"] .session .session-head h2{grid-column:1;margin:0;font:700 var(--swa-t-13)/1.3 var(--swa-body);letter-spacing:1.2px;text-transform:uppercase;color:var(--m-strong);overflow-wrap:anywhere}
+body[data-swa-page="/roster"] .session-head .when{grid-column:1;margin:0;font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-29);line-height:1.05;letter-spacing:.2px;color:var(--m-strong);font-variant-numeric:tabular-nums}
+body[data-swa-page="/roster"] .count{grid-column:2;grid-row:1/3;font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-35);line-height:1;color:var(--m-strong);font-variant-numeric:tabular-nums;white-space:nowrap}
 body[data-swa-page="/roster"] .count small{font:600 var(--swa-t-15)/1 var(--swa-body);color:var(--m-muted);margin-left:4px}
 body[data-swa-page="/roster"] .session .meta{margin:0 0 12px;color:var(--m-muted);font-size:var(--swa-t-15)}
+body[data-swa-page="/roster"] .session .meta:empty{display:none}
+body[data-swa-page="/roster"] #scanner .session-head{display:flex;justify-content:space-between;padding:0;border:0;background:none}
 body[data-swa-page="/roster"] .list{display:grid;gap:8px}
 body[data-swa-page="/roster"] .empty{color:var(--m-muted)}
 body[data-swa-page="/roster"] .empty>svg{color:var(--m-muted)}
@@ -92,7 +97,7 @@ body[data-swa-page="/roster"] .row .state .badge.warn{color:var(--m-bad);font-we
 body[data-swa-page="/roster"] .row .state .received,body[data-swa-page="/roster"] .row .state .small{color:var(--m-muted);font-size:var(--swa-t-13)}
 body[data-swa-page="/roster"] .row .state .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 body[data-swa-page="/roster"] .row details.why{margin:4px 0 0}
-body[data-swa-page="/roster"] .row details.why>summary{display:inline-flex;min-height:32px;color:var(--m-muted);font-size:var(--swa-t-13);font-weight:600}
+body[data-swa-page="/roster"] .row details.why>summary{display:inline-flex;min-height:44px;color:var(--m-muted);font-size:var(--swa-t-15);font-weight:600}
 body[data-swa-page="/roster"] .row details.why>summary::after{width:6px;height:6px}
 body[data-swa-page="/roster"] .block-reason{margin:4px 0 0;padding:8px 12px;border-left:3px solid var(--swa-red);border-radius:0 6px 6px 0;background:var(--m-alert-bg);color:var(--m-alert-ink);font-weight:600;font-size:var(--swa-t-15);line-height:1.4}
 body[data-swa-page="/roster"] .block-reason .fix-link{display:inline-block;margin-top:4px;font-weight:600;color:var(--swa-red-dark)}
@@ -109,7 +114,7 @@ body[data-swa-page="/roster"] .row .in{display:flex;align-items:center;justify-c
 body[data-swa-page="/roster"] .row .in svg{width:18px;height:18px;flex:none}
 /* The detail: open for a flagged wrestler, folded behind the row otherwise. Numbers are tap-to-call. */
 body[data-swa-page="/roster"] .row details.detail{grid-column:1/-1;margin:0}
-body[data-swa-page="/roster"] .row details.detail>summary{color:var(--m-muted);font-size:var(--swa-t-13);font-weight:600;min-height:36px}
+body[data-swa-page="/roster"] .row details.detail>summary{display:inline-flex;color:var(--m-muted);font-size:var(--swa-t-15);font-weight:600;min-height:44px}
 body[data-swa-page="/roster"] .row details.detail[open]>summary{margin-bottom:4px}
 body[data-swa-page="/roster"] .row .detail__body{display:grid;gap:8px;padding:8px 0 4px;border-top:1px solid var(--m-line);font-size:var(--swa-t-15);color:var(--m-text)}
 body[data-swa-page="/roster"] .row .detail__body .lbl{display:block;color:var(--m-muted);font-size:var(--swa-t-13);letter-spacing:1.2px;text-transform:uppercase;font-weight:700}
@@ -118,6 +123,7 @@ body[data-swa-page="/roster"] .row .detail__body .muted{color:var(--m-muted)}
 body[data-swa-page="/roster"] .safety{overflow-wrap:anywhere}
 body[data-swa-page="/roster"] .safety .medical{display:block;background:var(--m-alert-bg);color:var(--m-alert-ink);border-left:3px solid var(--swa-red);padding:8px 12px;border-radius:0 6px 6px 0;white-space:pre-line;margin-bottom:8px}
 body[data-swa-page="/roster"] .safety strong{color:inherit}
+body[data-swa-page="/roster"] .safety .medical+br{display:none}
 
 /* The pass scanner: the camera and its result, in a card on the ground. */
 body[data-swa-page="/roster"] #scanner{margin:16px 0 0;padding:16px;border-radius:var(--swa-r-card);background:var(--m-surface);border:1px solid var(--m-line);box-shadow:none}
@@ -141,7 +147,19 @@ body[data-swa-page="/roster"] .dock button{flex:1}
 html body[data-swa-page="/roster"] #swa-toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
 
 /* Phones: a phone number is a full-size tap target (issue #232). */
-@media(max-width:640px){a[href^="tel:"]{display:inline-flex;align-items:center;min-height:44px;padding:0 4px}body[data-swa-page="/roster"] .tools{flex-wrap:wrap}body[data-swa-page="/roster"] .tools label.date{flex:1 1 100%}}
+@media(max-width:640px){a[href^="tel:"]{display:inline-flex;align-items:center;min-height:44px;padding:0 4px}body[data-swa-page="/roster"] .tools{flex-wrap:wrap}body[data-swa-page="/roster"] .tools label.date{flex:1 1 100%}
+  /* The name and the one button share the first line; the state runs the full width under them, as words a gap
+     apart (a dot would end up at the end of a line), then Why? and the detail. */
+  body[data-swa-page="/roster"] .row{grid-template-areas:"name actions" "state state" "why why" "detail detail";align-items:start;gap:4px 12px}
+  body[data-swa-page="/roster"] .row .who{display:contents}
+  body[data-swa-page="/roster"] .row .name{grid-area:name;align-self:center}
+  body[data-swa-page="/roster"] .row .state{grid-area:state;margin-top:2px;gap:2px 12px}
+  body[data-swa-page="/roster"] .row .state>*:not(:last-child)::after{content:none}
+  body[data-swa-page="/roster"] .row details.why{grid-area:why;margin:0}
+  body[data-swa-page="/roster"] .row .actions{grid-area:actions;min-width:112px}
+  body[data-swa-page="/roster"] .row .actions button.primary{min-width:112px}
+  body[data-swa-page="/roster"] .row details.detail{grid-area:detail}
+}
 @media (min-width:900px){
   main{padding:0 32px 48px}
   body[data-swa-page="/roster"] .mat-bar,body[data-swa-page="/roster"] .sessions{margin:0 -32px;padding-left:32px;padding-right:32px}
@@ -159,9 +177,9 @@ html body[data-swa-page="/roster"] #swa-toast{bottom:calc(92px + env(safe-area-i
 @media print{body[data-swa-page="/roster"]{background:#fff;color:#000}.mat-bar,.sessions,.tools,.dock,#scanner,button,.swa-bar{display:none!important}body[data-swa-page="/roster"] .session{display:block!important;break-inside:avoid}body[data-swa-page="/roster"] .row{border:1px solid #ccc;background:#fff;color:#000}body[data-swa-page="/roster"] .row .name,body[data-swa-page="/roster"] .row .state>*{color:#000}}
 </style><script src="/jsqr-1.4.0.js" defer></script><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <div class="mat-bar"><div class="mat-bar__in"><a id="home" class="swa-back" href="/">← Back</a><h1>Check-in</h1><button type="button" id="scanStart" class="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>Scan</button></div></div>
-<div class="sessions"><div id="switcher"><div class="sessions__in" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span></div></div></div>
+<div class="sessions" id="sessionBar"><div id="switcher"><div class="sessions__in" aria-hidden="true"><span class="skeleton"></span><span class="skeleton"></span></div></div></div>
 <section id="scanner" hidden><div class="session-head"><h2>Scan entry passes</h2><button type="button" id="scanStop">Stop camera</button></div><p class="muted">Point the camera at a family's QR pass. Each wrestler is checked in once, into the session closest to now.</p><video id="video" playsinline muted></video><div id="scanResult" role="status" aria-live="assertive"></div></section>
-<div class="tools"><label id="dateLabel" class="date" hidden>Date<input type="date" id="date"></label><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="search" id="search" placeholder="Find a wrestler" aria-label="Find a wrestler" autocomplete="off"></label><details class="more"><summary aria-label="More actions">⋯</summary><div class="menu"><button id="refresh" type="button" class="quiet">Refresh</button><button type="button" id="printRoster" class="quiet">Print</button></div></details></div>
+<div class="tools"><label id="dateLabel" class="date" hidden>Date<input type="date" id="date"></label><label class="search" id="searchBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="search" id="search" placeholder="Find a wrestler" aria-label="Find a wrestler" autocomplete="off"></label><details class="more"><summary aria-label="More actions">⋯</summary><div class="menu"><button id="refresh" type="button" class="quiet">Refresh</button><button type="button" id="printRoster" class="quiet">Print</button></div></details></div>
 <p id="status" role="status" aria-live="polite">Loading roster…</p>
 <div id="sessions"><div class="list" aria-hidden="true"><span class="skeleton row"></span><span class="skeleton row"></span><span class="skeleton row"></span></div></div>
 <details class="how"><summary>How this works</summary><p>Wrestlers listed here have a paid membership, a paid walk-in or registration, or an active scholarship for the session, or booked a walk-in or extra practice to pay cash at the academy (shown with the amount due: tap Cash received when they pay). A wrestler can be checked in only with a USA Wrestling card the academy has verified and that is current that day, unless the owner allowed an exception. Times are New York time.</p></details>
@@ -180,7 +198,9 @@ function cashBadge(e){const c=e.cash;if(!c)return '';return c.status==='due'?'<s
 function cashButtons(e,at){const c=e.cash;if(!c)return '';if(c.status==='due')return `<button class="cash" type="button" data-cash="${at}">Cash received</button>`;return data.role==='owner'&&c.orderId?`<button type="button" class="quiet" data-cash-undo="${at}">Undo cash</button>`:''}
 // A coach is told who can undo cash, on the state line beside who received it.
 const cashNote=e=>e.cash&&e.cash.status==='paid'&&e.cash.orderId&&data.role!=='owner'?'<span class="muted small">Only the owner can undo cash</span>':'';
-function dueLine(s){const list=s.entries.filter(owes);return list.length?' · '+list.length+' to pay at the academy ('+money(list.reduce((n,e)=>n+e.cash.cents,0))+' due)':''}
+function dueLine(s){const list=s.entries.filter(owes);return list.length?list.length+' to pay at the academy ('+money(list.reduce((n,e)=>n+e.cash.cents,0))+' due)':''}
+// Under a session's header: what kind of session it is, who is on hold and what is owed in cash. Empty for a plain practice.
+function metaLine(s){const held=s.entries.filter(blockedNow).length;return [s.type==='live'?'Separate purchase':s.type==='event'?'Camp, clinic or event':'',held?held+' can’t be checked in until their USA Wrestling card is sorted out':'',dueLine(s)].filter(Boolean).map(esc).join(' · ')}
 // USA Wrestling card on the session date (issue #68). Since #210 the server refuses check-in unless the card is verified
 // and current, or the owner allowed an exception; e.checkInBlocked carries its plain reason, shown behind "Why?".
 function cardBadge(e){const d=e.cardExpires?new Date(e.cardExpires+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}):'';
@@ -221,7 +241,8 @@ const rowKey=e=>e.userId+'|'+e.wrestlerId;
 function render(changed){
  if(!data)return;
  const q=$('search').value.trim().toLowerCase(),filtered=s=>s.entries.filter(e=>!q||e.name.toLowerCase().includes(q));
- if(!data.sessions.length){$('switcher').innerHTML='';$('sessions').innerHTML='<div class="empty">'+EMPTY+'<p>No practices, camps or sessions are scheduled for this date.</p></div>';return}
+ const none=!data.sessions.length;$('sessionBar').hidden=none;$('scanStart').hidden=none;$('scanDock').hidden=none;$('searchBox').hidden=none;
+ if(none){$('switcher').innerHTML='';$('sessions').innerHTML='<div class="empty">'+EMPTY+'<p>'+(data.role==='owner'?'No practices, camps or sessions are scheduled for this date.':'Nothing is on the mat for your programs today.')+'</p></div>';return}
  const phases=phase(data.sessions);
  if(selected>=data.sessions.length)selected=0;
  // A search that finds nobody in the open session but someone in another opens that one.
@@ -231,7 +252,7 @@ function render(changed){
   const list=filtered(s);
   // A camp, clinic or event day without a time yet says so (issue #189).
   const when=s.start?clock(s.start)+'–'+clock(s.end):s.type==='event'?'Time to be announced':'All day';
-  return `<section class="session" id="s${si}" role="tabpanel" aria-labelledby="tab${si}"${si===selected?'':' hidden'}><div class="session-head"><h2>${esc(s.title)}</h2><span class="count">${s.checkedIn}<small>/ ${s.entries.length} in</small></span></div><p class="muted meta">${esc(when)}${s.type==='live'?' · Separate purchase':s.type==='event'?' · Camp, clinic or event':''}${s.entries.filter(blockedNow).length?' · '+s.entries.filter(blockedNow).length+' can’t be checked in until their USA Wrestling card is sorted out':''}${dueLine(s)}</p>${list.length?'<div class="list">'+list.map((e,ei)=>`<div class="row${e.checkedInAt?' done':''}${cardBad(e)?' card-problem':owes(e)?' owes':''}${blockedNow(e)?' hold':''}" data-row="${esc(rowKey(e))}"><div class="who"><div class="name"><strong>${esc(e.name)}</strong>${e.grade?`<small>${gradeText(e.grade)}</small>`:''}${flagged(e)?'<span class="flag">'+FLAG+'Allergy</span>':''}</div><div class="state">${e.sources.filter(x=>x!=='Pay at the academy').map(x=>`<span class="badge ok">${esc(x)}</span>`).join('')}${cashBadge(e)}${cardBadge(e)}${waiverBadge(e)}${cashNote(e)}</div>${blockedNow(e)?`<details class="why"><summary>Why?</summary><p class="block-reason" id="why${si}-${ei}">${esc(e.checkInBlocked)}${cardsLink(e)}</p></details>`:''}</div><div class="actions">${e.checkedInAt?`<span class="in">${CHECK}Checked in ${esc(timeOf(e.checkedInAt))}</span><button type="button" class="quiet" data-undo="${si}:${ei}">Undo</button>`:blockedNow(e)?`<button class="blocked" type="button" disabled aria-describedby="why${si}-${ei}">Hold</button>`:`<button class="primary big" type="button" data-checkin="${si}:${ei}">Check in</button>`}${cashButtons(e,si+':'+ei)}</div><details class="detail"${flagged(e)?' open':''}><summary>Contact and notes</summary><div class="detail__body"><div><span class="lbl">Parent</span>${esc(e.parentName||'Parent name not saved')}${e.phone?' · <a href="tel:'+esc(e.phone)+'">'+esc(e.phone)+'</a>':''}${e.email?' · '+esc(e.email):''}</div>${safety(e)}</div></details></div>`).join('')+'</div>':`<div class="empty">${EMPTY}<p>${s.entries.length?'No wrestler matches that name.':'Nobody is registered for this session yet.'}</p></div>`}</section>`}).join('');
+  return `<section class="session" id="s${si}" role="tabpanel" aria-labelledby="tab${si}"${si===selected?'':' hidden'}><div class="session-head"><h2>${esc(s.title)}</h2><p class="when">${esc(when)}</p><span class="count">${s.checkedIn}<small>/ ${s.entries.length} in</small></span></div><p class="muted meta">${metaLine(s)}</p>${list.length?'<div class="list">'+list.map((e,ei)=>`<div class="row${e.checkedInAt?' done':''}${cardBad(e)?' card-problem':owes(e)?' owes':''}${blockedNow(e)?' hold':''}" data-row="${esc(rowKey(e))}"><div class="who"><div class="name"><strong>${esc(e.name)}</strong>${e.grade?`<small>${gradeText(e.grade)}</small>`:''}${flagged(e)?'<span class="flag">'+FLAG+'Allergy</span>':''}</div><div class="state">${e.sources.filter(x=>x!=='Pay at the academy').map(x=>`<span class="badge ok">${esc(x)}</span>`).join('')}${cashBadge(e)}${cardBadge(e)}${waiverBadge(e)}${cashNote(e)}</div>${blockedNow(e)?`<details class="why"><summary>Why?</summary><p class="block-reason" id="why${si}-${ei}">${esc(e.checkInBlocked)}${cardsLink(e)}</p></details>`:''}</div><div class="actions">${e.checkedInAt?`<span class="in">${CHECK}Checked in ${esc(timeOf(e.checkedInAt))}</span><button type="button" class="quiet" data-undo="${si}:${ei}">Undo</button>`:blockedNow(e)?`<button class="blocked" type="button" disabled aria-describedby="why${si}-${ei}">Hold</button>`:`<button class="primary big" type="button" data-checkin="${si}:${ei}">Check in</button>`}${cashButtons(e,si+':'+ei)}</div><details class="detail"${flagged(e)?' open':''}><summary>Contact and notes</summary><div class="detail__body"><div><span class="lbl">Parent</span>${esc(e.parentName||'Parent name not saved')}${e.phone?' · <a href="tel:'+esc(e.phone)+'">'+esc(e.phone)+'</a>':''}${e.email?' · '+esc(e.email):''}</div>${safety(e)}</div></details></div>`).join('')+'</div>':`<div class="empty">${EMPTY}<p>${s.entries.length?'No wrestler matches that name.':'Nobody is registered for this session yet.'}</p></div>`}</section>`}).join('');
  const pick=v=>{const [si,ei]=v.split(':').map(Number),s=data.sessions[si],list=filtered(s);return {s,e:list[ei]}};
  document.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{selected=Number(b.dataset.session);chosen=true;render()});
  document.querySelectorAll('[data-checkin]').forEach(b=>b.onclick=()=>{const {s,e}=pick(b.dataset.checkin);act('checkin',s,e)});
@@ -249,7 +270,7 @@ async function undoCash(e){if(busy||!e.cash||!e.cash.orderId)return;const reason
 async function load(date){$('status').textContent='Loading roster…';try{data=await call('/api/roster'+(date?'?date='+encodeURIComponent(date):''));$('date').value=data.date;$('dateLabel').hidden=data.role!=='owner';$('home').hidden=data.role==='owner';$('home').href='/coach';$('home').textContent='← Coach home';
  // Open on the session that is running or next; a refresh keeps the one the coach chose.
  if(!chosen||!data.sessions[selected]){const p=phase(data.sessions);selected=Math.max(0,p.indexOf('now')>=0?p.indexOf('now'):p.indexOf('next'))}
- render();$('status').textContent=data.sessions.length?'':'Nothing is scheduled for this date.'}catch(e){$('status').textContent=e.message}}
+ render();$('status').textContent=''}catch(e){$('status').textContent=e.message;if(!data){$('sessions').innerHTML='';$('switcher').innerHTML=''}}}
 $('date').onchange=()=>{chosen=false;load($('date').value)};$('search').oninput=()=>render();$('refresh').onclick=()=>{document.querySelector?.('details.more')?.removeAttribute('open');load(data?.date)};
 load(new URLSearchParams(location.search).get('date')||'');
 

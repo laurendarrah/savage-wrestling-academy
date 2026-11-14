@@ -157,7 +157,7 @@ for (const role of ['coach', 'owner']) {
   assert.equal(/data-cash-undo/.test(row('Ben Paid')), role === 'owner', 'Undo cash is the owner’s');
   assert.equal(/Only the owner can undo cash/.test(row('Ben Paid')), role === 'coach', 'a coach is told who can undo it');
   assert.doesNotMatch(row('Cal Member'), /data-cash|badge due/);
-  assert.match(out, /· 1 to pay at the academy \(\$40\.00 due\)/);
+  assert.match(out, /<p class="muted meta">1 to pay at the academy \(\$40\.00 due\)<\/p>/, 'under the session\'s header');
   assert.match(html, /\.row \.actions button\.cash\{min-height:44px/, 'Cash received is a full-size tap target under the 56px Check in (issue #286)');
   assert.match(html, /<button class="primary big" type="button" data-checkin=/, 'Check in is the 56px red button');
   await vm.runInContext('cashReceived(data.sessions[0].entries[0])', ctx); await settle();

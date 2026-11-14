@@ -382,10 +382,13 @@ const myGroup = {id: 'pg', date: '2026-11-10', start: '09:30', end: '10:30', coa
   const p = page('app/coach/screen.html', {fetch: async u => json(u === '/api/roster' ? {sessions: []} : u === '/api/coach' ? {name: 'Coach Dana', programs: [], openings: list} : {ok: true})});
   await settle();
   const html = p.el('slots').innerHTML, articles = html.split('<article').slice(1);
+  assert.match(articles[0], /^ class="lesson booked"><p class="when"><b>Mon, Nov 9<\/b><span>10:00 AM–11:00 AM<\/span><\/p><div class="what">/, 'the day with its time, then what it is');
+  assert.match(articles[0], /<span class="pill neutral spots">2 of 4 spots left<\/span>/, 'spots left is a pill');
+  assert.match(articles[2], /^ class="lesson">/, 'an open time is not marked booked');
   assert.match(articles[0], /Small-group lesson[\s\S]*2 of 4 spots left[\s\S]*Coach-hosted[\s\S]*<b>Sam<\/b><br>Parent: Pat Example · <a href="tel:555-0100">555-0100<\/a>[\s\S]*<b>Riley<\/b> <span class="tag pill warn">Paying now/);
   assert.doesNotMatch(articles[0], /data-slot/, 'a booked lesson cannot be removed');
   assert.match(articles[0], /data-edit="g"/);
-  assert.match(articles[1], /Partner lesson[\s\S]*1 of 2 spots left[\s\S]*Family-requested private group, organised by Pat Example[\s\S]*Sam<\/b> <span class="tag pill warn">Not paid yet/);
+  assert.match(articles[1], /Partner lesson[\s\S]*1 of 2 spots left[\s\S]*Family-requested private group, organized by Pat Example[\s\S]*Sam<\/b> <span class="tag pill warn">Not paid yet/);
   assert.doesNotMatch(articles[1], /data-edit/, 'a family’s group is theirs'); assert.match(articles[1], /data-slot="f" data-family="1"/);
   assert.match(articles[2], /A family can book a one-on-one or ask for a private partner or small group[\s\S]*data-slot="o"/);
   // Saving a lesson type change sends the type and spots.
