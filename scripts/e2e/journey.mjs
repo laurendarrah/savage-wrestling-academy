@@ -381,17 +381,10 @@ await step('a signed-out visitor lands on the welcome page with programs, steps 
   if (SHOTS) await visitor.screenshot({path: `${SHOTS}/phone-welcome.png`, fullPage: true});
   await visitor.context().close();
 });
-await step('the owner\'s first sign-in goes straight to a clear authenticator setup', async () => {
+await step('the owner\'s first sign-in goes straight to the dashboard, with no authenticator (#306)', async () => {
   const first = await as('freshowner');
-  await first.goto(BASE + '/'); await first.waitForURL(/\/security/);
-  await waitText(first, '#authHeading', /Set up your authenticator/);
-  expect(await first.isVisible('#enroll') && await first.getAttribute('#enroll', 'class').then(c => /primary/.test(c || '')), 'Set up authenticator is the red main button');
-  expect(!(await first.isVisible('#codeForm')), 'no code box before setup starts');
-  expect(!(await first.isVisible('#backupNote')), 'the backup note waits until verified');
-  expect(await first.textContent('#home') === 'Back to sign in', 'no link that loops back to this page');
-  const closed = await first.request.get(BASE + '/api/launch-checklist'); expect(closed.status() === 403, 'dashboard data stays closed until the code is verified');
-  await first.click('#enroll'); await first.waitForSelector('#enrollment:not([hidden])');
-  expect(!(await first.isVisible('#enroll')) && await first.isVisible('#codeForm'), 'the QR step replaces the Set up button');
+  await first.goto(BASE + '/'); await first.waitForURL(u => new URL(u).pathname === '/');
+  const open = await first.request.get(BASE + '/api/launch-checklist'); expect(open.status() === 200, 'dashboard data opens with a password only: ' + open.status());
   if (SHOTS) await first.screenshot({path: `${SHOTS}/owner-first-signin.png`, fullPage: true});
   await first.context().close();
 });
@@ -883,7 +876,7 @@ const draw = async (page, sel) => {
 };
 // ---------- Coach invitation and onboarding (issue #190) ----------
 let lee;
-await step('owner invites a coach; the coach accepts, sets up the authenticator and lands on coach home', async () => {
+await step('owner invites a coach; the coach accepts and lands on coach home, then sets up an authenticator by choice', async () => {
   await owner.goto(BASE + '/staff'); await owner.waitForSelector('#inviteForm');
   await owner.fill('#inviteForm [name=name]', 'Coach Lee'); await owner.fill('#inviteForm [name=email]', 'coach.lee@example.test');
   await owner.check('#inviteForm [name=programs][value=Elementary]'); await owner.click('#sendInvite');
@@ -897,10 +890,10 @@ await step('owner invites a coach; the coach accepts, sets up the authenticator 
   await lee.goto(link); await lee.waitForSelector('#acceptInvite', {state: 'visible'});
   await waitText(lee, '#details', /Coach Lee[\s\S]*SWA Development/);
   await shot(lee, 'coach-join');
-  await lee.click('#acceptInvite'); await lee.waitForURL(/\/security$/);
+  await lee.click('#acceptInvite'); await lee.waitForURL(/\/coach$/); // no authenticator step (#306)
   const reuse = await api(lee, '/api/coach-invite', {action: 'accept', token: link.split('#invite=')[1]});
   expect(reuse.status === 410, 'an invite works once: ' + reuse.status);
-  // The stand-in cannot check a real authenticator code, so the walkthrough plays a finished setup.
+  // A coach may still choose an authenticator. The stand-in cannot check a real code, so the walkthrough plays a finished setup.
   users.invitee.factors = [{id: 'f-lee', status: 'verified', factor_type: 'totp'}]; users.invitee.aal = 'aal2';
   const c = sessionCookie('invitee', AUTH); await lee.context().addCookies([{name: c.name, value: c.value, url: BASE}]);
   await lee.goto(BASE + '/security'); await lee.waitForSelector('#continue', {state: 'visible'}); await lee.click('#continue');
