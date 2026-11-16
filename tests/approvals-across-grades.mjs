@@ -25,7 +25,7 @@ const mine = async () => { as('p1'); return (await call(requests, '/api/program-
 const owners = async () => { as('owner'); return (await call(decisions, '/api/owner-approvals')).body.requests; };
 const decide = async (status) => { as('owner'); const row = sqlite.prepare("SELECT id,updated_at FROM program_approvals WHERE wrestler_id='w1'").get(); return call(decisions, '/api/owner-approvals', {method: 'POST', body: {id: row.id, status, updatedAt: row.updated_at}}); };
 const access = async w => rules.checkCompetitionAccess('p1', 'Advanced', w);
-const notices = kind => sqlite.prepare('SELECT * FROM notifications WHERE kind=? ORDER BY created_at').all(kind);
+const notices = kind => sqlite.prepare('SELECT * FROM notifications WHERE kind=? ORDER BY created_at,rowid').all(kind);
 
 // --- The pure rule ---
 assert.equal(rules.approvalApplies({wrestler_name: 'Sam Example', grade: '9', status: 'approved'}, {name: 'Sam Example', grade: '10'}), true, 'a grade change within 7–12 keeps it');

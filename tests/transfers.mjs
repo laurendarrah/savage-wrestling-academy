@@ -5,6 +5,7 @@ import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
 import ts from 'typescript';
 import path from 'node:path';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const sqlite = new DatabaseSync(':memory:');
 for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
@@ -91,6 +92,7 @@ assert.match((await quotes.quoteMembership('p1', {wrestlerId: 'w1', program: 'In
 r = await call('GET'); assert.equal(r.body.memberships[0].programToday, 'Intermediate'); assert.equal(r.body.memberships[0].program, 'Advanced');
 
 // --- A second transfer chains; it cannot come before the first ---
+await nextMillisecond();   // the history lists transfers newest first; this one is made after the first
 assert.equal((await move({toProgram: 'Intermediate', effectiveDate: ny(2)})).status, 409);
 assert.equal((await move({toProgram: 'Intermediate', effectiveDate: ny(5)})).status, 200);
 assert.equal(JSON.stringify(await programsOn(ny(4))), JSON.stringify(['Advanced']));

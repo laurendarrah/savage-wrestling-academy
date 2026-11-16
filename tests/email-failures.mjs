@@ -6,6 +6,7 @@ import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
 import ts from 'typescript';
 import path from 'node:path';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const sqlite = new DatabaseSync(':memory:');
 for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
@@ -63,6 +64,7 @@ let g = await call('GET'); assert.equal(g.body.emailOn, false); assert.deepEqual
 
 // --- Failures record why ---
 emailOn();
+await nextMillisecond();   // sent announcements are listed newest first
 provider(422); await messages.sendAnnouncement('owner-id', {audience: {type: 'all'}, subject: 'Camp packing list', body: 'Bring two water bottles.'});
 assert.deepEqual(sqlite.prepare("SELECT DISTINCT email_status s, email_error e FROM announcement_recipients WHERE email_status!='skipped'").all().map(x => [x.s, x.e]), [['failed', 'refused']]);
 fetchMock = async () => { throw Error('network down'); };

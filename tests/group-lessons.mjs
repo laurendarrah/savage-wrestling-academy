@@ -7,6 +7,7 @@ import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
 import ts from 'typescript';
 import path from 'node:path';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const migrations = readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort();
 const sqlite = new DatabaseSync(':memory:');
@@ -118,14 +119,18 @@ assert.match((await quote('p1', oneOnly, {format: 'partner'})).error, /This time
 assert.match((await quote('p1', open, {format: 'partner'})).error, /ask for a private group first/);
 
 // --- Capacity: paid orders and checkouts in progress count; one family cannot book a wrestler twice ---
+// The roster lists wrestlers in the order they were booked, so each booking here is made a moment after the last.
 assert.equal((await record('p1', group)).status, 200);
 assert.match((await quote('p1', group)).error, /Sam is already booked into this lesson/);
 assert.equal((await record('p1', group)).status, 409, 'no second payment for the same wrestler');
+await nextMillisecond();
 assert.equal((await record('p1', group, 'w-p1b')).status, 200, 'a family books each of their wrestlers');
 // A checkout in progress holds a spot.
+await nextMillisecond();
 sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at)
   VALUES ('hold','p3','p3@x','w-p3','Max','lesson',?,'Lesson',?,3500,0,3500,'usd','{"slots":4}','{}','pending',?,0,?,?)`).run(group, JSON.stringify([ny(2)]), `p3|w-p3|lesson|${group}`, new Date().toISOString(), new Date().toISOString());
 as('p2'); r = await call(lessonsApi, 'GET'); assert.equal(listed(group).spotsLeft, 1, 'two paid and one checkout in progress');
+await nextMillisecond();
 assert.equal((await record('p2', group)).status, 200);
 as('p4'); r = await call(lessonsApi, 'GET'); assert.equal(listed(group), undefined, 'a full group is not listed');
 assert.match((await quote('p4', group)).error, /This lesson is full/);
@@ -212,6 +217,7 @@ as('owner'); r = await call(lessonsApi, 'GET'); assert.deepEqual([listed(open).s
 assert.equal(await capacity.lessonReserved(open, {userId: 'p1', wrestlerId: 'w-p1'}), 0, 'a kept spot is not counted against its own wrestler');
 as('p1'); assert.match((await call(lessonsApi, 'POST', {action: 'cancel', openingId: open})).body.error, /already paid for/, 'no calling off once someone paid');
 assert.equal((await quote('p1', open)).ok, true, 'the organiser books without the link');
+await nextMillisecond();   // booked after Riley, so listed after Riley
 assert.equal((await record('p1', open)).status, 200);
 as('p1');
 r = await call(lessonsApi, 'GET');

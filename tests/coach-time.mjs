@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {load, request, sqlite, users} from './accounts.mjs';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const T = load('lib/coach-time.ts'), S = load('lib/coach-timesheets.ts');
 const staff = load('app/api/staff/route.ts'), api = load('app/api/coach-time/route.ts'), owner = load('app/api/timesheets/route.ts');
@@ -111,7 +112,7 @@ const dana = {email: 'dana.coach@example.test', name: 'Coach Dana', programs: ['
   assert.equal((await post(api, '/api/coach-time', {action: 'clock-in', duty: 'head'}, 'dana')).status, 409, 'one open shift at a time');
   r = await get(api, '/api/coach-time', 'dana');
   assert.equal(r.body.open.session.title, 'SWA Intermediate'); assert.equal(r.body.lastDuty, 'head'); assert.equal(r.body.canSubmit, false);
-  await new Promise(res => setTimeout(res, 5));
+  await nextMillisecond();   // a shift ends after it starts
   assert.equal((await post(api, '/api/coach-time', {action: 'clock-out', id: r.body.open.id}, 'lee')).status, 409, 'not someone else’s shift');
   assert.equal((await post(api, '/api/coach-time', {action: 'clock-out', id: r.body.open.id}, 'dana')).status, 200);
   assert.equal((await get(api, '/api/coach-time', 'dana')).body.open, null);

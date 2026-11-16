@@ -5,6 +5,7 @@ import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
 import ts from 'typescript';
 import path from 'node:path';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const sqlite = new DatabaseSync(':memory:');
 for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql') && !f.includes('_starter_')).sort()) sqlite.exec(readFileSync('drizzle/' + f, 'utf8'));
@@ -125,6 +126,7 @@ assert.match(notice.html, /<h1[^>]*>New message from Savage Wrestling Academy<\/
 b = await box('p1'); assert.equal(b.thread[0].from, 'academy'); assert.equal(b.unread, 1);
 assert.equal((await box('p2')).thread.length, 0, 'threads are private');
 as('p1'); await call(inbox, 'POST', {action: 'read', thread: true}); assert.equal((await box('p1')).unread, 0);
+await nextMillisecond();   // the reply comes after the message it answers, so it sorts after it
 as('p1'); r = await call(inbox, 'POST', {action: 'reply', body: 'Thank you!'}); assert.equal(r.body.thread.length, 2); assert.equal(r.body.thread[1].from, 'you');
 assert.equal((await call(inbox, 'POST', {action: 'reply', body: '   '})).status, 400);
 as('owner'); r = await call(owner, 'GET'); assert.equal(r.body.families.find(f => f.userId === 'p1').unread, 1, 'owner sees the reply');

@@ -9,6 +9,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import path from 'node:path';
 import {makeDb} from './fixtures/d1.mjs';
+import {nextMillisecond} from './fixtures/clock.mjs';
 
 const {sqlite, DB} = makeDb();
 const env = {DB, CHECKOUT_KINDS: '', STRIPE_TEST_WEBHOOK_SECRET: 'whsec_test', STRIPE_CONFIG_ENCRYPTION_KEY: '9a'.repeat(32)};
@@ -66,7 +67,7 @@ const as = a => { actor = a; };
 const fam = id => as({kind: 'family', id});
 const book = (wrestlerId, id, option, extra = {}) => ({action: 'book', source: 'booking', type: 'event', id, wrestlerId, ...(option ? {option} : {}), ...extra});
 const row = id => sqlite.prepare('SELECT * FROM cash_bookings WHERE id=?').get(id);
-const notices = (u, kind) => sqlite.prepare('SELECT * FROM notifications WHERE user_id=? AND kind=? ORDER BY created_at').all(u, kind);
+const notices = (u, kind) => sqlite.prepare('SELECT * FROM notifications WHERE user_id=? AND kind=? ORDER BY created_at,rowid').all(u, kind);
 const same = (a, b, m) => assert.equal(JSON.stringify(a), JSON.stringify(b), m);
 const ownerScope = {role: 'owner'};
 const entries = async (date, key, scope = ownerScope) => (await roster.rosterFor(date, scope)).find(s => s.key === key)?.entries ?? [];
@@ -92,6 +93,7 @@ assert.equal((await send(cashApi, '/api/cash-bookings', book('w1', 'camp'))).sta
 
 // ---------- A member pays the member price; the seat limit counts unpaid cash bookings ----------
 fam('p4');
+await nextMillisecond();   // seats go in the order the bookings were made; this one is made after the first
 r = await send(cashApi, '/api/cash-bookings', book('w4', 'camp'));
 assert.equal(r.status, 200, JSON.stringify(r.body));
 assert.equal(r.body.booking.amountCents, 14400, '10% member discount on a camp'); assert.equal(row(r.body.booking.id).discount_cents, 1600); assert.equal(row(r.body.booking.id).base_cents, 16000);

@@ -116,7 +116,7 @@ const order = (id = orderId) => sqlite.prepare('SELECT * FROM orders WHERE id=?'
 const sub = (id = orderId) => sqlite.prepare('SELECT * FROM subscriptions WHERE order_id=?').get(id);
 const completed = (id, subscription) => ({id: order(id).stripe_session_id, mode: 'subscription', client_reference_id: id, metadata: {order_id: id}, amount_total: 20000, currency: 'usd', livemode: false, payment_status: 'paid', subscription});
 const invoice = (reason, amount = 20000, extra = {}, subscription = 'sub_1') => ({id: 'in_' + ++ev, billing_reason: reason, amount_paid: amount, parent: {subscription_details: {subscription}}, ...extra});
-const notices = kind => sqlite.prepare('SELECT * FROM notifications WHERE kind=? ORDER BY created_at').all(kind);
+const notices = kind => sqlite.prepare('SELECT * FROM notifications WHERE kind=? ORDER BY created_at,rowid').all(kind);
 
 // --- A later invoice arriving before checkout completion is retried, not lost ---
 let w = await deliver('invoice.paid', invoice('subscription_cycle'));
