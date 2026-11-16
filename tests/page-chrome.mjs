@@ -45,6 +45,29 @@ assert.match(text, /swa-bar/); assert.equal(res.headers.get('Content-Length'), n
 const redirect = new Response(null, {status: 303, headers: {Location: '/login', 'Content-Type': 'text/html'}});
 assert.equal(await decorateResponse(new Request('https://x.test/family'), redirect), redirect, 'redirects pass through untouched');
 
+// An address the site doesn't have (issue #353): the framework's bare 404 becomes a page in the academy's look.
+{
+  const bare = () => new Response('<!DOCTYPE html><html><head><title>Savage | Owner Workspace</title><title>404: This page could not be found.</title></head><body><h1>404</h1><script>x</script></body></html>', {status: 404, headers: {'Content-Type': 'text/html; charset=utf-8', 'Content-Length': '120', 'X-Frame-Options': 'DENY'}});
+  const missing = await decorateResponse(new Request('https://x.test/famly?x=<script>'), bare()), body = await missing.text();
+  assert.equal(missing.status, 404, 'still a 404'); assert.equal(missing.headers.get('X-Frame-Options'), 'DENY', 'the response keeps its other headers');
+  assert.equal(missing.headers.get('Content-Length'), null); assert.equal(missing.headers.get('Cache-Control'), 'no-store');
+  assert.match(body, /<title>Page not found \| Savage Wrestling Academy<\/title>/); assert.match(body, /<h1>Page not found<\/h1>/);
+  assert.match(body, /class="swa-bar/, 'with the top bar'); assert.match(body, /href="\/savage\.css"/, 'and the shared styles');
+  assert.match(body, /<a class="button primary" href="\/">Go to the home page<\/a><a class="button" href="\/calendar">See the practice calendar<\/a>/);
+  assert.doesNotMatch(body, /Owner Workspace|could not be found|famly|<script>x/, 'nothing of the bare page or of the address typed');
+  assert.equal(body.match(/<h1\b/g).length, 1); assert.equal(module.exports.notFoundPage(), body);
+  // Not for the API, a file, a form post or a route's own plain-text 404.
+  const same = async (req, res) => assert.equal(await decorateResponse(req, res), res);
+  await same(new Request('https://x.test/api/nothing'), bare());
+  await same(new Request('https://x.test/nothing', {method: 'POST'}), bare());
+  await same(new Request('https://x.test/waiver-copy?id=x'), new Response('Waiver not found.', {status: 404}));
+  await same(new Request('https://x.test/missing.png'), new Response('', {status: 404, headers: {'Content-Type': 'image/png'}}));
+  // The sign-in-unavailable page (503) is dressed like any other page; other errors pass through.
+  const down = await decorateResponse(new Request('https://x.test/family'), new Response('<!doctype html><html lang="en"><head><title>Sign-in unavailable | Savage Wrestling Academy</title></head><body><main><h1>Sign-in is temporarily unavailable</h1><p>Try again in a few minutes.</p></main></body></html>', {status: 503, statusText: 'Sign-in unavailable', headers: {'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '120'}}));
+  assert.equal(down.status, 503); assert.equal(down.headers.get('Retry-After'), '120'); assert.match(await down.text(), /class="swa-bar[\s\S]*Sign-in is temporarily unavailable/);
+  await same(new Request('https://x.test/family'), new Response('<html><body><h1>Error</h1></body></html>', {status: 500, headers: {'Content-Type': 'text/html'}}));
+}
+
 // The files the bar and stylesheet point at exist, and the font license ships with the fonts.
 for (const f of ['public/savage.css', 'public/brand/savage-logo-128.png', 'public/brand/favicon-32.png', 'public/brand/favicon-64.png', 'public/brand/apple-touch-icon.png', 'public/fonts/OFL-LICENSE.txt']) assert.ok(existsSync(f), f);
 for (const m of readFileSync('public/savage.css', 'utf8').matchAll(/url\(\/(fonts\/[^)]+)\)/g)) assert.ok(existsSync('public/' + m[1]), m[1]);

@@ -172,11 +172,31 @@ export function nonceApplies(headers: Headers, html: string) {
   return !!csp && !/script-src/.test(csp) && /no-store/.test(headers.get('Cache-Control') ?? '') && !hasInlineHandlers(html);
 }
 
+// An address the site doesn't have (issue #353). The framework answers with a bare black-and-white "404" that has no
+// way on; a person who mistyped a link or kept an old bookmark gets this page instead, in the academy's look, with the
+// top bar and two ways on. Nothing about the address typed is echoed back.
+const NOT_FOUND = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">'
+  + '<title>Page not found | Savage Wrestling Academy</title><style>body{margin:0}main{max-width:560px;margin:auto;padding:48px 16px 64px}.ways{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.ways a{display:inline-flex;align-items:center;justify-content:center;padding:0 20px;text-decoration:none}</style></head>'
+  + '<body><main><h1>Page not found</h1><p>This page doesn’t exist, or it has moved.</p>'
+  + '<p class="ways"><a class="button primary" href="/">Go to the home page</a><a class="button" href="/calendar">See the practice calendar</a></p></main></body></html>';
+export function notFoundPage() { return decoratePage(NOT_FOUND, '/not-found'); }
+// Only a page someone opened: a GET that came back as an HTML 404. Answers under /api/ and files stay as they are.
+const missingPage = (request: Request, url: URL, response: Response) =>
+  request.method === 'GET' && response.status === 404 && !url.pathname.startsWith('/api/') && !!response.headers.get('Content-Type')?.startsWith('text/html');
+
 export async function decorateResponse(request: Request, response: Response) {
   const url = new URL(request.url);
+  if (missingPage(request, url, response)) {
+    const headers = new Headers(response.headers);
+    headers.delete('Content-Length'); headers.delete(OWNER_SHELL_HEADER);
+    headers.set('Content-Type', 'text/html; charset=utf-8'); headers.set('Cache-Control', 'no-store');
+    return new Response(notFoundPage(), {status: 404, statusText: 'Not Found', headers});
+  }
   // A route marks an owner page only after its own owner check (lib/owner-shell.ts). The mark never leaves the Worker.
   const ownerShell = response.headers.has(OWNER_SHELL_HEADER);
-  if (request.method !== 'GET' || response.status !== 200 || !shouldDecorate(url, response.headers.get('Content-Type'), ownerShell)) {
+  // The page that says the sign-in service can't be reached (503, lib/protected-page.ts) gets the top bar and styles too.
+  const decorated = response.status === 200 || response.status === 503;
+  if (request.method !== 'GET' || !decorated || !shouldDecorate(url, response.headers.get('Content-Type'), ownerShell)) {
     if (!ownerShell) return response;
     const headers = new Headers(response.headers);
     headers.delete(OWNER_SHELL_HEADER);
