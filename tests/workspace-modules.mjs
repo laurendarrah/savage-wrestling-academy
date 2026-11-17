@@ -84,7 +84,8 @@ assert.deepEqual(plain(old.programs), plain(upgraded.programs), 'same upgrade as
 // A saved document is left alone.
 const saved = {...settings.emptyAcademy(), programNamingVersion: 2, programs: [{id: 'Elementary', name: 'Mine', grades: 'g', description: 'd', priceCents: 1}]};
 settings.hydratePrograms(saved, programs.starterPrograms());
-assert.deepEqual(plain(saved.programs), [{id: 'Elementary', name: 'Mine', grades: 'g', description: 'd', priceCents: 1}]);
+// What the owner saved stays, except the name, which is always the site's own (issue #355).
+assert.deepEqual(plain(saved.programs), [{id: 'Elementary', name: 'SWA Development', grades: 'g', description: 'd', priceCents: 1}]);
 let n = 0;
 const withEvents = {...settings.emptyAcademy(), events: [{name: 'a'}, {id: 'keep', name: 'b'}]};
 settings.ensureEventIds(withEvents, () => 'new-' + (++n));
@@ -146,8 +147,8 @@ console.log('Passed: event days, times, archiving and the event form.');
 assert.equal(pricing.formatPrice(123456), '$1,234.56'); assert.equal(pricing.formatPrice(null), '$200.00');
 assert.equal(pricing.centsFromDollars('225.505'), 22551); assert.equal(pricing.dollarsText(4500), '45.00');
 assert.deepEqual(plain(pricing.programFromForm({id: 'Elementary', name: 'x', grades: 'g', description: '', priceCents: 1}, {name: ' Dev ', grades: 'g', description: '', price: '210', walkInPrice: ''}).value),
-  {id: 'Elementary', name: 'Dev', grades: 'g', description: '', priceCents: 21000});
-assert.equal(pricing.programFromForm(shown[0], {name: 'Dev', grades: 'g', description: '', price: '10000.01', walkInPrice: ''}).error, 'Enter a valid name and price.');
+  {id: 'Elementary', name: 'SWA Development', grades: 'g', description: '', priceCents: 21000}); // the form cannot rename a program (issue #355)
+assert.equal(pricing.programFromForm(shown[0], {name: 'Dev', grades: 'g', description: '', price: '10000.01', walkInPrice: ''}).error, 'Enter a valid price.');
 const practice = pricing.extraPracticeFromForm({name: 'Open mat', start: '18:00', end: '19:00', member: '10', nonMember: '20', enabled: 'on'}, ['2026-12-04'], () => 'p1').value;
 assert.deepEqual(plain(practice), {id: 'p1', name: 'Open mat', gradeRange: '', description: '', dates: ['2026-12-04'], start: '18:00', end: '19:00', memberCents: 1000, nonMemberCents: 2000, enabled: true});
 assert.equal(pricing.extraPracticeClash([{...practice, id: 'p0'}], practice), true); assert.equal(pricing.extraPracticeClash([{...practice, id: 'p0', start: '17:00'}], practice), false);

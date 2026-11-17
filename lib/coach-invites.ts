@@ -5,11 +5,11 @@
 import {env} from 'cloudflare:workers';
 import {appOrigin, OWNER_EMAIL} from './account-auth';
 import {emailConfigured, sendEmails} from './email';
+import {programName} from './program-names';
 
 // How long a link works. The owner can make a new link at any time, which ends the old one.
 export const INVITE_DAYS = 7;
 export const PROGRAM_IDS = ['Elementary', 'Intermediate', 'Advanced'];
-const PROGRAM_NAMES: Record<string, string> = {Elementary: 'SWA Development', Intermediate: 'SWA Intermediate', Advanced: 'SWA Advance'};
 export const validEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 254;
 
 export function newToken() { return Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join(''); }
@@ -83,7 +83,7 @@ export async function cancelInvite(id: unknown, ownerId: string) {
 
 async function emailInvite(row: InviteRow, token: string): Promise<'sent' | 'failed' | 'off'> {
   if (!emailConfigured()) return 'off';
-  const programs = (JSON.parse(row.programs) as string[]).map(p => PROGRAM_NAMES[p] ?? p).join(', ');
+  const programs = (JSON.parse(row.programs) as string[]).map(programName).join(', ');
   const [status] = await sendEmails([{to: row.email, subject: 'You’re invited to coach at Savage Wrestling Academy',
     text: `Hi ${row.name},\n\nSavage Wrestling Academy has invited you to join as a coach${programs ? ' for ' + programs : ''}.\n\n`
       + `Open this link to create your coach account (or sign in with ${row.email}):\n${inviteLink(token)}\n\n`
