@@ -1647,11 +1647,11 @@ await step('owner renames a program; the new name shows on public and owner page
   // A name the site cannot use is refused beside the button and nothing changes.
   await owner.goto(BASE + '/#programs'); await owner.waitForSelector('form.prog-card input[name="name"]');
   await field().fill('Black <b>Program</b>'); await owner.locator('form.prog-card').nth(2).locator('button.save').click();
-  await waitText(owner, 'form.prog-card >> nth=2 >> .save-note', /can’t be used\. Use 2 to 40 letters, numbers and spaces/);
+  await waitText(owner, 'form.prog-card:nth-of-type(3) .save-note', /can’t be used\. Use 2 to 40 letters, numbers and spaces/);
   await rename(NEW);
   try {
     expect(await field().inputValue() === NEW, 'the form shows the new name after the page loads again');
-    await waitText(owner, 'form.prog-card >> nth=2 >> h2', /Black Program \(7-12\) & Up/);
+    await waitText(owner, 'form.prog-card:nth-of-type(3) h2', /Black Program \(7-12\) & Up/);
     // Inside the saved settings the program keeps its built-in name; the owner's name is saved beside it.
     const saved = (await (await owner.request.get(BASE + '/api/academy')).json()).data;
     expect(saved.programs[2].name === 'SWA Advanced' && saved.programNames?.Advanced === NEW, 'saved as programNames, got ' + JSON.stringify(saved.programNames));
@@ -1668,7 +1668,7 @@ await step('owner renames a program; the new name shows on public and owner page
     await visitor.goto(BASE + '/membership-terms'); expect(!/SWA Advanced/.test(await visitor.locator('body').innerText()), 'the terms page has no old name');
     await visitor.context().close();
     // The owner's other pages: titles, menu and sentences.
-    await owner.goto(BASE + '/approvals'); await waitText(owner, 'h1', /Black Program \(7-12\) & Up approvals/i);
+    await owner.goto(BASE + '/approvals'); await waitText(owner, 'h1', /Black Program \(7-12\) & Up approvals/);
     expect(!/SWA Advanced/.test(await owner.locator('body').innerText()), 'the approvals page has no old name');
     await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /program for Grades 7–12 renamed “Black Program \(7-12\) & Up”/);
   } finally {
