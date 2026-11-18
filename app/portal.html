@@ -509,9 +509,13 @@ async function loadToday(){
  for(const r of hours&&hours.timeOff&&hours.timeOff.approved||[]){const n=(r.cover&&r.cover.practices||[]).length,l=(r.cover&&r.cover.lessons||[]).length;if(r.end&&r.end<today)continue;up.push(`<li><div>${esc(r.text)} · ${esc(r.coachName)} off<small>${n||l?[n?plural(n,'practice'):'',l?plural(l,'lesson'):''].filter(Boolean).join(' and ')+' need cover':'Nothing to cover'}</small></div>${n||l?link('/timesheets','Cover'):'<span class="amt"></span>'}</li>`)}
  up.splice(6);put('comingBody',up.length?`<ul class="rows">${up.join('')}</ul>`:'<p class="empty-line">Nothing coming up this month or next.</p>');
  // ---- This month by category, with what is owed to coaches last ----
- const cats=books&&books.categories&&books.categories.in||[],owed=pay&&pay.totals?pay.totals.owedCents:null;
+ // Owed to coaches is practice pay (Coach hours) plus lesson shares (Coach pay) for the month (issue #371). Practice pay
+ // is "so far" until every shift of the month is approved. Each coach's own total is on Coach hours.
+ const cats=books&&books.categories&&books.categories.in||[],owed=pay&&pay.totals?pay.totals.owedCents:null,practice=hours&&hours.overall?Number(hours.overall.practiceCents)||0:0,practiceFinal=practice>0&&Number(hours.overall.approvedCents)===practice;
  const monthRows=cats.slice(0,5).map(c=>`<li><div>${esc(c.category)}</div><span class="amt">${usd(c.cents)}</span></li>`);
- if(owed!==null)monthRows.push(`<li><div><b>Owed to coaches</b><small>Lesson shares${pay.totals.lessons?' · '+plural(pay.totals.lessons,'lesson'):''}</small></div><span class="amt">${usd(owed)}</span></li>`);
+ if(owed!==null||practice>0){const parts=[];if(practice>0)parts.push('Practice '+usd(practice)+(practiceFinal?'':' so far'));
+  parts.push(owed===null?'lesson shares could not be loaded':practice>0?'lesson shares '+usd(owed):'Lesson shares'+(pay.totals.lessons?' · '+plural(pay.totals.lessons,'lesson'):''));
+  monthRows.push(`<li><div><b>Owed to coaches</b><small>${parts.join(' + ')} · <a href="/timesheets">Each coach’s total</a></small></div><span class="amt">${usd(practice+(owed||0))}</span></li>`)}
  put('monthBody',monthRows.length?`<ul class="rows">${monthRows.join('')}</ul>`:'<p class="empty-line">'+(books?'No income recorded yet this month.':'Could not load the books.')+'</p>');
 }
 const weekdays=W.WEEKDAYS;

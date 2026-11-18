@@ -22,7 +22,7 @@ const responses = {
   ['/api/public-schedule?month=' + monthKey]: {liveClasses: [{id: 'fnl', name: 'Friday Night Live', date: '2099-11-13', start: '16:00', memberCents: 1000}], events: [{id: 'camp', name: 'Winter camp', type: 'Camp', dates: ['2099-11-17', '2099-11-18'], cents: 16000, full: true}]},
   '/api/site-health': {last24h: 0, health: {ok: true}},
 };
-let fetched = [];
+let fetched = [], payDown = false;
 const location = {hash: '', href: ''};
 // The page reads the clock to mark a session "Now". Run it at 10 AM New York today, before any session, so the test
 // passes at any hour (it failed during practice time on Nov 13, issue #304).
@@ -32,7 +32,7 @@ const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date:
   document: {querySelector: node, getElementById: id => node('#' + id), addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {}, confirm: () => true,
   fetch: async url => { fetched.push(url); const key = Object.keys(responses).find(k => url === k);
     if (key) return {ok: true, json: async () => responses[key]};
-    if (url.startsWith('/api/coach-pay')) return {ok: true, json: async () => ({totals: {lessons: 5, owedCents: 14300}})};
+    if (url.startsWith('/api/coach-pay')) return payDown ? {ok: false, json: async () => ({})} : {ok: true, json: async () => ({totals: {lessons: 5, owedCents: 14300}})};
     if (url.startsWith('/api/payments?from=')) return {ok: true, json: async () => ({totals: {collectedCents: url.endsWith('-01') && !url.includes('-09-01') ? 123450 : 285400, count: 7}})};
     return {ok: false, json: async () => ({})}; }});
 vm.runInContext(code, ctx);
@@ -92,7 +92,25 @@ assert.match(coming, /<li><div>Fri, Nov 13 · Friday Night Live<small>4:00 PM ·
 assert.match(coming, /<li><div>Nov 17–18 · Winter camp<small>Full · Camp<\/small><\/div><span class="amt">\$160\.00<\/span><\/li>/);
 assert.match(coming, /<li><div>Dec 7 to Dec 8 · Coach Dana off<small>2 practices need cover<\/small><\/div><a class="button sm" href="\/timesheets">Cover<\/a><\/li>/);
 // This month by category, with what is owed to coaches last.
-assert.equal(node('#monthBody').innerHTML, '<ul class="rows"><li><div>Private lessons</div><span class="amt">$220.00</span></li><li><div>Camps, clinics and events</div><span class="amt">$144.00</span></li><li><div>Walk-ins</div><span class="amt">$80.00</span></li><li><div><b>Owed to coaches</b><small>Lesson shares · 5 lessons</small></div><span class="amt">$143.00</span></li></ul>', 'money reads $40.00 everywhere');
+assert.equal(node('#monthBody').innerHTML, '<ul class="rows"><li><div>Private lessons</div><span class="amt">$220.00</span></li><li><div>Camps, clinics and events</div><span class="amt">$144.00</span></li><li><div>Walk-ins</div><span class="amt">$80.00</span></li><li><div><b>Owed to coaches</b><small>Lesson shares · 5 lessons · <a href="/timesheets">Each coach’s total</a></small></div><span class="amt">$143.00</span></li></ul>', 'money reads $40.00 everywhere');
+// Issue #371: practice pay for the month is added to the lesson shares, with both parts written out. It is "so far"
+// until every shift of the month is approved.
+{
+  const hoursKey = '/api/timesheets?month=' + monthKey, before = responses[hoursKey].overall;
+  const owedRow = async () => { await vm.runInContext('loadToday()', ctx); return node('#monthBody').innerHTML.match(/<li><div><b>Owed to coaches<\/b>.*?<\/li>/)?.[0] ?? null; };
+  responses[hoursKey].overall = {...before, practiceCents: 10500, approvedCents: 0};
+  assert.equal(await owedRow(), '<li><div><b>Owed to coaches</b><small>Practice $105.00 so far + lesson shares $143.00 · <a href="/timesheets">Each coach’s total</a></small></div><span class="amt">$248.00</span></li>');
+  responses[hoursKey].overall = {...before, practiceCents: 10500, approvedCents: 6000};
+  assert.match(await owedRow(), /Practice \$105\.00 so far \+ lesson shares \$143\.00/, 'part of the month approved is still so far');
+  responses[hoursKey].overall = {...before, practiceCents: 10500, approvedCents: 10500};
+  assert.match(await owedRow(), /<small>Practice \$105\.00 \+ lesson shares \$143\.00 · .*<span class="amt">\$248\.00<\/span>/, 'a fully approved month is final');
+  payDown = true;
+  assert.equal(await owedRow(), '<li><div><b>Owed to coaches</b><small>Practice $105.00 + lesson shares could not be loaded · <a href="/timesheets">Each coach’s total</a></small></div><span class="amt">$105.00</span></li>', 'a missing report is said, not counted as $0');
+  responses[hoursKey].overall = before;
+  assert.equal(await owedRow(), null, 'no practice pay and no lesson report: no row');
+  payDown = false;
+  assert.match(await owedRow(), /<small>Lesson shares · 5 lessons · /);
+}
 // Something wrong with the site, or a data request, joins "Needs you"; a document that is not in force stays out.
 responses['/api/waivers'] = {current: null, wrestlers: []}; delete responses['/api/messages']; responses['/api/site-health'] = {last24h: 3, health: {ok: true}}; responses['/api/data-requests'] = {open: 1};
 await vm.runInContext('loadToday()', ctx);
