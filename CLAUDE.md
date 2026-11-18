@@ -64,7 +64,8 @@ Known issues and priorities are in `docs/ISSUES.md` and `docs/LAUNCH_PLAN.md`.
 ## Domain rules
 
 - Programs: SWA Development is grades K to 6. SWA Intermediate is grades 7 to 12. SWA Advanced is grades 7 to 12 and every wrestler needs coach approval.
-- Program names come only from `lib/program-names.ts` (#355). Read them with `programName(id)`; never keep another copy of the names in `lib/`, and don't let a page retype one. To rename a program, change it there after Lauren and Justin decide.
+- The built-in program names come only from `lib/program-names.ts` (#355). Read them with `programName(id)` and write them plainly in pages, emails and messages; never keep another copy of the names in `lib/`.
+- The owner can rename a program on Programs & pricing (#363). The owner's names are saved beside the settings as `programNames`; inside the site (code, stored records, tests) a program is always called by its built-in name. `lib/program-renames.ts` puts the owner's name in at the last step: every page, data reply and spreadsheet the Worker sends, every email, and the product name at Stripe. Never show a program name by another route, never write the owner's name into stored records, and keep new text that leaves the site going through that step. Backups, `/api/academy`, the Stripe webhook and the health checks are sent as stored.
 - Server rules in `lib/program-approval.ts` are the source of truth. Workspace code must match them.
 - Kindergarten is stored as the string `"K"`. Other grades are numbers or numeric strings.
 - Email links use `appOrigin()` from `lib/account-auth.ts`. Never hard-code a hostname. Any new origin must also be added to the Supabase Auth redirect allowlist.

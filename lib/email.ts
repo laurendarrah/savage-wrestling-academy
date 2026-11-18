@@ -8,6 +8,8 @@ import {env} from 'cloudflare:workers';
 import {appOrigin, OWNER_EMAIL} from './account-auth';
 import {brandedEmail, type BrandAudience} from './email-brand';
 import {EMAIL_TIMEOUT_MS, timeoutSignal} from './net';
+import {applyProgramNames} from './program-names';
+import {currentProgramNames} from './program-renames';
 
 type Env = Cloudflare.Env & {EMAIL_API_KEY?: string; MAIL_FROM?: string};
 // `audience` is optional and only picks the footer's "why you got this" line: 'invite' for someone without an account
@@ -66,6 +68,10 @@ export async function sendEmailsDetailed(list: Outgoing[]): Promise<EmailResult[
   if (!list.length) return [];
   if (!emailConfigured()) return list.map(() => ({status: 'skipped', reason: null}));
   const e = env as Env, out: EmailResult[] = [];
+  // The owner's own names for the programs (issue #363): every email is written with the built-in names and reads with
+  // the owner's, like every page.
+  const names = await currentProgramNames();
+  if (Object.keys(names).length) list = list.map(m => ({...m, subject: applyProgramNames(m.subject, names), text: applyProgramNames(m.text, names)}));
   let origin: string | null = null;
   try { origin = appOrigin(); } catch { origin = null; }
   const built = new Map<string, string>();

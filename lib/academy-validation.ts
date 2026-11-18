@@ -1,5 +1,6 @@
 import {validEventSchedule} from './event-schedule';
 import {validExtraPractices,validOfferingDetails} from './friday-live';
+import {programNamesFrom} from './program-names';
 export function validTeamCodes(codes:any):boolean{
  return Array.isArray(codes)&&codes.length<=200&&new Set(codes.map((c:any)=>c?.code)).size===codes.length&&new Set(codes.map((c:any)=>c?.id)).size===codes.length&&codes.every((c:any)=>c&&typeof c==='object'&&typeof c.id==='string'&&/^[A-Za-z0-9-]{1,80}$/.test(c.id)&&typeof c.code==='string'&&/^[A-Z0-9][A-Z0-9-]{2,31}$/.test(c.code)&&typeof c.name==='string'&&c.name.trim().length>0&&c.name.length<=80&&Number.isInteger(c.percent)&&c.percent>=1&&c.percent<=100&&typeof c.active==='boolean'&&Array.isArray(c.programs)&&c.programs.length>=1&&c.programs.length<=3&&new Set(c.programs).size===c.programs.length&&c.programs.every((id:unknown)=>['Elementary','Intermediate','Advanced'].includes(id as string)));
 }
@@ -17,6 +18,8 @@ export function validState(d: any): boolean {
  for(const key of ["kids","bookings","messages","offers","seasons","staff"]) if(!Array.isArray(d[key]) || d[key].length>10000) return false;
  if(!d.attendance || typeof d.attendance !== "object" || !d.settings || typeof d.settings !== "object") return false;
  if(d.programs && (!Array.isArray(d.programs) || d.programs.length !== 3 || d.programs.some((p:any,i:number)=>!p || typeof p !== "object" || p.id !== ["Elementary","Intermediate","Advanced"][i] || typeof p.name !== "string" || !p.name.trim() || p.name.length>100 || typeof p.description !== "string" || p.description.length>2000 || !Number.isInteger(p.priceCents) || p.priceCents<0 || p.priceCents>1000000))) return false;
+ // The owner's own names for the programs (issue #363): only names that pass the same check as the form's.
+ if(d.programNames!==undefined){const checked=programNamesFrom(d.programNames);if(!('names' in checked)||JSON.stringify(checked.names)!==JSON.stringify(d.programNames))return false}
  if(d.programs?.some((p:any)=>p.walkInPriceCents!==undefined&&(!Number.isInteger(p.walkInPriceCents)||p.walkInPriceCents<0||p.walkInPriceCents>1000000))) return false;
  if(d.teamCodes!==undefined&&!validTeamCodes(d.teamCodes))return false;
  if(d.messages.some((m:any)=>!m||typeof m!=='object'||(m.archived!==undefined&&typeof m.archived!=='boolean')))return false;

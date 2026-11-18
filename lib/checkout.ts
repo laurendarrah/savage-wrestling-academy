@@ -6,6 +6,7 @@ import {storedStripeKeyFor, stripeClientFor, stripeMode} from './stripe-test';
 import {academyToday} from './public-schedule';
 import type {Charge} from './quotes';
 import {withinCapacity} from './capacity';
+import {withProgramNames} from './program-renames';
 
 export {ONLINE_KINDS, checkoutKinds} from './checkout-config';
 export const MIN_CHARGE_CENTS = 50;
@@ -63,7 +64,8 @@ export async function startCheckout(buyer: Buyer, wrestler: Wrestler, charge: Ch
       cancel_url: `${origin}/family?checkout=canceled&order=${id}`,
       expires_at: sessionExpiry(Date.now())
     };
-    const product = {name: charge.itemLabel, description: `For ${wrestler.name}`};
+    // Stripe's checkout page and receipt show the owner's own name for the program (issue #363); the order keeps the built-in one.
+    const product = {name: await withProgramNames(charge.itemLabel), description: `For ${wrestler.name}`};
     session = await stripe.checkout.sessions.create(charge.kind === 'monthly'
       // Month to month (decided Nov 13, 2026 on #2): Stripe charges the same amount every month, on the same day, until
       // the membership is canceled. The price is fixed at checkout, so a later price change never reaches it.

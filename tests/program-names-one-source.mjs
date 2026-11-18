@@ -1,5 +1,6 @@
-// One list of program names (issue #355): lib/program-names.ts. A name reads the same on every page, email and receipt
-// because nothing else keeps its own copy and the owner's form cannot retype it.
+// One list of built-in program names (issue #355): lib/program-names.ts. Nothing else keeps its own copy, and inside a
+// settings document a program's name is always the built-in one. The owner's own names (issue #363) are saved beside
+// the settings and put in at the last step; tests/program-renames.mjs covers that.
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -72,7 +73,8 @@ const saved = programFromForm({id: 'Elementary', name: 'SWA Development', grades
 assert.deepEqual(plain(saved.value), {id: 'Elementary', name: 'SWA Development', grades: 'Grades K–6', description: 'New words', priceCents: 21000, walkInPriceCents: 4500});
 assert.equal(programFromForm({id: 'Elementary', name: 'x', grades: 'g', description: '', priceCents: 1}, {grades: 'g', description: '', price: '10000.01', walkInPrice: ''}).error, 'Enter a valid price.');
 const portal = readFileSync('app/portal.html', 'utf8');
-assert.match(portal, /<div class="fixed"><span>Program name<\/span><p>\$\{esc\(p\.name\)\}<\/p><\/div><div class="fixed"><span>Grade eligibility<\/span>/, 'the name is shown as fixed, like the grades');
-assert.doesNotMatch(portal, /<input name="name" required maxlength="100" value="\$\{esc\(p\.name\)\}">/, 'no field to retype a program name');
-assert.match(portal, /The name and grades are fixed, so they read the same on every page, email and receipt\./);
-console.log('Passed: one list of program names; no second copy in lib/; saved settings, the family catalog and the owner page always carry the standard names; the owner form cannot retype one.');
+// The owner's form has a name field again (issue #363). What it saves goes to `programNames`, never into the program.
+assert.match(portal, /<label>Program name<input name="name" required maxlength="40" value="\$\{esc\(p\.name\)\}"><\/label><div class="fixed"><span>Grade eligibility<\/span>/);
+assert.match(portal, /W\.programNamesFromForm\(data,data\.programs\[i\]\.id,fields\.name\)/);
+assert.match(portal, /A new name shows everywhere: every page, email and receipt\./);
+console.log('Passed: one list of built-in program names; no second copy in lib/; inside saved settings and the family catalog a program always carries its built-in name, whatever a form sends.');

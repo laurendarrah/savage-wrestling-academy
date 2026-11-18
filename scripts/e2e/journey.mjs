@@ -1633,6 +1633,55 @@ if (SHOTS) await step('owner screens at 1280 and 390 for the design record', asy
   }
 });
 
+// ---------- The owner renames a program (issue #363) ----------
+await step('owner renames a program; the new name shows on public and owner pages; typing the old name back restores it', async () => {
+  const NEW = 'Black Program (7-12) & Up';
+  const field = () => owner.locator('form.prog-card').nth(2).locator('input[name="name"]');
+  const rename = async name => {
+    await owner.goto(BASE + '/#programs'); await owner.waitForSelector('form.prog-card input[name="name"]');
+    await field().fill(name);
+    // The page loads again after a rename, so the rest of it reads the new name too.
+    const reloaded = owner.waitForEvent('load'); await owner.locator('form.prog-card').nth(2).locator('button.save').click(); await reloaded;
+    await owner.waitForSelector('form.prog-card input[name="name"]');
+  };
+  // A name the site cannot use is refused beside the button and nothing changes.
+  await owner.goto(BASE + '/#programs'); await owner.waitForSelector('form.prog-card input[name="name"]');
+  await field().fill('Black <b>Program</b>'); await owner.locator('form.prog-card').nth(2).locator('button.save').click();
+  await waitText(owner, 'form.prog-card:nth-of-type(3) .save-note', /can’t be used\. Use 2 to 40 letters, numbers and spaces/);
+  await rename(NEW);
+  try {
+    expect(await field().inputValue() === NEW, 'the form shows the new name after the page loads again');
+    await waitText(owner, 'form.prog-card:nth-of-type(3) h2', /Black Program \(7-12\) & Up/);
+    // Inside the saved settings the program keeps its built-in name; the owner's name is saved beside it.
+    const saved = (await (await owner.request.get(BASE + '/api/academy')).json()).data;
+    expect(saved.programs[2].name === 'SWA Advanced' && saved.programNames?.Advanced === NEW, 'saved as programNames, got ' + JSON.stringify(saved.programNames));
+    // A visitor: the welcome page, its data and the calendar all read the new name, and the old one is gone.
+    const visitor = await phoneAs(null);
+    // On a phone only one program's card shows at a time, so this reads the page's text whether shown or not.
+    const pageText = page => page.evaluate(() => document.querySelector('main').textContent);
+    await visitor.goto(BASE + '/welcome'); await visitor.waitForFunction(() => /Black Program \(7-12\) & Up/.test(document.querySelector('#programs')?.textContent ?? ''));
+    const welcome = await pageText(visitor);
+    expect(!/SWA Advanced/.test(welcome) && /Every Black Program \(7-12\) & Up wrestler needs coach approval/.test(welcome), 'the welcome page says the new name everywhere, in its own sentences too');
+    const schedule = await (await visitor.request.get(BASE + '/api/public-schedule')).json();
+    expect(schedule.programs.map(p => p.name).join('|') === 'SWA Development|SWA Intermediate|' + NEW, 'the public schedule names the programs ' + schedule.programs.map(p => p.name).join('|'));
+    expect(schedule.programs[2].id === 'Advanced', 'the program id is unchanged');
+    await visitor.goto(BASE + '/membership-terms'); expect(!/SWA Advanced/.test(await visitor.locator('body').innerText()), 'the terms page has no old name');
+    await visitor.context().close();
+    // The owner's other pages: titles, menu and sentences.
+    await owner.goto(BASE + '/approvals'); await waitText(owner, 'h1', /Black Program \(7-12\) & Up approvals/);
+    expect(!/SWA Advanced/.test(await owner.locator('body').innerText()), 'the approvals page has no old name');
+    await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /program for Grades 7–12 renamed “Black Program \(7-12\) & Up”/);
+  } finally {
+    await rename('SWA Advanced');
+  }
+  expect(await field().inputValue() === 'SWA Advanced', 'the built-in name is back in the form');
+  expect((await (await owner.request.get(BASE + '/api/academy')).json()).data.programNames === undefined, 'nothing is saved once every program has its built-in name');
+  const after = await phoneAs(null);
+  await after.goto(BASE + '/welcome'); await after.waitForFunction(() => /SWA Advanced/.test(document.querySelector('#programs')?.textContent ?? ''));
+  expect(!/Black Program/.test(await after.evaluate(() => document.querySelector('main').textContent)), 'the welcome page is back to the built-in name');
+  await after.context().close();
+});
+
 await step('nothing asked the sign-in service about authenticators, though the owner and a coach still have one saved (#347)', async () => {
   expect(!factorCalls.length, 'the site asked about authenticators: ' + factorCalls.join(', '));
   // The owner's Account security: the same small page, inside the owner shell, with the owner's tools under it.
