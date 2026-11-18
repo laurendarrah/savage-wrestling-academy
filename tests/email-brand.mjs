@@ -191,6 +191,9 @@ function loadEmail() {
       if (name.endsWith('/account-auth')) return {appOrigin: () => origin(), OWNER_EMAIL: 'savagewrestlingclub@gmail.com'};
       if (name.endsWith('/email-brand')) return layout;
       if (name.endsWith('/net')) return {EMAIL_TIMEOUT_MS: 10000, timeoutSignal: () => undefined};
+      // No program is renamed here (issue #363); tests/program-renames.mjs covers emails with the owner's names.
+      if (name.endsWith('/program-names')) return {applyProgramNames: text => text};
+      if (name.endsWith('/program-renames')) return {currentProgramNames: async () => ({})};
       throw Error('unexpected import ' + name);
     }});
   return module.exports;

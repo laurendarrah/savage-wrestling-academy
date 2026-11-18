@@ -2,7 +2,7 @@
 // codes. These only check and store what the owner typed in the settings document; the server checks every save
 // (lib/academy-validation.ts). What a family pays is always worked out on the server, in lib/quotes.ts, never here.
 import type {Checked, ExtraPractice, FormList, FormValues, Program, TeamCode} from './types';
-import {programName} from '../program-names';
+import {customProgramNames, programName, programNamesFrom} from '../program-names';
 
 // The highest price the settings document accepts, in cents ($10,000).
 export const MAX_PRICE_CENTS = 1000000;
@@ -35,8 +35,17 @@ export function programFromForm(saved: Program, form: FormValues): Checked<Progr
   if (!validCents(priceCents)) return {error: 'Enter a valid price.'};
   const walkInPriceCents = v.walkInPrice === '' ? undefined : centsFromDollars(v.walkInPrice);
   if (walkInPriceCents !== undefined && !validCents(walkInPriceCents)) return {error: 'Enter a valid walk-in price.'};
-  // The name is the site's own, the same on every page (issue #355, lib/program-names.ts); the form cannot change it.
+  // Inside the document the name stays the built-in one (issue #355); the owner's own name is saved beside it by
+  // programNamesFromForm below (issue #363).
   return {value: {...saved, walkInPriceCents, name: programName(saved.id) === saved.id ? saved.name : programName(saved.id), grades: v.grades.trim(), description: v.description.trim(), priceCents}};
+}
+
+// The owner's own name for one program, typed on Programs & pricing (issue #363). Returns every renamed program's name
+// as it should be saved in the document's `programNames` (a program typed back to its built-in name is left out), or
+// the sentence to show. lib/program-names.ts holds the rule; the server checks it again on every save.
+export function programNamesFromForm(doc: {programNames?: unknown}, id: string, typed: unknown): Checked<Record<string, string>> {
+  const checked = programNamesFrom({...customProgramNames(doc), [id]: typed});
+  return 'names' in checked ? {value: checked.names} : {error: checked.error};
 }
 
 // Additional practices: a name, 1 to 366 dates, a start before the end, and member and non-member prices per date.

@@ -739,24 +739,24 @@
   "10000.00"
  ],
  "ownerPrograms": {
-  "sha256": "8ac75422c9e59f0063cc4495de0a108f210c462cababa83265ebd7ace71fb878",
-  "length": 7362
+  "sha256": "b10c1eb37cb3878852d6ad8c84cf71f436ed528d8df76b933adee077f4da03fd",
+  "length": 7566
  },
  "ownerPrograms.unpublished": {
-  "sha256": "75b75740f69f6cca3e0bc444de05bcb1f6f11e543dedf5d8082e36011940f841",
-  "length": 7706
+  "sha256": "f92e0d628bd46ca51731c4c371dea42425a1011cf822501a60eee49f7ebd2368",
+  "length": 7910
  },
  "saveProgram.ok": {
-  "sha256": "ea97872177d31c0e8b39c0c3952926919e618d40e2e3a4c27e91690be03480e2",
-  "length": 449
+  "sha256": "6724e7c80d9e9c83601db26748870d7bdf6fa92844b9463af5640b2fa5b11af7",
+  "length": 437
  },
  "saveProgram.noWalkIn": {
-  "sha256": "b1e1c52125c35e89e34100c5e1a154210f9e9e14c59a076d89d9d521fefe72b8",
-  "length": 387
+  "sha256": "f332f23eb88d5f4df7f9edcd03b6523d0f85e76e65ff3674dd8ed328b1be12de",
+  "length": 375
  },
  "saveProgram.free": {
-  "sha256": "408dc6974de6c81d5e360d89cbb2c125f9c79df964c71900221cd40157774359",
-  "length": 429
+  "sha256": "74baabe553583a8e2c126b6f0ecf55712e98eeb500bc1773cc68721289cb3417",
+  "length": 417
  },
  "saveProgram.tooMuch": {
   "sha256": "a4fb8576666587e7aeb8a786191692e68f30a978f52fc3aba77e4648a95ef46b",
@@ -767,8 +767,8 @@
   "length": 806
  },
  "saveProgram.noName": {
-  "sha256": "92489dec766512f40211d3d90b40167f26da5933ec0a862f825d53100abbb381",
-  "length": 395
+  "sha256": "36a6723963d779d73a07efc958f15b74b90ac8f212a43481e515a59e41a28a22",
+  "length": 930
  },
  "saveProgram.text": {
   "sha256": "a4fb8576666587e7aeb8a786191692e68f30a978f52fc3aba77e4648a95ef46b",

@@ -54,6 +54,7 @@ const worker = (() => {
         if (name === 'vinext/server/fetch-handler') return {default: {fetch: async () => { if (handlerResult instanceof Error) throw handlerResult; return handlerResult; }}};
         if (name.endsWith('/site-health')) return load(path.resolve('lib/site-health.ts'));
         if (name.endsWith('/page-chrome')) return load(path.resolve('lib/page-chrome.ts'));
+        if (name.endsWith('/program-renames')) return {renameResponse: async (request, response) => response};
         if (name.endsWith('/owner-alerts')) return {alertOwner: async db => { alerts.push(db); return 'off'; }};
         if (name.endsWith('/notify')) return {dailyReminders: async () => { reminders++; if (reminderFails) throw Error('mail provider down'); return 0; }};
         if (name.endsWith('/reminder-watch')) return {reminderWatch: async () => { watches++; return 'early'; }};

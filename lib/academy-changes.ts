@@ -13,7 +13,7 @@
 import {env} from 'cloudflare:workers';
 import {sessionsOn, type Session} from './roster';
 import {clockTime, dayDate, fullDate} from './datetime';
-import {upgradeProgramNames} from './program-names';
+import {customProgramNames, programDetails, upgradeProgramNames} from './program-names';
 
 type Group = {kind: 'walkin' | 'event' | 'live'; id: string; date: string; paid: number; cash: number};
 
@@ -94,6 +94,11 @@ export function changeSummary(oldState: any, newState: any): string {
     if (was.priceCents !== p.priceCents) out.push(`${p.name} monthly ${money(was.priceCents)} → ${money(p.priceCents)}`);
     if (was.walkInPriceCents !== p.walkInPriceCents) out.push(`${p.name} walk-in ${money(was.walkInPriceCents)} → ${money(p.walkInPriceCents)}`);
   }
+  // The owner's own name for a program (issue #363). The line names the program by its grades, because the built-in
+  // name in a stored line is shown as the owner's current name like everywhere else.
+  const oldNames = customProgramNames(o), newNames = customProgramNames(n);
+  for (const id of Object.keys(programDetails)) if (oldNames[id] !== newNames[id])
+    out.push(newNames[id] ? `program for ${programDetails[id].grades.split(' · ')[0]} renamed “${newNames[id]}”` : `program for ${programDetails[id].grades.split(' · ')[0]} back to its built-in name`);
   // Seasons have no id: match on program and dates; a change to days, times or days off shows as "changed".
   const oldSeasons = new Map(list(o.seasons).map((s: any) => [seasonKey(s), s])), newSeasons = new Map(list(n.seasons).map((s: any) => [seasonKey(s), s]));
   for (const [k, s] of newSeasons) { const was = oldSeasons.get(k); if (!was) out.push(`schedule added: ${seasonText(s, names)}`); else if (!same(was.weekly, s.weekly) || !same(was.excludedDates, s.excludedDates)) out.push(`schedule changed: ${seasonText(s, names)}`); }

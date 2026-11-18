@@ -68,6 +68,7 @@ Every other owner tool is its own page, listed once in `lib/owner-nav.ts`: four 
 | Rule | Source of truth |
 |---|---|
 | Program grades and SWA Advanced approval | `lib/program-approval.ts` (workspace code must match it) |
+| Program names | Built-in names in `lib/program-names.ts`, used everywhere inside the site. The owner's own names (`programNames` in the academy settings, #363) are put in at the last step by `lib/program-renames.ts`: every page, data reply and spreadsheet in `build/worker.ts`, every email in `lib/email.ts`, the product name at Stripe in `lib/checkout.ts` |
 | Prices, discounts, eligibility for every purchase | `lib/quotes.ts` |
 | Which purchase types are open online | `CHECKOUT_KINDS`, read in `lib/checkout-config.ts` |
 | Seat limits for camps and events | `lib/capacity.ts` (there are no waitlists, #210) |

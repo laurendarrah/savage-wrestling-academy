@@ -9,6 +9,7 @@ import { recordStripeFees } from "../lib/stripe-fees";
 import { clearStaleStaging } from "../lib/backup-records";
 import { purgeStaleLookups } from "../lib/usaw-check";
 import { decorateResponse } from "../lib/page-chrome";
+import { renameResponse } from "../lib/program-renames";
 import { RECORDED_HEADER } from "../lib/api";
 
 export default {
@@ -28,8 +29,9 @@ export default {
       // isolate per day, a request checks that the scheduled run happened and runs the reminders as a fallback if not.
       // Never awaited by the request.
       ctx.waitUntil(reminderWatch(db).then((r) => (r === "ran" || r === "failed" ? alertOwner(db) : undefined)).catch(() => undefined));
-      // One look on every page (issue #129): shared stylesheet, icons and top bar.
-      return await decorateResponse(request, response);
+      // One look on every page (issue #129): shared stylesheet, icons and top bar. Then, last of all, the owner's own
+      // names for the programs (issue #363, lib/program-renames.ts).
+      return await renameResponse(request, await decorateResponse(request, response), db);
     } catch (error) {
       ctx.waitUntil(recordError(db, request, 500, error instanceof Error ? error.message : String(error)).then(() => alertOwner(db)));
       throw error;

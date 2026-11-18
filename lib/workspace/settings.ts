@@ -1,6 +1,6 @@
 // Normalizing the academy settings document as the owner workspace loads it (issue #45). Saving, revisions and the
 // conflict warning stay in app/portal.html: the page sends its revision with each save and /api/academy refuses a stale one.
-import {programDetails, standardProgramNames} from '../program-names';
+import {customProgramNames, programDetails, standardProgramNames} from '../program-names';
 import {STARTER_PRICE_CENTS, STARTER_WALK_IN_CENTS, starterDescription} from './programs';
 import type {AcademyDoc, Program} from './types';
 
@@ -30,7 +30,9 @@ export function hydratePrograms(doc: AcademyDoc, shown: readonly {id: string; na
     doc.programs = doc.programs.map(p => ({...p, ...programDetails[p.id], priceCents: STARTER_PRICE_CENTS, walkInPriceCents: STARTER_WALK_IN_CENTS}));
     doc.programNamingVersion = 2;
   }
-  // The names are the site's own (issue #355): the same on every page, so never whatever an older page let be typed.
+  // Inside the document a program's name is always the built-in one (issue #355). The owner's own name for it is in
+  // doc.programNames (issue #363); the copy the page shows carries that name, so the dashboard reads like every other page.
   doc.programs = standardProgramNames(doc.programs);
-  return structuredClone(doc.programs);
+  const names = customProgramNames(doc);
+  return structuredClone(doc.programs).map(p => names[p.id] ? {...p, name: names[p.id]} : p);
 }

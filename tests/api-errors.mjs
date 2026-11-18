@@ -124,6 +124,7 @@ const worker = (() => {
         if (name === 'vinext/server/fetch-handler') return {default: {fetch: async () => handlerResult}};
         if (name.endsWith('/site-health')) return site;
         if (name.endsWith('/page-chrome')) return load('lib/page-chrome.ts');
+        if (name.endsWith('/program-renames')) return {renameResponse: async (request, response) => response};
         if (name.endsWith('/api')) return api;
         if (name.endsWith('/owner-alerts')) return {alertOwner: async () => { alerts.push(1); return 'off'; }};
         if (name.endsWith('/reminder-watch')) return {reminderWatch: async () => 'early'};
