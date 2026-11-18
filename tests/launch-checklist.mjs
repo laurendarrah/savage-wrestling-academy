@@ -89,7 +89,7 @@ assert.equal(i.schedule.detail, 'SWA Intermediate has no practice times yet. Add
   const state = JSON.parse(sqlite.prepare("SELECT payload FROM academy_state WHERE id='academy'").get().payload);
   const save = s => sqlite.prepare("UPDATE academy_state SET payload=? WHERE id='academy'").run(JSON.stringify(s));
   save({...state, programs: [...state.programs, {id: 'Advanced', priceCents: 0}], seasons: [...state.seasons, {program: 'Advanced', start: '2026-12-01', end: '2027-03-01', weekly: []}]});
-  assert.equal(by(await launchChecklist(DB, settings, today, now)).schedule.detail, 'SWA Intermediate and SWA Advance have no practice times yet. Add a semester under Schedules');
+  assert.equal(by(await launchChecklist(DB, settings, today, now)).schedule.detail, 'SWA Intermediate and SWA Advanced have no practice times yet. Add a semester under Schedules');
   // An upcoming semester counts: Intermediate starts in January.
   state.seasons.push({program: 'Intermediate', start: '2027-01-04', end: '2027-05-01', weekly: [{day: 'Tuesday'}]});
   save(state);

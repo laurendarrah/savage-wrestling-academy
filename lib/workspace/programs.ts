@@ -1,5 +1,5 @@
 // Programs and grades in the owner workspace (issue #45). The server's rules in lib/program-approval.ts are the source
-// of truth: SWA Development is grades K to 6, SWA Intermediate 7 to 12, SWA Advance 7 to 12 and every wrestler needs
+// of truth: SWA Development is grades K to 6, SWA Intermediate 7 to 12, SWA Advanced 7 to 12 and every wrestler needs
 // coach approval. tests/workspace-modules.mjs checks that these rules and the server agree for every grade.
 import {programDetails} from '../program-names';
 import type {Program} from './types';
@@ -19,12 +19,12 @@ export const PROGRAM_RULES: Record<ProgramId, {grades: readonly string[]; coachA
 
 const rules = (program: string) => (PROGRAM_IDS as readonly string[]).includes(program) ? PROGRAM_RULES[program as ProgramId] : null;
 
-// Whether a wrestler in this grade may join the program (SWA Advance also needs coach approval).
+// Whether a wrestler in this grade may join the program (SWA Advanced also needs coach approval).
 export function gradeAllowed(program: string, grade: string): boolean {
   return !!rules(program)?.grades.includes(grade);
 }
 
-// Whether this wrestler needs the coach's approval first: every SWA Advance wrestler in its grades.
+// Whether this wrestler needs the coach's approval first: every SWA Advanced wrestler in its grades.
 export function needsCoachApproval(program: string, grade: string): boolean {
   return !!rules(program)?.coachApproval && gradeAllowed(program, grade);
 }
@@ -46,8 +46,8 @@ export function starterPrograms(): StarterProgram[] {
   ];
 }
 
-// The first SWA Advance description, before the program names changed. hydratePrograms() replaces it straight away.
-const FIRST_ADVANCED_DESCRIPTION = 'For experienced wrestlers ready for faster drilling, demanding situations, and competitive live wrestling. All SWA Advance wrestlers require coach approval.';
+// The first SWA Advanced description, before the program names changed. hydratePrograms() replaces it straight away.
+const FIRST_ADVANCED_DESCRIPTION = 'For experienced wrestlers ready for faster drilling, demanding situations, and competitive live wrestling. All SWA Advanced wrestlers require coach approval.';
 export function starterDescription(id: string): string {
   return id === 'Elementary' ? programDetails.Elementary.description : id === 'Intermediate' ? programDetails.Intermediate.description : FIRST_ADVANCED_DESCRIPTION;
 }

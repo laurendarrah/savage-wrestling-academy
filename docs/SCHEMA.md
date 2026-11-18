@@ -20,7 +20,7 @@ To change the schema, edit `db/schema.ts`, then run `pnpm db:generate` to add a 
 | `integration_secrets` | The restricted Stripe key, encrypted with `STRIPE_CONFIG_ENCRYPTION_KEY` |
 | **Families** | |
 | `family_accounts` | Each family's profile and wrestlers, one JSON row per Supabase user |
-| `program_approvals`, `approval_messages` | SWA Advance approval requests per wrestler, and the private chat about each |
+| `program_approvals`, `approval_messages` | SWA Advanced approval requests per wrestler, and the private chat about each |
 | `usaw_reviews` | The owner's (or the automatic lookup's) verdict on a wrestler's USA Wrestling card |
 | `usaw_lookups` | The latest check on USA Wrestling's verify page, also the one-day cache |
 | `wrestler_passes` | QR entry passes, one active per wrestler |

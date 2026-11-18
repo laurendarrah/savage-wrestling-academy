@@ -60,7 +60,7 @@ await run('publishPrograms()');
 assert.equal(puts, 0, 'declining publishes nothing');
 assert.match(asked[0], /SWA Development \(Grades K–6\): \$200\.00 a month, \$40\.00 walk-in/);
 assert.match(asked[0], /SWA Intermediate \(Grades 7–12\): \$200\.00 a month, \$40\.00 walk-in/);
-assert.match(asked[0], /SWA Advance \(Grades 7–12 · Coach approval required\): \$200\.00 a month, \$40\.00 walk-in/);
+assert.match(asked[0], /SWA Advanced \(Grades 7–12 · Coach approval required\): \$200\.00 a month, \$40\.00 walk-in/);
 
 // Publishing saves through the owner's normal save, and the welcome page and calendar list the programs.
 answer = true;
@@ -70,7 +70,7 @@ const pub = await publicSchedule();
 assert.deepEqual(pub.programs.map(p => [p.id, p.name, p.grades, p.monthlyCents, p.walkInCents]), [
   ['Elementary', 'SWA Development', 'Grades K–6', 20000, 4000],
   ['Intermediate', 'SWA Intermediate', 'Grades 7–12', 20000, 4000],
-  ['Advanced', 'SWA Advance', 'Grades 7–12 · Coach approval required', 20000, 4000]]);
+  ['Advanced', 'SWA Advanced', 'Grades 7–12 · Coach approval required', 20000, 4000]]);
 assert.ok(pub.programs.every(p => !('annualCents' in p)), 'no upfront-year price is published (#210)');
 assert.ok(pub.programs.every(p => p.description.length > 40), 'each program has its description');
 assert.deepEqual(pub.practices, [], 'publishing the programs publishes no practice schedule; that stays under Schedules');

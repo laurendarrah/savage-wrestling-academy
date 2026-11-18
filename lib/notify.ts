@@ -58,12 +58,12 @@ export async function noticeApproval(approvalId: string, status: string) {
   const f = a ? await family(a.user_id) : null;
   if (!a || !f || !['approved', 'declined'].includes(status)) return;
   await notify([{userId: a.user_id, email: f.email, kind: 'approval_' + status, dedupeKey: `approval:${a.id}:${status}:${a.updated_at}`, link: '/register?program=Advanced',
-    subject: status === 'approved' ? `${a.wrestler_name} is approved for SWA Advance` : `Update on ${a.wrestler_name}'s SWA Advance request`,
-    body: status === 'approved' ? `${a.wrestler_name} is approved for SWA Advance. You can now register from your family account.`
-      : `The academy has not approved ${a.wrestler_name} for SWA Advance at this time. You can talk it over with Justin in the private conversation on the registration page.`}]);
+    subject: status === 'approved' ? `${a.wrestler_name} is approved for SWA Advanced` : `Update on ${a.wrestler_name}'s SWA Advanced request`,
+    body: status === 'approved' ? `${a.wrestler_name} is approved for SWA Advanced. You can now register from your family account.`
+      : `The academy has not approved ${a.wrestler_name} for SWA Advanced at this time. You can talk it over with Justin in the private conversation on the registration page.`}]);
 }
 
-// A family changed a wrestler's grade or name while an SWA Advance request waits (issue #271). The owner is told: the
+// A family changed a wrestler's grade or name while an SWA Advanced request waits (issue #271). The owner is told: the
 // request still stands after a grade change within 7–12 and shows "Requested as Grade 9, now Grade 10" on /approvals;
 // a renamed entry no longer applies, so the family asks again. One notice per change.
 export async function noticeApprovalProfileChanged(userId: string, before: {id: string; name: string; grade: string}[], after: {id: string; name: string; grade: string}[]) {
@@ -76,10 +76,10 @@ export async function noticeApprovalProfileChanged(userId: string, before: {id: 
     if (!a) continue;
     const renamed = was.name.trim().toLowerCase() !== w.name.trim().toLowerCase(), high = ['7', '8', '9', '10', '11', '12'].includes(w.grade);
     list.push({userId: null, email: OWNER_EMAIL, kind: 'approval_profile_changed', dedupeKey: `approval-changed:${a.id}:${w.name}:${w.grade}`, link: '/approvals',
-      subject: renamed ? `SWA Advance request: ${was.name} was renamed ${w.name}` : `SWA Advance request: ${w.name} is now Grade ${w.grade}`,
-      body: renamed ? `The family changed the wrestler on a waiting SWA Advance request from ${was.name} to ${w.name}. The request no longer applies: if it is the same wrestler, the family asks again; if they renamed the entry for another child, that child needs their own request. Nothing is approved.`
-        : high ? `${w.name}'s grade changed from ${was.grade} to ${w.grade} while their SWA Advance request waits. The request still stands and shows "Requested as Grade ${a.grade}, now Grade ${w.grade}" on SWA Advance approvals, where you can approve or decline it.`
-        : `${w.name}'s grade changed from ${was.grade} to ${w.grade}, outside grades 7–12, so their waiting SWA Advance request no longer applies. The family may have mistyped the grade.`});
+      subject: renamed ? `SWA Advanced request: ${was.name} was renamed ${w.name}` : `SWA Advanced request: ${w.name} is now Grade ${w.grade}`,
+      body: renamed ? `The family changed the wrestler on a waiting SWA Advanced request from ${was.name} to ${w.name}. The request no longer applies: if it is the same wrestler, the family asks again; if they renamed the entry for another child, that child needs their own request. Nothing is approved.`
+        : high ? `${w.name}'s grade changed from ${was.grade} to ${w.grade} while their SWA Advanced request waits. The request still stands and shows "Requested as Grade ${a.grade}, now Grade ${w.grade}" on SWA Advanced approvals, where you can approve or decline it.`
+        : `${w.name}'s grade changed from ${was.grade} to ${w.grade}, outside grades 7–12, so their waiting SWA Advanced request no longer applies. The family may have mistyped the grade.`});
   }
   if (list.length) await notify(list);
 }

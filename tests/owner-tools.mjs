@@ -63,7 +63,7 @@ const plain = v => JSON.parse(JSON.stringify(v));   // values from the shell's r
 assert.deepEqual(plain(ownerNavPlace('/')), {group: '', label: 'Dashboard'}, 'the dashboard stands alone in the breadcrumb');
 assert.deepEqual(plain(ownerNavPlace('/cards')), {group: 'Families', label: 'Cards & documents'});
 assert.deepEqual(plain(ownerNavTabs('/consent-forms').map(t => t.href)), ['/cards', '/waivers', '/consent-forms', '/contracts'], 'the documents switch');
-assert.deepEqual(plain(ownerNavTabs('/transfers').map(t => t.label)), ['SWA Advance approvals', 'Scholarships', 'Program transfers']);
+assert.deepEqual(plain(ownerNavTabs('/transfers').map(t => t.label)), ['SWA Advanced approvals', 'Scholarships', 'Program transfers']);
 assert.deepEqual(plain(ownerNavTabs('/timesheets').map(t => t.href)), ['/staff', '/lesson-settings', '/timesheets', '/coach']);
 assert.deepEqual(plain(ownerNavTabs('/coach-pay').map(t => t.href)), ['/financials', '/coach-pay']);
 assert.deepEqual(plain(ownerNavTabs('/', '#events').map(t => t.href)), ['/#programs', '/#schedules', '/#events'], 'the academy sections switch between themselves');

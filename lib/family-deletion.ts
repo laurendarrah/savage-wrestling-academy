@@ -9,7 +9,7 @@
 // - Kept for the books, without the family: every payment (orders, with their refunds, fees, subscriptions and Stripe
 //   event ids, which name only the order). The family's account, email, wrestler and name on them become
 //   "deleted-family-<id>" and "Deleted family", so Payments and Income and expenses add up exactly as before.
-// - Signed waivers and Parent Consent Forms, scholarship agreements and SWA Advance approvals: how long the academy
+// - Signed waivers and Parent Consent Forms, scholarship agreements and SWA Advanced approvals: how long the academy
 //   keeps these isn't decided (docs/policies/data-retention-draft.md), so they stay unchanged unless the owner says
 //   this is a test account (`test`), when they are deleted too. Check-ins (attendance) stay for the roster's history
 //   but are re-keyed like payments (issue #272), so nothing points at the deleted account.
@@ -57,7 +57,7 @@ export async function activeProblems(userId: string, today = academyToday(), now
   if (await one(`SELECT 1 FROM scholarship_awards WHERE user_id=? AND status='active'`, userId))
     problems.push('an active scholarship (end it on Scholarships)');
   if (await one(`SELECT 1 FROM program_approvals WHERE user_id=? AND status='pending'`, userId))
-    problems.push('an SWA Advance request waiting for a decision (decide it on SWA Advance approvals)');
+    problems.push('an SWA Advanced request waiting for a decision (decide it on SWA Advanced approvals)');
   return problems;
 }
 

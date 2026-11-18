@@ -109,9 +109,9 @@ for (const [f, ids] of [['app/payment-setup/screen.html', ['setupTitle', 'modePi
   assert.equal(el('history').innerHTML, ''); assert.equal(el('status').textContent, '');
   el = await run({memberships: [{orderId: 'o1', wrestler: 'Sam Example', parent: 'Pat', email: 'p@example.test', grade: '9', programToday: 'Intermediate', program: 'Intermediate', termEnd: '2026-12-31'}], history: []});
   el('order').value = 'o1'; el('date').value = '2026-12-01'; await el('form').onsubmit({preventDefault() {}}); await tick();
-  assert.equal(el('formNote').textContent, 'Sam Example moves to SWA Advance from Dec 1, 2026.', 'the result shows under the button');
+  assert.equal(el('formNote').textContent, 'Sam Example moves to SWA Advanced from Dec 1, 2026.', 'the result shows under the button');
   assert.equal(el('historyTable').hidden, false); assert.equal(el('noHistory').hidden, true);
-  assert.match(el('history').innerHTML, /^<tr><td>Sam &lt;b&gt;<\/td><td data-label="From">SWA Intermediate<\/td><td data-label="To">SWA Advance<\/td><td data-label="Effective">Dec 1, 2026<\/td><td>Moved up<\/td><\/tr>$/, 'cells are named for the phone layout, and escaped');
+  assert.match(el('history').innerHTML, /^<tr><td>Sam &lt;b&gt;<\/td><td data-label="From">SWA Intermediate<\/td><td data-label="To">SWA Advanced<\/td><td data-label="Effective">Dec 1, 2026<\/td><td>Moved up<\/td><\/tr>$/, 'cells are named for the phone layout, and escaped');
 }
 
 // ---------- Data requests: a status pill, an empty state, a toast ----------

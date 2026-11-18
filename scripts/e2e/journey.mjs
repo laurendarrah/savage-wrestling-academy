@@ -178,8 +178,8 @@ await step('on a fresh site the owner publishes the programs with one click', as
   await owner.waitForSelector('[data-launch="programs"][data-status="done"]', {state: 'attached'});
   const after = await api(owner, '/api/public-schedule');
   // Monthly and walk-in prices only: a year paid upfront is not offered (#210).
-  expect(JSON.stringify(after.body.programs.map(p => [p.name, p.monthlyCents, p.walkInCents, p.annualCents])) === JSON.stringify([['SWA Development', 20000, 4000, undefined], ['SWA Intermediate', 20000, 4000, undefined], ['SWA Advance', 20000, 4000, undefined]]), 'published programs: ' + JSON.stringify(after.body.programs));
-  await pub.goto(BASE + '/welcome'); await waitText(pub, '#programs', /SWA Development[\s\S]*SWA Intermediate[\s\S]*SWA Advance/);
+  expect(JSON.stringify(after.body.programs.map(p => [p.name, p.monthlyCents, p.walkInCents, p.annualCents])) === JSON.stringify([['SWA Development', 20000, 4000, undefined], ['SWA Intermediate', 20000, 4000, undefined], ['SWA Advanced', 20000, 4000, undefined]]), 'published programs: ' + JSON.stringify(after.body.programs));
+  await pub.goto(BASE + '/welcome'); await waitText(pub, '#programs', /SWA Development[\s\S]*SWA Intermediate[\s\S]*SWA Advanced/);
   await shot(pub, 'welcome-programs'); await pub.close();
 });
 
@@ -188,7 +188,7 @@ await step('owner saves the academy schedule, programs, camp and Friday Night Li
   await owner.goto(BASE + '/');
   const weekly = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: PRACTICE.start, end: PRACTICE.end}));
   const state = {kids: [], bookings: [], messages: [], offers: [], staff: [], attendance: {}, settings: {},
-    programs: [['Elementary', 'SWA Development'], ['Intermediate', 'SWA Intermediate'], ['Advanced', 'SWA Advance']].map(([id, name]) => ({id, name, description: '', priceCents: 20000, walkInPriceCents: 4000})),
+    programs: [['Elementary', 'SWA Development'], ['Intermediate', 'SWA Intermediate'], ['Advanced', 'SWA Advanced']].map(([id, name]) => ({id, name, description: '', priceCents: 20000, walkInPriceCents: 4000})),
     seasons: ['Elementary', 'Intermediate', 'Advanced'].map(program => ({program, start: ny(-30), end: ny(120), weekly, excludedDates: []})),
     events: [{id: 'winter-camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], schedule: [{date: ny(10), start: '09:00', end: '12:00'}], price: 160, day: 90, slots: 1, gradeRange: '', description: ''},
       {id: 'spring-clinic', name: 'Spring clinic', type: 'Clinic', dates: [ny(12)], schedule: [{date: ny(12), start: '10:00', end: '12:00'}], price: 60, day: null, slots: 2, gradeRange: '', description: ''}],
@@ -375,7 +375,7 @@ const phoneAs = async name => { const ctx = await browser.newContext({viewport: 
 await step('a signed-out visitor lands on the welcome page with programs, steps and what is coming up', async () => {
   const visitor = await phoneAs(null);
   await visitor.goto(BASE + '/'); expect(new URL(visitor.url()).pathname === '/welcome', 'signed-out home should be /welcome, got ' + visitor.url());
-  await waitText(visitor, '#programs', /SWA Development[\s\S]*SWA Intermediate[\s\S]*SWA Advance/);
+  await waitText(visitor, '#programs', /SWA Development[\s\S]*SWA Intermediate[\s\S]*SWA Advanced/);
   await waitText(visitor, '#programs', /\$200 a month[\s\S]*\$40 for a single walk-in practice/);
   await waitText(visitor, '#programs', /needs coach approval/);
   await waitText(visitor, '#week', /practice/);
@@ -512,7 +512,7 @@ await step('family sees the pass, the wrestler view and the membership', async (
 await step('a coach sees today\'s roster for their program only and can check in', async () => {
   await coach.goto(BASE + '/roster'); await waitText(coach, '#sessions', /SWA Intermediate/);
   const t = await text(coach, '#sessions');
-  expect(!/SWA Development|SWA Advance/.test(t), 'coach sees other programs');
+  expect(!/SWA Development|SWA Advanced/.test(t), 'coach sees other programs');
   expect(!/family\.a@example\.test/.test(t), 'coach must not see family emails');
   expect(/Sam Example[\s\S]*No allergies or medical notes[\s\S]*Emergency contact: Jordan Emergency/.test(t), 'a coach sees allergies and the emergency contact for their program');
 });
@@ -837,7 +837,7 @@ await step('a family starts a private partner lesson; a second family joins thro
 });
 
 // ---------- Transfers ----------
-await step('owner transfers Sam to SWA Advance after approval checks', async () => {
+await step('owner transfers Sam to SWA Advanced after approval checks', async () => {
   await owner.goto(BASE + '/transfers'); await owner.waitForFunction(() => [...document.querySelectorAll('#order option')].some(o => o.value));
   await owner.selectOption('#to', 'Advanced'); await owner.fill('#reason', 'Moved up'); await owner.fill('#date', ny(5));
   // The result shows under the Transfer button (issue #341).
@@ -1046,7 +1046,7 @@ await step('the coach adds a missed shift for last month and sends it; the owner
   await shot(owner, 'owner-timesheets');
 });
 await step('a coach asks for time off; the owner approves; only coaches in the same program are told and practices are listed for cover', async () => {
-  // Lee coaches SWA Intermediate with Dana for this step; the owner coaches SWA Advance only.
+  // Lee coaches SWA Intermediate with Dana for this step; the owner coaches SWA Advanced only.
   expect((await api(owner, '/api/staff', {action: 'grant', email: 'coach.lee@example.test', name: 'Coach Lee', programs: ['Elementary', 'Intermediate']})).status === 200, 'Lee joins SWA Intermediate');
   // The request form is behind "Ask for time off"; coach home's Time off door opens the page with it open.
   await coach.goto(BASE + '/coach'); await coach.click('.swa-doors a[href="/coach-time#timeOff"]'); await coach.waitForSelector('#offBox[open] #offForm');
@@ -1120,7 +1120,7 @@ await step('owner publishes the Parent Consent Form; booking waits until a paren
   // The rest of the walkthrough runs without the form, as the live site will until the attorney has reviewed it.
   await owner.click('#retire'); await at(owner, '#status', /Form retired/);
 });
-await step('family requests SWA Advance approval; owner approves; transfer to SWA Advance goes through', async () => {
+await step('family requests SWA Advanced approval; owner approves; transfer to SWA Advanced goes through', async () => {
   await family.goto(BASE + `/register?program=Advanced&wrestler=${samId}`); await family.waitForSelector('#requestApproval');
   await family.waitForFunction(() => !document.querySelector('#requestApproval').closest('[hidden]'), null, {timeout: 8000});
   await family.click('#requestApproval'); await waitText(family, '#status', /Approval request saved/);
@@ -1129,10 +1129,10 @@ await step('family requests SWA Advance approval; owner approves; transfer to SW
   await waitText(owner, '#requests', /Revoke approval/);
   await owner.goto(BASE + '/transfers'); await owner.waitForFunction(() => [...document.querySelectorAll('#order option')].some(o => o.value));
   await owner.selectOption('#to', 'Advanced'); await owner.fill('#reason', 'Moved up after evaluation'); await owner.fill('#date', ny(5));
-  await owner.click('#form button'); await waitText(owner, '#formNote', /moves to SWA Advance/);
+  await owner.click('#form button'); await waitText(owner, '#formNote', /moves to SWA Advanced/);
   const later = await api(owner, '/api/roster?date=' + ny(5)), before = await api(owner, '/api/roster?date=' + ny(4));
   const where = r => r.body.sessions.filter(s => s.entries.some(e => e.name === 'Sam Example')).map(s => s.title).join();
-  expect(where(later) === 'SWA Advance' && where(before) === 'SWA Intermediate', `roster after transfer: ${where(before)} -> ${where(later)}`);
+  expect(where(later) === 'SWA Advanced' && where(before) === 'SWA Intermediate', `roster after transfer: ${where(before)} -> ${where(later)}`);
 });
 await step('owner offers a scholarship; family 2 accepts it with a drawn signature', async () => {
   // Create stays off until the offers list has loaded, so a late list cannot hide the new offer (issue #247).

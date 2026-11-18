@@ -47,7 +47,7 @@ function load(file) {
 const ny = k => new Date(Date.now() + k * 86400000).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 const all = start => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start, end: start.replace(/^(\d\d)/, (h) => String(+h + 1).padStart(2, '0'))}));
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2,
-  programs: [['Elementary', 'SWA Development'], ['Intermediate', 'SWA Intermediate'], ['Advanced', 'SWA Advance']].map(([id, name]) => ({id, name, priceCents: 20000, walkInPriceCents: 4000})),
+  programs: [['Elementary', 'SWA Development'], ['Intermediate', 'SWA Intermediate'], ['Advanced', 'SWA Advanced']].map(([id, name]) => ({id, name, priceCents: 20000, walkInPriceCents: 4000})),
   seasons: [['Elementary', '16:00'], ['Intermediate', '17:00'], ['Advanced', '18:00']].map(([program, t]) => ({program, start: ny(-30), end: ny(60), weekly: all(t), excludedDates: []})), events: []}));
 sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('p1', 'p1@example.test', JSON.stringify({parentName: 'Pat', phone: '', wrestlers: [{id: 'w1', name: 'Sam', grade: '8', usawNumber: 'AB1234', usawExpires: '2099-12-31'}]}), 1, 'x');
 
@@ -76,7 +76,7 @@ assert.equal((await move({toProgram: 'Advanced', reason: ''})).status, 400, 'rea
 assert.equal((await move({toProgram: 'Advanced', effectiveDate: ny(-1)})).status, 400, 'no back-dating');
 assert.equal((await move({toProgram: 'Intermediate'})).status, 409, 'already there');
 assert.match((await move({toProgram: 'Elementary'})).body.error, /grades K/, 'grade rule from the server');
-assert.match((await move({toProgram: 'Advanced'})).body.error, /approv/i, 'SWA Advance needs approval');
+assert.match((await move({toProgram: 'Advanced'})).body.error, /approv/i, 'SWA Advanced needs approval');
 sqlite.prepare("INSERT INTO program_approvals(id,user_id,wrestler_id,program,wrestler_name,grade,status,created_at,updated_at,decided_by) VALUES ('a1','p1','w1','Advanced','Sam','8','approved','t','t','owner')").run();
 
 // --- Transfer from a future date: rosters before it are unchanged ---
@@ -86,7 +86,7 @@ assert.equal(JSON.stringify(await programsOn(ny(0))), JSON.stringify(['Intermedi
 assert.equal(JSON.stringify(await programsOn(ny(2))), JSON.stringify(['Intermediate']));
 assert.equal(JSON.stringify(await programsOn(ny(3))), JSON.stringify(['Advanced']));
 const up = await view.upcomingFor('p1', 'w1', ny(0), 6);
-assert.equal(JSON.stringify(up.map(u => u.title)), JSON.stringify(['SWA Intermediate', 'SWA Intermediate', 'SWA Intermediate', 'SWA Advance', 'SWA Advance', 'SWA Advance']), 'wrestler view follows the transfer');
+assert.equal(JSON.stringify(up.map(u => u.title)), JSON.stringify(['SWA Intermediate', 'SWA Intermediate', 'SWA Intermediate', 'SWA Advanced', 'SWA Advanced', 'SWA Advanced']), 'wrestler view follows the transfer');
 // Still a member of Intermediate today, so it cannot be bought twice.
 assert.match((await quotes.quoteMembership('p1', {wrestlerId: 'w1', program: 'Intermediate', plan: 'monthly'})).error, /already has an active paid membership/);
 r = await call('GET'); assert.equal(r.body.memberships[0].programToday, 'Intermediate'); assert.equal(r.body.memberships[0].program, 'Advanced');

@@ -53,7 +53,7 @@ export const PUT = withApi(PUT_); async function PUT_(request:Request){
  let lookups:Record<string,string>={};
  const earlier=before?JSON.parse(before.payload):null;
  try{lookups=await checkChangedCards(request,auth.user.id,earlier,clean)}catch{}
- // The owner hears when a wrestler with a waiting SWA Advance request changes grade or name (issue #271).
+ // The owner hears when a wrestler with a waiting SWA Advanced request changes grade or name (issue #271).
  if(earlier?.wrestlers)await quietly(()=>noticeApprovalProfileChanged(auth.user!.id,earlier.wrestlers,clean.wrestlers));
  // The saved profile as stored (trimmed, state in capitals), so the page shows exactly what was kept.
  return reply({revision:row.revision,updatedAt:now,lookups,data:clean});

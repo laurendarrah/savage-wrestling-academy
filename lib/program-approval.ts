@@ -6,7 +6,7 @@ export const HIGH_SCHOOL=['7','8','9','10','11','12'];
 export function requiresApproval(program:string,w:Wrestler){return program==='Advanced'&&HIGH_SCHOOL.includes(w.grade)}
 export type ApprovalRow={id?:string;status:string;wrestler_name:string;grade:string};
 const sameName=(a:unknown,b:unknown)=>String(a??'').trim().toLowerCase()===String(b??'').trim().toLowerCase();
-// An SWA Advance decision belongs to the wrestler, not to the grade they were in when they asked (issue #271): it stays
+// An SWA Advanced decision belongs to the wrestler, not to the grade they were in when they asked (issue #271): it stays
 // valid through a grade change within 7–12, so a family is not sent back to "not requested" every September. It stops
 // applying when the entry's name changes (the family may have renamed it to another child, issue #97) or the wrestler
 // leaves grades 7–12. The owner's page shows "Requested as Grade 9, now Grade 10" from the stored grade.
@@ -21,7 +21,7 @@ export async function checkCompetitionAccess(userId:string,program:string,w:Wres
  if(program==='Elementary')return ['K','1','2','3','4','5','6'].includes(w.grade)?null:'SWA Development is for grades K–6. Choose a program that matches this wrestler’s saved grade.';
  if(program==='Intermediate')return HIGH_SCHOOL.includes(w.grade)?null:'SWA Intermediate is for grades 7–12. Choose a program that matches this wrestler’s saved grade.';
  if(program!=='Advanced')return 'Choose an available program.';
- if(!HIGH_SCHOOL.includes(w.grade))return 'SWA Advance is for grades 7–12 and requires coach approval.';
- if(requiresApproval(program,w)&&await approvalStatus(userId,w)!=='approved')return 'Contact Justin and receive approval before registering for SWA Advance.';
+ if(!HIGH_SCHOOL.includes(w.grade))return 'SWA Advanced is for grades 7–12 and requires coach approval.';
+ if(requiresApproval(program,w)&&await approvalStatus(userId,w)!=='approved')return 'Contact Justin and receive approval before registering for SWA Advanced.';
  return null;
 }

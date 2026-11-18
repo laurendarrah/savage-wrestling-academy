@@ -38,7 +38,7 @@ const ny = k => new Date(Date.now() + k * 86400000).toLocaleDateString('en-CA', 
 const today = ny(0);
 const all = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: '18:00', end: '19:30'}));
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2,
-  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Advanced', name: 'SWA Advance', priceCents: 20000, walkInPriceCents: 4000}],
+  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Advanced', name: 'SWA Advanced', priceCents: 20000, walkInPriceCents: 4000}],
   seasons: [{program: 'Intermediate', start: ny(-30), end: ny(60), weekly: all, excludedDates: []}],
   events: [{id: 'camp', name: 'Camp', type: 'Camp', dates: [ny(10)], price: 160, slots: 1}],
   extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [today], enabled: true, start: '17:00', end: '18:00', memberCents: 1000, nonMemberCents: 2000}]}));
@@ -65,7 +65,7 @@ assert.equal(fams.length, 2); assert.equal(fams[0].wrestlers[0].name, 'Wrestler 
 const walk = {kind: 'walkin', program: 'Intermediate', date: today, practiceId: `Intermediate:${today}:18:00`};
 let r = await post({action: 'preview', userId: 'p1', wrestlerId: 'w-p1', ...walk});
 assert.equal(r.status, 200); assert.equal(r.body.listCents, 4000); assert.equal(r.body.suggestedCents, 4000);
-assert.equal((await post({action: 'preview', userId: 'p1', wrestlerId: 'w-p1', ...walk, program: 'Advanced'})).status, 403, 'Advance still needs approval');
+assert.equal((await post({action: 'preview', userId: 'p1', wrestlerId: 'w-p1', ...walk, program: 'Advanced'})).status, 403, 'Advanced still needs approval');
 assert.equal((await post({action: 'preview', userId: 'nobody', wrestlerId: 'w-p1', ...walk})).status, 404);
 
 // --- Validation ---

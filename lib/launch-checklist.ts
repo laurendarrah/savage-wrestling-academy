@@ -92,7 +92,7 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
   const items: Item[] = [
     !listed.length
       ? {key: 'programs', group: 'Academy', label: 'Programs on the welcome page and calendar', status: 'todo', action: 'publish-programs',
-        detail: 'Families see no programs yet. Publish SWA Development, SWA Intermediate and SWA Advance with the prices under Programs & pricing'}
+        detail: 'Families see no programs yet. Publish SWA Development, SWA Intermediate and SWA Advanced with the prices under Programs & pricing'}
       : {key: 'programs', group: 'Academy', label: 'Programs on the welcome page and calendar', section: 'Programs & pricing',
         status: priced.length ? 'done' : 'todo',
         detail: priced.length ? `${plural(listed.length, 'program')} listed, ${priced.length} with prices` : 'Listed without prices. Set a membership or walk-in price for each program'},

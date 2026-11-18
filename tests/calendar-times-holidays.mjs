@@ -148,7 +148,7 @@ function page(file, {fetch, search = ''}) {
   for (const [, code] of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) vm.runInContext(code, ctx);
   return {el, ctx};
 }
-const schedule = {month: '2026-11', today: '2026-11-11', programs: [{id: 'Elementary', name: 'SWA Development', grades: '', description: '', monthlyCents: 20000, annualCents: 240000, walkInCents: 4000}, {id: 'Advanced', name: 'SWA Advance'}],
+const schedule = {month: '2026-11', today: '2026-11-11', programs: [{id: 'Elementary', name: 'SWA Development', grades: '', description: '', monthlyCents: 20000, annualCents: 240000, walkInCents: 4000}, {id: 'Advanced', name: 'SWA Advanced'}],
   practices: [{id: 'Elementary:2026-11-11:17:00', program: 'Elementary', date: '2026-11-11', start: '17:00', end: '18:15'}, {id: 'Advanced:2026-11-12:19:30', program: 'Advanced', date: '2026-11-12', start: '19:30', end: '21:00'}],
   events: [{id: 'camp', name: 'Winter camp', type: 'Camp', dates: ['2026-11-11', '2026-11-12'], schedule: [{date: '2026-11-11', start: '09:00', end: '12:00'}], cents: 16000, dayCents: 9000, full: false},
     {id: 'clinic', name: 'Single-leg clinic', type: 'Clinic', dates: ['2026-11-14'], schedule: [], cents: 4000, dayCents: null, full: false}],
@@ -201,7 +201,7 @@ assert.match(readFileSync('app/roster/screen.html', 'utf8'), /s\.type==='event'\
   const week = el('week').innerHTML;
   assert.equal(el('weekRange').textContent, 'Mon, Nov 9 – Sun, Nov 15');
   assert.match(week, /<div class="wday is-today" aria-current="date"><h3>Wed, Nov 11<span class="today-tag">Today<\/span><\/h3><span class="holiday-tag">Veterans Day<\/span><div class="witem p-extra"><b>9:00 AM–12:00 PM<\/b><span>Winter camp<\/span><\/div><div class="witem p-Elementary"><b>5:00 PM–6:15 PM<\/b><span>SWA Development<\/span>/);
-  assert.match(week, /<b>Time to be announced<\/b><span>Winter camp<\/span>/); assert.doesNotMatch(week, /SWA Advance/, 'only the coach’s own programs');
+  assert.match(week, /<b>Time to be announced<\/b><span>Winter camp<\/span>/); assert.doesNotMatch(week, /SWA Advanced/, 'only the coach’s own programs');
   assert.match(week, /<div class="wday is-clear"><h3>Mon, Nov 9<\/h3><\/div>/);
   vm.runInContext('showWeek(2)', ctx); await settle();
   // Issue #336: a week with nothing on it is one line naming its holiday, not seven empty boxes, and never "No practice".

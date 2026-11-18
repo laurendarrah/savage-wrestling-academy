@@ -45,7 +45,7 @@ const ny = k => new Date(Date.now() + k * 86400000).toLocaleDateString('en-CA', 
 const today = ny(0);
 const all = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: '18:00', end: '19:30'}));
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2,
-  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Advanced', name: 'SWA Advance', priceCents: 20000, walkInPriceCents: 4000}],
+  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Advanced', name: 'SWA Advanced', priceCents: 20000, walkInPriceCents: 4000}],
   seasons: [{program: 'Intermediate', start: ny(-30), end: ny(60), weekly: all, excludedDates: []}, {program: 'Advanced', start: ny(-30), end: ny(60), weekly: all.map(x => ({...x, start: '19:30', end: '21:00'})), excludedDates: []}],
   events: [{id: 'camp', name: 'Winter camp', type: 'Camp', dates: [ny(5), ny(6)], price: 160}],
   extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [ny(2), ny(9)], enabled: true, start: '16:00', end: '17:00', memberCents: 1000, nonMemberCents: 2000}]}));
@@ -83,7 +83,7 @@ sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,ki
 r = await view('w1');
 const up = r.body.upcoming;
 assert.equal(up.filter(u => u.type === 'practice').length, 21, 'every practice in the next three weeks');
-assert.ok(up.every(u => u.type !== 'practice' || u.title === 'SWA Intermediate'), 'not the Advance practices');
+assert.ok(up.every(u => u.type !== 'practice' || u.title === 'SWA Intermediate'), 'not the Advanced practices');
 assert.equal(JSON.stringify(up.filter(u => u.type === 'live').map(u => u.date)), JSON.stringify([ny(2)]), 'only the paid extra practice, not ' + ny(9));
 assert.equal(JSON.stringify(up.filter(u => u.type === 'event').map(u => u.date)), JSON.stringify([ny(5), ny(6)]));
 const lesson = up.find(u => u.type === 'lesson'); assert.equal(lesson.title, 'One-on-one lesson with Coach Dana'); assert.equal(lesson.date, ny(3));

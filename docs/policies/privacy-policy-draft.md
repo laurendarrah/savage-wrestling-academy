@@ -22,7 +22,7 @@ Accounts are created by a **parent or guardian** (or an adult wrestler). Childre
 [Decided in #197, question 14: these details are required, and coaches see allergies and emergency contacts on the check-in roster. Attorney: confirm how allergy and medical notes about minors must be handled and disclosed.]
 - Signatures: when you sign a waiver or scholarship agreement, the drawing of your signature, your typed name, and the date and time. If the academy asks you to sign a document again, the earlier signature is kept with the date and the reason the academy gave.
 - Messages you send the academy, and notes you add to requests (for example, an account closure request).
-- Requests for SWA Advance approval, and the private conversation about them.
+- Requests for SWA Advanced approval, and the private conversation about them.
 
 **Information created when you use the site**
 - Registrations and purchases: what you bought, for which wrestler, the price, any discount, and the payment status. When you pay online, your card details go directly to Stripe, our payment processor. We do not receive or store your card number.

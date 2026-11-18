@@ -42,7 +42,7 @@ html body[data-swa-page="/coach-join"] .switch button.link{font-family:var(--swa
 </section><footer><span>Savage Wrestling Academy · Huntington Station, NY</span><a href="/login" id="footSignin">Sign in</a></footer></main>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const programName=id=>({Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'}[id]||id);
+const programName=id=>({Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advanced'}[id]||id);
 const longDate=iso=>new Date(iso).toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'long',month:'long',day:'numeric'});
 // The invite token comes after # in the link, so it never reaches the server in a page request.
 const token=((new URLSearchParams(location.hash.slice(1)).get('invite'))||'').trim().toLowerCase();

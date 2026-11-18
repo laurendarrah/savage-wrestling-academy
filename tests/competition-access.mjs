@@ -65,7 +65,7 @@ assert.equal((await review('kid-9')).status,200);
 profile.wrestlers[2].grade='12';sqlite.prepare('UPDATE family_accounts SET payload=? WHERE user_id=?').run(JSON.stringify(profile),'alice-uuid');
 assert.equal((await review('kid-9')).status,200,'approved at grade 9, still approved at grade 12');
 profile.wrestlers[2].grade='6';sqlite.prepare('UPDATE family_accounts SET payload=? WHERE user_id=?').run(JSON.stringify(profile),'alice-uuid');
-assert.equal((await review('kid-9')).status,403,'grade 6 is outside SWA Advance');
+assert.equal((await review('kid-9')).status,403,'grade 6 is outside SWA Advanced');
 profile.wrestlers[2].grade='9';sqlite.prepare('UPDATE family_accounts SET payload=? WHERE user_id=?').run(JSON.stringify(profile),'alice-uuid');
 console.log('Passed: grade gates, forged approval rejection, parent request isolation, owner decisions and revocation, stale profile/decision protection, private chat isolation, sender-role enforcement, validation and CSRF.');
 

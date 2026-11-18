@@ -58,7 +58,7 @@ assert.equal(byTitle['Waiver signed'].who, 'Pat Example (pat@example.test)');
 assert.equal(byTitle['Lesson opening added'].who, 'Coach Dana (dana@example.test)', 'a coach is named, not shown as an id');
 assert.equal(byTitle['Coach access given'].detail, 'Coach Dana (dana@example.test)');
 assert.equal(byTitle['Practice plan shared with coaches'].detail, 'SWA Intermediate · Fri, Nov 6');
-assert.equal(byTitle['Membership moved to another program'].detail, 'Sam Example: SWA Intermediate → SWA Advance from Nov 11, 2026');
+assert.equal(byTitle['Membership moved to another program'].detail, 'Sam Example: SWA Intermediate → SWA Advanced from Nov 11, 2026');
 assert.equal(byTitle['Booking allowed anyway'].detail, 'Sam Example may book without a signed waiver until Dec 6, 2026');
 assert.equal(byTitle['Announcement sent'].detail, 'Sent to 1 family');
 assert.equal(byTitle['Backup restored'].detail, '', 'no list of internal table names');

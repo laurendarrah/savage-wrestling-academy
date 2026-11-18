@@ -201,14 +201,14 @@ const json = body => ({ok: true, status: 200, json: async () => body});
 // The welcome page's program cards: weekly times, or "Practice times coming soon" when nothing is published.
 {
   const today = '2026-11-09';
-  const schedule = {month: '2026-11', today, programs: [{id: 'Elementary', name: 'SWA Development', grades: '', description: '', monthlyCents: 20000, walkInCents: 4000}, {id: 'Advanced', name: 'SWA Advance', grades: '', description: '', monthlyCents: 22550, walkInCents: null}],
+  const schedule = {month: '2026-11', today, programs: [{id: 'Elementary', name: 'SWA Development', grades: '', description: '', monthlyCents: 20000, walkInCents: 4000}, {id: 'Advanced', name: 'SWA Advanced', grades: '', description: '', monthlyCents: 22550, walkInCents: null}],
     practices: [{id: 'p1', program: 'Elementary', date: '2026-11-10', start: '18:00', end: '19:30'}], events: [], liveClasses: []};
   const {el, html} = run('app/welcome/screen.html', {fetch: async url => json(/month=/.test(url) ? {...schedule, month: '2026-12', practices: []} : schedule)});
   await settle();
   const cards = el('programs').innerHTML.split('<article').slice(1);
   assert.match(cards[0], /SWA Development[\s\S]*<span class="times">Tue · 6:00–7:30 PM<\/span>/);
   assert.doesNotMatch(cards[0], /coming soon/);
-  assert.match(cards[1], /SWA Advance[\s\S]*<span class="times soon">Practice times coming soon<\/span>/, 'a program with no practices says so');
+  assert.match(cards[1], /SWA Advanced[\s\S]*<span class="times soon">Practice times coming soon<\/span>/, 'a program with no practices says so');
   // Program colors come from the shared tokens, as on the calendar.
   assert.match(cards[0], /background:var\(--swa-prog-development\)/); assert.match(cards[1], /background:var\(--swa-prog-advance\)/);
   assert.doesNotMatch(html, /\.program \.program \.times/, 'the times style applies (the selector had .program twice)');

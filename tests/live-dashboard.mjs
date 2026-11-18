@@ -10,7 +10,7 @@ const html = readFileSync('app/portal.html', 'utf8');
 const nodes = new Map(), node = s => { if (!nodes.has(s)) nodes.set(s, {value: '', style: {}, textContent: '', innerHTML: '', focus() {}, classList: {remove() {}, toggle() {}}, setAttribute() {}}); return nodes.get(s); };
 const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'}), monthKey = today.slice(0, 7);
 const responses = {
-  '/api/roster': {sessions: [{type: 'practice', title: 'SWA Intermediate', program: 'Intermediate', date: today, start: '18:00', end: '19:30', entries: [{}, {}, {}], checkedIn: 2}, {type: 'live', title: 'Friday Night Live', program: null, date: today, start: '16:00', end: '17:00', entries: [{}], checkedIn: 0}, {type: 'practice', title: 'SWA Advance', program: 'Advanced', date: today, start: '18:00', end: '19:30', entries: [], checkedIn: 0}]},
+  '/api/roster': {sessions: [{type: 'practice', title: 'SWA Intermediate', program: 'Intermediate', date: today, start: '18:00', end: '19:30', entries: [{}, {}, {}], checkedIn: 2}, {type: 'live', title: 'Friday Night Live', program: null, date: today, start: '16:00', end: '17:00', entries: [{}], checkedIn: 0}, {type: 'practice', title: 'SWA Advanced', program: 'Advanced', date: today, start: '18:00', end: '19:30', entries: [], checkedIn: 0}]},
   '/api/usaw-cards?limit=1': {cards: [{state: 'current', blocksToday: true}], totals: {all: 4, blocked: 2, blockedToday: 2, waiting: 1}},
   '/api/payments?attention=1': {graceDays: 7, attention: [{orderId: 'm1'}]},
   '/api/payments?cash=due': {count: 2, dueCents: 5000, bookings: [{wrestler: 'Sam Example', item: 'SWA Intermediate walk-in', amountCents: 4000}, {wrestler: 'Riley Two', item: 'Friday Night Live', amountCents: 1000}]},
@@ -66,7 +66,7 @@ assert.ok(!tiles.includes('waitlist') && !fetched.includes('/api/waitlists'), 'n
 const tonight = node('#tonightBody').innerHTML;
 assert.equal(tonight, '<ul class="tl"><li class="next"><div class="w"><b>Friday Night Live</b><span class="t">4:00–5:00 PM</span><small>Extra practice</small></div><div class="r"><b>0</b> / 1<small>checked in</small></div></li>'
   + '<li><div class="w"><b>SWA Intermediate</b><span class="t">6:00–7:30 PM</span><small>Plan shared · Leg attacks and finishes</small></div><div class="r"><b>2</b> / 3<small>checked in</small></div></li>'
-  + '<li><div class="w"><b>SWA Advance</b><span class="t">6:00–7:30 PM</span><small>No plan yet · Nobody registered yet</small></div><div class="r"></div></li></ul><a class="button primary" href="/roster">Open check-in</a>');
+  + '<li><div class="w"><b>SWA Advanced</b><span class="t">6:00–7:30 PM</span><small>No plan yet · Nobody registered yet</small></div><div class="r"></div></li></ul><a class="button primary" href="/roster">Open check-in</a>');
 // At 6:30 PM the two 6:00 practices are on the mat: each says so in one red line and gets the red bar; the 4:00 one is over.
 {
   const morning = fixedNow;
@@ -74,7 +74,7 @@ assert.equal(tonight, '<ul class="tl"><li class="next"><div class="w"><b>Friday 
   await vm.runInContext('loadToday()', ctx);
   const evening = node('#tonightBody').innerHTML;
   assert.match(evening, /^<ul class="tl"><li><div class="w"><b>Friday Night Live<\/b>/, 'a finished session has the quiet bar');
-  assert.equal((evening.match(/<li class="now"><div class="w"><span class="on">On the mat now<\/span><b>SWA (Intermediate|Advance)<\/b><span class="t">6:00–7:30 PM<\/span>/g) || []).length, 2);
+  assert.equal((evening.match(/<li class="now"><div class="w"><span class="on">On the mat now<\/span><b>SWA (Intermediate|Advanced)<\/b><span class="t">6:00–7:30 PM<\/span>/g) || []).length, 2);
   assert.doesNotMatch(evening, /class="next"/, 'nothing is "next" while a session is on');
   fixedNow = morning; await vm.runInContext('loadToday()', ctx);
 }

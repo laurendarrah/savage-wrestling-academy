@@ -129,7 +129,7 @@ assert.match(legacyCard, /data-programs="none"/, 'an ended membership is not a c
 assert.match(legacyCard, /<span class="pill warn">Details missing<\/span>/);
 assert.match(legacyCard, /Home address<\/dt><dd><span class="none">Not provided/);
 assert.match(html, /Coaches see allergies and emergency contacts on the check-in roster for their own programs/);
-assert.match(html, /<select id="program" name="program"><option value="" selected>All programs<\/option><option value="Elementary">SWA Development<\/option><option value="Intermediate">SWA Intermediate<\/option><option value="Advanced">SWA Advance<\/option><option value="none">No current program<\/option><\/select>/);
+assert.match(html, /<select id="program" name="program"><option value="" selected>All programs<\/option><option value="Elementary">SWA Development<\/option><option value="Intermediate">SWA Intermediate<\/option><option value="Advanced">SWA Advanced<\/option><option value="none">No current program<\/option><\/select>/);
 // Text a family typed is escaped.
 assert.equal((await put({...bob, emergencyContactName: '<img src=x onerror=alert(1)>'})).status, 200);
 const escaped = await (await accounts.GET(request('/accounts', 'GET', null, 'owner'))).text();
