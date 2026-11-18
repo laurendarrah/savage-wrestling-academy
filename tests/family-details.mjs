@@ -107,8 +107,7 @@ sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)').run('legacy-uui
 sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,paid_at,term_start,term_end,source)
   VALUES ('ord-old','legacy-uuid','legacy@example.test','lw1','Lou Legacy','annual','Elementary','Elementary','Membership','[]',240000,0,240000,'usd','{}','{}','paid','kold',0,?,?,?,'2024-01-01','2024-12-31','offline')`).run(now, now, now);
 const accounts = load('app/accounts/route.ts');
-assert.equal((await accounts.GET(request('/accounts', 'GET', null, 'bob'))).status, 403, 'a family cannot open Family accounts');
-assert.equal((await accounts.GET(request('/accounts', 'GET', null, 'alice'))).status, 403);
+for (const who of ['bob', 'alice']) { const r = await accounts.GET(request('/accounts', 'GET', null, who)); assert.deepEqual([r.status, r.headers.get('location'), await r.text()], [303, '/login', ''], 'a family cannot open Family accounts: sent to sign in, with nothing from the page (issue #373)'); }
 const html = await (await accounts.GET(request('/accounts', 'GET', null, 'owner'))).text();
 // A family's card on the page, found by its email.
 const cardOf = (page, email) => '<article ' + page.split('<article ').find(s => s.includes(email)).split('</article>')[0] + '</article>';

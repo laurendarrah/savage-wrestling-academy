@@ -1,10 +1,11 @@
 // A signed waiver, for the owner or the family that signed it (issue #69).
+import {toSignIn} from '../../lib/protected-page';
 import {ownerIdentity} from '../../lib/account-auth';
 import {signedCopy, waiverCopyHtml} from '../../lib/waivers';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const auth = await ownerIdentity(request);
-  if (!auth.user?.email_confirmed_at) return new Response('Sign-in required.', {status: 401, headers: auth.headers});
+  if (!auth.user?.email_confirmed_at) return toSignIn(auth.headers);
   const id = new URL(request.url).searchParams.get('id');
   if (!id || !/^[a-zA-Z0-9-]{1,80}$/.test(id)) return new Response('Waiver not found.', {status: 404, headers: auth.headers});
   const copy = await signedCopy(id, {userId: auth.user.id, owner: !!auth.owner});

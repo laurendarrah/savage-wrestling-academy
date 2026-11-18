@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { ownerIdentity } from '../../lib/account-auth';
 import { markOwnerShell } from '../../lib/owner-shell';
+import {toSignIn} from '../../lib/protected-page';
 import { when } from '../../lib/datetime';
 import { addressLines, hasMedicalNote, missingDetails, type FamilyProfile, type Wrestler } from '../../lib/family-records';
 import { programDetails } from '../../lib/program-names';
@@ -79,7 +80,7 @@ async function familyPage(f:Filters,today:string){
 // A page link that keeps the search and filter. Cursors are URL-safe already.
 const link=(f:Filters,k:'after'|'before',cursor:string)=>'?'+[f.q&&'q='+encodeURIComponent(f.q),f.program&&'program='+encodeURIComponent(f.program),k+'='+cursor].filter(Boolean).join('&');
 export async function GET(request:Request){
- const auth=await ownerIdentity(request);if(!auth.owner)return new Response('Sign in as the owner to see family accounts.',{status:403,headers:auth.headers});
+ const auth=await ownerIdentity(request);if(!auth.owner)return toSignIn(auth.headers);
  const today=academyToday(),url=new URL(request.url),f=filters(url.searchParams),list=await familyPage(f,today);
  const programOf=await programsToday(today,list.rows.map(r=>r.user_id));
  const rows=list.rows.map((row,n)=>{
