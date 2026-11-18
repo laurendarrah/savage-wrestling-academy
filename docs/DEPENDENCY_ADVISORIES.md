@@ -3,13 +3,17 @@
 What `pnpm audit` reports, what was fixed, and why anything left over is acceptable. Update this file whenever an
 upgrade or override changes the picture.
 
-Last checked: November 7, 2026 (issue #48).
+Last checked: November 17, 2026 (issue #357).
 
 | | Low | Moderate | High | Total |
 |---|---|---|---|---|
 | `pnpm audit` before #48 | 7 | 27 | 28 | 62 |
 | `pnpm audit` after #48 | 0 | 3 | 0 | 3 |
 | `pnpm audit --prod` (before and after) | 0 | 0 | 0 | 0 |
+| `pnpm audit` on Nov 17, before #357 | 0 | 5 | 1 | 7, with 1 critical |
+| `pnpm audit` after #357 | 0 | 3 | 1 | 4 |
+| `pnpm audit --prod` before #357 | 0 | 2 | 0 | 2 |
+| `pnpm audit --prod` after #357 | 0 | 0 | 0 | 0 |
 
 ## Read this first: `--prod` does not cover everything that ships
 
@@ -67,13 +71,29 @@ Both are patch-level, same major as the dependent asks for. pnpm applies the ove
 `overrides` block in `package.json` uses npm's format and was left unchanged; for example, it still says fast-uri 3.1.8
 while 3.1.9 is installed.
 
-## What remains (3 moderate, all dev-only)
+## What #357 fixed (November 17, 2026)
+
+Advisories published after the last check. The checks failed on the two Next.js ones; the critical one was found by
+running `pnpm audit` without `--prod`.
+
+| Change | How | Advisories fixed |
+|---|---|---|
+| react, react-dom, react-server-dom-webpack 19.2.8 → 19.2.9 | patch upgrade; the three must match | [GHSA-xqc2-xf4c-x3h3](https://github.com/advisories/GHSA-xqc2-xf4c-x3h3), **critical**: unauthenticated remote code execution in React Server Components (ships in the Worker) |
+| next 16.4.3 → 16.4.6 | patch upgrade | [GHSA-mfr8-8qww-v76h](https://github.com/advisories/GHSA-mfr8-8qww-v76h) and [GHSA-vc7v-qv4w-wrv8](https://github.com/advisories/GHSA-vc7v-qv4w-wrv8), moderate: cache leaks with `'use cache'`, which the app does not use |
+
+- Each was followed by `pnpm test`, `pnpm typecheck` and `pnpm build`; the browser walkthrough ran in the checks.
+- The checks now also run `pnpm audit --audit-level critical` over every dependency, because `--prod` cannot see
+  `react-server-dom-webpack` (see "Read this first" above). A critical advisory anywhere fails the checks; triage it
+  the same day.
+
+## What remains (3 moderate and 1 high, all dev-only)
 
 | Advisory | Package and path | Why it is acceptable | Fixed by |
 |---|---|---|---|
 | [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99): any website can read responses from esbuild's development server | esbuild 0.18.20 via drizzle-kit 0.31.10 → @esbuild-kit/esm-loader → @esbuild-kit/core-utils | The flaw is in esbuild's `serve` API. @esbuild-kit only calls `transform`/`transformSync` to load the Drizzle config when someone runs `pnpm db:generate` locally. No server is started, and nothing from drizzle-kit is in the Worker. | Blocked. drizzle-kit 0.31.11, the newest stable release, still depends on @esbuild-kit. An override from 0.18 to 0.25 would cross breaking 0.x versions. |
 | [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249): minimatch DoS through glob pattern amplification | minimatch 10.2.5 via eslint-config-next → typescript-eslint → @typescript-eslint/typescript-estree | Only the linter uses it, on glob patterns written in this repo. Lint is not part of CI or the build. | Blocked. The fix is minimatch 11 (a major), and the newest typescript-estree (8.72.1) still asks for `^10.2.2`. |
 | [GHSA-wx4j-mvgx-mqwp](https://github.com/advisories/GHSA-wx4j-mvgx-mqwp): Satori-generated SVG has improper escaping | satori 0.16.0 via vinext 1.0.0-beta.5 → @vercel/og 0.8.6 | Satori backs `next/og` (`ImageResponse`). The app never imports `next/og`, so satori is never loaded and is not in the Worker bundle. | A vinext upgrade (1.0.0-beta.13 and later use @vercel/og 1.0.3 with satori 0.33.5). An override from 0.16 to 0.33 would cross breaking 0.x versions. |
+| [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) (high): picomatch ReDoS through repeated extglobs | picomatch up to 4.0.7 via vite (under @cloudflare/vite-plugin, @vitejs/plugin-react, @vitejs/plugin-rsc, vinext) and other build tooling | Build and dev tooling only: it matches file globs written in this repo and its dependencies' configs, never text from a visitor. It is not in `pnpm audit --prod` and not in the Worker bundle (`dist/server` has no picomatch code). | No fixed release yet (checked Nov 17). Upgrade when one is published. |
 
 ## Other follow-ups noticed
 
