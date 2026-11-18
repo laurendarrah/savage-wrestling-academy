@@ -69,7 +69,7 @@ const wrestlers = [{id: 'w1', name: 'Sam Example', grade: '8'}, {id: 'w2', name:
 
 // ---------- Choose training: the chip row and the plan segment over hidden values ----------
 {
-  const catalog = {today: '2026-11-07', now: '09:00', month: '2026-11', programs: [{id: 'Elementary', name: 'SWA Development', walkInCents: 4000, monthlyCents: 20000, grades: 'Grades K–6'}, {id: 'Intermediate', name: 'SWA Intermediate', walkInCents: 4000, monthlyCents: 20000, grades: 'Grades 7–12'}], practices: [{id: 'Intermediate:2026-11-12:18:00', program: 'Intermediate', date: '2026-11-12', start: '18:00', end: '19:30'}]};
+  const catalog = {today: '2026-11-07', now: '09:00', month: '2026-11', holidays: [{date: '2026-11-11', name: 'Veterans Day'}, {date: '2026-11-26', name: 'Thanksgiving Day'}], programs: [{id: 'Elementary', name: 'SWA Development', walkInCents: 4000, monthlyCents: 20000, grades: 'Grades K–6'}, {id: 'Intermediate', name: 'SWA Intermediate', walkInCents: 4000, monthlyCents: 20000, grades: 'Grades 7–12'}], practices: [{id: 'Intermediate:2026-11-12:18:00', program: 'Intermediate', date: '2026-11-12', start: '18:00', end: '19:30'}]};
   const p = page('app/register/screen.html', {fetch: async (url, o) => {
     if (url === '/api/family') return json({data: {wrestlers}});
     if (url.startsWith('/api/registration') && o?.method !== 'POST') return json(catalog);
@@ -96,6 +96,12 @@ const wrestlers = [{id: 'w1', name: 'Sam Example', grade: '8'}, {id: 'w2', name:
   vm.runInContext("selectPracticeTime('Intermediate:2026-11-12:18:00')", p.ctx);
   assert.match(p.el('practiceCalendar').innerHTML, /id="day-2026-11-12" aria-label="[^"]*"\s+aria-pressed="true"/);
   assert.doesNotMatch(p.el('practiceCalendar').innerHTML, /practice-dot/);
+  // The month's U.S. federal holidays (issue #365): marked on their day, named for screen readers, listed under the grid.
+  assert.match(p.el('practiceCalendar').innerHTML, /class="calendar-day  is-holiday" data-day="2026-11-26" id="day-2026-11-26" aria-label="26, Thu, Nov 26, 2026, Thanksgiving Day, no available practice" disabled/);
+  assert.match(p.el('practiceCalendar').innerHTML, /class="calendar-day  is-holiday" data-day="2026-11-11"[^>]*aria-label="11, Wed, Nov 11, 2026, Veterans Day, no available practice"/);
+  assert.equal((p.el('practiceCalendar').innerHTML.match(/is-holiday/g) || []).length, 2); assert.match(p.el('practiceCalendar').innerHTML, /class="calendar-day has-practice" data-day="2026-11-12"/, 'an ordinary practice day has no holiday mark');
+  assert.equal(p.el('calendarHolidays').hidden, false);
+  assert.equal(p.el('calendarHolidays').innerHTML, '<span></span>Holidays this month: <b>Wed, Nov 11, 2026</b> Veterans Day · <b>Thu, Nov 26, 2026</b> Thanksgiving Day. Holidays are shown for information only: a practice is canceled only when the academy marks a day off.');
   await p.el('selection').onsubmit({preventDefault() {}}); await settle();
   const r = p.el('reviewDetails').innerHTML;
   assert.match(r, /^<div class="swa-receipt"><div class="swa-receipt__row"><span class="k">Wrestler<\/span><span class="v">Sam Example<\/span><\/div><div class="swa-receipt__row"><span class="k">Program<\/span><span class="v">SWA Intermediate<\/span><\/div><div class="swa-receipt__row"><span class="k">Plan<\/span><span class="v">Single-practice walk-in<\/span><\/div><div class="swa-receipt__row"><span class="k">Practice<\/span><span class="v">Thu, Nov 12, 2026<small>6:00 PM–7:30 PM · New York time<\/small><\/span><\/div><div class="swa-receipt__total"><span class="k">Total<\/span><span class="v">\$40\.00<small>One payment<\/small><\/span><\/div><\/div>/);

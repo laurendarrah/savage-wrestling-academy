@@ -131,7 +131,19 @@ run('saveEvent(-1,form)'); assert.deepEqual(JSON.parse(run('JSON.stringify(data.
 assert.equal(run("eventSession(data.events[1],'2026-12-30').start"), '18:00'); assert.equal(run("eventSession({dates:['2026-12-30']},'2026-12-30')"), undefined);
 
 // Date grids in Schedules: today is underlined in red.
-run("extraPracticeMonth='2026-11'"); assert.match(run('extraPracticeCalendar()'), /aria-label="Today, Nov 11, 2026"[^>]*><span class="today-mark">11<\/span>/);
+// The Add a practice date picker also marks U.S. federal holidays and lists the month's under the grid (issue #365).
+run("extraPracticeMonth='2026-11'");
+{
+  const picker = run('extraPracticeCalendar()');
+  assert.match(picker, /class=" is-holiday" aria-label="Today, Nov 11, 2026, Veterans Day"[^>]*><span class="today-mark">11<\/span><i class="hol" aria-hidden="true"><\/i><\/button>/);
+  assert.match(picker, /class=" is-holiday" aria-label="Nov 26, 2026, Thanksgiving Day" aria-pressed="false"  onclick="toggleExtraPracticeDate\('2026-11-26'\)">26<i class="hol" aria-hidden="true"><\/i><\/button>/, 'a holiday can still be chosen');
+  assert.match(picker, /aria-label="Nov 27, 2026" aria-pressed="false"/, 'an ordinary day has no mark');
+  assert.equal((picker.match(/is-holiday/g) || []).length, 2);
+  assert.match(picker, /<p class="hint extra-practice-holidays"><i class="hol" aria-hidden="true"><\/i> Holidays: <b>Wed, Nov 11<\/b> Veterans Day · <b>Thu, Nov 26<\/b> Thanksgiving Day\. You can still add a practice on a holiday\.<\/p>/);
+  run("extraPracticeMonth='2027-08'"); assert.doesNotMatch(run('extraPracticeCalendar()'), /is-holiday|extra-practice-holidays/, 'a month without a holiday has no holiday line');
+  run("extraPracticeMonth='2026-11';extraPracticeDates=new Set(['2026-11-26'])"); assert.match(run('extraPracticeCalendar()'), /class="selected is-holiday" aria-label="Nov 26, 2026, Thanksgiving Day" aria-pressed="true"/);
+  run('extraPracticeDates=new Set()');
+}
 run("plannerMonth='2026-11'"); assert.match(run("holidayPlannerMarkup('2026-11-01','2026-12-31')"), /aria-label="Today, Wednesday, November 11, 2026, Veterans Day[^"]*"[^>]*><b><span class="today-mark">11<\/span>/);
 console.log('Passed: owner calendar holidays and today, phone list, event editor times and date grids.');
 
