@@ -49,6 +49,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Income and expenses | Card, monthly, refund and offline payments appear on their own; owner adds expenses (#194, #42) | `/financials`, `lib/financials.ts` | Checking against Stripe's totals (#42) |
 | Backups and restore | Owner downloads an encrypted backup of every business record and restores from one; Deploy backs up before each publish; restore drill (#25, #221) | `/backups`, `lib/backup-records.ts`, `pnpm restore:drill` | First backup off the platform (#17), restore drill (#25) |
 | Site health and alerts | Server errors, alerts to the owner (at most hourly), emails that didn't send, test alert (#107, #47, #263) | `/site-health`, `lib/owner-alerts.ts` | Uptime monitor on `/api/health` (#47) |
+| Requests for changes to the site | The owner writes what should change on the site itself; it is saved on the page and emailed to the person who maintains the site; the owner marks it done (#361) | `/site-requests`, `lib/site-requests.ts` | Needs `SITE_REQUESTS_TO` set on the Worker to email; without it requests are saved only |
 | Security log | Sensitive actions, 100 a page | `/security-log`, `lib/security-log.ts` | |
 
 ## Not built, on purpose or not yet

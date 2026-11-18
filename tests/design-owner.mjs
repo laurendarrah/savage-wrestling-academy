@@ -28,7 +28,7 @@ assert.match(shell, /@media \(min-width:901px\)\{html body\[data-swa-shell\] \.o
 assert.match(shell, /html body\[data-swa-shell\] \.swa-table:has\(tbody>tr:only-child>td\[colspan\]\) thead\{display:none\}/, 'an empty table shows no column headings');
 
 // ---------- Every owner page is on the design system: no font, color or button of its own ----------
-const pages = ['app/portal.html', 'app/payment-setup/screen.html', 'app/backups/screen.html', 'app/site-health/screen.html', 'app/data-requests/screen.html', 'app/transfers/screen.html',
+const pages = ['app/portal.html', 'app/payment-setup/screen.html', 'app/backups/screen.html', 'app/site-health/screen.html', 'app/site-requests/screen.html', 'app/data-requests/screen.html', 'app/transfers/screen.html',
   'app/scholarships/screen.html', 'app/waivers/screen.html', 'app/approvals/screen.html', 'app/cards/screen.html', 'app/website/screen.html', 'app/help/owner/screen.html', 'app/accounts/route.ts', 'app/security-log/route.ts', 'app/account-setup/route.ts'];
 for (const f of pages) {
   const css = styleOf(read(f));

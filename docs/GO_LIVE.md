@@ -31,6 +31,7 @@ Follow the steps in order. The old Sites site keeps running until the domain is 
 | `STRIPE_MODE` | Leave unset (test) until live-mode day (#26) |
 | `STRIPE_ACCOUNT_ID` | **Optional; usually leave unset.** The first test key saved on `/payment-setup` tells the site the academy's Stripe account (step 6). Set it to the account id (`acct_…`) only to pin the account from the start; then every test and live key must belong to it, and the owner can't switch accounts from the page |
 | `EMAIL_API_KEY`, `MAIL_FROM` | Leave unset until the email decision (#87). They come from Justin's own Resend account, which he sets up himself (Lauren helps only if asked). Once set, families get emails and the owner gets problem alerts from the site, at most one an hour (#47) |
+| `SITE_REQUESTS_TO` | The one email address the owner's **Request a site change** page sends to: the person who maintains the site (#361). Save it as a **Secret**; it is never committed and never shown on a page. Unset, requests are saved on the page but not emailed. |
 
 ## 3. Switch on the Deploy workflow (Lauren, in GitHub settings)
 

@@ -61,6 +61,7 @@ export const OWNER_NAV: OwnerNavGroup[] = [
     {href: '/payment-setup', label: 'Online payment setup'},
     {href: '/backups', label: 'Backups'},
     {href: '/site-health', label: 'Site health'},
+    {href: '/site-requests', label: 'Request a site change'},
     {href: '/data-requests', label: 'Data requests'},
     {href: '/security-log', label: 'Security activity'},
     {href: '/help/owner', label: 'Owner guide'},
