@@ -37,7 +37,7 @@ const ny = n => new Date(Date.now() + n * 86400000).toLocaleDateString('en-CA', 
 const today = ny(0), tomorrow = ny(1);
 const all = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: '18:00', end: '19:30'}));
 const state = {programNamingVersion: 2,
-  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000}, {id: 'Advanced', name: 'SWA Advance', priceCents: 20000}],
+  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000}, {id: 'Advanced', name: 'SWA Advanced', priceCents: 20000}],
   seasons: [{program: 'Intermediate', start: ny(-30), end: ny(60), weekly: all, excludedDates: []}, {program: 'Advanced', start: ny(-30), end: ny(60), weekly: all.map(w => ({...w, start: '19:30', end: '21:00'})), excludedDates: []}],
   events: [{id: 'camp-1', name: 'Takedown Camp', type: 'Camp', dates: [today, tomorrow], price: 160, slots: 20}],
   extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [today], enabled: true, start: '17:00', end: '18:00', memberCents: 1000, nonMemberCents: 2000}]};

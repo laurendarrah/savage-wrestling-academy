@@ -17,7 +17,7 @@ const dayDate = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', {tim
 const all = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: '18:00', end: '19:30'}));
 const season = (program, extra = {}) => ({season: 'Fall', program, start: ny(-30), end: ny(90), weekly: all, excludedDates: [], ...extra});
 const base = {kids: [], bookings: [], messages: [], offers: [], staff: [], attendance: {}, settings: {}, programNamingVersion: 2,
-  programs: [{id: 'Elementary', name: 'SWA Development', description: '', priceCents: 20000, walkInPriceCents: 3500}, {id: 'Intermediate', name: 'SWA Intermediate', description: '', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Advanced', name: 'SWA Advance', description: '', priceCents: 20000, walkInPriceCents: 4000}],
+  programs: [{id: 'Elementary', name: 'SWA Development', description: '', priceCents: 20000, walkInPriceCents: 3500}, {id: 'Intermediate', name: 'SWA Intermediate', description: '', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Advanced', name: 'SWA Advanced', description: '', priceCents: 20000, walkInPriceCents: 4000}],
   seasons: [season('Intermediate'), season('Elementary'), season('Advanced')],
   events: [{id: 'camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], price: 160, slots: 2}],
   extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: [ny(5), ny(12)], enabled: true, start: '17:00', end: '18:00', memberCents: 1000, nonMemberCents: 2000}],

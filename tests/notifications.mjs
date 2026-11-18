@@ -49,7 +49,7 @@ let fetchMock = async () => new Response('{}', {status: 200});
 const ny = k => new Date(Date.now() + k * 86400000).toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
 const all = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: '18:00', end: '19:30'}));
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2,
-  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Advanced', name: 'SWA Advance', priceCents: 20000, walkInPriceCents: 4000}],
+  programs: [{id: 'Intermediate', name: 'SWA Intermediate', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Advanced', name: 'SWA Advanced', priceCents: 20000, walkInPriceCents: 4000}],
   seasons: [{program: 'Intermediate', start: ny(-30), end: ny(90), weekly: all, excludedDates: []}],
   events: [{id: 'camp', name: 'Winter camp', type: 'Camp', dates: [ny(10), ny(11)], price: 160, slots: 1}]}));
 const fam = (u, wrestlers) => sqlite.prepare('INSERT OR REPLACE INTO family_accounts VALUES (?,?,?,?,?)').run(u, u + '@example.test', JSON.stringify({parentName: 'P ' + u, phone: '', wrestlers}), 1, 'x');
@@ -106,7 +106,7 @@ sqlite.prepare(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,ki
 r = {body: {orderId: 'm-jo'}};
 sqlite.prepare("INSERT INTO program_approvals(id,user_id,wrestler_id,program,wrestler_name,grade,status,created_at,updated_at,decided_by) VALUES ('a1','p2','w3','Advanced','Jo','8','approved','t','t','owner')").run();
 r = await call(transfersApi, 'POST', {orderId: r.body.orderId, toProgram: 'Advanced', effectiveDate: ny(3), reason: 'Moved up'});
-assert.equal(r.status, 200); assert.match(notices('p2', 'transfer')[0].subject, /Jo moves to SWA Advance/);
+assert.equal(r.status, 200); assert.match(notices('p2', 'transfer')[0].subject, /Jo moves to SWA Advanced/);
 
 // --- No waitlists (#210): a full camp sends no seat-offer notice ---
 as('owner'); r = await call(payments, 'POST', {action: 'record', userId: 'p1', wrestlerId: 'w1', kind: 'event', eventId: 'camp', method: 'cash'});

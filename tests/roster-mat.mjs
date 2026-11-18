@@ -23,7 +23,7 @@ const sessions = () => [
     entry('Riley Two', {checkedInAt: new Date().toISOString(), sources: ['Scholarship']}),
     entry('Casey Morgan', {card: 'missing', checkInBlocked: 'Casey Morgan can\'t be checked in: there is no USA Wrestling card on file. Ask the family to update the card, or the owner to allow an exception.'}),
     entry('Jordan Avery')]},
-  {key: 'practice:Advanced:' + ny + ':' + hhmm(nowMin + 60), type: 'practice', title: 'SWA Advance', program: 'Advanced', date: ny, start: hhmm(nowMin + 60), end: hhmm(nowMin + 150), checkedIn: 0, entries: []},
+  {key: 'practice:Advanced:' + ny + ':' + hhmm(nowMin + 60), type: 'practice', title: 'SWA Advanced', program: 'Advanced', date: ny, start: hhmm(nowMin + 60), end: hhmm(nowMin + 150), checkedIn: 0, entries: []},
 ];
 
 function page({role = 'coach', date = ny, today = ny, toast = null} = {}) {
@@ -60,7 +60,7 @@ const row = (p, name) => { const out = p.el('sessions').innerHTML, at = out.inde
 {
   const p = page(); await p.settle();
   const t = tabs(p);
-  assert.deepEqual(t.map(x => x.title), ['Friday Night Live', 'SWA Intermediate', 'SWA Advance']);
+  assert.deepEqual(t.map(x => x.title), ['Friday Night Live', 'SWA Intermediate', 'SWA Advanced']);
   assert.match(p.el('switcher').innerHTML, /^<div class="sessions__in" role="tablist" aria-label="Sessions">/);
   assert.deepEqual(t.map(x => [x.id, x.panel]), [['tab0', 's0'], ['tab1', 's1'], ['tab2', 's2']], 'each tab controls its panel');
   assert.deepEqual(t.map(x => x.selected), [false, true, false], 'opens on the session running now');
@@ -76,13 +76,13 @@ const row = (p, name) => { const out = p.el('sessions').innerHTML, at = out.inde
   // The session's header is the academy's practice box: the name, the time under it, the count beside them.
   assert.match(p.el('sessions').innerHTML, /<div class="session-head"><h2>SWA Intermediate<\/h2><p class="when">6:20 PM–7:20 PM<\/p><span class="count">1<small>\/ 4 in<\/small><\/span><\/div>/, 'the name, its time and the count in one box');
   assert.match(p.el('sessions').innerHTML, /<h2>Friday Night Live<\/h2><p class="when">4:30 PM–5:30 PM<\/p>[\s\S]*?<p class="muted meta">Separate purchase<\/p>/, 'what kind of session it is, under the box');
-  assert.match(p.el('sessions').innerHTML, /<h2>SWA Advance<\/h2><p class="when">7:30 PM–9:00 PM<\/p>[\s\S]*?<p class="muted meta"><\/p>/, 'a plain practice has nothing to add (the empty line is hidden by the stylesheet)');
+  assert.match(p.el('sessions').innerHTML, /<h2>SWA Advanced<\/h2><p class="when">7:30 PM–9:00 PM<\/p>[\s\S]*?<p class="muted meta"><\/p>/, 'a plain practice has nothing to add (the empty line is hidden by the stylesheet)');
   assert.equal(p.el('sessionBar').hidden, false); assert.equal(p.el('scanStart').hidden, false); assert.equal(p.el('scanDock').hidden, false); assert.equal(p.el('searchBox').hidden, false);
   assert.match(p.el('sessions').innerHTML, /Friday Night Live[\s\S]*Early Bird/, 'the other sessions are still in the page (the walkthrough reads them)');
   // A tab click opens its panel and moves the tab order; the arrow keys walk the tabs.
   await p.click('session', '2');
   assert.deepEqual(tabs(p).map(x => x.selected), [false, false, true]); assert.deepEqual(panels(p).map(x => x[2]), [false, false, true]);
-  assert.match(p.el('sessions').innerHTML, /<section class="session" id="s2"[^>]*><div class="session-head"><h2>SWA Advance<\/h2>[\s\S]*<div class="empty">[\s\S]*Nobody is registered for this session yet\./);
+  assert.match(p.el('sessions').innerHTML, /<section class="session" id="s2"[^>]*><div class="session-head"><h2>SWA Advanced<\/h2>[\s\S]*<div class="empty">[\s\S]*Nobody is registered for this session yet\./);
   let prevented = 0; p.el('switcher').onkeydown({key: 'ArrowRight', preventDefault() { prevented++; }});
   assert.deepEqual(tabs(p).map(x => x.selected), [true, false, false], 'ArrowRight wraps to the first tab'); assert.equal(prevented, 1);
   p.el('switcher').onkeydown({key: 'End', preventDefault() {}}); assert.equal(tabs(p)[2].selected, true);

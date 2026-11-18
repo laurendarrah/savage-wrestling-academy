@@ -63,7 +63,7 @@ Known issues and priorities are in `docs/ISSUES.md` and `docs/LAUNCH_PLAN.md`.
 
 ## Domain rules
 
-- Programs: SWA Development is grades K to 6. SWA Intermediate is grades 7 to 12. SWA Advance is grades 7 to 12 and every wrestler needs coach approval.
+- Programs: SWA Development is grades K to 6. SWA Intermediate is grades 7 to 12. SWA Advanced is grades 7 to 12 and every wrestler needs coach approval.
 - Program names come only from `lib/program-names.ts` (#355). Read them with `programName(id)`; never keep another copy of the names in `lib/`, and don't let a page retype one. To rename a program, change it there after Lauren and Justin decide.
 - Server rules in `lib/program-approval.ts` are the source of truth. Workspace code must match them.
 - Kindergarten is stored as the string `"K"`. Other grades are numbers or numeric strings.

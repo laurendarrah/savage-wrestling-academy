@@ -45,7 +45,7 @@ await step('setup: schedule and a family with a current card', async () => {
   await owner.goto(BASE + '/');
   const weekly = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => ({day, start: '18:00', end: '19:30'}));
   const state = {kids: [], bookings: [], messages: [], offers: [], staff: [], attendance: {}, settings: {},
-    programs: [['Elementary', 'SWA Development'], ['Intermediate', 'SWA Intermediate'], ['Advanced', 'SWA Advance']].map(([id, name]) => ({id, name, description: '', priceCents: 20000, walkInPriceCents: 4000})),
+    programs: [['Elementary', 'SWA Development'], ['Intermediate', 'SWA Intermediate'], ['Advanced', 'SWA Advanced']].map(([id, name]) => ({id, name, description: '', priceCents: 20000, walkInPriceCents: 4000})),
     seasons: ['Intermediate'].map(program => ({program, start: ny(-30), end: ny(120), weekly, excludedDates: []}))};
   const got = await api(owner, '/api/academy');
   const r = await api(owner, '/api/academy', {revision: got.body.revision, data: state}, 'PUT'); expect(r.status === 200, 'academy ' + JSON.stringify(r.body));
@@ -274,7 +274,7 @@ await step('the family cancels the membership on /family: confirm on the same pa
 await step('a late Stripe event for an upfront order started before #210 still records it, with its 12-month term', async () => {
   const at = new Date(Date.now() - 20 * 60000).toISOString();
   sql(`INSERT INTO orders(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,dates,base_cents,discount_cents,amount_cents,currency,pricing,terms_accepted,status,dedupe_key,livemode,created_at,updated_at,stripe_session_id)
-    VALUES ('late-upfront','e2e-family-a','family.a@example.test','w-sam','Sam Example','annual','Advanced','Advanced','SWA Advance: 12-month membership, paid upfront','[]',240000,0,240000,'usd','{}','{}','pending','late-upfront',0,'${at}','${at}','cs_test_late_upfront')`);
+    VALUES ('late-upfront','e2e-family-a','family.a@example.test','w-sam','Sam Example','annual','Advanced','Advanced','SWA Advanced: 12-month membership, paid upfront','[]',240000,0,240000,'usd','{}','{}','pending','late-upfront',0,'${at}','${at}','cs_test_late_upfront')`);
   const r = await webhook('checkout.session.completed', {id: 'cs_test_late_upfront', object: 'checkout.session', client_reference_id: 'late-upfront', metadata: {order_id: 'late-upfront'}, payment_status: 'paid', amount_total: 240000, currency: 'usd', livemode: false, payment_intent: 'pi_rehearsal_upfront', mode: 'payment'});
   expect(r.status === 200 && r.body.outcome === 'paid', 'late upfront webhook ' + JSON.stringify(r.body));
   const o = sql("SELECT status,term_start,term_end FROM orders WHERE id='late-upfront'")[0];

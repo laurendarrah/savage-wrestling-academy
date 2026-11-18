@@ -111,7 +111,7 @@ Done when: Stripe test clocks show 12 charges then a stop, a failed card marks t
 - Owner roster page built from paid memberships and walk-ins for a given practice date. This replaces the sample roster for daily operations.
 - Simple manual check-in on that roster, saved to a real attendance table.
 - Sample-only pages in the owner workspace are labeled clearly, so staff do not rely on simulated data. Update, November 6 (#147): the sample screens, the family previews and `/admin-demo` are removed instead. Every workspace screen is real.
-- Full test pass in a separate test environment: every purchase type, failures, cancellations, refunds, scholarship families, Advance approvals, team codes.
+- Full test pass in a separate test environment: every purchase type, failures, cancellations, refunds, scholarship families, Advanced approvals, team codes.
   Update, November 7 (#24, #259): the checklist is `docs/LAUNCH_TEST_PASS.md`, run on the live site in Stripe test mode before families join. It ends by deleting the test family with **Delete this family account** on Family accounts (payments stay for the books as "Deleted family").
 
 Done when: a test family's purchase appears on the correct practice roster and can be checked in.

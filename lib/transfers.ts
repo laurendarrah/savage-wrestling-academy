@@ -1,5 +1,5 @@
 // Program transfers on paid memberships (issue #74). The owner moves a membership to another program from an
-// effective date. Eligibility uses the same server rules as registration (grade ranges, SWA Advance approval).
+// effective date. Eligibility uses the same server rules as registration (grade ranges, SWA Advanced approval).
 // No money moves: changing programs doesn't change a membership's price (decided Nov 13, 2026 on #2).
 import {env} from 'cloudflare:workers';
 import {familyProfile, checkCompetitionAccess} from './program-approval';

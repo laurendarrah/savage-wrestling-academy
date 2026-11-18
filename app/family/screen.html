@@ -396,7 +396,7 @@ async function refreshCards(){try{const r=await fetch('/api/family',{cache:'no-s
 function refreshHome(){if(!$('summary').hidden)showSummary();else renderHome()}
 // Membership for the wrestler card: a short line beside the grade, and a sentence only when there is something to do.
 function membershipStatus(w){
- const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
+ const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advanced'};
  const a=scholarshipAwards.find(a=>a.wrestler_id===w.id&&a.status==='active');
  if(a)return {label:'Scholarship',ok:true,short:esc(names[a.program]||a.program)+' scholarship, no tuition',text:''};
  const m=activeMembership(w);
@@ -554,7 +554,7 @@ function renderPurchases(){
  document.querySelectorAll('[data-cash-cancel]').forEach(b=>b.onclick=()=>cancelCash(b.dataset.cashCancel));
 }
 function renderMembershipCards(){
- const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
+ const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advanced'};
  $('membershipCards').innerHTML=profile.wrestlers.length?profile.wrestlers.map(w=>{
   const a=scholarshipAwards.find(a=>a.wrestler_id===w.id&&a.status==='active');
   if(a)return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="pill ok">Active scholarship</span></div><p>${esc(names[a.program])} · <strong>$0.00 tuition</strong></p><p>Started ${esc(longDate(a.accepted_at))}. The scholarship continues under the agreement you accepted until it ends.</p><p class="billing-note">Additional paid practices, camps, clinics, travel, and private lessons are separate unless included in the final award.</p><details><summary>View your signed agreement</summary><p><a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">View / print signed copy →</a> · <a href="/scholarship-agreement?id=${encodeURIComponent(a.id)}&amp;download=1">Download copy</a></p><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(a.terms_text)}</p><p>Accepted by ${esc(a.signer)}.</p></details></article>`;
@@ -588,7 +588,7 @@ async function confirmCancel(b){const id=b.dataset.order,note=$('cancelNote-'+id
   renderMembershipCards();refreshHome()}
  catch(e){note.textContent=e.message;b.disabled=false}}
 function memberCard(w,m){
- const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
+ const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advanced'};
  const online=m.kind==='monthly'&&!!m.subscription_status,due=m.subscription_status==='past_due',paused=m.subscription_status==='paused',canceled=online&&!!m.cancel_on;
  const pill=paused?['warn','Paused']:due&&!canceled?['warn','Payment needs attention']:canceled?['neutral','Canceled · ends '+longDate(m.cancel_on)]:['ok','Active membership'];
  const rows=['<div><dt>Membership started</dt><dd>'+esc(longDate(m.term_start))+'</dd></div>'];
@@ -606,7 +606,7 @@ function memberCard(w,m){
 // A paused membership: the card kept failing until Stripe stopped trying. Restarting is a new sign-up from that
 // day, at the program's price, with no back pay for the missed months.
 function pausedCard(w,o){
- const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advance'};
+ const names={Elementary:'SWA Development',Intermediate:'SWA Intermediate',Advanced:'SWA Advanced'};
  return `<article class="member-card"><div class="section-title"><h3>${esc(w.name)}</h3><span class="pill warn">Paused</span></div><p>${esc(names[o.program]||o.program)} · monthly membership</p><p>The monthly payment didn’t go through after Stripe tried the card again, so the membership is paused. Nothing more is charged, and ${esc(w.name)} is off the practice roster. The last paid day was ${esc(longDate(o.term_end))}.</p><p class="billing-note">Restart with a card that works: payments start again from the day you restart, on that day each month. Missed months are not charged.</p><div class="billing-actions"><a class="button primary" href="/register?plan=monthly&amp;program=${encodeURIComponent(o.program)}&amp;wrestler=${encodeURIComponent(w.id)}">Restart membership →</a></div></article>`;
 }
 const pausedMembership=w=>orders.find(o=>o.wrestler_id===w.id&&o.kind==='monthly'&&o.status==='paid'&&o.subscription_status==='paused');

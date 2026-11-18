@@ -28,7 +28,7 @@
   --swa-body:Barlow,'Helvetica Neue',Arial,sans-serif; --swa-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
   --swa-shadow:0 1px 2px rgba(17,17,19,.05),0 10px 28px -12px rgba(17,17,19,.16);
   --swa-texture:radial-gradient(90% 140% at 100% 0%,rgba(196,34,44,.22),transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 1px,transparent 1px 10px),linear-gradient(180deg,#141416,#0D0D0F);
-  /* Program colors, as on the public calendar: Advance black, Intermediate gray, Development white, events red.
+  /* Program colors, as on the public calendar: Advanced black, Intermediate gray, Development white, events red.
      Each has a text color (-ink) to use on it; Development white also needs its edge (-line) on a white card. */
   --swa-prog-advance:#000000; --swa-prog-advance-ink:#FFFFFF;
   --swa-prog-intermediate:#686868; --swa-prog-intermediate-ink:#FFFFFF;
@@ -249,7 +249,7 @@ html body .swa-title__text>p.eyebrow{margin:0 0 var(--swa-s-8);color:var(--swa-m
 html body .swa-title__text>a,html body .swa-title__text>.swa-back{display:inline-flex;align-items:center;min-height:44px;margin:0 0 var(--swa-s-4);color:var(--swa-muted);font-size:var(--swa-t-15);font-weight:600;text-decoration:none}
 html body .swa-title__text>a:hover{color:var(--swa-red)}
 html body .swa-title__actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--swa-s-8);flex:none;max-width:100%}
-/* A link that opened the page (Family accounts' "SWA Advance approvals →") reads as a quiet action beside the title. */
+/* A link that opened the page (Family accounts' "SWA Advanced approvals →") reads as a quiet action beside the title. */
 html body .swa-title__actions>a:not(.button){display:inline-flex;align-items:center;min-height:44px;font-size:var(--swa-t-15);font-weight:600;color:var(--swa-ink);text-decoration-color:var(--swa-line)}
 html body .swa-title__actions>a:not(.button):hover{color:var(--swa-red);text-decoration-color:var(--swa-red)}
 /* An actions slot whose only button is hidden (Inbox before there is anything to mark) takes no room. */

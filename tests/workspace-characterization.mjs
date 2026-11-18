@@ -269,7 +269,7 @@ reset('saves=0;'); ctx.form = form(codeCases.taken); run('saveTeamCode(0,form)')
 record('saveTeamCode.edit', json('{codes:data.teamCodes,saves}'));
 
 // The owner calendar (the month grid and the week list, issue #283), planner and pages, drawn from all of the above.
-// The legend's hidden keys stand where the old program filter stood: everything, SWA Advance only, events only.
+// The legend's hidden keys stand where the old program filter stood: everything, SWA Advanced only, events only.
 reset(`calendarPlanSummaries['2026-11']={status:'ready',items:[{program:'Elementary',date:'2026-11-16',published:true},{program:'Advanced',date:'2026-11-17',published:false}]}`);
 const hidden = {'All programs': [], 'Advanced': ['Elementary', 'Intermediate', 'events'], 'Camps, clinics & events': ['Elementary', 'Intermediate', 'Advanced']};
 for (const [y, m] of [[2026, 10], [2026, 11], [2027, 1], [2027, 2]]) {

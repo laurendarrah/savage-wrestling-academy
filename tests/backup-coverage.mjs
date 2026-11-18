@@ -81,7 +81,7 @@ function seed(sqlite){
   run("INSERT INTO installment_payments VALUES (?,?,?,?,?,?,?,?)",'evt_inv_2','ord-1','in_2',2,18000,20000,0,now);
   // Issue #248: a walk-in booked to pay cash at the academy.
   run(`INSERT INTO cash_bookings(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,session_date,start_time,end_time,base_cents,discount_cents,amount_cents,pricing,dedupe_key,status,order_id,created_at,updated_at,canceled_at,canceled_by,cancel_reason)
-    VALUES ('cash-1','parent-1','pat@example.test','w-1','Sam Example','walkin','Advanced','Advanced:2026-11-20:18:00','SWA Advance walk-in','2026-11-20','18:00','19:30',4000,0,4000,'{"plan":"walkin"}','parent-1|w-1|walkin|Advanced|2026-11-20','due',NULL,?,?,NULL,NULL,NULL)`,now,now);
+    VALUES ('cash-1','parent-1','pat@example.test','w-1','Sam Example','walkin','Advanced','Advanced:2026-11-20:18:00','SWA Advanced walk-in','2026-11-20','18:00','19:30',4000,0,4000,'{"plan":"walkin"}','parent-1|w-1|walkin|Advanced|2026-11-20','due',NULL,?,?,NULL,NULL,NULL)`,now,now);
 }
 const dump=(sqlite,t)=>sqlite.prepare(`SELECT * FROM ${t} ORDER BY 1`).all().map(r=>({...r}));
 const legacy=['practice_curriculum_groups','practice_curricula','program_approvals','approval_messages','practice_plans','scholarship_awards'];

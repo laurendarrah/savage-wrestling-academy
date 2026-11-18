@@ -176,7 +176,7 @@ const wrestlers = [{id: 'w1', name: 'Sam Example', grade: '8'}, {id: 'w2', name:
 
 // ---------- Welcome: the program switch on a phone ----------
 {
-  const schedule = {month: '2026-11', today: '2026-11-09', programs: [{id: 'Elementary', name: 'SWA Development', monthlyCents: 20000, walkInCents: 4000}, {id: 'Intermediate', name: 'SWA Intermediate', monthlyCents: 20000, walkInCents: 4000}, {id: 'Advanced', name: 'SWA Advance', monthlyCents: 20000, walkInCents: 4000}], practices: [], events: [], liveClasses: []};
+  const schedule = {month: '2026-11', today: '2026-11-09', programs: [{id: 'Elementary', name: 'SWA Development', monthlyCents: 20000, walkInCents: 4000}, {id: 'Intermediate', name: 'SWA Intermediate', monthlyCents: 20000, walkInCents: 4000}, {id: 'Advanced', name: 'SWA Advanced', monthlyCents: 20000, walkInCents: 4000}], practices: [], events: [], liveClasses: []};
   const p = page('app/welcome/screen.html', {fetch: async () => json(schedule)});
   await settle();
   assert.equal(p.el('programSwitch').hidden, false);

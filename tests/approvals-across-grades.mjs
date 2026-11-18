@@ -1,4 +1,4 @@
-// Issue #271 (audit E1, UX 3): an SWA Advance request or decision belongs to the wrestler, not to the grade they asked
+// Issue #271 (audit E1, UX 3): an SWA Advanced request or decision belongs to the wrestler, not to the grade they asked
 // in. It survives a grade change within 7–12 (the owner sees "Requested as Grade 9, now Grade 10" and can still decide;
 // the family's registration page says the request is still waiting), the owner is told when a waiting request's
 // profile changes, and only a name change or leaving grades 7–12 ends it.
@@ -14,7 +14,7 @@ const load = loader(env, actor);
 const requests = load('app/api/program-approvals/route.ts'), decisions = load('app/api/owner-approvals/route.ts'), familyApi = load('app/api/family/route.ts');
 const rules = load('lib/program-approval.ts');
 const today = new Date().toLocaleDateString('en-CA', {timeZone: 'America/New_York'});
-sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o',?)").run(JSON.stringify({programNamingVersion: 2, programs: [{id: 'Advanced', name: 'SWA Advance', priceCents: 20000, walkInPriceCents: 4000}], seasons: []}), today);
+sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o',?)").run(JSON.stringify({programNamingVersion: 2, programs: [{id: 'Advanced', name: 'SWA Advanced', priceCents: 20000, walkInPriceCents: 4000}], seasons: []}), today);
 const details = {homeAddress: '20 Railroad St', homeCity: 'Huntington Station', homeState: 'NY', homeZip: '11746', emergencyContactName: 'Jordan', emergencyContactPhone: '631-555-0188'};
 const kid = (name, grade) => ({id: 'w1', name, grade, usawNumber: 'AB1234', usawExpires: '2099-08-31', birthDate: '2012-04-18', allergies: 'None'});
 const profile = (...wrestlers) => ({parentName: 'Pat', phone: '631-555-0100', ...details, wrestlers});
@@ -79,7 +79,7 @@ assert.deepEqual([fresh.wrestler_name, fresh.grade, fresh.status, fresh.decided_
 await save(kid('Alexander Example', '9'));
 assert.equal(notices('approval_profile_changed').length, 2); assert.match(notices('approval_profile_changed')[1].subject, /Alex Example was renamed Alexander Example/);
 assert.match(notices('approval_profile_changed')[1].body, /no longer applies/);
-console.log('Passed: SWA Advance requests and decisions follow the wrestler through grade changes within 7–12, end on a rename or on leaving 7–12, stay decidable, and the owner hears about profile changes once.');
+console.log('Passed: SWA Advanced requests and decisions follow the wrestler through grade changes within 7–12, end on a rename or on leaving 7–12, stay decidable, and the owner hears about profile changes once.');
 
 // --- Pages (inline JavaScript is not typechecked) ---
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -106,7 +106,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
   assert.match(ctx.approvalWords('pending', {gradeChanged: true}, w), /^Approval pending\. Your request is still waiting; Justin sees the new grade \(now Grade 10\) with it, so there is nothing to send again\./);
   assert.match(ctx.approvalWords('pending', {gradeChanged: false}, w), /^Approval pending\. Please message Justin below/);
   assert.match(ctx.approvalWords('approved', {gradeChanged: true}, w), /Approved![\s\S]*stays with the wrestler after the grade change \(now Grade 10\)/);
-  assert.match(ctx.approvalWords('not_requested', undefined, w), /need coach approval for SWA Advance/);
+  assert.match(ctx.approvalWords('not_requested', undefined, w), /need coach approval for SWA Advanced/);
   assert.ok(script.includes("$('approvalText').textContent=approvalWords(status,approval,w)"), 'the gate uses it');
 }
 console.log('Passed: approvals and registration pages explain a request that outlived a grade change.');

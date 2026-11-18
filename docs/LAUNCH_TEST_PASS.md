@@ -23,7 +23,7 @@ Stripe test cards (Stripe's public test numbers; no real money moves): **4242 42
 
 In a private window, signed out:
 
-- [ ] **Must pass.** `/welcome` lists **SWA Development**, **SWA Intermediate** and **SWA Advance** with their prices, says SWA Advance needs coach approval, and shows practices under **Coming up**. *If it says programs will be listed soon, publish them from the Launch checklist (**Publish the programs**).*
+- [ ] **Must pass.** `/welcome` lists **SWA Development**, **SWA Intermediate** and **SWA Advanced** with their prices, says SWA Advanced needs coach approval, and shows practices under **Coming up**. *If it says programs will be listed soon, publish them from the Launch checklist (**Publish the programs**).*
 - [ ] **Must pass.** `/calendar` shows the week's practices, and **Camps & clinics** and **Extra practices** show the camp and Friday Night Live with their dates and times.
 - [ ] **Must pass.** The SWA Intermediate practice days and times on `/calendar` match what Justin set under **Schedules** in the owner dashboard.
 - [ ] Program cards on `/calendar?view=programs` show the prices set under **Programs & pricing**.

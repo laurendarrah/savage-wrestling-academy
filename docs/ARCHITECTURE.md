@@ -67,7 +67,7 @@ Every other owner tool is its own page, listed once in `lib/owner-nav.ts`: four 
 
 | Rule | Source of truth |
 |---|---|
-| Program grades and SWA Advance approval | `lib/program-approval.ts` (workspace code must match it) |
+| Program grades and SWA Advanced approval | `lib/program-approval.ts` (workspace code must match it) |
 | Prices, discounts, eligibility for every purchase | `lib/quotes.ts` |
 | Which purchase types are open online | `CHECKOUT_KINDS`, read in `lib/checkout-config.ts` |
 | Seat limits for camps and events | `lib/capacity.ts` (there are no waitlists, #210) |

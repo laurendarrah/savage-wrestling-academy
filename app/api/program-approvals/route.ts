@@ -24,7 +24,7 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  if(input?.action!=='request'||typeof input.wrestlerId!=='string')return reply({error:'Choose a saved wrestler.'},400);
  const profile=await familyProfile(auth.user.id),w=profile?.wrestlers.find(w=>w.id===input.wrestlerId);
  if(!w)return reply({error:'Saved wrestler not found in your family account.'},404);
- if(!requiresApproval('Advanced',w))return reply({error:'SWA Advance approval requests are for wrestlers in grades 7–12.'},400);
+ if(!requiresApproval('Advanced',w))return reply({error:'SWA Advanced approval requests are for wrestlers in grades 7–12.'},400);
  if(await rateLimited(request,'program-approval:'+auth.user.id))return reply({error:'Please wait a minute before trying again.'},429);
  const now=new Date().toISOString();
  // A request for a wrestler who already has one changes nothing while the decision still applies (same name, grades

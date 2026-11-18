@@ -27,8 +27,17 @@ const row = fresh.prepare("SELECT payload,revision,updated_by FROM academy_state
 assert.equal(row.revision, 1); assert.equal(row.updated_by, 'setup:issue-178');
 const doc = JSON.parse(row.payload);
 assert.equal(validState(doc), true, 'the owner can save over it without a validation error');
+// The setup migration saved the third program under its earlier name, SWA Advance, and migrations are never edited.
+// What families and the owner see is the name in lib/program-names.ts, SWA Advanced (issue #359), with the standard
+// description under the new name too.
 assert.deepEqual(doc.programs.map(p => [p.id, p.name, p.priceCents, p.walkInPriceCents]),
   [['Elementary', 'SWA Development', 20000, 4000], ['Intermediate', 'SWA Intermediate', 20000, 4000], ['Advanced', 'SWA Advance', 20000, 4000]]);
+{
+  const shown = registrationCatalog(doc, '2026-12', '2026-11-06').programs;
+  assert.deepEqual(shown.map(p => p.name), ['SWA Development', 'SWA Intermediate', 'SWA Advanced']);
+  assert.match(shown[2].description, /All SWA Advanced wrestlers require coach approval\.$/);
+  assert.doesNotMatch(JSON.stringify(shown), /SWA Advance(?!d)/);
+}
 const times = Object.fromEntries(doc.seasons.map(s => [s.program, s.weekly.map(w => `${w.day.slice(0, 3)} ${w.start}-${w.end}`).join(', ')]));
 assert.deepEqual(times, {
   Elementary: 'Mon 18:00-19:30, Wed 18:00-19:30, Fri 18:00-19:30',
@@ -41,7 +50,7 @@ assert.deepEqual([doc.kids, doc.bookings, doc.messages, doc.staff, doc.events, d
 const nov = registrationCatalog(doc, '2026-11', '2026-11-06'), dec = registrationCatalog(doc, '2026-12', '2026-11-06');
 assert.equal(nov.programs.length, 3);
 assert.ok(nov.practices.every(p => p.date >= '2026-11-09'), 'nothing before the season starts');
-assert.ok(nov.practices.some(p => p.program === 'Advanced' && p.date === '2026-11-15' && p.start === '10:00'), 'Sunday Advance practice');
+assert.ok(nov.practices.some(p => p.program === 'Advanced' && p.date === '2026-11-15' && p.start === '10:00'), 'Sunday Advanced practice');
 assert.ok(dec.practices.some(p => p.program === 'Elementary' && p.date === '2026-12-04' && p.start === '18:00'), 'Friday Development practice');
 assert.ok(!dec.practices.some(p => p.program === 'Intermediate' && p.date === '2026-12-01'), 'no Intermediate on Tuesdays');
 

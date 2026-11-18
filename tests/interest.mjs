@@ -49,7 +49,7 @@ assert.equal((await post({kind: 'membership', wrestlerId: 'w1', program: 'Advanc
 assert.equal((await post({kind: 'membership', wrestlerId: 'w2', program: 'Elementary'})).status, 200, 'another wrestler is another item');
 assert.equal(rows().length, 3);
 // Yesterday's same request does not block today's.
-sqlite.prepare("UPDATE family_messages SET created_at=? WHERE body LIKE '%SWA Advance%'").run(ny(-1) + 'T12:00:00Z');
+sqlite.prepare("UPDATE family_messages SET created_at=? WHERE body LIKE '%SWA Advanced%'").run(ny(-1) + 'T12:00:00Z');
 assert.equal((await post({kind: 'membership', wrestlerId: 'w1', program: 'Advanced'})).status, 200, 'a new day, a new request');
 
 // ---------- Lessons: a chosen open time names the coach and time; the type is the time's own ----------

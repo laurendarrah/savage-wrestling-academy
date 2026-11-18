@@ -37,7 +37,7 @@ function page(file, {fetch, search = '', hidden = []}) {
   const programs = [
     {id: 'Elementary', name: 'SWA Development', grades: '', description: '', monthlyCents: 20000, annualCents: 240000, walkInCents: 4000},
     {id: 'Intermediate', name: 'SWA Intermediate', grades: 'Grades 7–12', description: 'Teens', monthlyCents: 20000, annualCents: 240000, walkInCents: 4000},
-    {id: 'Advanced', name: 'SWA Advance', grades: 'Grades 7–12 · Coach approval required', description: '', monthlyCents: 22550, annualCents: 270600, walkInCents: null}];
+    {id: 'Advanced', name: 'SWA Advanced', grades: 'Grades 7–12 · Coach approval required', description: '', monthlyCents: 22550, annualCents: 270600, walkInCents: null}];
   // Near the end of November the next sessions are in December.
   const months = {
     '': {month: '2026-11', today: '2026-11-30', programs, practices: [{id: 'Elementary:2026-11-30:18:00', program: 'Elementary', date: '2026-11-30', start: '18:00', end: '19:30'}, {id: 'Intermediate:2026-11-30:18:00', program: 'Intermediate', date: '2026-11-30', start: '18:00', end: '19:30'}], liveClasses: [], events: []},
@@ -53,17 +53,17 @@ function page(file, {fetch, search = '', hidden = []}) {
   assert.match(cards, /\$40 for a single walk-in practice/);
   // Weekly practice times on each card, from the published practices (issue #180).
   assert.match(cards, /SWA Development<\/h3><span class="times">Mon · 6:00–7:30 PM<\/span>/);
-  assert.match(cards, /SWA Advance<\/h3><span class="times">Tue · 3:00–4:30 PM<\/span>/, 'next month\'s practices count too');
+  assert.match(cards, /SWA Advanced<\/h3><span class="times">Tue · 3:00–4:30 PM<\/span>/, 'next month\'s practices count too');
   assert.match(cards, /\$225\.50 a month/, 'cents shown when the price has them');
-  assert.equal((cards.match(/needs coach approval/g) || []).length, 1, 'only SWA Advance says coach approval');
-  assert.match(cards, /">Grades 7–12<\/span><h3>SWA Advance<\/h3>/, 'approval is said once, in the note');
+  assert.equal((cards.match(/needs coach approval/g) || []).length, 1, 'only SWA Advanced says coach approval');
+  assert.match(cards, /">Grades 7–12<\/span><h3>SWA Advanced<\/h3>/, 'approval is said once, in the note');
   // Coming up is one row in the hero (#282): the soonest session, with sessions at the same time sharing it.
   const week = el('week').innerHTML;
   assert.equal(week, '<span class="lbl">Coming up<b class="today">Today</b></span><span class="swa-practice dark"><span class="swa-practice__name what">SWA Development practice, SWA Intermediate practice</span><span class="swa-practice__time when">6:00 PM</span></span><a href="/calendar">Full calendar →</a>', 'the test clock is Nov 30, so the session is today: the red Today line, and the box keeps the time');
   assert.doesNotMatch(week, /2026-1|18:00/);
   // The rest of the list is still computed (next month included), for the row to reach into December when November is over.
   const groups = vm.runInContext('upcoming(__s,"2026-11-30",5)', Object.assign(page('app/welcome/screen.html', {fetch: async () => json({}, false)}).ctx, {__s: [months[''], months['?month=2026-12']]}));
-  assert.equal(JSON.stringify(groups.map(g => g.date + ' ' + g.items.map(i => i.title).join('+'))), JSON.stringify(['2026-11-30 SWA Development practice+SWA Intermediate practice', '2026-12-01 SWA Advance practice', '2026-12-04 Friday Night Live', '2026-12-20 Winter camp (camp)']));
+  assert.equal(JSON.stringify(groups.map(g => g.date + ' ' + g.items.map(i => i.title).join('+'))), JSON.stringify(['2026-11-30 SWA Development practice+SWA Intermediate practice', '2026-12-01 SWA Advanced practice', '2026-12-04 Friday Night Live', '2026-12-20 Winter camp (camp)']));
   // One red button in the first screen: Join; Sign in is the quiet link. The mark lives in the top bar only.
   assert.match(html, /<div class="actions"><a class="button primary" href="\/login\?mode=signup">Join the academy<\/a><a class="button quiet" href="\/login">Sign in<\/a><\/div>/);
   assert.doesNotMatch(html, /savage-logo-256\.png/, 'no second mark in the hero');

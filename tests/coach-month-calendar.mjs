@@ -22,7 +22,7 @@ const request=(session,query,body)=>new Request('https://academy.test/api/practi
 async function get(session,query='?month=2026-12'){const r=await plans.GET(request(session,query));assert.equal(r.status,200,session+' GET');return r.json()}
 users.coachA={id:'coach-a',email:'a@coach.test',email_confirmed_at:'2026-10-15'};users.coachB={...users.coachA,id:'coach-b',email:'b@coach.test'};
 sqlite.prepare('INSERT INTO staff_access(email,name,programs,active,updated_at) VALUES (?,?,?,?,?)').run('a@coach.test','Coach A','["Elementary"]',1,'2026-10-16');sqlite.prepare('INSERT INTO staff_access(email,name,programs,active,updated_at) VALUES (?,?,?,?,?)').run('b@coach.test','Coach B','["Advanced"]',1,'2026-10-16');
-const state={programs:[{id:'Elementary',name:'SWA Development',priceCents:20000},{id:'Advanced',name:'SWA Advance',priceCents:20000}],
+const state={programs:[{id:'Elementary',name:'SWA Development',priceCents:20000},{id:'Advanced',name:'SWA Advanced',priceCents:20000}],
  seasons:[{program:'Elementary',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Monday',start:'18:00',end:'19:30'}],excludedDates:['2026-12-28']},{program:'Advanced',start:'2026-12-01',end:'2026-12-31',weekly:[{day:'Monday',start:'19:30',end:'21:00'}],excludedDates:[]}],
  events:[{id:'winter-camp',name:'Winter camp',type:'Camp',dates:['2026-12-19','2026-12-20'],schedule:[{date:'2026-12-19',start:'09:00',end:'12:00'}],price:160,slots:20},{id:'ref-clinic',name:'Referee',type:'Clinic',dates:['2026-12-02'],price:40,slots:10}],
  extraPractices:[{id:'friday-live',name:'Friday Night Live',enabled:true,gradeRange:'7–12',description:'',dates:['2026-12-04'],start:'19:00',end:'20:30',memberCents:1000,nonMemberCents:2000}]};
@@ -79,7 +79,7 @@ assert.match(grid,/<div class="cal-item p-Elementary"><b>6:00 PM–7:30 PM<\/b><
 assert.doesNotMatch(grid,/Advanced/,'only the coach’s programs');
 assert.match(grid,/<div class="cal-item p-extra"><b>9:00 AM–12:00 PM<\/b><span>Winter camp<\/span><\/div>/);assert.match(grid,/Time to be announced<\/b><span>Winter camp/);
 assert.match(grid,/Friday Night Live \(extra practice\)/);assert.match(grid,/holiday-tag">Christmas Day/);assert.match(grid,/<span class="d-long">Mon, Dec 7<\/span>/);
-assert.match(coach.el('calendarKey').innerHTML,/p-Elementary"><\/i>SWA Development/);assert.doesNotMatch(coach.el('calendarKey').innerHTML,/SWA Advance/);
+assert.match(coach.el('calendarKey').innerHTML,/p-Elementary"><\/i>SWA Development/);assert.doesNotMatch(coach.el('calendarKey').innerHTML,/SWA Advanced/);
 assert.match(coach.el('intro').textContent,/Your month at a glance/);
 // A practice marked Plan shared opens its plan, with its text escaped.
 coach.el('calendar').onclick({target:{closest:()=>({dataset:{practice:'Elementary|2026-12-07'}})}});
@@ -106,7 +106,7 @@ coach.el('thisMonth').onclick();await coach.settle();assert.equal(await coach.ru
  assert.doesNotMatch(html,/class="cal-day[^"]* empty/,'never the class name "empty": the empty-state block\'s padding would push the date down');
  assert.ok(html.indexOf('cal-earlier')>html.lastIndexOf('cal-day'),'the toggle comes after the week');
  assert.equal((await coach.run('otherDays(cal,d=>d.items.filter(i=>i.program!=="Advanced"))')).length,3,'the program filter changes what folds');
- assert.equal((await coach.run('otherDays(cal,d=>d.items.filter(i=>i.program==="Advanced"))')).length,1,'with only SWA Advance shown, just the holiday folds');
+ assert.equal((await coach.run('otherDays(cal,d=>d.items.filter(i=>i.program==="Advanced"))')).length,1,'with only SWA Advanced shown, just the holiday folds');
  html=await coach.run('calendarHtml(cal,"",true)');
  assert.match(html,/aria-expanded="true">Show this week only<\/button>/);assert.doesNotMatch(html,/folded/);
  await coach.run('cal.days.forEach(d=>d.today=false)');assert.doesNotMatch(await coach.run('calendarHtml(cal,"",false)'),/cal-earlier|folded/,'a month without today folds nothing');

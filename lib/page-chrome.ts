@@ -62,7 +62,7 @@ export function bandPage(pathname: string) { return BAND_PAGES.has(pathname) || 
 
 // A page's opening: optional back links, an optional eyebrow line, the heading and an optional intro paragraph.
 // Status lines and notices stay outside; pages with their own header are left alone.
-// After the heading: paragraphs that hold only a link (Family accounts' "SWA Advance approvals →"), which become the
+// After the heading: paragraphs that hold only a link (Family accounts' "SWA Advanced approvals →"), which become the
 // title row's actions, then at most one intro paragraph. Status lines and notices never come along.
 const LINK_LINE = /\s*<p>\s*<a\b[^>]*>[^<]*<\/a>\s*<\/p>/;
 const INTRO_P = /\s*<p\b(?![^>]*(?:id="status"|role="status"|class="notice"))[^>]*>[\s\S]*?<\/p>/;

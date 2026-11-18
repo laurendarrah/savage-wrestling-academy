@@ -14,7 +14,7 @@ const ny = k => new Date(Date.now() + k * 864e5).toLocaleDateString('en-CA', {ti
 const people = {dana: 'dana.coach@example.test', lee: 'lee.coach@example.test', sam: 'sam.coach@example.test', kim: 'kim.coach@example.test'};
 for (const [k, email] of Object.entries(people)) { users[k] = {id: k + '-uuid', email, email_confirmed_at: '2026-10-15'}; }
 
-// Dana and Kim coach SWA Intermediate, Lee coaches SWA Development and SWA Intermediate, Sam only SWA Advance. The owner
+// Dana and Kim coach SWA Intermediate, Lee coaches SWA Development and SWA Intermediate, Sam only SWA Advanced. The owner
 // coaches SWA Intermediate too. Kim's access was removed.
 const every = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const state = {programs: [{id: 'Elementary'}, {id: 'Intermediate'}, {id: 'Advanced'}],
@@ -61,7 +61,7 @@ assert.equal((await post(owner, '/api/timesheets', {action: 'time-off', id: reqI
 r = await post(owner, '/api/timesheets', {action: 'time-off', id: reqId, revision: rev(), decision: 'approve', note: 'Enjoy it'}, 'owner');
 assert.equal(r.status, 200); assert.equal(r.body.told, 1, 'one other active coach shares a program');
 const notes = all('SELECT email,kind,subject,body,user_id FROM notifications ORDER BY kind,email');
-// B: Lee (shares SWA Intermediate) is told. Sam (SWA Advance only), Kim (removed) and the owner (who approved it) are not.
+// B: Lee (shares SWA Intermediate) is told. Sam (SWA Advanced only), Kim (removed) and the owner (who approved it) are not.
 assert.deepEqual(notes.map(n => [n.email, n.kind]), [[people.dana, 'coach_time_off_approved'], [people.lee, 'coach_time_off_team']]);
 const team = notes.find(n => n.kind === 'coach_time_off_team');
 assert.match(team.subject, /^Coach Dana is away /); assert.match(team.body, /You both coach SWA Intermediate\./); assert.match(team.body, /nothing on the schedule changes/);

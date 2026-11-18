@@ -7,7 +7,7 @@ const html = readFileSync('app/register/screen.html', 'utf8'), body = html.slice
 assert.match(body, /<div class="swa-head"><p class="eyebrow">Savage Wrestling Academy<\/p><h1>Choose training<\/h1>/);
 assert.deepEqual([...body.matchAll(/<span class="num" aria-hidden="true">(\d)<\/span>/g)].map(m => m[1]), ['1', '2', '3'], 'three numbered steps');
 
-// While choosing, the only red button is Review selection. The approval request only shows for SWA Advance.
+// While choosing, the only red button is Review selection. The approval request only shows for SWA Advanced.
 const form = body.match(/<form id="selection" class="reg">[\s\S]*?<\/form>/)[0], gate = form.match(/<div id="approvalGate" hidden>[\s\S]*?<\/div><div id="monthly">/)[0];
 assert.deepEqual([...form.replace(gate, '').matchAll(/<button[^>]*class="primary"[^>]*id="(\w+)"/g)].map(m => m[1]), ['reviewButton']);
 assert.match(form, /<div class="reviewbar"><p id="price" class="price"><\/p><button class="primary" id="reviewButton">/, 'price and Review selection sit together');

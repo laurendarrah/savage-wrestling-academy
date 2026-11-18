@@ -35,7 +35,7 @@ details.change{margin-top:12px}details.change summary{cursor:pointer;min-height:
 <p id="status" role="status" aria-live="polite"></p></main>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const PROGRAMS=[['Elementary','SWA Development'],['Intermediate','SWA Intermediate'],['Advanced','SWA Advance']];
+const PROGRAMS=[['Elementary','SWA Development'],['Intermediate','SWA Intermediate'],['Advanced','SWA Advanced']];
 const programName=id=>(PROGRAMS.find(p=>p[0]===id)||[id,id])[1];
 const longDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'long',day:'numeric',year:'numeric'});
 const shortDate=iso=>new Date(iso).toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric'});

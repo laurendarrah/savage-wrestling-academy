@@ -33,7 +33,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/interest` | GET, POST | "Tell the academy I want this": the academy's contact line, and a request for a closed membership or lesson sent to the owner's inbox, once per item per day |
 | `/api/orders` | GET | The family's own orders and cash bookings |
 | `/api/lessons` | GET, POST | Lesson formats, prices and open coach times; book, join or organise a private group |
-| `/api/program-approvals` | GET, POST | Ask for SWA Advance approval and see its status |
+| `/api/program-approvals` | GET, POST | Ask for SWA Advanced approval and see its status |
 | `/api/approval-chat` | GET, POST | The private chat about an approval (family and owner) |
 | `/api/scholarship` | GET, POST | Open a scholarship invitation and accept it with a drawn signature |
 | `/api/waiver` | GET, POST | Sign the waiver, or the Parent Consent Form with `?kind=parent_consent` |
@@ -61,7 +61,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/academy` | GET, PUT | The academy settings document (programs, schedules, events, team codes), with revision checks. A save that would drop a session families have paid for or booked is refused (409, `blocked` lists them); every save writes what changed to the security log |
 | `/api/launch-checklist` | GET | What is ready and what is left before launch |
 | `/api/accounts` | POST | Delete a family account (payments stay for the books) |
-| `/api/owner-approvals` | GET, POST | Decide SWA Advance approvals |
+| `/api/owner-approvals` | GET, POST | Decide SWA Advanced approvals |
 | `/api/scholarships` | GET, POST | Create, revise, rotate, revoke and end scholarship offers |
 | `/api/waivers` | GET, POST | Publish and retire the waiver, the Parent Consent Form (`?kind=parent_consent`) or the coach contract (`?kind=coach_contract`); see who signed; ask for a signature again; carry a signature over to a renamed wrestler |
 | `/api/exceptions` | GET, POST | Dated exceptions to the card, waiver and consent-form booking blocks |

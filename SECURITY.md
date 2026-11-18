@@ -47,7 +47,7 @@ Updated November 7, 2026 (#267). Open launch work is on the [Launch board (#246)
 
 ## Competition program approvals and conversations
 
-Every SWA Advance wrestler (grades 7–12) requires an owner approval decision before monthly or walk-in registration review. Approval records use the verified parent account, wrestler ID, name, and grade; edited identity fields require renewed approval. Owner decisions are owner-only and reject stale requests. Approval alone never grants a paid membership. Registration review and Stripe checkout both price and check eligibility through `lib/quotes.ts`, which reuses the server approval check.
+Every SWA Advanced wrestler (grades 7–12) requires an owner approval decision before monthly or walk-in registration review. Approval records use the verified parent account, wrestler ID, name, and grade; edited identity fields require renewed approval. Owner decisions are owner-only and reject stale requests. Approval alone never grants a paid membership. Registration review and Stripe checkout both price and check eligibility through `lib/quotes.ts`, which reuses the server approval check.
 
 Each approval conversation is accessible only to its verified parent account and the owner. Server-side sender roles, text-only rendering, bounded messages, CSRF checks, and rate limits protect the thread. Conversations are stored in D1; email notifications follow the family notices (#105) once email is on (#35). Backups include approval decisions and chat messages (#78); approval grants must not be restored through family-controlled backup content.
 

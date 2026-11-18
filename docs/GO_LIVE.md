@@ -54,10 +54,10 @@ To publish by hand: Actions → Deploy → Run workflow.
 
 ## 5. Move the data from the old site
 
-**The old site's backup tool only saves academy settings, family profiles and coach openings.** It leaves out scholarships (including signed agreements), SWA Advance approvals and their conversations, practice plans and curricula. Choose one:
+**The old site's backup tool only saves academy settings, family profiles and coach openings.** It leaves out scholarships (including signed agreements), SWA Advanced approvals and their conversations, practice plans and curricula. Choose one:
 
 - [ ] **Preferred: a full database export.** If Sites offers a database export (SQL), Justin downloads it, and Lauren imports it into the new database with `wrangler d1 execute DB --remote --file export.sql` before anyone signs up on the new site.
-- [ ] **Otherwise:** Justin downloads an encrypted backup on the old site (owner workspace → Backups), and the owner restores it on the new site's `/backups` page. Then he re-creates any scholarship offers (families sign again), re-approves SWA Advance wrestlers, and re-enters practice plans and curricula. Check first how many of each exist.
+- [ ] **Otherwise:** Justin downloads an encrypted backup on the old site (owner workspace → Backups), and the owner restores it on the new site's `/backups` page. Then he re-creates any scholarship offers (families sign again), re-approves SWA Advanced wrestlers, and re-enters practice plans and curricula. Check first how many of each exist.
 
 Logins do not move: the new Supabase project starts empty (#139). Families and the owner sign up again on the new site. Family profiles in the backup stay linked to the old logins, so families re-enter their wrestlers when they sign up again. Ask Justin first how many real families have logins on the old site.
 
@@ -83,7 +83,7 @@ Logins do not move: the new Supabase project starts empty (#139). Families and t
 
 Signed in as the owner:
 - [ ] `/` shows the **Launch checklist** and the Today panel. Work through anything the checklist marks as to do; `/site-health` says the site and database are answering
-- [ ] `/welcome` lists SWA Development, SWA Intermediate and SWA Advance. If the checklist offers **Publish the programs**, choose it, then check the practice days and times under Schedules
+- [ ] `/welcome` lists SWA Development, SWA Intermediate and SWA Advanced. If the checklist offers **Publish the programs**, choose it, then check the practice days and times under Schedules
 - [ ] `/roster`, `/payments`, `/cards`, `/waivers`, `/messages`, `/accounts`, `/approvals`, `/scholarships`, `/staff`, `/backups` load with the moved data
 
 With a test family (not a real family):

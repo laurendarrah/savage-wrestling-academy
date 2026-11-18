@@ -75,7 +75,7 @@ for (const [k, email] of [['dana', 'dana.coach@example.test'], ['lee', 'lee.coac
 
 // ---------- Setup: a schedule with back-to-back practices every day, and three coaches ----------
 const every = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const state = {programs: [{id: 'Elementary', name: 'SWA Development'}, {id: 'Intermediate', name: 'SWA Intermediate'}, {id: 'Advanced', name: 'SWA Advance'}],
+const state = {programs: [{id: 'Elementary', name: 'SWA Development'}, {id: 'Intermediate', name: 'SWA Intermediate'}, {id: 'Advanced', name: 'SWA Advanced'}],
   seasons: [['Elementary', '17:00', '18:00'], ['Intermediate', '18:00', '19:30'], ['Advanced', '19:30', '21:00']].map(([program, start, end]) => ({program, start: '2026-01-01', end: '2028-12-31', weekly: every.map(day => ({day, start, end})), excludedDates: []})),
   extraPractices: [{id: 'fnl', name: 'Friday Night Live', dates: ['2026-11-06'], enabled: true, start: '16:00', end: '17:00', memberCents: 1000, nonMemberCents: 2000}]};
 sqlite.prepare("INSERT OR REPLACE INTO academy_state(id,payload,revision,updated_by,updated_at) VALUES ('academy',?,1,'owner','x')").run(JSON.stringify(state));

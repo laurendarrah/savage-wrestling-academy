@@ -38,7 +38,7 @@ sqlite.exec('BEGIN');
 // Settings a backup accepts (lib/academy-validation.ts), so the backup round trip below carries them too.
 sqlite.prepare("INSERT INTO academy_state VALUES ('academy',?,1,'o','x')").run(JSON.stringify({programNamingVersion: 2, kids: [], bookings: [], messages: [], offers: [], staff: [], attendance: {}, settings: {}, seasons: [], events: [],
   programs: [{id: 'Elementary', name: 'SWA Development', description: 'Grades K to 6.', priceCents: 20000, walkInPriceCents: 4000}, {id: 'Intermediate', name: 'SWA Intermediate', description: 'Grades 7 to 12.', priceCents: 20000, walkInPriceCents: 4000},
-    {id: 'Advanced', name: 'SWA Advance', description: 'Grades 7 to 12, with coach approval.', priceCents: 20000, walkInPriceCents: 4000}]}));
+    {id: 'Advanced', name: 'SWA Advanced', description: 'Grades 7 to 12, with coach approval.', priceCents: 20000, walkInPriceCents: 4000}]}));
 sqlite.prepare("INSERT INTO waiver_versions VALUES ('wv','Participation waiver and release','The approved waiver text.','h',?,'o',NULL,'waiver')").run('2026-09-01T00:00:00Z');
 const family = sqlite.prepare('INSERT INTO family_accounts VALUES (?,?,?,?,?)');
 const signature = sqlite.prepare('INSERT INTO waiver_signatures VALUES (?,?,?,?,?,?,?,?,?,0)');

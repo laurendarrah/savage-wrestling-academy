@@ -118,7 +118,7 @@ await refused(() => order('tf', {id: 'pend', status: 'pending', created_at: at, 
 await refused(() => ins('cash_bookings', {id: 'due', user_id: 'tf', email: 'e', wrestler_id: 'w-tf', wrestler_name: 'W', kind: 'walkin', item_id: 'p', item_label: 'Walk-in', session_date: soon, base_cents: 4000, discount_cents: 0, amount_cents: 4000, pricing: '{}', dedupe_key: 'due', status: 'due', created_at: old, updated_at: old}),
   () => sqlite.exec("DELETE FROM cash_bookings WHERE id='due'"), /pay at the academy that is still to come/);
 await refused(() => sqlite.exec("UPDATE scholarship_awards SET status='active' WHERE id='sch-tf'"), () => sqlite.exec("UPDATE scholarship_awards SET status='ended' WHERE id='sch-tf'"), /active scholarship/);
-await refused(() => sqlite.exec("UPDATE program_approvals SET status='pending' WHERE id='ap-tf'"), () => sqlite.exec("UPDATE program_approvals SET status='approved' WHERE id='ap-tf'"), /SWA Advance request/);
+await refused(() => sqlite.exec("UPDATE program_approvals SET status='pending' WHERE id='ap-tf'"), () => sqlite.exec("UPDATE program_approvals SET status='approved' WHERE id='ap-tf'"), /SWA Advanced request/);
 // A checkout abandoned long ago does not block.
 order('tf', {id: 'stale', status: 'pending', created_at: old});
 

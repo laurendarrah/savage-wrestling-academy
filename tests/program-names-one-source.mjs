@@ -18,7 +18,7 @@ function load(file) {
 }
 const plain = v => JSON.parse(JSON.stringify(v));
 const {programDetails, programName, standardProgramNames, upgradeProgramNames} = load('lib/program-names.ts');
-const NAMES = {Elementary: 'SWA Development', Intermediate: 'SWA Intermediate', Advanced: 'SWA Advance'};
+const NAMES = {Elementary: 'SWA Development', Intermediate: 'SWA Intermediate', Advanced: 'SWA Advanced'};
 
 // The list, and the helper everything else calls.
 assert.deepEqual(Object.fromEntries(Object.entries(programDetails).map(([id, d]) => [id, d.name])), NAMES);
@@ -37,10 +37,27 @@ const typed = {programNamingVersion: 2, programs: [{id: 'Elementary', name: 'Ele
 const fixed = upgradeProgramNames(typed);
 assert.deepEqual(plain(fixed.programs), [{id: 'Elementary', name: 'SWA Development', description: 'Mine', priceCents: 15000, walkInPriceCents: 3000}, {id: 'Intermediate', name: 'SWA Intermediate', description: 'x', priceCents: 20000}, {id: 'Extra', name: 'Kept'}]);
 assert.equal(typed.programs[0].name, 'Elementary K-6', 'the document passed in is not changed');
-const standard = {programNamingVersion: 2, programs: [{id: 'Advanced', name: 'SWA Advance', priceCents: 1}]};
+const standard = {programNamingVersion: 2, programs: [{id: 'Advanced', name: 'SWA Advanced', priceCents: 1}]};
 assert.equal(upgradeProgramNames(standard), standard, 'a document already in order comes back as it is');
 assert.equal(standardProgramNames(standard.programs)[0], standard.programs[0]);
 for (const v of [null, undefined, 'x', {}, {programs: 'no'}]) assert.equal(upgradeProgramNames(v), v);
+
+// The program was SWA Advance until Nov 17, 2026 (issue #359). The starter settings saved the old name in the standard
+// description; that exact text is shown with the new name, and a description the owner edited is left alone.
+{
+  const now = programDetails.Advanced.description, before = now.replace('All SWA Advanced wrestlers', 'All SWA Advan' + 'ce wrestlers');
+  assert.notEqual(before, now); assert.match(now, /All SWA Advanced wrestlers require coach approval\.$/);
+  const starter = {programNamingVersion: 2, programs: [{id: 'Advanced', name: 'SWA Advan' + 'ce', description: before, priceCents: 20000}, {id: 'Intermediate', name: 'SWA Intermediate', description: 'Not SWA Advan' + 'ce. My own words.', priceCents: 1}]};
+  assert.deepEqual(plain(upgradeProgramNames(starter).programs), [{id: 'Advanced', name: 'SWA Advanced', description: now, priceCents: 20000}, {id: 'Intermediate', name: 'SWA Intermediate', description: 'Not SWA Advan' + 'ce. My own words.', priceCents: 1}]);
+  const edited = {programNamingVersion: 2, programs: [{id: 'Advanced', name: 'SWA Advan' + 'ce', description: before + ' Ask Justin first.'}]};
+  assert.equal(upgradeProgramNames(edited).programs[0].description, before + ' Ask Justin first.', 'an edited description is the owner’s own');
+  // Nowhere else: no page, library file, stylesheet or script still says the old name.
+  const all = dir => readdirSync(dir, {withFileTypes: true}).flatMap(e => e.isDirectory() ? all(dir + '/' + e.name) : [dir + '/' + e.name]);
+  for (const file of [...all('app'), ...all('lib'), ...all('public').filter(f => /\.(css|js|html|txt|json)$/.test(f)), ...all('docs/email-templates')]) {
+    const text = readFileSync(file, 'utf8').replace(/const EARLIER_NAME=\/SWA Advance\(\?!d\)\/g;/, '').replace(/^\/\/ The program was "SWA Advance" until.*$/m, '');
+    assert.doesNotMatch(text, /SWA Advance(?!d)/, file + ' still says the old name');
+  }
+}
 
 // What families see comes through the same door: the welcome page, calendar and Choose training read this catalog.
 const {registrationCatalog} = load('lib/registration-catalog.ts');

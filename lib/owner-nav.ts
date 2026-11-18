@@ -29,7 +29,7 @@ export type OwnerNavGroup = {label: string; items: OwnerNavItem[]; folded?: bool
 const DOCUMENT_TABS: OwnerNavTab[] = [
   {href: '/cards', label: 'USA Wrestling cards'}, {href: '/waivers', label: 'Waiver'}, {href: '/consent-forms', label: 'Parent Consent Form'}, {href: '/contracts', label: 'Coach contract'},
 ];
-const APPROVAL_TABS: OwnerNavTab[] = [{href: '/approvals', label: 'SWA Advance approvals'}, {href: '/scholarships', label: 'Scholarships'}, {href: '/transfers', label: 'Program transfers'}];
+const APPROVAL_TABS: OwnerNavTab[] = [{href: '/approvals', label: 'SWA Advanced approvals'}, {href: '/scholarships', label: 'Scholarships'}, {href: '/transfers', label: 'Program transfers'}];
 const ACADEMY_TABS: OwnerNavTab[] = [{href: '/#programs', label: 'Programs & pricing'}, {href: '/#schedules', label: 'Schedules'}, {href: '/#events', label: 'Camps & events'}];
 const COACH_TABS: OwnerNavTab[] = [{href: '/staff', label: 'Coaches'}, {href: '/lesson-settings', label: 'Private lesson prices'}, {href: '/timesheets', label: 'Coach hours'}, {href: '/coach', label: 'Coach view'}];
 const MONEY_TABS: OwnerNavTab[] = [{href: '/financials', label: 'Income & expenses'}, {href: '/coach-pay', label: 'Coach pay'}];
@@ -45,7 +45,7 @@ export const OWNER_NAV: OwnerNavGroup[] = [
   {label: 'Families', items: [
     {href: '/accounts', label: 'Families', also: ['/account-setup'], blurb: 'Every family and wrestler, with their approvals and transfers.'},
     {href: '/cards', label: 'Cards & documents', also: ['/waivers', '/consent-forms', '/contracts'], tabs: DOCUMENT_TABS, blurb: 'USA Wrestling cards, the waiver, the Parent Consent Form and coach contracts.'},
-    {href: '/approvals', label: 'Approvals & scholarships', also: ['/scholarships', '/transfers'], tabs: APPROVAL_TABS, blurb: 'SWA Advance approvals, scholarships and program transfers.'},
+    {href: '/approvals', label: 'Approvals & scholarships', also: ['/scholarships', '/transfers'], tabs: APPROVAL_TABS, blurb: 'SWA Advanced approvals, scholarships and program transfers.'},
   ]},
   {label: 'Academy', items: [
     {href: '/#practice-calendar', label: 'Calendar & plans', section: 'Calendar', also: ['/practice-plans', '/curricula'], tabs: CALENDAR_TABS},

@@ -33,10 +33,10 @@ function page(file, fetch, {hash = '', extra = {}} = {}) {
   // Today: nothing on is one sentence; the day reads as the academy writes it.
   assert.equal(p.el('sessions').innerHTML, '<p class="muted">Nothing is on the mat for your programs today.</p>'); assert.equal(p.el('todayDate').textContent, 'Saturday, Nov 14');
   // A practice box: name, time, count. A camp day with no time yet says so; text is escaped.
-  p.ctx.list = [{title: 'Winter <camp>', type: 'event', start: null, end: null, entries: [{}], checkedIn: 0}, {title: 'Open mat', type: 'live', start: null, entries: [], checkedIn: 0}, {title: 'SWA Advance', start: '09:00', end: '10:30', entries: [{}, {}], checkedIn: 2}];
+  p.ctx.list = [{title: 'Winter <camp>', type: 'event', start: null, end: null, entries: [{}], checkedIn: 0}, {title: 'Open mat', type: 'live', start: null, entries: [], checkedIn: 0}, {title: 'SWA Advanced', start: '09:00', end: '10:30', entries: [{}, {}], checkedIn: 2}];
   assert.equal(p.run('todayHtml(list)'), '<div class="session"><span class="name">Winter &lt;camp&gt;</span><span class="time">Time to be announced</span><span class="count"><b>0 of 1</b> checked in</span></div>'
     + '<div class="session"><span class="name">Open mat</span><span class="time">All day</span><span class="count"><b>0 of 0</b> checked in</span></div>'
-    + '<div class="session"><span class="name">SWA Advance</span><span class="time">9:00 AM–10:30 AM</span><span class="count"><b>2 of 2</b> checked in</span></div>');
+    + '<div class="session"><span class="name">SWA Advanced</span><span class="time">9:00 AM–10:30 AM</span><span class="count"><b>2 of 2</b> checked in</span></div>');
   assert.equal(p.run('longDay("")'), ''); assert.equal(p.run('longDay("2026-12-02")'), 'Wednesday, Dec 2');
   // With lessons, the explanation shows again.
   coach.openings = [{id: 'o', date: '2026-11-20', start: '15:00', end: '16:00', format: null, capacity: 1, spotsLeft: 1, roster: []}];
