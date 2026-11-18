@@ -70,7 +70,7 @@ const ownerRoutes = {
   '/curricula': '/#practice-calendar', '/website': '/website', '/staff': '/staff', '/coach-openings?email=coach%40example.test': '/staff',
   '/coach-profile?email=coach%40example.test': '/staff', '/contracts': '/cards', '/lesson-settings': '/staff', '/timesheets': '/staff',
   '/financials': '/financials', '/coach-pay': '/financials', '/payment-setup': '/payment-setup', '/backups': '/backups', '/site-health': '/site-health',
-  '/data-requests': '/data-requests', '/security-log': '/security-log', '/help/owner': '/help/owner', '/security': null,
+  '/site-requests': '/site-requests', '/data-requests': '/data-requests', '/security-log': '/security-log', '/help/owner': '/help/owner', '/security': null,
 };
 // The pages that share an item get its switch, with this page marked (the plan editor counts as the calendar, a
 // coach's pages as Coaches); pages without sisters get none.

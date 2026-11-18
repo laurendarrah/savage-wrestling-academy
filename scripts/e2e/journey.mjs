@@ -1407,6 +1407,22 @@ await step('family downloads their data and asks to close the account; owner rec
   await waitText(owner, '#list', /Handled/);
 });
 
+// ---------- The owner asks for a change to the site itself (issue #361) ----------
+await step('owner writes a request for a site change; it is saved, says it was not emailed here, and is marked done', async () => {
+  await owner.goto(BASE + '/site-requests'); await waitText(owner, '#list', /No requests yet/);
+  // This local site has no address for requests (SITE_REQUESTS_TO), so the page says so and the request is saved only.
+  await owner.waitForSelector('#notReady:not([hidden])');
+  await owner.fill('#words', 'On the welcome page, change "Join the academy" to "Register".\nAlso make the logo bigger.'); await owner.fill('#where', 'Welcome page');
+  await owner.click('#send'); await waitText(owner, '#formNote', /Saved below, but the email did not go out/);
+  await waitText(owner, '#list', /Open[\s\S]*Welcome page[\s\S]*change "Join the academy" to "Register"\.[\s\S]*Also make the logo bigger\.[\s\S]*Saved here, but not emailed/);
+  expect(await owner.inputValue('#words') === '', 'the form clears after sending');
+  await owner.click('#list button[data-act="mark"]'); await waitText(owner, '#list .pill', /Done/);
+  await owner.reload(); await waitText(owner, '#list', /Done[\s\S]*Welcome page/);
+  // Owner only: a family asking for the page or its data gets neither.
+  expect((await family.request.get(BASE + '/api/site-requests')).status() === 403, 'a family cannot read the owner’s requests');
+  const page = await family.request.get(BASE + '/site-requests', {maxRedirects: 0}); expect(page.status() === 303, 'a family is sent away from the page, got ' + page.status());
+});
+
 // ---------- Delete a test family account (issue #259, the last step of docs/LAUNCH_TEST_PASS.md) ----------
 await step('owner deletes a test family account; a family with a lesson still to come is refused', async () => {
   const fresh = await as('newfam');
@@ -1512,7 +1528,7 @@ const a11yPages = {
   public: ['/welcome', '/team', '/calendar', '/login', '/membership-terms', '/help', '/coach-join'],
   family: ['/family', '/register', '/booking?type=event&id=winter-camp', '/lesson', '/waiver', '/consent', '/pass', '/wrestler?id=' + samId, '/inbox', '/security'],
   coach: ['/coach', '/roster', '/help/coach', '/coach-profile', '/contract', '/coach-time'],
-  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/consent-forms', '/contracts', '/lesson-settings', '/coach-pay', '/timesheets', '/transfers', '/messages', '/staff', '/coach-openings?email=coach.dana%40example.test', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
+  owner: ['/', '/roster', '/payments', '/cards', '/waivers', '/consent-forms', '/contracts', '/lesson-settings', '/coach-pay', '/timesheets', '/transfers', '/messages', '/staff', '/coach-openings?email=coach.dana%40example.test', '/approvals', '/scholarships', '/accounts', '/payment-setup', '/backups', '/security-log', '/site-health', '/site-requests', '/data-requests', '/financials', '/help/owner', `/practice-plans?program=Intermediate&date=${today}`, '/curricula', '/website'],
 };
 const a11y = [];
 await step('accessibility: no serious or critical axe-core issues on any page', async () => {

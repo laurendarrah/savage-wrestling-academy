@@ -28,7 +28,7 @@ assert.deepEqual(OWNER_NAV.map(g => g.items.filter(i => !i.under).map(i => i.lab
   ['Dashboard', 'Roster & check-in', 'Payments', 'Messages'],
   ['Families', 'Cards & documents', 'Approvals & scholarships'],
   ['Calendar & plans', 'Programs, schedules & events', 'Coaches & lessons', 'Money', 'Public website'],
-  ['Coach view', 'Online payment setup', 'Backups', 'Site health', 'Data requests', 'Security activity', 'Owner guide'],
+  ['Coach view', 'Online payment setup', 'Backups', 'Site health', 'Request a site change', 'Data requests', 'Security activity', 'Owner guide'],
 ]);
 assert.equal(OWNER_NAV_SHOWN.filter(i => !OWNER_NAV.find(g => g.folded).items.includes(i) && !OWNER_NAV.find(g => g.folded).items.some(x => x.href === i.href)).length, 12, 'twelve items before the fold');
 assert.ok(OWNER_NAV.find(g => g.folded).label === 'Settings & records', 'settings stay folded');
@@ -44,10 +44,11 @@ for (const i of OWNER_NAV_ITEMS) {
 }
 assert.equal(new Set(Object.values(OWNER_ICONS)).size, Object.keys(OWNER_ICONS).length, 'every destination has its own icon');
 
-// The pages inside the shell are exactly what they were before the fold (issue #261's list).
+// The pages inside the shell are exactly what they were before the fold (issue #261's list), plus Request a site
+// change (issue #361).
 assert.deepEqual([...OWNER_SHELL_PAGES].sort(), ['/', '/account-setup', '/accounts', '/approvals', '/backups', '/cards', '/coach-openings', '/coach-pay', '/coach-profile', '/consent-forms', '/contracts',
   '/curricula', '/data-requests', '/financials', '/help/owner', '/lesson-settings', '/messages', '/payment-setup', '/payments', '/practice-plans', '/roster', '/scholarships', '/security', '/security-log',
-  '/site-health', '/staff', '/timesheets', '/transfers', '/waivers', '/website']);
+  '/site-health', '/site-requests', '/staff', '/timesheets', '/transfers', '/waivers', '/website']);
 
 // ---------- Aliases: a merged page marks the item it lives under, and gets that item's switch ----------
 const marks = {'/waivers': '/cards', '/consent-forms': '/cards', '/contracts': '/cards', '/scholarships': '/approvals', '/transfers': '/approvals', '/account-setup': '/accounts',

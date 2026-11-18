@@ -10,7 +10,7 @@
 // scripts and no fonts to download. Barlow Condensed is not available in an email, so headings fall back to
 // Arial Narrow.
 
-export type BrandAudience = 'account' | 'owner' | 'invite';
+export type BrandAudience = 'account' | 'owner' | 'invite' | 'maintainer';
 export type BrandInput = {subject: string; text: string; origin?: string | null; audience?: BrandAudience};
 
 export const ACADEMY_NAME = 'Savage Wrestling Academy';
@@ -21,7 +21,9 @@ export const LOGO_PATH = '/brand/savage-logo-128.png';
 export const WHY: Record<BrandAudience, string> = {
   account: 'You’re getting this because you have an account with Savage Wrestling Academy.',
   owner: 'You’re getting this because you run the Savage Wrestling Academy site.',
-  invite: 'You’re getting this because Savage Wrestling Academy invited you to coach.'
+  invite: 'You’re getting this because Savage Wrestling Academy invited you to coach.',
+  // The person who maintains the site, for the owner's requests for changes to it (issue #361, lib/site-requests.ts).
+  maintainer: 'You’re getting this because the Savage Wrestling Academy site sends the owner’s change requests to this address.'
 };
 
 const INK = '#111113', RED = '#C4222C', SILVER = '#B9C4C9', GROUND = '#F3F4F6', MUTED = '#55585F', LINE = '#E4E6EA';

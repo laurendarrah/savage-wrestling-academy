@@ -47,6 +47,7 @@ export const OWNER_ICONS: Record<string, string> = {
   '/backups': '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
   '/site-health': '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
   '/data-requests': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  '/site-requests': '<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   '/security-log': SHIELD + '<path d="M12 8v4M12 16h.01"/>',
   '/help/owner': '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
 };

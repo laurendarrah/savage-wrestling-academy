@@ -80,6 +80,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/website` | GET, POST | Edit, preview and publish the public welcome and team pages |
 | `/api/backups` | GET, POST | Download the encrypted backup in batches; preview and restore a file |
 | `/api/site-health` | GET, POST | Recent server errors (with request ids and roles), alerts, emails that didn't send, the last reminder run, whether Supabase answers; send a test alert |
+| `/api/site-requests` | GET, POST | Owner only: the owner's requests for changes to the site itself (#361). GET lists them and says whether a new one will be emailed. POST `add` (words, optional where), `resend` (id) and `mark` (id, done). The address requests go to (`SITE_REQUESTS_TO`) is never returned |
 | `/api/data-requests` | GET, POST | Families' closure requests and how they were handled |
 
 ## Pages (`app/**/route.ts`)
@@ -92,7 +93,7 @@ Most pages are `screen.html` served by the route next to it; a few build their H
 | Everyone | `/` sends each person home: the owner's dashboard (`app/portal.html`), coach home, family home, or `/welcome` |
 | Families | `/family`, `/register`, `/booking`, `/lesson`, `/waiver`, `/consent`, `/pass`, `/wrestler`, `/inbox`, `/scholarship`, `/security` |
 | Coaches | `/coach`, `/coach-profile`, `/coach-time`, `/contract`, `/practice-plans`, `/roster`, `/help/coach` |
-| Owner | `/accounts`, `/account-setup`, `/approvals`, `/scholarships`, `/waivers`, `/consent-forms`, `/contracts`, `/transfers`, `/cards`, `/payments`, `/payment-setup`, `/messages`, `/staff`, `/coach-openings`, `/lesson-settings`, `/timesheets`, `/coach-pay`, `/financials`, `/curricula`, `/website`, `/backups`, `/site-health`, `/security-log`, `/data-requests`, `/help/owner` |
+| Owner | `/accounts`, `/account-setup`, `/approvals`, `/scholarships`, `/waivers`, `/consent-forms`, `/contracts`, `/transfers`, `/cards`, `/payments`, `/payment-setup`, `/messages`, `/staff`, `/coach-openings`, `/lesson-settings`, `/timesheets`, `/coach-pay`, `/financials`, `/curricula`, `/website`, `/backups`, `/site-health`, `/site-requests`, `/security-log`, `/data-requests`, `/help/owner` |
 | Printable copies | `/scholarship-agreement` (a signed scholarship agreement) and `/waiver-copy` (a signed waiver), for the owner or the family that signed |
 
 The owner's sidebar and the dashboard's tool list both come from `lib/owner-nav.ts`.
