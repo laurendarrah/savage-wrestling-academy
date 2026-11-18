@@ -194,8 +194,9 @@ export async function decorateResponse(request: Request, response: Response) {
   }
   // A route marks an owner page only after its own owner check (lib/owner-shell.ts). The mark never leaves the Worker.
   const ownerShell = response.headers.has(OWNER_SHELL_HEADER);
-  // The page that says the sign-in service can't be reached (503, lib/protected-page.ts) gets the top bar and styles too.
-  const decorated = response.status === 200 || response.status === 503;
+  // The page that says the sign-in service can't be reached (503) and the page that says a page is for another kind of
+  // account (403), both in lib/protected-page.ts, get the top bar and styles too.
+  const decorated = response.status === 200 || response.status === 503 || response.status === 403;
   if (request.method !== 'GET' || !decorated || !shouldDecorate(url, response.headers.get('Content-Type'), ownerShell)) {
     if (!ownerShell) return response;
     const headers = new Headers(response.headers);
@@ -205,7 +206,8 @@ export async function decorateResponse(request: Request, response: Response) {
   const headers = new Headers(response.headers);
   headers.delete('Content-Length');
   headers.delete(OWNER_SHELL_HEADER);
-  let html = decoratePage(await response.text(), url.pathname, ownerShell);
+  // The 403 page is not the page asked for, so it takes the plain top bar and no page title row of that page.
+  let html = decoratePage(await response.text(), response.status === 403 ? '/no-access' : url.pathname, ownerShell);
   if (nonceApplies(headers, html)) {
     const nonce = newNonce();
     html = applyScriptNonce(html, nonce);

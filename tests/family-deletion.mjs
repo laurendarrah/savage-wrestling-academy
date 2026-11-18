@@ -200,7 +200,7 @@ assert.match(html, /Type <strong>Pat &quot;Quote&quot; O&#39;Brien &lt;b&gt;<\/s
 assert.match(html, /<button type="submit" class="danger" disabled>Delete this family account<\/button>/);
 assert.ok(html.includes(lib.DELETE_SCRIPT), 'the page runs the tested script');
 const ids = [...html.matchAll(/id="(confirm\d+)"/g)].map(m => m[1]); assert.equal(new Set(ids).size, ids.length, 'each confirm box has its own id');
-actor = {owner: false, id: 'of'}; assert.equal((await page.GET(new Request(O + '/accounts'))).status, 403); actor = {owner: true, id: 'owner-id'};
+actor = {owner: false, id: 'of'}; { const r = await page.GET(new Request(O + '/accounts')); assert.deepEqual([r.status, r.headers.get('location'), await r.text()], [303, '/login', ''], 'anyone but the owner is sent to sign in and gets nothing from the page (issue #373)'); } actor = {owner: true, id: 'owner-id'};
 
 // --- The page script, in a small stand-in for the browser ---
 function browser(label, user, reply) {

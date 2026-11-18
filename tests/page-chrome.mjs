@@ -65,6 +65,13 @@ assert.equal(await decorateResponse(new Request('https://x.test/family'), redire
   // The sign-in-unavailable page (503) is dressed like any other page; other errors pass through.
   const down = await decorateResponse(new Request('https://x.test/family'), new Response('<!doctype html><html lang="en"><head><title>Sign-in unavailable | Savage Wrestling Academy</title></head><body><main><h1>Sign-in is temporarily unavailable</h1><p>Try again in a few minutes.</p></main></body></html>', {status: 503, statusText: 'Sign-in unavailable', headers: {'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '120'}}));
   assert.equal(down.status, 503); assert.equal(down.headers.get('Retry-After'), '120'); assert.match(await down.text(), /class="swa-bar[\s\S]*Sign-in is temporarily unavailable/);
+  // So is the page that says a page is for another kind of account (403, issue #373): the plain top bar, never the
+  // bar or title row of the page that was asked for. A 403 that is not a page passes through.
+  const refused = await decorateResponse(new Request('https://x.test/coach-time'), new Response('<!doctype html><html lang="en"><head><title>Not your page | Savage Wrestling Academy</title></head><body><main><h1>This page is for coaches</h1></main></body></html>', {status: 403, statusText: 'Forbidden', headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store'}}));
+  const refusedHtml = await refused.text();
+  assert.equal(refused.status, 403); assert.match(refusedHtml, /<body data-swa-page="\/no-access">[\s\S]*class="swa-bar[\s\S]*<h1>This page is for coaches<\/h1>/); assert.doesNotMatch(refusedHtml, /Your hours/);
+  await same(new Request('https://x.test/coach-time'), new Response('Not allowed.', {status: 403}));
+  await same(new Request('https://x.test/api/coach-time'), new Response('{"error":"x"}', {status: 403, headers: {'Content-Type': 'application/json'}}));
   await same(new Request('https://x.test/family'), new Response('<html><body><h1>Error</h1></body></html>', {status: 500, headers: {'Content-Type': 'text/html'}}));
 }
 
