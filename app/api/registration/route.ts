@@ -4,6 +4,7 @@ import {quoteMembership} from '../../../lib/quotes';
 import {checkoutKinds} from '../../../lib/checkout-config';
 import {registrationCatalog} from '../../../lib/registration-catalog';
 import {withApi} from '../../../lib/api';
+import {holidaysInMonth} from '../../../lib/holidays';
 export const dynamic='force-dynamic';
 export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await verifiedAccount(request);
@@ -16,7 +17,8 @@ export const GET = withApi(GET_); async function GET_(request:Request){
  const now=new Intl.DateTimeFormat('en-GB',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
  // onlineKinds: which of this page's plans can be paid online now, so the page speaks only about the plan chosen.
  const onlineKinds=[...checkoutKinds()].filter(k=>k==='walkin'||k==='monthly');
- return accountReply({...registrationCatalog(row?JSON.parse(row.payload):{},month,today),now,onlineKinds},200,auth.headers);
+ // holidays: the month's U.S. federal holidays, shown on the calendar as a label only (issues #189, #365).
+ return accountReply({...registrationCatalog(row?JSON.parse(row.payload):{},month,today),now,onlineKinds,holidays:holidaysInMonth(month)},200,auth.headers);
 }
 
 // Registration review is authorized on the server. A browser flag cannot grant approval.
