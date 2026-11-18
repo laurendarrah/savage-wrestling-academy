@@ -9,6 +9,7 @@
 // Lesson pay stays on /coach-pay (lib/coach-pay.ts), from what families paid; the CSV adds each coach's lesson share.
 // All amounts are integer cents. Times are instants (ISO strings) shown in academy time (America/New_York).
 import {ACADEMY_TIME_ZONE, academyDay, clockTime, dayDate} from './datetime';
+import {programName} from './program-names';
 
 // The one place the practice rates live, in cents per hour.
 export const PRACTICE_RATES = {head: 4000, assistant: 3000} as const;
@@ -161,14 +162,13 @@ export function shiftView(e: Entry, ctx: {sessions?: Session[]; timeOff?: TimeOf
   };
 }
 export type ShiftView = ReturnType<typeof shiftView>;
-const PROGRAM_NAMES: Record<string, string> = {Elementary: 'SWA Development', Intermediate: 'SWA Intermediate', Advanced: 'SWA Advance'};
 // Totals for a set of shifts, with a breakdown by program (or extra practice) and role.
 export function totals(views: ShiftView[]) {
   const live = views.filter(v => v.status !== 'voided');
   const groups = new Map<string, {label: string; duty: string; minutes: number; amountCents: number; shifts: number}>();
   for (const v of live) {
     const program = v.session?.key.startsWith('practice:') ? v.session.key.split(':')[1] : null;
-    const label = program ? PROGRAM_NAMES[program] ?? program : v.session ? v.session.title ?? 'Extra practice' : 'No scheduled practice';
+    const label = program ? programName(program) : v.session ? v.session.title ?? 'Extra practice' : 'No scheduled practice';
     const k = label + '|' + v.duty, g = groups.get(k) ?? {label, duty: v.dutyLabel, minutes: 0, amountCents: 0, shifts: 0};
     g.minutes += v.paidMinutes; g.amountCents += v.amountCents; g.shifts++; groups.set(k, g);
   }

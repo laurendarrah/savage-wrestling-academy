@@ -2,6 +2,7 @@
 // codes. These only check and store what the owner typed in the settings document; the server checks every save
 // (lib/academy-validation.ts). What a family pays is always worked out on the server, in lib/quotes.ts, never here.
 import type {Checked, ExtraPractice, FormList, FormValues, Program, TeamCode} from './types';
+import {programName} from '../program-names';
 
 // The highest price the settings document accepts, in cents ($10,000).
 export const MAX_PRICE_CENTS = 1000000;
@@ -31,10 +32,11 @@ const validCents = (n: number) => Number.isFinite(n) && n >= 0 && n <= MAX_PRICE
 // Programs & pricing: a name and a monthly price, and a walk-in price or none. Other fields stay as saved.
 export function programFromForm(saved: Program, form: FormValues): Checked<Program> {
   const v = form as Record<string, string>, priceCents = centsFromDollars(v.price);
-  if (!v.name.trim() || !validCents(priceCents)) return {error: 'Enter a valid name and price.'};
+  if (!validCents(priceCents)) return {error: 'Enter a valid price.'};
   const walkInPriceCents = v.walkInPrice === '' ? undefined : centsFromDollars(v.walkInPrice);
   if (walkInPriceCents !== undefined && !validCents(walkInPriceCents)) return {error: 'Enter a valid walk-in price.'};
-  return {value: {...saved, walkInPriceCents, name: v.name.trim(), grades: v.grades.trim(), description: v.description.trim(), priceCents}};
+  // The name is the site's own, the same on every page (issue #355, lib/program-names.ts); the form cannot change it.
+  return {value: {...saved, walkInPriceCents, name: programName(saved.id) === saved.id ? saved.name : programName(saved.id), grades: v.grades.trim(), description: v.description.trim(), priceCents}};
 }
 
 // Additional practices: a name, 1 to 366 dates, a start before the end, and member and non-member prices per date.

@@ -13,6 +13,7 @@ import {registrationCatalog} from './registration-catalog';
 import {lessonHolders} from './lessons';
 import {notify, quietly} from './notify';
 import {validDay} from './coach-time';
+import {programName} from './program-names';
 import type {Coach} from './coach-timesheets';
 
 type Row = {id: string; user_id: string; coach_email: string; coach_name: string; start_date: string; end_date: string; reason: string; status: string; programs: string;
@@ -22,7 +23,6 @@ const db = () => env.DB!;
 const fail = (status: number, error: string) => ({status, error});
 const note = (v: unknown) => typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '';
 const addDays = (d: string, n: number) => new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().slice(0, 10);
-const PROGRAM_NAMES: Record<string, string> = {Elementary: 'SWA Development', Intermediate: 'SWA Intermediate', Advanced: 'SWA Advance'};
 export const rangeText = (start: string, end: string) => start === end ? dayDate(start) : `${dayDate(start)} to ${dayDate(end)}`;
 const audit = (actor: string, action: string, target: string) =>
   db().prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), actor, action, target, new Date().toISOString()).run();
@@ -95,7 +95,7 @@ export async function decideTimeOff(ownerId: string, input: any) {
   if (status === 'approved') {
     const team = await sameProgramCoaches(r.coach_email, programs);
     for (const c of team) {
-      const shared = c.programs.filter(p => programs.includes(p)).map(p => PROGRAM_NAMES[p] ?? p).join(' and ');
+      const shared = c.programs.filter(p => programs.includes(p)).map(programName).join(' and ');
       notices.push({userId: null, email: c.email, kind: 'coach_time_off_team', dedupeKey: `time-off-team:${r.id}:${c.email}`, link: '/coach-time',
         subject: `${r.coach_name} is away ${when}`,
         body: `${r.coach_name} has approved time off ${r.start_date === r.end_date ? 'on' : 'from'} ${when}. You both coach ${shared}. The academy is arranging cover; nothing on the schedule changes unless the academy tells you.`});
@@ -115,7 +115,7 @@ export async function coverFor(r: ReturnType<typeof view>, state: any) {
   for (const m of months) {
     const cat = registrationCatalog(state, m, '0000-01-01'), names = new Map(cat.programs.map((p: any) => [p.id, p.name]));
     for (const p of cat.practices) if (p.date >= r.start && p.date <= r.end && r.programs.includes(p.program))
-      practices.push({date: p.date, title: String(names.get(p.program) ?? PROGRAM_NAMES[p.program] ?? p.program), time: clockRange(p.start, p.end)});
+      practices.push({date: p.date, title: String(names.get(p.program) ?? programName(p.program)), time: clockRange(p.start, p.end)});
   }
   const openings = (await db().prepare('SELECT id,date,start,end,format FROM coach_openings WHERE coach_email=? AND date BETWEEN ? AND ? ORDER BY date,start').bind(r.coachEmail, r.start, r.end)
     .all<{id: string; date: string; start: string; end: string; format: string | null}>()).results;

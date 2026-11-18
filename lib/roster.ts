@@ -7,6 +7,7 @@ import {currentWaiver} from './waivers';
 import {CARRIED_NAME, LIVE_SIGNATURE, SIGNATURE_JOIN, signatureCounts} from './documents';
 import {PROGRAM_ON} from './transfers';
 import {fullDate} from './datetime';
+import {programName} from './program-names';
 import {collectorNameSql} from './collectors';
 
 export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: string; program: string | null; date: string; start: string | null; end: string | null};
@@ -36,7 +37,6 @@ export type Scope = {role: 'owner'} | {role: 'coach'; programs: string[]};
 export const validDate = (d: unknown): d is string =>
   typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(d + 'T12:00:00Z').toISOString().slice(0, 10) === d;
 
-const programNames: Record<string, string> = {Elementary: 'SWA Development', Intermediate: 'SWA Intermediate', Advanced: 'SWA Advance'};
 
 export async function academyState(): Promise<any> {
   const row = await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload: string}>();
@@ -48,7 +48,7 @@ export function sessionsOn(state: any, date: string): Session[] {
   const s = publicSchedule(state, date.slice(0, 7), date);
   const names = new Map<string, string>((s.programs ?? []).map((p: any) => [p.id, p.name]));
   const practices: Session[] = s.practices.filter((p: any) => p.date === date).map((p: any) => ({
-    key: `practice:${p.program}:${date}:${p.start}`, type: 'practice', title: names.get(p.program) ?? programNames[p.program] ?? p.program, program: p.program, date, start: p.start, end: p.end
+    key: `practice:${p.program}:${date}:${p.start}`, type: 'practice', title: names.get(p.program) ?? programName(p.program), program: p.program, date, start: p.start, end: p.end
   }));
   const live: Session[] = (s.liveClasses ?? []).filter((l: any) => l.date === date).map((l: any) => ({
     key: `live:${l.id}:${date}`, type: 'live', title: l.name, program: null, date, start: l.start, end: l.end

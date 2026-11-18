@@ -215,15 +215,16 @@ for (const [f, ids] of [['app/payment-setup/screen.html', ['setupTitle', 'modePi
   assert.match(page, /<div class="fixed"><span>Grade eligibility<\/span><p>Grades K–6<\/p><input type="hidden" name="grades" value="Grades K–6"><\/div>/);
   assert.match(page, /<div class="save-row"><button class="save">Save program<\/button><span class="save-note" role="status" aria-live="polite"><\/span><\/div>/);
   assert.match(run('programsSaved=false;ownerPrograms()'), /<section class="card flag" id="publish-programs">[\s\S]*?<button type="button" class="primary" onclick="publishPrograms\(\)">Publish the programs<\/button>/, 'unpublished: Publish is the one red button');
-  // Editing a card turns its Save red; saving says "Saving…" then "Saved" beside the button and renames the card.
+  // Editing a card turns its Save red; saving says "Saving…" then "Saved" beside the button. The card keeps the site's
+  // name for the program whatever a form sends (issue #355).
   const classes = new Set(), note = {textContent: 'x', className: 'save-note'}, name = {textContent: ''}, button = {classList: {add: c => classes.add(c), remove: c => classes.delete(c)}};
   ctx.form = {fields: [['name', 'SWA Little Savages'], ['grades', 'Grades K–6'], ['description', 'New'], ['price', '210'], ['walkInPrice', '45']], querySelector: s => s === '.save' ? button : s === '.save-note' ? note : s === 'h2 span' ? name : null};
   run('programEdited(form)'); assert.ok(classes.has('primary')); assert.equal(note.textContent, '', 'the last result clears on a new edit');
   run('saveProgram(0,form)');
-  assert.equal(run('saves'), 1); assert.equal(run('data.programs[0].priceCents'), 21000); assert.equal(name.textContent, 'SWA Little Savages'); assert.ok(!classes.has('primary'));
+  assert.equal(run('saves'), 1); assert.equal(run('data.programs[0].priceCents'), 21000); assert.equal(name.textContent, 'SWA Development'); assert.ok(!classes.has('primary'));
   assert.equal(note.textContent, 'Saving…'); await tick(); assert.equal(note.textContent, 'Saved'); assert.equal(note.className, 'save-note');
   // A refused value shows beside the button too, in the error color, and nothing is saved.
-  ctx.form.fields = [['name', ''], ['grades', 'Grades K–6'], ['description', ''], ['price', '210'], ['walkInPrice', '']];
+  ctx.form.fields = [['grades', 'Grades K–6'], ['description', ''], ['price', '10000.01'], ['walkInPrice', '']];
   run('saveProgram(0,form)');
   assert.equal(run('saves'), 1); assert.equal(note.className, 'save-note bad'); assert.ok(note.textContent.length > 5 && note.textContent !== 'Saved');
   // An unsaved change that could not be saved says so beside the button.

@@ -296,6 +296,8 @@ reset();
 // the calendar digests were frozen again.
 // Issue #314 (memberships month to month) dropped the 12-month total and wording from the programs editor, so
 // ownerPrograms was frozen again.
+// Issue #355 (one list of program names) shows a program's name as fixed in the programs editor and always loads the
+// standard names, so hydrate.saved and ownerPrograms were frozen again.
 // Issue #341 (the design pass on the owner screens) redrew every section's markup on purpose: the shared title row, the
 // program cards, the semester and extra-practice forms and lists, the event cards, the dashboard's skeletons and
 // practice boxes; dates read "Wed, Dec 2" and money "$40.00". The fixture was frozen again; the programs, schedules,
