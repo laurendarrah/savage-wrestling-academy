@@ -32,4 +32,4 @@ SERVER=$!
 trap 'kill $SERVER $MOCK_PID 2>/dev/null; rm -rf "$STATE"' EXIT
 for i in $(seq 1 90); do curl -s -o /dev/null http://127.0.0.1:$PORT/calendar && break; sleep 1; done
 curl -s -o /dev/null http://127.0.0.1:$PORT/calendar || { echo "Local site did not start:"; tail -40 "$LOG"; exit 1; }
-E2E_BASE=http://127.0.0.1:$PORT E2E_SUPABASE=http://127.0.0.1:$AUTH_PORT E2E_WEBHOOK_SECRET=$SECRET node scripts/e2e/payments.mjs
+E2E_BASE=http://127.0.0.1:$PORT E2E_SUPABASE=http://127.0.0.1:$AUTH_PORT E2E_PERSIST="$STATE" E2E_WEBHOOK_SECRET=$SECRET node scripts/e2e/payments.mjs
