@@ -74,6 +74,16 @@ for (const e of log) {
   assert.ok(!/supabase:|owner-1|fam-a|ord1|wv1|_/.test(e.title + e.detail + e.who), 'no internal ids or action codes: ' + JSON.stringify(e));
 }
 // An action this page does not know yet still reads as words.
+// Issue #375: a removed coach shift is deleted, so its line in this log is the record of it.
+{
+  const names = {people: {}, you: [], approvals: {}, waitlist: {}, orders: {}, waivers: {}, wrestlers: {}, requests: {}, curricula: {}, coaches: {'dana.coach@example.test': 'Coach Dana'}};
+  const words = 'dana.coach@example.test · Wed, Nov 4 · No scheduled practice · Head coach · added by hand 2:00 PM–3:00 PM · Entered twice';
+  const byOwner = describeSecurityEvent({actor: 'x', action: 'coach_shift_removed_by_owner', target: words, created_at: at}, names, now);
+  assert.deepEqual([byOwner.title, byOwner.detail], ['Coach shift removed by the academy', 'Coach Dana (dana.coach@example.test) · Wed, Nov 4 · No scheduled practice · Head coach · added by hand 2:00 PM–3:00 PM · Entered twice']);
+  const byCoach = describeSecurityEvent({actor: 'x', action: 'coach_shift_removed', target: 'lee.coach@example.test · Mon, Nov 2 · SWA Intermediate 6:00 PM–7:30 PM · Head coach · clocked 5:55 PM–7:35 PM', created_at: at}, names, now);
+  assert.deepEqual([byCoach.title, byCoach.detail], ['Coach removed one of their shifts', 'lee.coach@example.test · Mon, Nov 2 · SWA Intermediate 6:00 PM–7:30 PM · Head coach · clocked 5:55 PM–7:35 PM']);
+  assert.equal(describeSecurityEvent({actor: 'x', action: 'coach_shift_removed', target: '00000000-0000-4000-8000-0000000000a6', created_at: at}, names, now).detail, '', 'an older line that holds only an id shows no detail');
+}
 assert.equal(describeSecurityEvent({actor: 'x', action: 'something_new', target: '', created_at: at}, {people: {}, you: [], approvals: {}, waitlist: {}, orders: {}, waivers: {}, wrestlers: {}, requests: {}, curricula: {}, coaches: {}}, now).title, 'Something new');
 
 // The page wraps long values instead of scrolling sideways.

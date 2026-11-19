@@ -1,5 +1,5 @@
 // Issue #193: coach timesheets. Pay math in integer cents (#197 Q1 rates, Q4 scheduled practice time only), the
-// month-end submit rule (Q5, academy time), flags, coach corrections, voiding, the owner's audited corrections and
+// month-end submit rule (Q5, academy time), flags, coach corrections, removing a shift (it is deleted, issue #375), the owner's audited corrections and
 // approval, the month's file (hours and lesson shares, neutral wording for Q6), owner-only access, and the page scripts.
 // Runs the real routes and libraries against a database built from every migration (tests/accounts.mjs).
 import assert from 'node:assert/strict';
@@ -95,7 +95,7 @@ const dana = {email: 'dana.coach@example.test', name: 'Coach Dana', programs: ['
   const page = await pages.ownerPage(request('/timesheets', 'GET', null, 'dana'), '<p>x</p>');
   assert.equal(page.status, 303, 'a coach is sent away from the owner page');
   assert.equal((await api.POST(request('/api/coach-time', 'POST', {action: 'clock-in', duty: 'head'}, 'dana', 'https://evil.test'))).status, 403, 'same origin only');
-  assert.equal((await owner.POST(request('/api/timesheets', 'POST', {action: 'void'}, 'owner', 'https://evil.test'))).status, 403, 'same origin only');
+  assert.equal((await owner.POST(request('/api/timesheets', 'POST', {action: 'remove'}, 'owner', 'https://evil.test'))).status, 403, 'same origin only');
 }
 
 // ---------- Clocking in and out today, through the routes ----------
@@ -116,10 +116,17 @@ const dana = {email: 'dana.coach@example.test', name: 'Coach Dana', programs: ['
   assert.equal((await post(api, '/api/coach-time', {action: 'clock-out', id: r.body.open.id}, 'lee')).status, 409, 'not someone else’s shift');
   assert.equal((await post(api, '/api/coach-time', {action: 'clock-out', id: r.body.open.id}, 'dana')).status, 200);
   assert.equal((await get(api, '/api/coach-time', 'dana')).body.open, null);
-  // Removing that test punch: it stays on record, void.
+  // Removing that test punch deletes it (issue #375): it is gone from the coach's page, and the security log keeps one
+  // line saying who removed which shift.
   const shift = (await get(api, '/api/coach-time', 'dana')).body.shifts[0];
+  assert.equal((await post(api, '/api/coach-time', {action: 'remove', id: shift.id, revision: shift.revision, reason: 'Test punch'}, 'lee')).status, 409, 'not someone else’s shift');
+  assert.equal((await post(api, '/api/coach-time', {action: 'remove', id: shift.id, revision: shift.revision + 1, reason: 'Test punch'}, 'dana')).status, 409, 'a stale page removes nothing');
   assert.equal((await post(api, '/api/coach-time', {action: 'remove', id: shift.id, revision: shift.revision, reason: 'Test punch'}, 'dana')).status, 200);
-  assert.equal(row('SELECT void_reason FROM coach_time_entries WHERE id=?', shift.id).void_reason, 'Test punch');
+  assert.equal(row('SELECT count(*) AS n FROM coach_time_entries WHERE id=?', shift.id).n, 0, 'the shift is deleted, not kept as removed');
+  deq((await get(api, '/api/coach-time', 'dana')).body.shifts, []);
+  assert.equal((await post(api, '/api/coach-time', {action: 'remove', id: shift.id, revision: shift.revision, reason: 'Test punch'}, 'dana')).status, 409, 'a second removal finds nothing');
+  const removedLine = row("SELECT actor,target FROM security_events WHERE action='coach_shift_removed'");
+  assert.equal(removedLine.actor, 'dana-uuid'); assert.match(removedLine.target, /^dana\.coach@example\.test · \w{3}, \w{3} \d+ · SWA Intermediate 6:00 PM–7:30 PM · Head coach · clocked \d+:\d\d [AP]M–\d+:\d\d [AP]M · Test punch$/);
   assert.equal(row("SELECT count(*) AS n FROM security_events WHERE action IN ('coach_clock_in','coach_clock_out','coach_shift_removed')").n, 3);
 }
 
@@ -203,11 +210,48 @@ let ids = {};
   assert.equal(ev.actor, 'owner-uuid'); assert.equal(ev.target, `${ids.hand} 0min head->105min assistant`);
   assert.match(row('SELECT history FROM coach_time_entries WHERE id=?', ids.hand).history, /"by":"owner","action":"corrected","from":"0 min Head coach","to":"1 h 45 min Assistant coach","note":"Camp setup, agreed"/);
   assert.equal((await post(owner, '/api/timesheets', {...fix, reason: 'Again'}, 'owner')).status, 409, 'stale revision refused');
-  // Void a mistaken shift.
+  // The owner removes a mistaken shift (issue #375): a reason is required, the shift is deleted, and the coach is
+  // emailed which shift and why.
   r = await get(owner, '/api/timesheets?month=2026-11&coach=dana.coach@example.test', 'owner'); c = r.body.coaches[0];
-  assert.equal((await post(owner, '/api/timesheets', {action: 'void', id: ids.dup, revision: s(ids.dup).revision, reason: ''}, 'owner')).status, 400);
-  assert.equal((await post(owner, '/api/timesheets', {action: 'void', id: ids.dup, revision: s(ids.dup).revision, reason: 'Entered twice'}, 'owner')).status, 200);
-  assert.equal(row("SELECT count(*) AS n FROM security_events WHERE action='coach_shift_voided'").n, 1);
+  assert.equal((await post(owner, '/api/timesheets', {action: 'remove', id: ids.dup, revision: s(ids.dup).revision, reason: ''}, 'owner')).status, 400);
+  assert.equal((await post(owner, '/api/timesheets', {action: 'remove', id: ids.dup, revision: s(ids.dup).revision, reason: 'Entered twice'}, 'dana')).status, 403, 'coaches cannot remove through the owner’s page');
+  assert.equal((await post(owner, '/api/timesheets', {action: 'void', id: ids.dup, revision: s(ids.dup).revision, reason: 'Entered twice'}, 'owner')).status, 400, 'the old name is no longer an action');
+  assert.equal((await S.ownerRemove('owner-uuid', {id: ids.dup, revision: s(ids.dup).revision + 1, reason: 'Entered twice'}, async () => { throw Error('must not send'); })).status, 409, 'a stale page removes nothing and sends nothing');
+  const mail = [];
+  const gone = await S.ownerRemove('owner-uuid', {id: ids.dup, revision: s(ids.dup).revision, reason: 'Entered twice'}, async list => { mail.push(...list); return list.map(() => ({status: 'sent', reason: null})); });
+  deq([gone.status, gone.coachTold, gone.coachName], [200, 'emailed', 'Coach Dana']);
+  assert.equal(row('SELECT count(*) AS n FROM coach_time_entries WHERE id=?', ids.dup).n, 0, 'deleted, not kept as void');
+  assert.equal(mail.length, 1); deq([mail[0].to, mail[0].subject, mail[0].audience], ['dana.coach@example.test', 'The academy removed one of your shifts: Wed, Nov 4', 'account']);
+  assert.equal(mail[0].text, 'Hi Coach Dana,\n\nThe academy removed one of your shifts. It is no longer in your hours and is not paid.\n\nShift: Wed, Nov 4 · No scheduled practice · Head coach · added by hand 2:00 PM–3:00 PM\nReason: Entered twice\n\nIf this is a mistake, reply to the academy at savagewrestlingclub@gmail.com. You can see your hours on the site, on Your hours.');
+  const byOwner = row("SELECT actor,target FROM security_events WHERE action='coach_shift_removed_by_owner'");
+  deq([byOwner.actor, byOwner.target], ['owner-uuid', 'dana.coach@example.test · Wed, Nov 4 · No scheduled practice · Head coach · added by hand 2:00 PM–3:00 PM · Entered twice']);
+  assert.equal((await S.ownerRemove('owner-uuid', {id: ids.dup, revision: 1, reason: 'Entered twice'})).status, 409, 'already gone');
+  // An email that cannot be sent never holds the removal back: the owner is told to tell the coach.
+  {
+    const ok = x => { assert.equal(x.status, 200, x.error); return x; };
+    const extra = ok(await S.addShift(dana, 'dana-uuid', {date: '2026-11-05', session: null, duty: 'head', in: '08:00', out: '09:00', reason: 'Second test entry'}, at('2026-11-20T15:00:00Z'))).id;
+    const rev = row('SELECT revision FROM coach_time_entries WHERE id=?', extra).revision;
+    const quiet = await S.ownerRemove('owner-uuid', {id: extra, revision: rev, reason: 'Not a real shift'}, async () => { throw Error('email is down'); });
+    deq([quiet.status, quiet.coachTold, quiet.coachName], [200, 'not-emailed', 'Coach Dana']); assert.equal(row('SELECT count(*) AS n FROM coach_time_entries WHERE id=?', extra).n, 0);
+    // Through the page's own route: the reply carries whether the coach was told (no email is set up in tests).
+    const extra2 = ok(await S.addShift(dana, 'dana-uuid', {date: '2026-11-05', session: null, duty: 'head', in: '08:00', out: '09:00', reason: 'Third test entry'}, at('2026-11-20T15:00:00Z'))).id;
+    const viaPage = await post(owner, '/api/timesheets', {action: 'remove', id: extra2, revision: 1, reason: 'Not a real shift'}, 'owner');
+    deq([viaPage.status, viaPage.body.ok, viaPage.body.coachTold, viaPage.body.coachName], [200, true, 'not-emailed', 'Coach Dana']);
+  }
+  // A shift marked removed the old way (an older backup restored) is never read, and the migration deletes it and
+  // leaves one line in the security log.
+  {
+    sqlite.prepare("INSERT INTO coach_time_entries(id,user_id,coach_email,coach_name,work_date,session_key,session_title,session_start,session_end,duty,source,clock_in,clock_out,voided_at,voided_by,void_reason,history,created_at) VALUES ('old-removed-1','dana-uuid','dana.coach@example.test','Coach Dana','2026-11-09','practice:Intermediate:2026-11-09:18:00','SWA Intermediate','18:00','19:30','head','clock','2026-11-09T23:00:00.000Z','2026-11-10T00:30:00.000Z','2026-11-10T01:00:00.000Z','dana.coach@example.test','Removed by the coach','[]','2026-11-09T23:00:00.000Z')").run();
+    const mine = await S.coachMonth(dana, '2026-11', at('2026-11-20T15:00:00Z')), theirs = await get(owner, '/api/timesheets?month=2026-11&coach=dana.coach@example.test', 'owner');
+    assert.ok(mine.shifts.every(x => x.id !== 'old-removed-1') && theirs.body.coaches[0].shifts.every(x => x.id !== 'old-removed-1'), 'never shown to the coach or the owner');
+    assert.ok([...mine.shifts, ...theirs.body.coaches[0].shifts].every(x => x.status !== 'voided'));
+    assert.equal((await S.ownerRemove('owner-uuid', {id: 'old-removed-1', revision: 1, reason: 'Gone already'})).status, 409);
+    const before = row('SELECT count(*) AS n FROM coach_time_entries').n;
+    for (const statement of readFileSync('drizzle/0048_delete_removed_coach_shifts.sql', 'utf8').split('--> statement-breakpoint')) sqlite.exec(statement);
+    assert.equal(row('SELECT count(*) AS n FROM coach_time_entries').n, before - 1, 'only the shift marked removed goes');
+    assert.equal(row("SELECT count(*) AS n FROM coach_time_entries WHERE voided_at IS NOT NULL").n, 0);
+    deq(row("SELECT action,target FROM security_events WHERE actor='migration:0048'"), {action: 'coach_shift_removed', target: 'dana.coach@example.test · 2026-11-09 · SWA Intermediate · Removed by the coach'});
+  }
   // Approve exactly what was reviewed.
   r = await get(owner, '/api/timesheets?month=2026-11&coach=dana.coach@example.test', 'owner'); c = r.body.coaches[0];
   const sentShifts = c.shifts.filter(x => x.status === 'submitted').map(x => ({id: x.id, revision: x.revision}));
@@ -224,7 +268,7 @@ let ids = {};
   assert.equal((await post(owner, '/api/timesheets', {action: 'correct', id: ids.mon, revision: 99, hours: 1, minutes: 0, duty: 'head', reason: 'x y z'}, 'owner')).status, 409);
   const approvedMon = row('SELECT revision FROM coach_time_entries WHERE id=?', ids.mon).revision;
   assert.match((await post(owner, '/api/timesheets', {action: 'correct', id: ids.mon, revision: approvedMon, hours: 1, minutes: 0, duty: 'head', reason: 'x y z'}, 'owner')).body.error, /Undo the month/);
-  assert.match((await post(owner, '/api/timesheets', {action: 'void', id: ids.mon, revision: approvedMon, reason: 'x y z'}, 'owner')).body.error, /Undo the month/);
+  assert.match((await post(owner, '/api/timesheets', {action: 'remove', id: ids.mon, revision: approvedMon, reason: 'x y z'}, 'owner')).body.error, /Undo the month/);
   // After approval the coach cannot add to that month by hand.
   assert.equal((await S.addShift(dana, 'dana-uuid', {date: '2026-11-25', session: null, duty: 'head', in: '10:00', out: '11:00', reason: 'Forgot'}, at('2026-12-02T15:00:00Z'))).status, 409);
 
@@ -303,6 +347,10 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   ctx.d.canSubmit = true; assert.match(vm.runInContext('submitHelp(d)', ctx), /^Sends every shift in December 2026/);
   ctx.s = {id: 'a"b', revision: 2, status: 'draft', date: '2026-12-01', session: null, dutyLabel: 'Head coach', inTime: '10:00', outTime: '11:00', paidMinutes: 0, amountCents: 0, flags: ['<b>x</b>']};
   const sh = vm.runInContext('shiftHtml(s)', ctx);
+  // Issue #375: removing deletes, and the page has nothing for a shift marked removed.
+  { const src = readFileSync('app/coach-time/screen.html', 'utf8'); assert.match(src, /confirm\('Remove this shift\? It is deleted for good and is not paid\.'\)/); assert.doesNotMatch(src, /voided|Removed'|Not paid|stays on record/);
+    assert.doesNotMatch(readFileSync('app/timesheets/screen.html', 'utf8'), /voided|Void|data-void/);
+    assert.match(readFileSync('app/help/coach/screen.html', 'utf8'), /choose <strong>Fix the times<\/strong>, then <strong>Remove this shift<\/strong>\. It is deleted and isn’t paid\./); assert.match(readFileSync('app/help/owner/screen.html', 'utf8'), /the shift is deleted and the coach is emailed which shift you removed and why/); }
   assert.match(sh, /data-fix="a&quot;b" data-rev="2"/); assert.match(sh, /&lt;b&gt;x&lt;\/b&gt;/); assert.match(sh, /No scheduled practice · Head coach/);
 }
 {
@@ -313,7 +361,9 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   assert.equal(el('month').value, '2026-11'); assert.match(el('month').innerHTML, /<option value="2026-11" selected>November 2026<\/option>/); // the shared month picker (issue #232) assert.equal(el('csv').href, '/api/timesheets?format=csv&month=2026-11');
   assert.match(el('coaches').innerHTML, /data-approve="dana\.coach@example\.test">Approve Coach Dana’s November 2026 \(\$237\.50\)/);
   assert.match(el('coaches').innerHTML, /Private lessons: 1, share \$65\.00 at 65%/);
-  assert.match(el('coaches').innerHTML, /data-correct=/); assert.match(el('coaches').innerHTML, /Void: Entered twice/);
+  assert.match(el('coaches').innerHTML, /data-correct=/); assert.doesNotMatch(el('coaches').innerHTML, /Entered twice|Void|voided/, 'a removed shift is not on the page');
+  assert.match(el('coaches').innerHTML, /<summary>Correct · Remove(?: · History)?<\/summary>[\s\S]*?<h4>Remove this shift<\/h4><p class="muted">The shift is deleted and is not paid\. The coach is emailed which shift you removed and your reason\.<\/p>[\s\S]*?Reason \(the coach sees this\)[\s\S]*?data-remove="[0-9a-f-]{36}" data-rev="\d+">Remove shift<\/button>/);
+  deq([ctx.removedText({coachTold: 'emailed', coachName: 'Coach Dana'}), ctx.removedText({coachTold: 'not-emailed', coachName: 'Coach Dana'}), ctx.removedText({coachTold: 'self'})], ['Shift removed. Coach Dana was emailed.', 'Shift removed. The email to Coach Dana could not be sent, so tell them yourself.', 'Shift removed.']);
   ctx.c = r.body.coaches[0];
   const body = vm.runInContext('approveBody(c,"2026-11")', ctx);
   assert.equal(body.action, 'approve'); assert.equal(body.shifts.length, 5); assert.ok(body.shifts.every(x => typeof x.revision === 'number'));
@@ -322,6 +372,6 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   assert.match(cover, /Thu, Dec 10 · 6:00 PM–7:30 PM · SWA Intermediate practice/); assert.match(cover, /private lesson · 1 wrestler booked/); assert.match(cover, /\(open time\)/);
   assert.match(vm.runInContext('coverHtml({practices:[],lessons:[]})', ctx), /No practices or lessons/);
   ctx.s = {...ctx.c.shifts[0], status: 'approved'};
-  assert.doesNotMatch(vm.runInContext('shiftHtml(s)', ctx), /data-correct|data-void/, 'approved shifts are changed only after undoing approval');
+  assert.doesNotMatch(vm.runInContext('shiftHtml(s)', ctx), /data-correct|data-remove/, 'approved shifts are changed only after undoing approval');
 }
-console.log('Coach timesheet tests passed: academy time across daylight saving, $40/$30 rates in one place, pay for scheduled practice time only in whole cents, flags (early, late, long, back to back, by hand, changed, open, time off), month sent only on or after its last day in New York time, coach fixes and removals with reasons, owner corrections audited before and after, voiding, approval of exactly the reviewed shifts with amounts frozen, undo with a reason, the month file with lesson shares and neutral wording, owner-only access, and the clock card and page scripts.');
+console.log('Coach timesheet tests passed: academy time across daylight saving, $40/$30 rates in one place, pay for scheduled practice time only in whole cents, flags (early, late, long, back to back, by hand, changed, open, time off), month sent only on or after its last day in New York time, coach fixes and removals with reasons, owner corrections audited before and after, removed shifts deleted (the coach emailed when the academy removes one), approval of exactly the reviewed shifts with amounts frozen, undo with a reason, the month file with lesson shares and neutral wording, owner-only access, and the clock card and page scripts.');

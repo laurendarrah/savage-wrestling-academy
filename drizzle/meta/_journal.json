@@ -337,6 +337,13 @@
       "when": 1794620099735,
       "tag": "0047_friendly_gorilla_man",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1795047897931,
+      "tag": "0048_delete_removed_coach_shifts",
+      "breakpoints": true
     }
   ]
 }
