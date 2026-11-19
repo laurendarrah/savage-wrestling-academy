@@ -149,6 +149,20 @@ let ids = {};
   assert.equal((await S.addShift(dana, 'dana-uuid', {...hand, session: 'practice:Elementary:2026-11-04:17:00'}, at('2026-11-07T15:00:00Z'))).status, 409, 'not another program');
   ids.hand = ok(await S.addShift(dana, 'dana-uuid', hand, at('2026-11-07T15:00:00Z'))).id;
   assert.equal((await S.addShift(dana, 'dana-uuid', {...hand, in: '11:00', out: '13:00'}, at('2026-11-07T15:00:00Z'))).status, 409, 'overlap refused');
+  // Issue #378: a shift added by hand for a scheduled practice is paid for the practice time at the role's rate, and
+  // says it was added by hand. Only the time inside the practice counts.
+  {
+    const key = 'practice:Intermediate:2026-11-05:18:00', when = at('2026-11-07T15:00:00Z');
+    const full = ok(await S.addShift(dana, 'dana-uuid', {date: '2026-11-05', session: key, duty: 'head', in: '17:45', out: '19:40', reason: 'Forgot to clock in'}, when)).id;
+    let mm = await S.coachMonth(dana, '2026-11', when), v = mm.shifts.find(x => x.id === full);
+    deq([v.paidMinutes, v.amountCents, v.status, v.session.title, v.flags[0]], [90, 6000, 'draft', 'SWA Intermediate', 'Added by hand, not clocked: Forgot to clock in']);
+    ok(await S.removeShift(dana, 'dana-uuid', {id: full, revision: v.revision}));
+    const part = ok(await S.addShift(dana, 'dana-uuid', {date: '2026-11-05', session: key, duty: 'assistant', in: '18:30', out: '19:30', reason: 'Covered the second half'}, when)).id;
+    mm = await S.coachMonth(dana, '2026-11', when); v = mm.shifts.find(x => x.id === part);
+    deq([v.paidMinutes, v.amountCents], [60, 3000], 'an hour as assistant is $30.00');
+    ok(await S.removeShift(dana, 'dana-uuid', {id: part, revision: v.revision}));
+    assert.equal(row("SELECT count(*) AS n FROM coach_time_entries WHERE work_date='2026-11-05'").n, 0, 'both test shifts are gone');
+  }
   ids.dup = ok(await S.addShift(dana, 'dana-uuid', {...hand, in: '14:00', out: '15:00', reason: 'Entered twice by mistake'}, at('2026-11-07T15:00:00Z'))).id;
 
   // The coach fixes their own times, with a reason; the punches stay.
@@ -350,7 +364,11 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   // Issue #375: removing deletes, and the page has nothing for a shift marked removed.
   { const src = readFileSync('app/coach-time/screen.html', 'utf8'); assert.match(src, /confirm\('Remove this shift\? It is deleted for good and is not paid\.'\)/); assert.doesNotMatch(src, /voided|Removed'|Not paid|stays on record/);
     assert.doesNotMatch(readFileSync('app/timesheets/screen.html', 'utf8'), /voided|Void|data-void/);
-    assert.match(readFileSync('app/help/coach/screen.html', 'utf8'), /choose <strong>Fix the times<\/strong>, then <strong>Remove this shift<\/strong>\. It is deleted and isn’t paid\./); assert.match(readFileSync('app/help/owner/screen.html', 'utf8'), /the shift is deleted and the coach is emailed which shift you removed and why/); }
+    assert.match(readFileSync('app/help/coach/screen.html', 'utf8'), /Open the shift and choose <strong>Remove this shift<\/strong>\. It is deleted and isn’t paid\./); assert.match(readFileSync('app/help/owner/screen.html', 'utf8'), /the shift is deleted and the coach is emailed which shift you removed and why/); }
+  // Issue #378: Remove this shift is in plain view in the opened shift, after the form for changing times, with its own note.
+  assert.match(sh, /<\/details><div class="actions remove-row"><button type="button" class="quiet" data-remove="a&quot;b" data-rev="2">Remove this shift<\/button><p class="form-note" id="removeNote-a&quot;b" role="status" aria-live="polite"><\/p><\/div><\/div><\/details>$/);
+  assert.doesNotMatch(sh.slice(sh.indexOf('<details class="fix">'), sh.indexOf('</details>')), /data-remove/, 'not inside Fix the times');
+  for (const status of ['submitted', 'approved']) { ctx.s2 = {...ctx.s, status}; assert.doesNotMatch(vm.runInContext('shiftHtml(s2)', ctx), /data-remove|data-fix/, 'a sent or approved shift cannot be changed or removed by the coach'); }
   assert.match(sh, /data-fix="a&quot;b" data-rev="2"/); assert.match(sh, /&lt;b&gt;x&lt;\/b&gt;/); assert.match(sh, /No scheduled practice · Head coach/);
 }
 {
