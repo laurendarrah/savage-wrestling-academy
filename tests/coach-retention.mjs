@@ -108,6 +108,8 @@ function seedCoach(p, email, uid, name, lessonDay) {
     now, approved ? 'ok' : null, approved ? now : null, approved ? 'owner-uuid' : null, approved ? 90 : null, approved ? 'head' : null, approved ? 4000 : null, approved ? 6000 : null,
     voided ? now : null, voided ? 'owner-uuid' : null, voided ? 'Duplicate' : null, `[{"by":"coach","note":"${name}"}]`, now);
   shift(p + '-shift-ok', true, false); shift(p + '-shift-draft', false, false); shift(p + '-shift-void', false, true);
+  // Issue #370: a payment the academy made to the coach.
+  run("INSERT INTO coach_payments(id,coach_email,coach_name,paid_on,amount_cents,method,period_from,period_to,note,created_at,created_by) VALUES (?,?,?,'2023-09-30',12000,'check','2023-09-01','2023-09-30',?,?,'owner-uuid')", p + '-pay', email, name, 'Check for ' + name, now);
   run("INSERT INTO coach_time_off(id,user_id,coach_email,coach_name,start_date,end_date,reason,status,programs,requested_at,decided_at,decided_by,revision) VALUES (?,?,?,?,'2023-10-01','2023-10-03','Wedding','approved','[\"Intermediate\"]',?,?,'owner-uuid',2)", p + '-off', uid, email, name, now, now);
   const notice = (id, userId, to, kind, key) => run('INSERT INTO notifications(id,user_id,email,kind,subject,body,dedupe_key,created_at,read_at,email_status) VALUES (?,?,?,?,?,?,?,?,NULL,?)', id, userId, to, kind, 'Subject', 'Body', key, now, 'sent');
   notice(p + '-n1', null, email, 'coach_time_off_approved', 'time-off-decided:' + p + '-off');
@@ -166,7 +168,7 @@ const maxBefore = everywhere(NEW).sort();
     ['SELECT count(*) FROM coach_profiles WHERE email=?', 'profile and phone'], ['SELECT count(*) FROM coach_invites WHERE email=?', 'old invites'],
     ['SELECT count(*) FROM coach_time_off WHERE coach_email=?', 'time off'], ['SELECT count(*) FROM coach_time_entries WHERE coach_email=?', 'shifts'],
     ['SELECT count(*) FROM waiver_signatures WHERE lower(email)=?', 'signed contract'], ['SELECT count(*) FROM notifications WHERE email=?', 'notices to the coach'],
-    ['SELECT count(*) FROM coach_openings WHERE coach_email=?', 'lesson times']]) assert.equal(count(sql, OLD), 0, what);
+    ['SELECT count(*) FROM coach_openings WHERE coach_email=?', 'lesson times'], ['SELECT count(*) FROM coach_payments WHERE coach_email=?', 'payments under their email']]) assert.equal(count(sql, OLD), 0, what);
   assert.equal(count("SELECT count(*) FROM coach_openings WHERE id IN ('rae-open','rae-legacy')"), 0, 'times nobody booked are deleted, with or without the coach email');
   assert.equal(count("SELECT count(*) FROM coach_time_entries WHERE id IN ('rae-shift-draft','rae-shift-void')"), 0, 'shifts never approved, or voided, are deleted');
   assert.equal(count("SELECT count(*) FROM notifications WHERE id IN ('rae-n1','rae-n2')"), 0, 'notices about their time off are deleted, including to the coaches covering');
@@ -186,6 +188,10 @@ const maxBefore = everywhere(NEW).sort();
   const shift = one("SELECT * FROM coach_time_entries WHERE id='rae-shift-ok'");
   assert.deepEqual([shift.coach_email, shift.user_id, shift.coach_name, shift.coach_note, shift.owner_note, shift.history], [KEY, KEY, 'Former coach', null, null, '[]']);
   assert.deepEqual([shift.approved_minutes, shift.approved_rate_cents, shift.approved_cents, shift.work_date], [90, 4000, 6000, '2023-09-12'], 'the approved pay record stays');
+  // Issue #370: what the academy paid stays in its books, without the coach's name, email or the note.
+  const paid = one("SELECT * FROM coach_payments WHERE id='rae-pay'");
+  assert.deepEqual([paid.coach_email, paid.coach_name, paid.note, paid.paid_on, paid.amount_cents, paid.method, paid.period_from, paid.period_to], [KEY, 'Former coach', '', '2023-09-30', 12000, 'check', '2023-09-01', '2023-09-30']);
+  assert.equal(count("SELECT count(*) FROM coach_payments WHERE coach_name<>'Former coach'"), count('SELECT count(*) FROM coach_payments') - 1, 'other coaches’ payments are untouched');
   assert.equal(one("SELECT checked_in_by FROM attendance WHERE id='rae-att'").checked_in_by, KEY, 'the check-in stays; who checked in does not');
   assert.equal(one("SELECT checked_in_by FROM attendance WHERE id='owner-att'").checked_in_by, 'owner-uuid');
   assert.equal(one("SELECT updated_by FROM practice_plans WHERE id='rae-plan'").updated_by, KEY);

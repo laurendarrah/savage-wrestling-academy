@@ -76,6 +76,9 @@ export const RECORD_TABLES:Record<string,Col[]>={
  // Coaches removed for good and when (issue #212), so a restored file keeps each coach's 3-year clock. Added after version 3
  // first shipped (V3_LATER). Restoring never overwrites a row, so a file cannot bring back an email the cleanup cleared.
  removed_coaches:[['id','text'],['email_hash','text'],['email','text',true],['name','text',true],['removed_on','text'],['cleaned_at','text',true]],
+ // Payments the academy made to coaches (issue #370). Added after version 3 first shipped (V3_LATER). Restoring never
+ // changes a payment already recorded.
+ coach_payments:[['id','text'],['coach_email','text'],['coach_name','text'],['paid_on','text'],['amount_cents','int'],['method','text'],['period_from','text',true],['period_to','text',true],['note','text'],['created_at','text'],['created_by','text']],
 };
 // Tables whose primary key is not a single id column.
 export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],signature_reissues:['signature_id'],signature_carryovers:['signature_id'],stripe_fees:['payment_intent'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
@@ -85,7 +88,7 @@ const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[[
 const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
 // Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
 // and still restores; a file that has the section is checked like any other.
-const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues','cash_bookings','payment_disputes','signature_carryovers','installment_payments'];
+const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues','cash_bookings','payment_disputes','signature_carryovers','installment_payments','coach_payments'];
 // Columns added to a version 3 table after it first shipped, with the value an older file's rows mean. A row may leave
 // them out and is restored with that value; a row that has one is checked like any other column. Issue #195: every
 // signed-document version in an older file is a waiver. Issue #239: every signature in an older file is a first signing.

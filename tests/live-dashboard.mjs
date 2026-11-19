@@ -17,12 +17,13 @@ const responses = {
   '/api/waivers': {current: {id: 'v'}, wrestlers: [{signed: true}, {signed: false}]},
   '/api/messages': {families: [{unread: 2}, {unread: 1}, {unread: 0}], familiesMatched: 3},
   ['/api/timesheets?month=' + monthKey]: {coaches: [{name: 'Coach Dana', totals: {open: 1, drafts: 3, submitted: 0}}, {name: 'Coach Lee', totals: {open: 1, drafts: 0, submitted: 2}}], overall: {waiting: 2, notSent: 4}, timeOff: {pending: [{coachName: 'Coach Dana'}], approved: [{coachName: 'Coach Dana', text: 'Dec 7 to Dec 8', start: '2099-12-07', end: '2099-12-08', cover: {practices: [{}, {}], lessons: []}}]}},
-  ['/api/financials?month=' + monthKey]: {categories: {in: [{category: 'Private lessons', cents: 22000}, {category: 'Camps, clinics and events', cents: 14400}, {category: 'Walk-ins', cents: 8000}], out: []}},
+  ['/api/financials?month=' + monthKey]: {categories: {in: [{category: 'Private lessons', cents: 22000}, {category: 'Camps, clinics and events', cents: 14400}, {category: 'Walk-ins', cents: 8000}], out: [{category: 'Coach pay', cents: 20000}, {category: 'Card processing fees', cents: 1340}, {category: 'Refunds', cents: 4000}]}, totals: {incomeCents: 44400, refundsCents: 4000, expensesCents: 21340, netCents: 19060}},
+  '/api/coach-payments': {totals: {earnedCents: 61850, paidCents: 45000, owedCents: 16850, aheadCents: 0, pendingCents: 0, paidThisMonthCents: 20000, paymentsThisMonth: 2, shareNotSet: 0}},
   ['/api/practice-plans?summary=1&month=' + monthKey]: {owner: true, plans: [{program: 'Intermediate', date: today, published: true, title: 'Leg attacks and finishes'}]},
   ['/api/public-schedule?month=' + monthKey]: {liveClasses: [{id: 'fnl', name: 'Friday Night Live', date: '2099-11-13', start: '16:00', memberCents: 1000}], events: [{id: 'camp', name: 'Winter camp', type: 'Camp', dates: ['2099-11-17', '2099-11-18'], cents: 16000, full: true}]},
   '/api/site-health': {last24h: 0, health: {ok: true}},
 };
-let fetched = [], payDown = false;
+let fetched = [];
 const location = {hash: '', href: ''};
 // The page reads the clock to mark a session "Now". Run it at 10 AM New York today, before any session, so the test
 // passes at any hour (it failed during practice time on Nov 13, issue #304).
@@ -32,7 +33,6 @@ const ctx = vm.createContext({console, structuredClone, crypto, URL, Intl, Date:
   document: {querySelector: node, getElementById: id => node('#' + id), addEventListener() {}}, window: {addEventListener() {}}, setTimeout() {}, confirm: () => true,
   fetch: async url => { fetched.push(url); const key = Object.keys(responses).find(k => url === k);
     if (key) return {ok: true, json: async () => responses[key]};
-    if (url.startsWith('/api/coach-pay')) return payDown ? {ok: false, json: async () => ({})} : {ok: true, json: async () => ({totals: {lessons: 5, owedCents: 14300}})};
     if (url.startsWith('/api/payments?from=')) return {ok: true, json: async () => ({totals: {collectedCents: url.endsWith('-01') && !url.includes('-09-01') ? 123450 : 285400, count: 7}})};
     return {ok: false, json: async () => ({})}; }});
 vm.runInContext(code, ctx);
@@ -91,25 +91,36 @@ const coming = node('#comingBody').innerHTML;
 assert.match(coming, /<li><div>Fri, Nov 13 · Friday Night Live<small>4:00 PM · \$10\.00 members<\/small><\/div><span class="amt"><\/span><\/li>/);
 assert.match(coming, /<li><div>Nov 17–18 · Winter camp<small>Full · Camp<\/small><\/div><span class="amt">\$160\.00<\/span><\/li>/);
 assert.match(coming, /<li><div>Dec 7 to Dec 8 · Coach Dana off<small>2 practices need cover<\/small><\/div><a class="button sm" href="\/timesheets">Cover<\/a><\/li>/);
-// This month by category, with what is owed to coaches last.
-assert.equal(node('#monthBody').innerHTML, '<ul class="rows"><li><div>Private lessons</div><span class="amt">$220.00</span></li><li><div>Camps, clinics and events</div><span class="amt">$144.00</span></li><li><div>Walk-ins</div><span class="amt">$80.00</span></li><li><div><b>Owed to coaches</b><small>Lesson shares · 5 lessons · <a href="/timesheets">Each coach’s total</a></small></div><span class="amt">$143.00</span></li></ul>', 'money reads $40.00 everywhere');
-// Issue #371: practice pay for the month is added to the lesson shares, with both parts written out. It is "so far"
-// until every shift of the month is approved.
+// This month (issue #370): money in by category and in total, what was paid to coaches, the other money out, what is
+// left, and what is still owed to coaches with the way to pay them.
+const li = (label, amount, small = '') => `<li><div>${label}${small ? '<small>' + small + '</small>' : ''}</div><span class="amt">${amount}</span></li>`;
+const owedLi = (small, amount) => li('<b>Still owed to coaches</b>', amount, small + ' · <a href="/coach-pay">Pay coaches</a>');
+assert.equal(node('#monthBody').innerHTML, '<ul class="rows">' + li('Private lessons', '$220.00') + li('Camps, clinics and events', '$144.00') + li('Walk-ins', '$80.00') + li('<b>Money in</b>', '$444.00')
+  + li('Paid to coaches', '$200.00', '2 payments') + li('Other money out', '$53.40', 'Expenses, card fees and refunds') + li('<b>Left after money out</b>', '$190.60')
+  + owedLi('Approved hours and lessons taught, less what you paid', '$168.50') + '</ul>', 'money reads $40.00 everywhere');
+assert.ok(fetched.includes('/api/coach-payments') && !fetched.some(u => u.startsWith('/api/coach-pay?')), 'the dashboard reads payroll once and no longer loads the lesson report');
 {
-  const hoursKey = '/api/timesheets?month=' + monthKey, before = responses[hoursKey].overall;
-  const owedRow = async () => { await vm.runInContext('loadToday()', ctx); return node('#monthBody').innerHTML.match(/<li><div><b>Owed to coaches<\/b>.*?<\/li>/)?.[0] ?? null; };
-  responses[hoursKey].overall = {...before, practiceCents: 10500, approvedCents: 0};
-  assert.equal(await owedRow(), '<li><div><b>Owed to coaches</b><small>Practice $105.00 so far + lesson shares $143.00 · <a href="/timesheets">Each coach’s total</a></small></div><span class="amt">$248.00</span></li>');
-  responses[hoursKey].overall = {...before, practiceCents: 10500, approvedCents: 6000};
-  assert.match(await owedRow(), /Practice \$105\.00 so far \+ lesson shares \$143\.00/, 'part of the month approved is still so far');
-  responses[hoursKey].overall = {...before, practiceCents: 10500, approvedCents: 10500};
-  assert.match(await owedRow(), /<small>Practice \$105\.00 \+ lesson shares \$143\.00 · .*<span class="amt">\$248\.00<\/span>/, 'a fully approved month is final');
-  payDown = true;
-  assert.equal(await owedRow(), '<li><div><b>Owed to coaches</b><small>Practice $105.00 + lesson shares could not be loaded · <a href="/timesheets">Each coach’s total</a></small></div><span class="amt">$105.00</span></li>', 'a missing report is said, not counted as $0');
-  responses[hoursKey].overall = before;
-  assert.equal(await owedRow(), null, 'no practice pay and no lesson report: no row');
-  payDown = false;
-  assert.match(await owedRow(), /<small>Lesson shares · 5 lessons · /);
+  const booksKey = '/api/financials?month=' + monthKey, books = responses[booksKey], pay = responses['/api/coach-payments'];
+  const month = async () => { await vm.runInContext('loadToday()', ctx); return node('#monthBody').innerHTML; };
+  // Practice pay waiting for approval, and a coach paid ahead, are said beside what is owed.
+  responses['/api/coach-payments'] = {totals: {...pay.totals, pendingCents: 10500, aheadCents: 2500}};
+  assert.ok((await month()).includes(owedLi('$105.00 more not approved yet · $25.00 paid ahead', '$168.50')));
+  // No payment yet this month: the line still shows, at $0.00, and all the money out is "other".
+  responses['/api/coach-payments'] = {totals: {...pay.totals, paidThisMonthCents: 0, paymentsThisMonth: 0}};
+  let html = await month();
+  assert.ok(html.includes(li('Paid to coaches', '$0.00', 'No payments recorded this month')) && html.includes(li('Other money out', '$253.40', 'Expenses, card fees and refunds')));
+  // Payroll could not be loaded: money in, money out and what is left still show; nothing is claimed about coaches.
+  delete responses['/api/coach-payments'];
+  html = await month();
+  assert.ok(html.includes(li('Money out', '$253.40', 'Expenses, card fees and refunds')) && html.includes(li('<b>Left after money out</b>', '$190.60')) && !/coaches/.test(html));
+  // The books could not be loaded: what was paid to coaches and what is still owed are still shown.
+  responses['/api/coach-payments'] = pay; delete responses[booksKey];
+  assert.equal(await month(), '<ul class="rows">' + li('Paid to coaches', '$200.00', '2 payments') + owedLi('Approved hours and lessons taught, less what you paid', '$168.50') + '</ul>');
+  // A month with nothing in or out and nothing owed.
+  responses[booksKey] = {categories: {in: [], out: []}, totals: {incomeCents: 0, refundsCents: 0, expensesCents: 0, netCents: 0}};
+  responses['/api/coach-payments'] = {totals: {earnedCents: 0, paidCents: 0, owedCents: 0, aheadCents: 0, pendingCents: 0, paidThisMonthCents: 0, paymentsThisMonth: 0, shareNotSet: 0}};
+  assert.equal(await month(), '<ul class="rows">' + owedLi('Approved hours and lessons taught, less what you paid', '$0.00') + '</ul>');
+  responses[booksKey] = books; responses['/api/coach-payments'] = pay;
 }
 // Something wrong with the site, or a data request, joins "Needs you"; a document that is not in force stays out.
 responses['/api/waivers'] = {current: null, wrestlers: []}; delete responses['/api/messages']; responses['/api/site-health'] = {last24h: 3, health: {ok: true}}; responses['/api/data-requests'] = {open: 1};

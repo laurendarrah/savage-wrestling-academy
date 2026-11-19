@@ -449,10 +449,10 @@ async function loadLaunch(){
 }
 async function loadToday(){
  const get=async u=>{try{const r=await fetch(u,{cache:'no-store'});return r.ok?await r.json():null}catch{return null}};
- const today=academyToday(),monthKey=today.slice(0,7),monthStart=monthKey+'-01',monthEnd=new Date(Date.UTC(Number(monthKey.slice(0,4)),Number(monthKey.slice(5)),0)).toISOString().slice(0,10),nextMonth=W.shiftMonth(monthKey,1);
+ const today=academyToday(),monthKey=today.slice(0,7),monthStart=monthKey+'-01',nextMonth=W.shiftMonth(monthKey,1);
  // The season runs September to August, as USA Wrestling cards do.
  const seasonStart=(Number(today.slice(5,7))>=9?today.slice(0,4):String(Number(today.slice(0,4))-1))+'-09-01';
- const [roster,cards,waivers,messages,payments,site,requests,consent,attention,cash,hours,books,pay,plans,sched,schedNext,season]=await Promise.all(['/api/roster','/api/usaw-cards?limit=1','/api/waivers','/api/messages','/api/payments?from='+monthStart,'/api/site-health','/api/data-requests','/api/waivers?kind=parent_consent','/api/payments?attention=1','/api/payments?cash=due','/api/timesheets?month='+monthKey,'/api/financials?month='+monthKey,'/api/coach-pay?from='+monthStart+'&to='+monthEnd,'/api/practice-plans?summary=1&month='+monthKey,'/api/public-schedule?month='+monthKey,'/api/public-schedule?month='+nextMonth,'/api/payments?from='+seasonStart].map(get));
+ const [roster,cards,waivers,messages,payments,site,requests,consent,attention,cash,hours,books,payroll,plans,sched,schedNext,season]=await Promise.all(['/api/roster','/api/usaw-cards?limit=1','/api/waivers','/api/messages','/api/payments?from='+monthStart,'/api/site-health','/api/data-requests','/api/waivers?kind=parent_consent','/api/payments?attention=1','/api/payments?cash=due','/api/timesheets?month='+monthKey,'/api/financials?month='+monthKey,'/api/coach-payments','/api/practice-plans?summary=1&month='+monthKey,'/api/public-schedule?month='+monthKey,'/api/public-schedule?month='+nextMonth,'/api/payments?from='+seasonStart].map(get));
  const el=document.getElementById('todayTiles');if(!el)return;
  const put=(id,html)=>{const n=document.getElementById(id);if(n)n.innerHTML=html};
  const plural=(n,one,many=one+'s')=>n.toLocaleString('en-US')+' '+(n===1?one:many);
@@ -509,13 +509,21 @@ async function loadToday(){
  for(const r of hours&&hours.timeOff&&hours.timeOff.approved||[]){const n=(r.cover&&r.cover.practices||[]).length,l=(r.cover&&r.cover.lessons||[]).length;if(r.end&&r.end<today)continue;up.push(`<li><div>${esc(r.text)} · ${esc(r.coachName)} off<small>${n||l?[n?plural(n,'practice'):'',l?plural(l,'lesson'):''].filter(Boolean).join(' and ')+' need cover':'Nothing to cover'}</small></div>${n||l?link('/timesheets','Cover'):'<span class="amt"></span>'}</li>`)}
  up.splice(6);put('comingBody',up.length?`<ul class="rows">${up.join('')}</ul>`:'<p class="empty-line">Nothing coming up this month or next.</p>');
  // ---- This month by category, with what is owed to coaches last ----
- // Owed to coaches is practice pay (Coach hours) plus lesson shares (Coach pay) for the month (issue #371). Practice pay
- // is "so far" until every shift of the month is approved. Each coach's own total is on Coach hours.
- const cats=books&&books.categories&&books.categories.in||[],owed=pay&&pay.totals?pay.totals.owedCents:null,practice=hours&&hours.overall?Number(hours.overall.practiceCents)||0:0,practiceFinal=practice>0&&Number(hours.overall.approvedCents)===practice;
+ // ---- This month: money in by category and in total, money out (what was paid to coaches, then everything else), and
+ // what is left; then what is still owed to coaches (issue #370). Payments to coaches are recorded on Coach pay and are
+ // in the books as money out; still owed is approved practice pay plus lesson shares for lessons taught, less those.
+ const cats=books&&books.categories&&books.categories.in||[],bt=books&&books.totals||null,pt=payroll&&payroll.totals||null;
  const monthRows=cats.slice(0,5).map(c=>`<li><div>${esc(c.category)}</div><span class="amt">${usd(c.cents)}</span></li>`);
- if(owed!==null||practice>0){const parts=[];if(practice>0)parts.push('Practice '+usd(practice)+(practiceFinal?'':' so far'));
-  parts.push(owed===null?'lesson shares could not be loaded':practice>0?'lesson shares '+usd(owed):'Lesson shares'+(pay.totals.lessons?' · '+plural(pay.totals.lessons,'lesson'):''));
-  monthRows.push(`<li><div><b>Owed to coaches</b><small>${parts.join(' + ')} · <a href="/timesheets">Each coach’s total</a></small></div><span class="amt">${usd(practice+(owed||0))}</span></li>`)}
+ if(bt&&(bt.incomeCents||bt.expensesCents||bt.refundsCents)){
+  const out=bt.expensesCents+bt.refundsCents,toCoaches=pt?Math.min(pt.paidThisMonthCents,out):0,other=out-toCoaches;
+  monthRows.push(`<li><div><b>Money in</b></div><span class="amt">${usd(bt.incomeCents)}</span></li>`);
+  if(pt)monthRows.push(`<li><div>Paid to coaches<small>${pt.paymentsThisMonth?plural(pt.paymentsThisMonth,'payment'):'No payments recorded this month'}</small></div><span class="amt">${usd(toCoaches)}</span></li>`);
+  if(other>0||!pt)monthRows.push(`<li><div>${pt?'Other money out':'Money out'}<small>Expenses, card fees and refunds</small></div><span class="amt">${usd(other)}</span></li>`);
+  monthRows.push(`<li><div><b>Left after money out</b></div><span class="amt">${usd(bt.netCents)}</span></li>`)}
+ else if(pt&&pt.paidThisMonthCents)monthRows.push(`<li><div>Paid to coaches<small>${plural(pt.paymentsThisMonth,'payment')}</small></div><span class="amt">${usd(pt.paidThisMonthCents)}</span></li>`);
+ if(pt){const waiting=pt.pendingCents?usd(pt.pendingCents)+' more not approved yet':'',early=pt.aheadCents?usd(pt.aheadCents)+' paid ahead':'';
+  const owedNote=waiting&&early?waiting+' · '+early:waiting?waiting:early?early:'Approved hours and lessons taught, less what you paid';
+  monthRows.push(`<li><div><b>Still owed to coaches</b><small>${owedNote} · <a href="/coach-pay">Pay coaches</a></small></div><span class="amt">${usd(pt.owedCents)}</span></li>`)}
  put('monthBody',monthRows.length?`<ul class="rows">${monthRows.join('')}</ul>`:'<p class="empty-line">'+(books?'No income recorded yet this month.':'Could not load the books.')+'</p>');
 }
 const weekdays=W.WEEKDAYS;

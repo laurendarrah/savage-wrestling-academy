@@ -112,7 +112,7 @@ function chartSvg(months,selected,width){
 }
 // Ranked bars, largest first, one colour per side. Text stays in ink; the bar carries the colour.
 function categoryBars(list,empty){if(!list.length)return `<p class="muted">${esc(empty)}</p>`;const max=list[0].cents;return list.map(c=>`<div class="catrow"><span>${esc(c.category)}</span><b>${money(c.cents)}</b><span class="bar" aria-hidden="true"><span style="width:${Math.max(1,Math.round(c.cents/max*100))}%"></span></span></div>`).join('')}
-const FROM={online:'Card payment',offline:'Offline payment',owner:'Entered by you'};
+const FROM={online:'Card payment',offline:'Offline payment',owner:'Entered by you',payroll:'Payment to a coach'};
 // An offline payment says who collected it (issue #250): "Cash · Collected by Coach Dana".
 function lineRow(l){
  const out=l.type!=='income',from=l.type==='refund'?'Refund':FROM[l.source]||'',how=l.source==='owner'?(l.receipt?'Receipt: '+l.receipt:''):l.method+(l.collectedBy?' · Collected by '+l.collectedBy:'');

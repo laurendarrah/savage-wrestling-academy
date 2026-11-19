@@ -119,6 +119,9 @@ function steps(email: string, key: string, accounts: string[]): Step[] {
       'coach_email=? AND approved_at IS NOT NULL AND voided_at IS NULL', [email]),
     del('coach_time_entries', 'coach_email=?', [email]),
     del('coach_time_off', 'coach_email=?', [email]),
+    // Payments the academy made to the coach (issue #370) are the academy's own money record: kept with the date,
+    // amount and how it was paid, without the coach or the note.
+    set('coach_payments', "coach_email=?,coach_name=?,note=''", [key, FORMER_COACH], 'coach_email=?', [email]),
     // Their signed contract (the contract text itself stays: other coaches signed it too), and any request to sign it
     // again (issue #239), whose reason is about the coach.
     del('signature_reissues', "signature_id IN (SELECT s.id FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE v.kind='coach_contract' AND lower(s.email)=?)", [email]),
@@ -135,7 +138,7 @@ const changes = (r: any) => Number(r?.meta?.changes ?? r?.changes ?? 0);
 // Every coach email still found in the data, for matching cleaned coaches after a restore.
 async function candidateEmails() {
   const rows = (await db().prepare(`SELECT DISTINCT lower(e) AS e FROM (
-      SELECT coach_email AS e FROM coach_openings UNION SELECT coach_email FROM coach_time_entries UNION SELECT coach_email FROM coach_time_off
+      SELECT coach_email AS e FROM coach_openings UNION SELECT coach_email FROM coach_time_entries UNION SELECT coach_email FROM coach_time_off UNION SELECT coach_email FROM coach_payments
       UNION SELECT email FROM coach_profiles UNION SELECT email FROM coach_invites UNION SELECT email FROM notifications WHERE user_id IS NULL
       UNION SELECT s.email FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE v.kind='coach_contract'
       UNION SELECT json_extract(pricing,'$.coachEmail') FROM orders WHERE kind='lesson'

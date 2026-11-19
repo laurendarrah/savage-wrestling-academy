@@ -43,6 +43,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Practice plans and curricula | Owner writes and publishes plans; reusable curricula | `/practice-plans`, `/curricula` | |
 | Coach hours and time off | Clock in and out, corrections, owner approval, monthly file; time off tells same-program coaches (#193) | `/coach-time`, `/timesheets` | Coaches are contractors (#331): hours and amounts owed, no withholding |
 | Coach pay from lessons | Totals per coach at the owner's share, CSV (#75) | `/coach-pay` | |
+| Payments to coaches | The owner records each payment to a coach; every coach has a balance (approved practice pay plus lesson shares for lessons taught, less what was paid); payments are money out in the books; the dashboard shows money in, money out and what is still owed (#370) | `/coach-pay`, `/` | The site does not send money to coaches |
 | Removed coaches | Records kept 3 years, then deleted or anonymized by the daily job (#212) | `lib/coach-retention.ts` | |
 | **Running the academy** | | | |
 | Owner dashboard and shell | Opens on today: four tiles, tonight's sessions, what needs the owner (the launch checklist's open items among them), what is coming up and this month's money; a four-group sidebar of about fourteen items keeps the same header on every tool page (#123, #261, #283) | `/`, `app/portal.html`, `lib/owner-nav.ts` | |

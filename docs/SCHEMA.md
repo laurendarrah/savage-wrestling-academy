@@ -48,6 +48,7 @@ To change the schema, edit `db/schema.ts`, then run `pnpm db:generate` to add a 
 | `coach_profiles` | Coaches' public name, bio and specialties, and their phone for the academy |
 | `coach_openings` | Lesson times coaches post, including partner and small-group lessons |
 | `coach_time_entries`, `coach_time_off` | Coach hours (clock in and out, corrections, approval) and time off |
+| `coach_payments` | Payments the academy made to a coach, typed in by the owner: day paid, amount, how, the dates covered and a note (#370). Read by the books as money out |
 | `removed_coaches` | Coaches removed for good, whose records are deleted or anonymized after 3 years |
 | `practice_plans`, `practice_curricula`, `practice_curriculum_groups` | Practice plans per program and date, and reusable curricula |
 | **Messages** | |
