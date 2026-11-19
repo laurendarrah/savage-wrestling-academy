@@ -148,6 +148,17 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   ({el} = open()); await settle();
   held[0].reply(undefined, 502); await settle();
   assert.equal(el('familyFields').disabled, true); assert.equal(el('status').textContent, 'We couldn’t load your family account. Refresh the page to try again.');
+
+  // /family#add ("+ Add" on Choose training) opens the editor with a new wrestler and puts the cursor in its name. A
+  // browser ignores focus() on a field inside a disabled fieldset, so the form must be on before the page asks for
+  // focus (issue #377). This stand-in name field records whether the form was still disabled when it was focused.
+  const added = open(); added.ctx.location.hash = '#add';
+  const disabledAtFocus = []; added.el('name0').focus = () => disabledAtFocus.push(added.el('familyFields').disabled);
+  await settle();
+  assert.deepEqual(disabledAtFocus, [], 'nothing is focused before the profile loads');
+  held[0].reply({email: 'pat@example.test', data: saved, revision: 3, updatedAt: null}); await settle();
+  assert.equal(vm.runInContext('profile.wrestlers.length', added.ctx), 1, '/family#add adds a wrestler');
+  assert.deepEqual(disabledAtFocus, [false], 'the form is on when /family#add focuses the new wrestler’s name');
 }
 
 // ---------- Inbox: announcements first ----------
