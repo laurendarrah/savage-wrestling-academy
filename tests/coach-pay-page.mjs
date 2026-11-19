@@ -57,6 +57,62 @@ assert.match(out, /Coach Lee<\/h2><p class="muted">1 lesson · \$60\.00 kept · 
 // A coach with no pay share set: nothing is claimed about what is owed.
 assert.deepEqual(plain(pay.run('ahead([{coachEmail:"x",splitPct:null,lines:[{date:"2999-01-01",start:"16:00",netCents:6000}]}],"2026-11-18")')), {lessons: 1, cents: 0});
 
+// ---------- Coach pay: each coach's balance, recording a payment and deleting one (issue #370) ----------
+{
+  const bal = (name, more) => ({email: name.toLowerCase().replace(/\W+/g, '.') + '@example.test', name, active: true, practiceCents: 0, lessonCents: 0, lessonShareSet: true, earnedCents: 0, paidCents: 0, owedCents: 0, aheadCents: 0, pendingCents: 0, payments: 0, lastPaidOn: null, ...more});
+  const payment = {id: '11111111-1111-4111-8111-111111111111', coachEmail: 'coach.dana@example.test', coach: 'Coach Dana', paidOn: '2026-11-15', amountCents: 5000, method: 'check', methodLabel: 'Check', periodFrom: '2026-11-01', periodTo: '2026-11-15', note: 'Check <1042>'};
+  const state = (owed, paid, payments) => ({today: '2026-11-18', methods: [{value: 'check', label: 'Check'}, {value: 'cash', label: 'Cash'}], morePayments: false, payments,
+    coaches: [bal('Coach Dana', {practiceCents: 13500, lessonCents: 3900, earnedCents: 17400, paidCents: paid, owedCents: owed, pendingCents: 6000, payments: payments.length, lastPaidOn: payments.length ? '2026-11-15' : null}),
+      bal('Coach Lee', {practiceCents: 4500, earnedCents: 4500, paidCents: 6000, aheadCents: 1500, payments: 1, lastPaidOn: '2026-10-31'}), bal('Coach Sam', {active: false, lessonCents: 3250, earnedCents: 3250, owedCents: 3250}), bal('Coach New')],
+    totals: {earnedCents: 25150, paidCents: paid + 6000, owedCents: owed + 3250, aheadCents: 1500, pendingCents: 6000, paidThisMonthCents: paid, paymentsThisMonth: payments.length, shareNotSet: 0}});
+  const sent = []; let next = null;
+  const payPage = page('app/coach-pay/screen.html', async (url, init) => {
+    if (!url.startsWith('/api/coach-payments')) return json(report);
+    if (!init || !init.method) return json(state(17400, 0, []));
+    sent.push(JSON.parse(init.body)); return next;
+  });
+  await settle();
+  const {el, run} = payPage;
+  // The tiles and each coach's row.
+  assert.deepEqual([el('pOwed').textContent, el('pOwedNote').textContent, el('pMonth').textContent, el('pMonthNote').textContent, el('pPaid').textContent, el('pPaidNote').textContent, el('pPending').textContent],
+    ['$206.50', '$15.00 paid ahead to others', '$0.00', '', '$60.00', 'of $251.50 earned', '$60.00']);
+  const rows = el('balances').innerHTML.split('</li>');
+  assert.equal(rows[0], '<li><div class="who"><b>Coach Dana</b><small>Earned $174.00 ($135.00 practice + $39.00 lessons) · Nothing paid yet</small><small>Not approved yet: $60.00 of practice pay</small></div><div class="due"><b>$174.00</b><small>still owed</small></div><button type="button" class="sm" data-pay="coach.dana@example.test" data-owed="17400">Record a payment</button>');
+  assert.match(rows[1], /<b>Coach Lee<\/b><small>Earned \$45\.00 in practice pay · Paid \$60\.00 in 1 payment, last on Oct 31, 2026<\/small><\/div><div class="due"><b>\$15\.00<\/b><small>paid ahead<\/small>/, 'paid more than earned so far reads paid ahead');
+  assert.match(rows[2], /<b>Coach Sam <span class="pill neutral">No longer coaching<\/span><\/b><small>Earned \$32\.50 in lesson shares · Nothing paid yet<\/small><\/div><div class="due"><b>\$32\.50<\/b><small>still owed<\/small>/, 'a coach who left and is still owed stays on the list');
+  assert.match(rows[3], /<b>Coach New<\/b><small>Earned \$0\.00 · Nothing paid yet<\/small>/);
+  assert.equal(el('payments').innerHTML, '<li class="muted">No payments recorded yet.</li>');
+  assert.match(el('payCoach').innerHTML, /^<option value="">Choose a coach<\/option><option value="coach\.dana@example\.test">Coach Dana<\/option>/); assert.equal(el('payMethod').innerHTML, '<option value="check">Check</option><option value="cash">Cash</option>');
+  assert.deepEqual([el('payDate').value, el('payDate').max], ['2026-11-18', '2026-11-18'], 'the date starts as today and cannot be later');
+  // Amounts typed the way people type them.
+  assert.deepEqual(plain(run("['120','120.5','120.50','$1,200.00',' 75 ','0.01','12.345','abc','','-5','1e3','12345678'].map(toCents)")), [12000, 12050, 12050, 120000, 7500, 1, null, null, null, null, null, null]);
+  // "Record a payment" on a row fills the coach and what is still owed, for the owner to check and send.
+  run("startPayment('coach.dana@example.test',17400)");
+  assert.deepEqual([el('payCoach').value, el('payAmount').value], ['coach.dana@example.test', '174.00']);
+  run("startPayment('coach.lee@example.test',0)"); assert.equal(el('payAmount').value, '174.00', 'nothing owed: the amount is left for the owner to type'); run("startPayment('coach.dana@example.test',17400)");
+  // An amount that is not money is stopped on the page; nothing is sent.
+  el('payAmount').value = 'fifty'; assert.equal(await run('recordPayment()'), false); assert.equal(sent.length, 0); assert.equal(el('payNoteLine').textContent, 'Enter the amount you paid, like 120 or 120.50.');
+  // A good one is sent as whole cents, and the page shows the balances the server sends back.
+  el('payAmount').value = '50'; el('payMethod').value = 'check'; el('payFrom').value = '2026-11-01'; el('payTo').value = '2026-11-15'; el('payNote').value = 'Check <1042>';
+  next = json({ok: true, payment, ...state(12400, 5000, [payment])});
+  assert.equal(await run('recordPayment()'), true);
+  assert.deepEqual(sent[0], {action: 'add', coach: 'coach.dana@example.test', paidOn: '2026-11-18', amountCents: 5000, method: 'check', periodFrom: '2026-11-01', periodTo: '2026-11-15', note: 'Check <1042>'});
+  assert.equal(el('payNoteLine').textContent, 'Recorded: $50.00 to Coach Dana. It is in Income & expenses too.');
+  assert.deepEqual([el('payAmount').value, el('payNote').value, el('payFrom').value, el('payTo').value, el('payCoach').value], ['', '', '', '', 'coach.dana@example.test'], 'the form is ready for the next payment');
+  assert.deepEqual([el('pOwed').textContent, el('pMonth').textContent, el('pMonthNote').textContent, el('pPaid').textContent], ['$156.50', '$50.00', '1 payment', '$110.00']);
+  assert.match(el('balances').innerHTML, /Paid \$50\.00 in 1 payment, last on Nov 15, 2026<\/small><small>Not approved yet: \$60\.00 of practice pay<\/small><\/div><div class="due"><b>\$124\.00<\/b><small>still owed<\/small>/);
+  assert.equal(el('payments').innerHTML, '<li><div class="who"><b>Nov 15, 2026 · Coach Dana</b><small>Check · for Nov 1 to Nov 15, 2026 · Check &lt;1042&gt;</small></div><div class="due"><b>$50.00</b></div><button type="button" class="sm" data-del="11111111-1111-4111-8111-111111111111" aria-label="Delete the $50.00 payment to Coach Dana on Nov 15, 2026">Delete</button></li>', 'the note is escaped');
+  // The server's refusal is shown as it is, and the form keeps what was typed.
+  el('payAmount').value = '50'; next = {ok: false, status: 409, json: async () => ({error: 'That payment was just recorded. It is in the list below.'})};
+  assert.equal(await run('recordPayment()'), false); assert.equal(el('payNoteLine').textContent, 'That payment was just recorded. It is in the list below.'); assert.equal(el('payAmount').value, '50'); assert.equal(el('paySend').disabled, false);
+  // Deleting a payment entered by mistake.
+  next = json({ok: true, ...state(17400, 0, [])});
+  await run("deletePaymentById('11111111-1111-4111-8111-111111111111')");
+  assert.deepEqual(sent.at(-1), {action: 'delete', id: '11111111-1111-4111-8111-111111111111'}); assert.equal(el('payNoteLine').textContent, 'Payment deleted.'); assert.equal(el('pOwed').textContent, '$206.50');
+  assert.match(html, /confirm\('Delete this payment\? Use this only for a payment entered by mistake\. The coach’s balance goes back up\.'\)/);
+  assert.match(html, /Record every payment you make to a coach here; it goes into <a href="\/financials">Income &amp; expenses<\/a> as money out by itself, so don’t add it there as well\./);
+}
+
 // ---------- Coach hours: one total to pay per coach, and overall ----------
 const shift = (id, status, amountCents, paidMinutes = 90) => ({id, revision: 1, status, date: '2026-10-19', session: {title: 'SWA Intermediate', start: '19:30', end: '21:00'}, dutyLabel: 'Head coach', duty: 'head', inTime: '19:25', outTime: '21:05', clockIn: 'x', workedMinutes: 100,
   paidMinutes, amountCents, rateCents: 4000, flags: [], history: [], source: 'clock', ownerSet: null, voidReason: null});
@@ -83,4 +139,4 @@ const done = page('app/timesheets/screen.html', async () => json(month([view.coa
 await settle(); await settle();
 assert.equal(done.el('tTotal').textContent, '$174.00'); assert.equal(done.el('tTotalNote').textContent, 'Practice and lesson shares');
 assert.match(read('app/timesheets/screen.html'), /Nothing is canceled\./); assert.doesNotMatch(read('app/timesheets/screen.html'), /cancelled/);
-console.log('Passed: Coach pay has shortcuts for this month so far and the last 14 days, and marks lessons paid for but not taught yet with their share; Coach hours shows one total to pay per coach (final once approved, else so far) and overall.');
+console.log('Passed: Coach pay shows each coach’s balance (earned, paid, still owed or paid ahead, not approved yet), records a payment in whole cents and deletes one; it has shortcuts for this month so far and the last 14 days, and marks lessons paid for but not taught yet with their share; Coach hours shows one total to pay per coach (final once approved, else so far) and overall.');

@@ -10,6 +10,8 @@
 // - Stripe's card processing fees are read from stripe_fees (lib/stripe-fees.ts) and go out as an expense on the day of
 //   the payment. Stripe keeps its fee when a payment is refunded, so the fee stays.
 // - Offline payments are read from orders too (lib/offline-payments.ts records them; a voided one drops out).
+// - Payments to coaches are read from coach_payments (issue #370, lib/coach-payments.ts) and go out as Coach pay on
+//   the day the owner paid. They are recorded on Coach pay, never typed in here as an expense as well.
 // - financial_entries holds only what the owner types in: expenses and other income.
 // Nothing is copied into the books, so a payment can never be counted twice or go missing when it is voided or
 // refunded. Amounts are whole cents. Card income is shown before fees, and the fees as their own expense (issue #42).
@@ -18,12 +20,13 @@ import {academyDay} from './datetime';
 import {stripeMode} from './checkout-config';
 import {refundSteps, type RefundRow} from './card-refunds';
 import {collectorNameSql} from './collectors';
+import {PAY_CATEGORY, PAY_METHODS, paymentsBetweenSql, type PayMethod} from './coach-payments';
 
 export const ENTRY_KINDS = ['expense', 'income'] as const;
 export type EntryKind = typeof ENTRY_KINDS[number];
 // Suggestions only: the owner can type any category.
 export const SUGGESTIONS: Record<EntryKind, string[]> = {
-  expense: ['Rent', 'Equipment', 'Insurance', 'Utilities', 'Coach pay', 'Mats and cleaning', 'Tournament fees', 'Travel', 'Marketing', 'Software and fees', 'Supplies', 'Other'],
+  expense: ['Rent', 'Equipment', 'Insurance', 'Utilities', 'Mats and cleaning', 'Tournament fees', 'Travel', 'Marketing', 'Software and fees', 'Supplies', 'Other'],
   income: ['Sponsorship', 'Donation', 'Fundraiser', 'Apparel', 'Concessions', 'Grant', 'Other'],
 };
 export const MAX_CENTS = 100000000;   // $1,000,000 for one entry; also enforced by the table
@@ -38,7 +41,7 @@ export const FEE_CATEGORY = 'Card processing fees';
 const METHOD_LABEL: Record<string, string> = {cash: 'Cash', check: 'Check', venmo: 'Venmo', zelle: 'Zelle', 'card-in-person': 'Card in person', other: 'Other'};
 
 export type LedgerLine = {
-  id: string; date: string; type: 'income' | 'refund' | 'expense'; source: 'online' | 'offline' | 'owner';
+  id: string; date: string; type: 'income' | 'refund' | 'expense'; source: 'online' | 'offline' | 'owner' | 'payroll';
   category: string; description: string; method: string; amountCents: number; note: string; receipt: string;
   entryId: string | null; revision: number | null;
   // Who collected an offline payment (issue #250): a coach's display name, "Owner" or "Former coach". Empty otherwise.
@@ -69,7 +72,7 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
   // Payments are stored as UTC instants; read a day either side, then keep those whose New York date is in range.
   const lo = shift(from, -1), hi = shift(to, 2), live = stripeMode() === 'live' ? 1 : 0;
   const inRange = (d: string) => d >= from && d <= to;
-  const [paid, installments, refunds, history, fees, entries, disputes] = await env.DB!.batch([
+  const [paid, installments, refunds, history, fees, entries, disputes, coachPay] = await env.DB!.batch([
     // Card payments for the current Stripe mode, and offline payments. A refunded payment still came in; its refund
     // goes out on the day it was refunded. Voided offline payments (status canceled) were never received.
     env.DB!.prepare(`SELECT o.id,o.paid_at,o.kind,o.item_label,o.wrestler_name,o.amount_cents,o.source,o.pricing,s.payments_total,${collectorNameSql('o')} AS collected_by FROM orders o
@@ -97,6 +100,8 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
     // Card disputes (issue #272): the bank takes the money on funds_withdrawn and gives it back on funds_reinstated.
     env.DB!.prepare(`SELECT d.id,d.kind,d.amount_cents,d.occurred_at,o.item_label,o.wrestler_name FROM payment_disputes d JOIN orders o ON o.id=d.order_id
       WHERE d.kind IN ('funds_withdrawn','funds_reinstated') AND d.livemode=? AND o.source='stripe' AND o.livemode=? AND d.amount_cents>0 AND d.occurred_at>=? AND d.occurred_at<?`).bind(live, live, lo, hi),
+    // Payments the owner made to coaches (issue #370), on the day paid.
+    env.DB!.prepare(paymentsBetweenSql).bind(from, to),
   ]);
   const lines: LedgerLine[] = [];
   const base = {note: '', receipt: '', entryId: null, revision: null, collectedBy: ''};
@@ -151,6 +156,9 @@ export async function ledgerLines(from: string, to: string): Promise<LedgerLine[
   for (const r of entries.results as any[])
     lines.push({id: 'entry:' + r.id, date: r.entry_date, type: r.kind === 'income' ? 'income' : 'expense', source: 'owner', category: r.category,
       description: r.note, method: '', amountCents: r.amount_cents, note: r.note, receipt: r.receipt, entryId: r.id, revision: r.revision, collectedBy: ''});
+  for (const r of coachPay.results as any[])
+    lines.push({...base, id: 'coach-payment:' + r.id, date: r.paid_on, type: 'expense', source: 'payroll', category: PAY_CATEGORY,
+      description: `Paid to ${r.coach_name}${r.period_from && r.period_to ? ` for ${r.period_from} to ${r.period_to}` : ''}${r.note ? ' · ' + r.note : ''}`, method: PAY_METHODS[r.method as PayMethod] ?? 'Other', amountCents: r.amount_cents});
   return lines.sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
 }
 
@@ -184,7 +192,7 @@ export function periodBounds(q: URLSearchParams) {
 
 // Spreadsheet-safe cell: quotes commas and line breaks, and stops a cell from starting a formula.
 const csvCell = (v: unknown) => { const s = String(v ?? ''); return /[",\n\r]/.test(s) || /^[=+\-@\t]/.test(s) ? '"' + (/^[=+\-@\t]/.test(s) ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
-const SOURCE_LABEL = {online: 'Card payment', offline: 'Offline payment', owner: 'Entered by owner'};
+const SOURCE_LABEL = {online: 'Card payment', offline: 'Offline payment', owner: 'Entered by owner', payroll: 'Payment to a coach'};
 const TYPE_LABEL = {income: 'Income', refund: 'Refund', expense: 'Expense'};
 export function ledgerCsv(lines: LedgerLine[]) {
   const money = (c: number) => (c / 100).toFixed(2);

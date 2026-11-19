@@ -1262,7 +1262,7 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   expect(await owner.locator('#todayTiles a.tile').count() === 4, 'four tiles, each a link');
   await waitText(owner, '#tonightBody', /SWA Intermediate/); await at(owner, '#tonightBody', /Open check-in/);
   expect(!/Site errors/.test(await text(owner, '#launch')), 'site health is not on the home while nothing is wrong');
-  await waitText(owner, '#monthBody', /Owed to coaches/); await waitText(owner, '#comingBody', /Winter camp/);
+  await waitText(owner, '#monthBody', /Still owed to coaches/); await waitText(owner, '#comingBody', /Winter camp/);
   expect(await owner.locator('main .primary, main .button.primary').count() === 1, 'one red button on the dashboard: Open check-in');
   expect(await owner.locator('.os-nav a[href="/cards"] .os-badge').count() === 0 || /^\d+$/.test(await text(owner, '.os-nav a[href="/cards"] .os-badge')), 'the cards badge is a count or nothing');
   // Launch checklist: by now the walkthrough has set programs, schedules, website, waiver, coach and lesson prices.

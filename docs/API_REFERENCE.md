@@ -74,6 +74,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/coach-openings` | GET, POST | Manage any coach's lesson openings with the same rules as coach home |
 | `/api/lesson-settings` | GET, POST | Lesson prices per format and each coach's share |
 | `/api/coach-pay` | GET | Coach pay from lessons for a period, JSON or CSV |
+| `/api/coach-payments` | GET, POST | Each coach's balance (earned, paid, still owed) and the payments made to coaches; record a payment or delete one entered by mistake (#370) |
 | `/api/timesheets` | GET, POST | Review, correct, remove (the shift is deleted and the coach is emailed) and approve coach hours; decide time off; the month's file |
 | `/api/financials` | GET, POST | Income and expenses by month and year, CSV, and the owner's own entries |
 | `/api/practice-curricula` | GET, POST | Curriculum groups and their ordered lessons |

@@ -173,6 +173,19 @@ export const installmentPayments=sqliteTable("installment_payments",{
  amountCents:integer("amount_cents").notNull(),expectedCents:integer("expected_cents").notNull(),livemode:integer("livemode").notNull(),receivedAt:text("received_at").notNull()
 },t=>[index("installment_payments_order").on(t.orderId,t.paymentNumber),check("installment_payment_amounts",sql`${t.amountCents} >= 0 AND ${t.expectedCents} >= 0`),check("installment_payment_livemode",sql`${t.livemode} IN (0,1)`)]);
 
+// Payments the academy made to a coach (issue #370). The site works out what a coach earned (approved practice pay
+// and their share of private lessons); the owner pays outside the site (check, bank transfer, cash) and types each
+// payment in once here. The books read these rows as money out (lib/financials.ts), and a coach's balance is what
+// they earned less these (lib/coach-payments.ts). Whole cents. A payment entered by mistake is deleted, and the
+// security log keeps the line.
+export const coachPayments=sqliteTable("coach_payments",{
+ id:text("id").primaryKey(),coachEmail:text("coach_email").notNull(),coachName:text("coach_name").notNull(),paidOn:text("paid_on").notNull(),amountCents:integer("amount_cents").notNull(),
+ method:text("method").notNull(),periodFrom:text("period_from"),periodTo:text("period_to"),note:text("note").notNull().default(''),
+ createdAt:text("created_at").notNull(),createdBy:text("created_by").notNull()
+},t=>[index("coach_payments_coach").on(t.coachEmail,t.paidOn),index("coach_payments_paid").on(t.paidOn),
+ check("coach_payment_amount",sql`${t.amountCents} BETWEEN 1 AND 100000000`),check("coach_payment_method",sql`${t.method} IN ('check','cash','bank','zelle','venmo','other')`)]);
+
+
 // Owner review of a wrestler's USA Wrestling card (issue #68). Applies only while the number and expiration on
 // the family profile still match what was reviewed, so a family edit clears an earlier review.
 export const usawReviews=sqliteTable("usaw_reviews",{

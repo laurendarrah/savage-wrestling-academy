@@ -50,6 +50,8 @@ const TITLES: Record<string, string> = {
   practice_plan_shared: 'Practice plan shared with coaches',
   practice_plan_draft: 'Practice plan saved privately',
   practice_plan_hidden: 'Practice plan hidden from coaches',
+  coach_payment_recorded: 'Payment to a coach recorded',
+  coach_payment_deleted: 'Payment to a coach deleted',
   coach_shift_removed: 'Coach removed one of their shifts',
   coach_shift_removed_by_owner: 'Coach shift removed by the academy',
   coach_access_granted: 'Coach access given',
@@ -122,6 +124,7 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
   switch (row.action) {
     case 'coach_access_granted': case 'coach_access_revoked': case 'coach_permanently_removed':
       detail = t.startsWith('former-coach-') ? 'A former coach' : names.coaches[t.toLowerCase()] ? `${names.coaches[t.toLowerCase()]} (${t})` : t; break;
+    case 'coach_payment_recorded': case 'coach_payment_deleted':   // "coach email · $120.00 · day paid · how · for dates" (issue #370)
     case 'coach_shift_removed': case 'coach_shift_removed_by_owner': {
       // A removed shift is deleted (issue #375), so this line is its record: "coach email · day · practice · role ·
       // times · reason". Lines written before that hold only the shift's id, which says nothing to a reader.
