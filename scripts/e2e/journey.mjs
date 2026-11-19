@@ -640,8 +640,11 @@ await step('owner adds an opening for a coach; the coach and families see it, in
 
 // ---------- A full camp is full: no waitlist (#210) ----------
 await step('camp fills; family 2 sees it is full, with no waitlist to join', async () => {
-  await family2.goto(BASE + '/family'); await family2.waitForSelector('#familyForm');
-  await familyReady(family2); await family2.fill('[name=parentName]', 'Riley Parent'); await family2.click('text=+ Add wrestler'); await family2.fill('#name0', 'Riley Two'); await family2.selectOption('#grade0', '8');
+  // /family#add ("+ Add" on Choose training) opens the editor with a new wrestler and the cursor in its name (#377).
+  await family2.goto(BASE + '/family#add'); await family2.waitForSelector('#familyForm');
+  await familyReady(family2); await family2.waitForSelector('#name0');
+  expect(await family2.evaluate(() => document.activeElement.id) === 'name0', '/family#add puts the cursor in the new wrestler’s name');
+  await family2.fill('[name=parentName]', 'Riley Parent'); await family2.fill('#name0', 'Riley Two'); await family2.selectOption('#grade0', '8');
   await fillDetails(family2, 'Casey Emergency');
   await family2.fill('#usaw0', 'CD-5555'); await family2.selectOption('#usawSeason0', await latestSeason(family2)); await family2.click('#save'); await saved(family2);
   const rid = await wid(family2);
