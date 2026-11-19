@@ -65,7 +65,7 @@ const month = (coaches, overall) => ({month: '2026-10', monthLabel: 'October 202
   overall: {minutes: 0, practiceCents: 0, approvedCents: 0, lessonCents: 0, waiting: 0, notSent: 0, flagged: 0, ...overall}, timeOff: {pending: [], approved: []}});
 const coachRow = (name, state, shifts, lessons, more = {}) => ({email: name.toLowerCase().replace(/\W+/g, '.') + '@example.test', name, active: true, programs: ['Intermediate'], shifts, totals: totals(shifts, more), state, timeOff: [], lessons});
 const view = month([
-  coachRow('Coach Dana', 'approved', [shift('a', 'approved', 6000), shift('b', 'approved', 7500), shift('v', 'voided', 0)], {lessons: 1, grossCents: 6000, refundedCents: 0, splitPct: 65, owedCents: 3900}, {approved: 2, shifts: 2}),
+  coachRow('Coach Dana', 'approved', [shift('a', 'approved', 6000), shift('b', 'approved', 7500)], {lessons: 1, grossCents: 6000, refundedCents: 0, splitPct: 65, owedCents: 3900}, {approved: 2, shifts: 2}),
   coachRow('Coach Lee', 'submitted', [shift('c', 'submitted', 4500)], null, {submitted: 1}),
   coachRow('Coach Sam', 'empty', [], {lessons: 1, grossCents: 5000, refundedCents: 0, splitPct: 65, owedCents: 3250}),
   coachRow('Coach New', 'not-submitted', [shift('d', 'draft', 6000)], {lessons: 2, grossCents: 12000, refundedCents: 0, splitPct: null, owedCents: null}, {drafts: 1})],

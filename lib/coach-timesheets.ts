@@ -1,13 +1,21 @@
 // Coach timesheets (issue #193): clocking in and out, the coach's own month, the owner's review and the month's file.
 // The rules (rates, paid time, flags) are in lib/coach-time.ts. Every change bumps the shift's revision, so a stale page
 // cannot overwrite a newer change, and is written to the shift's history and the security log.
+//
+// A removed shift is deleted (issue #375): it is gone from Your hours and from Coach hours, and the security log keeps
+// one line saying who removed which shift and why. A coach removes their own shift until they send the month. The owner
+// removes any shift that is not approved, with a reason, and the coach is emailed which shift and why, so their hours
+// never change without them knowing. Rows marked removed before this change are deleted by a migration; one that came
+// back (an older backup restored) is never read.
 import {env} from 'cloudflare:workers';
-import {academyDay, fullDate} from './datetime';
+import {academyDay, clockRange, clockTime, dayDate, fullDate} from './datetime';
+import {OWNER_EMAIL} from './account-auth';
+import {sendEmailsDetailed, type EmailResult, type Outgoing} from './email';
 import {academyState, sessionsOn} from './roster';
 import {coachPayReport} from './coach-pay';
 import {
   ENTRY_COLUMNS, PRACTICE_RATES, DUTY_LABEL, academyClock, academyInstant, addMonths, amountCents, canSubmitMonth, dutyOf, handDateAllowed, hoursText,
-  isDuty, lastDayOf, monthLabel, monthOf, monthState, payrollCsv, scheduledMinutes, shiftView, totals, validClock, validDay, validMonth,
+  isDuty, lastDayOf, monthLabel, monthOf, monthState, payrollCsv, scheduledMinutes, shiftView, totals, validClock, validDay, validMonth, workedRange,
   type Entry, type Session, type TimeOff, type ShiftView
 } from './coach-time';
 
@@ -46,7 +54,7 @@ function sessionsFor(state: any, dates: string[]) {
 
 // ---------- Reading ----------
 async function entries(where: string, ...args: unknown[]) {
-  return (await db().prepare(`SELECT ${ENTRY_COLUMNS} FROM coach_time_entries WHERE ${where} ORDER BY work_date,clock_in,id LIMIT 3001`).bind(...args).all<Entry>()).results;
+  return (await db().prepare(`SELECT ${ENTRY_COLUMNS} FROM coach_time_entries WHERE voided_at IS NULL AND (${where}) ORDER BY work_date,clock_in,id LIMIT 3001`).bind(...args).all<Entry>()).results;
 }
 async function approvedTimeOff(email: string | null, from: string, to: string) {
   const sql = `SELECT id,coach_email,coach_name,start_date,end_date FROM coach_time_off WHERE status='approved' AND start_date<=? AND end_date>=?${email ? ' AND coach_email=?' : ''} ORDER BY start_date`;
@@ -104,7 +112,7 @@ export async function clockIn(coach: Coach, userId: string, input: any, now = ne
 
 async function ownShift(coach: Coach, id: unknown) {
   if (!validId(id)) return null;
-  return await db().prepare(`SELECT ${ENTRY_COLUMNS} FROM coach_time_entries WHERE id=? AND coach_email=?`).bind(id, coach.email).first<Entry>();
+  return await db().prepare(`SELECT ${ENTRY_COLUMNS} FROM coach_time_entries WHERE id=? AND coach_email=? AND voided_at IS NULL`).bind(id, coach.email).first<Entry>();
 }
 export async function clockOut(coach: Coach, userId: string, input: any, now = new Date()) {
   const e = await ownShift(coach, input?.id);
@@ -179,16 +187,24 @@ export async function addShift(coach: Coach, userId: string, input: any, now = n
   await audit(userId, 'coach_shift_added', `${id} ${date} ${input.in}-${input.out}`).run();
   return ok({id});
 }
+// A shift in plain words, for the security log and the email about a removal:
+// "Wed, Nov 18 · SWA Development 6:00 PM–7:30 PM · Head coach · clocked 5:55 PM–7:35 PM".
+export function shiftWords(e: Entry) {
+  const w = workedRange(e);
+  const practice = e.session_title ? `${e.session_title} ${clockRange(e.session_start, e.session_end)}` : 'No scheduled practice';
+  const times = w.end === null ? `${clockTime(academyClock(w.start))}, no clock-out` : clockRange(academyClock(w.start), academyClock(w.end));
+  return `${dayDate(e.work_date)} · ${practice} · ${DUTY_LABEL[dutyOf(e)]} · ${e.source === 'hand' ? 'added by hand' : 'clocked'} ${times}`;
+}
+// The coach removes their own shift (a test punch, a double clock-in) until they send the month. It is deleted.
 export async function removeShift(coach: Coach, userId: string, input: any) {
   const e = await ownShift(coach, input?.id), problem = editable(e, input?.revision);
   if (problem) return fail(409, problem);
-  const reason = note(input.reason) || 'Removed by the coach';
+  const reason = note(input.reason);
   if (reason.length > 300) return fail(400, 'Keep the reason under 300 characters.');
-  const r = await db().prepare(`UPDATE coach_time_entries SET voided_at=?,voided_by=?,void_reason=?,revision=revision+1,history=json_insert(history,'$[#]',json(?))
-    WHERE id=? AND revision=? AND submitted_at IS NULL AND approved_at IS NULL AND voided_at IS NULL RETURNING id`)
-    .bind(new Date().toISOString(), coach.email, reason, step('coach', 'removed', {note: reason}), e!.id, e!.revision).first();
+  const r = await db().prepare('DELETE FROM coach_time_entries WHERE id=? AND revision=? AND submitted_at IS NULL AND approved_at IS NULL AND voided_at IS NULL RETURNING id')
+    .bind(e!.id, e!.revision).first();
   if (!r) return fail(409, 'This shift changed since you opened the page. Refresh and try again.');
-  await audit(userId, 'coach_shift_removed', e!.id).run();
+  await audit(userId, 'coach_shift_removed', `${coach.email} · ${shiftWords(e!)}${reason ? ' · ' + reason : ''}`).run();
   return ok();
 }
 // Q5: the whole month, on or after its last day.
@@ -239,14 +255,14 @@ export async function ownerMonth(monthInput: unknown, coachInput: unknown, now =
   });
 }
 async function shift(id: unknown) {
-  return validId(id) ? await db().prepare(`SELECT ${ENTRY_COLUMNS} FROM coach_time_entries WHERE id=?`).bind(id).first<Entry>() : null;
+  return validId(id) ? await db().prepare(`SELECT ${ENTRY_COLUMNS} FROM coach_time_entries WHERE id=? AND voided_at IS NULL`).bind(id).first<Entry>() : null;
 }
 // The owner sets the paid time (hours and minutes) and role of a shift, with a reason. The clock punches stay as they
 // were; the change is kept on the shift's history and in the security log.
 export async function ownerCorrect(ownerId: string, input: any) {
   const e = await shift(input?.id);
   if (!e || e.revision !== input?.revision) return fail(409, 'This shift changed since you opened the page. Refresh and try again.');
-  if (e.voided_at || e.approved_at) return fail(409, e.voided_at ? 'That shift is void.' : 'Undo the month’s approval before correcting a shift.');
+  if (e.approved_at) return fail(409, 'Undo the month’s approval before correcting a shift.');
   if (!e.clock_out) return fail(409, 'The coach is still clocked in on that shift. Void it, or wait for the coach to clock out or fix it.');
   const hours = input.hours, minutes = input.minutes;
   if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 24 || minutes < 0 || minutes > 59 || hours * 60 + minutes > 1440) return fail(400, 'Enter the paid time in hours (0 to 24) and minutes (0 to 59).');
@@ -261,20 +277,28 @@ export async function ownerCorrect(ownerId: string, input: any) {
   await audit(ownerId, 'coach_shift_corrected', `${e.id} ${beforeMin}min ${beforeDuty}->${total}min ${input.duty}`).run();
   return ok();
 }
-// Void a mistaken shift (a test punch, a double clock-in). It stays on record and is never paid.
-export async function ownerVoid(ownerId: string, input: any) {
+// The email a coach gets when the academy removes one of their shifts: which shift, and the owner's reason.
+export function removedShiftEmail(e: Entry, reason: string): Outgoing {
+  const text = [`Hi ${e.coach_name},`, '', 'The academy removed one of your shifts. It is no longer in your hours and is not paid.', '', 'Shift: ' + shiftWords(e), 'Reason: ' + reason, '',
+    `If this is a mistake, reply to the academy at ${OWNER_EMAIL}. You can see your hours on the site, on Your hours.`].join('\n');
+  return {to: e.coach_email, subject: 'The academy removed one of your shifts: ' + dayDate(e.work_date), text, audience: 'account'};
+}
+// The owner removes a mistaken shift (a test punch, a double clock-in), with a reason, any time before it is approved.
+// It is deleted, and the coach is emailed which shift and why. A removal is never held back by an email problem: the
+// reply says whether the coach was told, so the owner can tell them otherwise. The owner's own shifts send no email.
+export async function ownerRemove(ownerId: string, input: any, send: (list: Outgoing[]) => Promise<EmailResult[]> = sendEmailsDetailed) {
   const e = await shift(input?.id);
   if (!e || e.revision !== input?.revision) return fail(409, 'This shift changed since you opened the page. Refresh and try again.');
-  if (e.voided_at) return fail(409, 'That shift is already void.');
-  if (e.approved_at) return fail(409, 'Undo the month’s approval before voiding a shift.');
+  if (e.approved_at) return fail(409, 'Undo the month’s approval before removing a shift.');
   const reason = note(input.reason);
-  if (reason.length < 3 || reason.length > 300) return fail(400, 'Add a reason for voiding the shift (up to 300 characters).');
-  const r = await db().prepare(`UPDATE coach_time_entries SET voided_at=?,voided_by=?,void_reason=?,revision=revision+1,history=json_insert(history,'$[#]',json(?))
-    WHERE id=? AND revision=? AND approved_at IS NULL AND voided_at IS NULL RETURNING id`)
-    .bind(new Date().toISOString(), ownerId, reason, step('owner', 'voided', {note: reason}), e.id, e.revision).first();
+  if (reason.length < 3 || reason.length > 300) return fail(400, 'Add a reason for removing the shift (up to 300 characters).');
+  const r = await db().prepare('DELETE FROM coach_time_entries WHERE id=? AND revision=? AND approved_at IS NULL AND voided_at IS NULL RETURNING id').bind(e.id, e.revision).first();
   if (!r) return fail(409, 'This shift changed since you opened the page. Refresh and try again.');
-  await audit(ownerId, 'coach_shift_voided', e.id).run();
-  return ok();
+  await audit(ownerId, 'coach_shift_removed_by_owner', `${e.coach_email} · ${shiftWords(e)} · ${reason}`).run();
+  if (e.coach_email.toLowerCase() === OWNER_EMAIL) return ok({coachTold: 'self'});
+  let told = false;
+  try { const [result] = await send([removedShiftEmail(e, reason)]); told = result?.status === 'sent'; } catch { told = false; }
+  return ok({coachTold: told ? 'emailed' : 'not-emailed', coachName: e.coach_name});
 }
 // Approve a coach's sent month: exactly the shifts the owner reviewed (ids and revisions), and only when nothing else in
 // the month is still open or unsent. The minutes, role, rate and amount are copied onto each shift.

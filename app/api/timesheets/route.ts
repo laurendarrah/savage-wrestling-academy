@@ -1,7 +1,7 @@
 // Owner review of coach hours and time off (issue #193), owner only. The month by coach with flags, corrections with
-// a reason, voiding, approval, the month's file (hours and amounts, with lesson shares), and time-off decisions.
+// a reason, removing a shift (the coach is emailed), approval, the month's file (hours and amounts, with lesson shares), and time-off decisions.
 import {ownerIdentity, sameOrigin, accountReply} from '../../../lib/account-auth';
-import {ownerMonth, ownerCorrect, ownerVoid, approveMonth, unapproveMonth, monthCsv} from '../../../lib/coach-timesheets';
+import {ownerMonth, ownerCorrect, ownerRemove, approveMonth, unapproveMonth, monthCsv} from '../../../lib/coach-timesheets';
 import {ownerTimeOff, decideTimeOff} from '../../../lib/coach-time-off';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
@@ -33,7 +33,7 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
   try { input = JSON.parse(raw); } catch { return reply({error: 'Invalid request.'}, 400); }
   const ownerId = auth.user!.id;
   const actions: Record<string, () => Promise<{status: number; error?: string}>> = {
-    correct: () => ownerCorrect(ownerId, input), void: () => ownerVoid(ownerId, input), approve: () => approveMonth(ownerId, input),
+    correct: () => ownerCorrect(ownerId, input), remove: () => ownerRemove(ownerId, input), approve: () => approveMonth(ownerId, input),
     unapprove: () => unapproveMonth(ownerId, input), 'time-off': () => decideTimeOff(ownerId, input)
   };
   const run = typeof input?.action === 'string' && Object.hasOwn(actions, input.action) ? actions[input.action] : null;

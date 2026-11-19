@@ -34,7 +34,6 @@ details.shift .s-what{grid-area:what;color:var(--swa-muted,#55585F);overflow-wra
 details.shift .s-paid{grid-area:paid;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
 details.shift .pill{grid-area:pill}
 details.shift .s-flag{color:var(--swa-warn,#8A5A00)}
-details.shift.voided .s-what,details.shift.voided .s-date{text-decoration:line-through;color:var(--swa-muted,#55585F)}
 .shift-body{padding:4px 0 16px;font-size:var(--swa-t-15,15px)}.shift-body p{margin:4px 0}
 .flags{margin:8px 0 0;padding:8px 12px 8px 28px;background:var(--swa-warn-bg,#FFF7E6);border-radius:8px;color:var(--swa-warn-ink,#5C3B00);font-size:15px}.flags li+li{margin-top:4px}
 @media(max-width:520px){html body details.shift>summary{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"date pill" "what what" "paid paid"}details.shift .s-paid{text-align:left}html body details.shift>summary::after{grid-row:1;grid-column:3}}
@@ -104,7 +103,7 @@ async function call(body,query=''){const r=await fetch('/api/coach-time'+query,b
 const say=(text,kind)=>{if(typeof swaToast==='function')swaToast(text,{kind});else $('status').textContent=text};
 const NOTES=['sendNote','addNote','offNote','offFormNote'];
 const fail=(text,note)=>{((note&&$(note))||$('status')).textContent=text};
-const BADGE={open:'Clocked in',draft:'Not sent',submitted:'Sent',approved:'Approved',voided:'Removed'};
+const BADGE={open:'Clocked in',draft:'Not sent',submitted:'Sent',approved:'Approved'};
 // Where the month stands, in one sentence.
 function monthText(d){const t=d.totals;if(!t.shifts)return 'No shifts in '+d.monthLabel+' yet.';
  if(t.open)return 'You are clocked in. Clock out before you send the month.';
@@ -124,9 +123,9 @@ const editable=s=>s.status==='draft'||s.status==='open';
 function shiftHtml(s){
  const what=(s.session?esc(s.session.title)+' · '+esc(clock(s.session.start))+'–'+esc(clock(s.session.end)):'No scheduled practice')+' · '+esc(s.dutyLabel);
  const worked=s.outTime?'Clocked '+esc(clock(s.inTime))+' – '+esc(clock(s.outTime)):'Clocked in at '+esc(clock(s.inTime));
- const paid=s.status==='voided'?'Not paid'+(s.voidReason?': '+esc(s.voidReason):''):'Paid '+esc(hoursText(s.paidMinutes))+' · '+esc(money(s.amountCents))+(s.ownerSet?' (set by the academy'+(s.ownerSet.note?': '+esc(s.ownerSet.note):'')+')':'');
- const short=s.status==='voided'?'Not paid':s.status==='open'?'On the clock':esc(hoursText(s.paidMinutes))+' · '+esc(money(s.amountCents));
- const flagged=!!(s.flags&&s.flags.length&&s.status!=='voided');
+ const paid='Paid '+esc(hoursText(s.paidMinutes))+' · '+esc(money(s.amountCents))+(s.ownerSet?' (set by the academy'+(s.ownerSet.note?': '+esc(s.ownerSet.note):'')+')':'');
+ const short=s.status==='open'?'On the clock':esc(hoursText(s.paidMinutes))+' · '+esc(money(s.amountCents));
+ const flagged=!!(s.flags&&s.flags.length);
  const fix=editable(s)?`<details class="fix"><summary>Fix the times</summary><div class="stack"><div class="pair times"><label>Start time<input type="time" id="fixIn-${esc(s.id)}" value="${esc(s.inTime)}"></label><label>End time<input type="time" id="fixOut-${esc(s.id)}" value="${esc(s.outTime||'')}"></label></div><label>Why did it change?<input id="fixWhy-${esc(s.id)}" maxlength="300"></label><div class="actions"><button type="button" data-fix="${esc(s.id)}" data-rev="${s.revision}">Save times</button><button type="button" class="quiet" data-remove="${esc(s.id)}" data-rev="${s.revision}">Remove this shift</button></div><p class="form-note" id="fixNote-${esc(s.id)}" role="status" aria-live="polite"></p></div></details>`:'';
  return `<details class="shift ${esc(s.status)}"><summary><span class="s-date">${esc(dayText(s.date))}</span><span class="s-what">${what}${flagged?' · <span class="s-flag">'+s.flags.length+(s.flags.length===1?' note':' notes')+'</span>':''}</span><span class="s-paid">${short}</span><span class="pill ${esc(s.status)}">${BADGE[s.status]||esc(s.status)}</span></summary><div class="shift-body"><p>${worked}</p><p><b>${paid}</b></p>${flagged?'<ul class="flags">'+s.flags.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>':''}${fix}</div></details>`}
 const OFF={pending:'Waiting for the academy',approved:'Approved',declined:'Not approved',withdrawn:'Withdrawn'},OFF_TINT={pending:'warn',approved:'ok',declined:'bad',withdrawn:'neutral'};
@@ -154,7 +153,7 @@ function render(d){data=d;current=d.month;
  $('offList').innerHTML=d.timeOffRequests.map(offHtml).join('')||'<p class="empty">No time off requests yet.</p>';
  $('noticeBox').hidden=!d.notices.length;$('notices').innerHTML=noticesHtml(d.notices,d.olderNotices);
  document.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>act({action:'fix',id:b.dataset.fix,revision:Number(b.dataset.rev),in:$('fixIn-'+b.dataset.fix).value,out:$('fixOut-'+b.dataset.fix).value,reason:$('fixWhy-'+b.dataset.fix).value},'Times saved.','fixNote-'+b.dataset.fix));
- document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{if(confirm('Remove this shift? It stays on record as removed and is not paid.'))act({action:'remove',id:b.dataset.remove,revision:Number(b.dataset.rev)},'Shift removed.','fixNote-'+b.dataset.remove)});
+ document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{if(confirm('Remove this shift? It is deleted for good and is not paid.'))act({action:'remove',id:b.dataset.remove,revision:Number(b.dataset.rev)},'Shift removed.','fixNote-'+b.dataset.remove)});
  document.querySelectorAll('[data-withdraw]').forEach(b=>b.onclick=()=>act({action:'time-off-withdraw',id:b.dataset.withdraw,revision:Number(b.dataset.rev)},'Request withdrawn.','offNote'))}
 async function load(month){try{render(await call(null,month?'?month='+encodeURIComponent(month):''));$('status').textContent=''}catch(e){$('status').textContent=e.message;if(!data)$('shifts').innerHTML='<p class="muted">Your month could not be loaded. Refresh the page to try again.</p>'}}
 // Sends an action, reloads the month and says what happened; resolves to the message, or '' when it failed. What went
