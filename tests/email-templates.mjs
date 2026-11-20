@@ -34,9 +34,14 @@ for (const t of TEMPLATES) {
     assert.match(html, /<p class="swa-code"[^>]*>\{\{ \.Token \}\}<\/p>/, f + ' shows the code');
     assert.equal(count(html, 'bgcolor="#C4222C"'), 0, f + ' has no button: Supabase sends no link with it');
   } else {
-    assert.deepEqual(variables, ['{{ .ConfirmationURL }}', '{{ .SiteURL }}'], f);
-    assert.match(html, new RegExp(`bgcolor="#C4222C"[^>]*><a href="\\{\\{ \\.ConfirmationURL \\}\\}" style="[^"]*">${t.button}</a>`), f + ' has the button, linked with {{ .ConfirmationURL }}');
-    assert.match(html, /If the button doesn’t work, paste this link into your browser:<br><a href="\{\{ \.ConfirmationURL \}\}"[^>]*>\{\{ \.ConfirmationURL \}\}<\/a>/, f + ' has the paste-this-link line');
+    // Issue #384: the two emails the site sends link to the site's own /auth/confirm, which checks the link itself, so
+    // it works in whatever app or browser the email opens in. The others keep Supabase's own link.
+    const own = {'confirm-signup.html': 'email', 'reset-password.html': 'recovery'}[f];
+    const link = own ? `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=${own}` : '{{ .ConfirmationURL }}';
+    assert.deepEqual(variables, own ? ['{{ .SiteURL }}', '{{ .TokenHash }}'] : ['{{ .ConfirmationURL }}', '{{ .SiteURL }}'], f);
+    assert.ok(html.includes(`bgcolor="#C4222C" style="background:#C4222C;border-radius:8px;mso-padding-alt:14px 28px;"><a href="${link}" style="`) && html.includes(`">${t.button}</a>`), f + ' has the button with its link');
+    assert.ok(html.includes(`If the button doesn’t work, paste this link into your browser:<br><a href="${link}"`) && html.includes(`>${link}</a></p>`), f + ' has the paste-this-link line');
+    assert.equal(count(html, link), 3, f + ' uses one link, three times');
     assert.equal(count(html, 'bgcolor="#C4222C"'), 1, f + ' has one button');
   }
   assert.equal(count(html, '{{'), count(html, '}}'), f);

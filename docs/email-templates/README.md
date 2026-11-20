@@ -15,7 +15,7 @@ Savage-branded versions of the emails Supabase sends (issues #155 and #320): con
    4. In the message body, choose **Source** (not Preview), delete everything there and paste.
    5. Choose **Preview** to check it shows the black SAVAGE header and the red button.
    6. Click **Save**.
-4. Check one for real: sign up on the site with an address you haven't used, and look at the email that arrives.
+4. Check one for real: sign up on the site with an address you haven't used, and look at the email that arrives. Open its button in a **different** browser or app from the one you signed up in. It should open the site and say your email is confirmed. If it opens anything else, check the Site URL (below).
 
 | Template in Supabase | Subject | File to paste (the whole file) | Does the site send it today? |
 |---|---|---|---|
@@ -26,12 +26,14 @@ Savage-branded versions of the emails Supabase sends (issues #155 and #320): con
 | Invite user | You’re invited to Savage Wrestling Academy | `invite.html` | Only if someone is invited from the Supabase dashboard. Coach invites come from the site itself |
 | Reauthentication | Your confirmation code · Savage Wrestling Academy | `reauthentication.html` | No. Ready in case it is turned on |
 
-Do the first two first. They are the ones families see.
+Do the first two first. They are the ones families and coaches see.
+
+**Changed on Nov 20 (#384): paste `confirm-signup.html` and `reset-password.html` again, even if you pasted them before.** Their button now opens the site directly, so it works when the email opens in a different app or browser from the one the person signed up in. Until they are pasted, a coach or parent who confirms from another app is told to go back and sign in, which works but takes an extra step.
 
 ## Good to know
 
-- **The logo needs the Site URL.** The header loads the logo from `{{ .SiteURL }}/brand/savage-logo-128.png`. Site URL is under Authentication → URL Configuration. It must be the site's address with no slash at the end. If the logo is missing, the header still reads SAVAGE WRESTLING ACADEMY in text.
-- **Only Supabase's own variables are used:** `{{ .ConfirmationURL }}` (the link), `{{ .Token }}` (the one-time code, in Reauthentication only) and `{{ .SiteURL }}`. No address is written into the files, so they keep working when the domain changes.
+- **The button and the logo need the Site URL.** In Confirm sign up and Reset password the button opens `{{ .SiteURL }}/auth/confirm?…`, and every header loads the logo from `{{ .SiteURL }}/brand/savage-logo-128.png`. Site URL is under Authentication → URL Configuration. It must be the address the site opens at, starting with `https://` and with no slash at the end. If it is wrong, the button opens the wrong place: fix the Site URL, not the template. Change it when the site moves to its own domain.
+- **Only Supabase's own variables are used:** `{{ .TokenHash }}` (in the links of Confirm sign up and Reset password, which the site checks itself), `{{ .ConfirmationURL }}` (Supabase's own link, in the templates the site does not send today), `{{ .Token }}` (the one-time code, in Reauthentication only) and `{{ .SiteURL }}`. No address is written into the files, so they keep working when the domain changes.
 - **Reauthentication has no button.** Supabase sends that one with a code and no link.
 - **Who gets them.** Supabase's built-in sender only delivers to members of the Supabase team, a few emails an hour. Families get these emails once a custom email sender (SMTP) is set up (#87).
 - **Fonts.** Email apps don't load the site's fonts, so the headings fall back to Arial Narrow and Arial.
