@@ -5,7 +5,7 @@
 import {env} from 'cloudflare:workers';
 import {ownerIdentity,sameOrigin,accountReply,OWNER_EMAIL} from '../../../lib/account-auth';
 import {securityEvent} from '../../../lib/security-events';
-import {createInvite,renewInvite,cancelInvite,inviteView,validEmail,PROGRAM_IDS,INVITE_DAYS,type InviteRow} from '../../../lib/coach-invites';
+import {createInvite,renewInvite,cancelInvite,grantInvite,inviteView,validEmail,PROGRAM_IDS,INVITE_DAYS,type InviteRow} from '../../../lib/coach-invites';
 import {emailConfigured} from '../../../lib/email';
 import {academyToday} from '../../../lib/public-schedule';
 import {HOLD_MINUTES} from '../../../lib/capacity';
@@ -30,7 +30,9 @@ export const GET = withApi(GET_); async function GET_(request:Request){
  const own=rows.find(s=>s.email===OWNER_EMAIL);
  // Open invites, and ones that ended in the last 30 days so the owner can send a new link.
  const recent=new Date(Date.now()-30*86400000).toISOString();
- const invites=(await env.DB!.prepare('SELECT * FROM coach_invites WHERE used_at IS NULL AND revoked_at IS NULL AND expires_at>? ORDER BY created_at DESC').bind(recent).all<InviteRow>()).results.map(inviteView);
+ // signedUp (issue #392): someone with this email already has a family account, so they signed up but are not a coach yet.
+ const signed=new Set((await env.DB!.prepare('SELECT lower(email) AS e FROM family_accounts WHERE lower(email) IN (SELECT email FROM coach_invites WHERE used_at IS NULL AND revoked_at IS NULL)').all<{e:string}>()).results.map(r=>r.e));
+ const invites=(await env.DB!.prepare('SELECT * FROM coach_invites WHERE used_at IS NULL AND revoked_at IS NULL AND expires_at>? ORDER BY created_at DESC').bind(recent).all<InviteRow>()).results.map(r=>({...inviteView(r),signedUp:signed.has(r.email.toLowerCase())}));
  return accountReply({staff:rows.filter(s=>s.email!==OWNER_EMAIL).map(view),self:own?view(own):null,invites,emailOn:emailConfigured(),inviteDays:INVITE_DAYS,
   removedForGood:await removedCoaches(),retentionYears:RETENTION_YEARS},200,auth.headers);
 }
@@ -45,6 +47,8 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  if(input?.action==='invite')return done(await createInvite(input,actor));
  if(input?.action==='renew')return done(await renewInvite(input.id,actor));
  if(input?.action==='cancel-invite')return done(await cancelInvite(input.id,actor));
+ // Give an invited coach access now, without the link (issue #392).
+ if(input?.action==='grant-invite')return done(await grantInvite(input.id,actor));
  // The owner as a coach: their own staff record, under the owner email. They keep the owner role everywhere.
  if(input?.action==='self'){
   if(!validPrograms(input.programs))return reply({error:'Choose valid programs.'},400);

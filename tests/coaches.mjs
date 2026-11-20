@@ -110,32 +110,37 @@ users.dana = {id: 'dana-uuid', email: 'dana.coach@example.test', email_confirmed
   assert.equal((await post(invites, '/api/coach-invite', {action: 'accept', token: tokenOf(second.body.link)}, 'pat')).status, 200);
   assert.equal(row("SELECT programs FROM staff_access WHERE email='pat.coach@example.test'").programs, '["Intermediate"]');
 
-  // A coach who confirmed their email (or signed in) elsewhere comes back to /coach-join and accepts without the link.
+  // Issue #392: an invited coach who signs in (from anywhere, without the link) gets coach access there and then and
+  // goes straight to coach home; there is no Accept step to miss.
   await post(staff, '/api/staff', {action: 'invite', name: 'Coach Sam', email: 'sam.coach@example.test', programs: ['Intermediate']}, 'owner');
-  r = await post(auth, '/api/auth', {action: 'login', email: 'sam.coach@example.test', password: 'valid-password'}, '');
-  assert.equal(r.body.redirect, '/coach-join', 'sign-in sends an invited coach back to accept');
-  assert.equal((await post(auth, '/api/auth', {action: 'login', email: 'alice@example.test', password: 'valid-password'}, '')).body.redirect, '/family', 'other families unaffected');
   r = await post(invites, '/api/coach-invite', {action: 'check'}, 'sam');
   assert.equal(r.body.invite.name, 'Coach Sam'); assert.equal(r.body.signedIn.matches, true);
   assert.equal((await post(invites, '/api/coach-invite', {action: 'accept'}, 'mallory')).status, 404, 'no invite for this email');
-  assert.equal((await post(invites, '/api/coach-invite', {action: 'accept'}, 'sam')).status, 200);
+  r = await post(auth, '/api/auth', {action: 'login', email: 'sam.coach@example.test', password: 'valid-password'}, '');
+  assert.equal(r.body.redirect, '/coach', 'sign-in gives an invited coach access and sends them to coach home');
   assert.equal(row("SELECT active FROM staff_access WHERE email='sam.coach@example.test'").active, 1);
+  assert.ok(row("SELECT used_at FROM coach_invites WHERE email='sam.coach@example.test' ORDER BY created_at DESC,rowid DESC LIMIT 1").used_at, 'the invite is used');
+  assert.equal(row("SELECT count(*) AS n FROM security_events WHERE action='coach_invite_accepted' AND target='sam.coach@example.test'").n, 1, 'and logged');
+  assert.equal((await post(auth, '/api/auth', {action: 'login', email: 'alice@example.test', password: 'valid-password'}, '')).body.redirect, '/family', 'other families unaffected');
   assert.equal((await post(auth, '/api/auth', {action: 'login', email: 'sam.coach@example.test', password: 'valid-password'}, '')).body.redirect, '/coach', 'once accepted, the coach signs in with a password straight to coach home (#306)');
 }
 
 // The confirmation link brings an invited coach to /coach-join; everyone else to sign-in as before.
 {
   const file = 'app/auth/confirm/route.ts', module = {exports: {}};
-  let open = false;
+  let open = false, accepted = false;
   const ts = (await import('typescript')).default;
   vm.runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}}).outputText, {module, exports: module.exports, URL, Response, Headers,
     require: n => n.endsWith('/account-auth') ? {accountClient: () => ({headers: new Headers(), client: {auth: {verifyOtp: async () => ({data: {user: {email: 'sam@x.test'}}, error: null}), exchangeCodeForSession: async () => ({data: {user: {email: 'sam@x.test'}}, error: null})}}})}
-      : n.endsWith('/coach-invites') ? {hasOpenInvite: async () => open} : null});
+      : n.endsWith('/coach-invites') ? {hasOpenInvite: async () => open, acceptOpenInvite: async () => accepted} : null});
   const go = async q => new URL((await module.exports.GET(new Request('https://academy.test/auth/confirm' + q))).headers.get('location')).pathname + new URL((await module.exports.GET(new Request('https://academy.test/auth/confirm' + q))).headers.get('location')).search;
   assert.equal(await go('?token_hash=x&type=signup'), '/login?confirmed=1');
   open = true;
-  assert.equal(await go('?token_hash=x&type=signup'), '/coach-join');
+  assert.equal(await go('?token_hash=x&type=signup'), '/coach-join', 'if coach access could not be added, the invite page says why');
   assert.equal(await go('?code=abc'), '/coach-join');
+  accepted = true;   // Issue #392: the confirmation link adds coach access and opens coach home.
+  assert.equal(await go('?token_hash=x&type=email'), '/coach');
+  accepted = false;
   assert.equal(await go('?token_hash=x&type=recovery'), '/login?mode=change', 'a password reset still goes to the reset form');
   assert.equal(await go('?token_hash=x&type=email'), '/coach-join', 'the link in the email template (issue #384) is checked by the site itself, in any browser');
 }
@@ -148,7 +153,7 @@ users.dana = {id: 'dana-uuid', email: 'dana.coach@example.test', email_confirmed
   const calls = [];
   vm.runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}}).outputText, {module, exports: module.exports, URL, Response, Headers,
     require: n => n.endsWith('/account-auth') ? {accountClient: () => ({headers: new Headers(), client: {auth: {verifyOtp: async a => { calls.push(a); return {data: {user: null}, error: {message: 'Token has expired or is invalid'}}; }, exchangeCodeForSession: async () => ({data: {user: null}, error: {message: 'invalid request: both auth code and code verifier should be non-empty'}})}}})}
-      : n.endsWith('/coach-invites') ? {hasOpenInvite: async () => { throw Error('must not be asked: nobody is signed in'); }} : null});
+      : n.endsWith('/coach-invites') ? {hasOpenInvite: async () => { throw Error('must not be asked: nobody is signed in'); }, acceptOpenInvite: async () => { throw Error('must not be asked'); }} : null});
   const go = async q => { const r = await module.exports.GET(new Request('https://academy.test/auth/confirm' + q)), u = new URL(r.headers.get('location')); assert.equal(r.status, 303); assert.equal(u.origin, 'https://academy.test'); return u.pathname + u.search; };
   assert.equal(await go('?code=abc'), '/login?confirmation=failed', 'opened in another browser: sign in');
   assert.equal(await go('?token_hash=x&type=email'), '/login?confirmation=failed', 'a link opened before');

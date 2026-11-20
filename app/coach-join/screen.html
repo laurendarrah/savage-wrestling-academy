@@ -59,7 +59,9 @@ async function load(){
  if(!invite){$('intro').textContent=me?'There is no open coach invitation for '+me.email+'. If the academy sent you a link, open it on this device.':'Open the invitation link the academy sent you. If it has stopped working, ask the academy for a new one.';show('');$('steps').hidden=true;offerSignin(true);return}
  $('details').innerHTML=detailsHtml(invite);$('details').hidden=false;
  if(invite.status!=='open'){$('steps').hidden=true;show('');offerSignin(invite.status==='used');$('intro').textContent={used:'This invitation was already used. Sign in to open coach home.',expired:'This invitation has expired. Ask the academy for a new link.',canceled:'This invitation was canceled. Ask the academy for a new one.'}[invite.status]||'This invitation isn’t working.';return}
- if(me&&me.matches){$('intro').textContent='Welcome, '+invite.name+'.';$('signedAs').textContent=me.email;show('acceptBox');steps(3);return}
+ // Signed in with the invited email: coach access is added straight away (issue #392). The button stays as the way to
+ // try again if that could not finish.
+ if(me&&me.matches){$('intro').textContent='Welcome, '+invite.name+'.';$('signedAs').textContent=me.email;show('acceptBox');steps(3);say('Adding coach access…');try{await acceptAndGo()}catch(e){say(e.message)}return}
  if(me){$('intro').textContent='This invitation is for a different email.';$('otherEmail').textContent=me.email;$('otherFor').textContent=invite.email;show('otherBox');steps(1);return}
  $('signupEmail').value=$('signinEmail').value=invite.email;
  // Back on the invite link after creating the account on this device (issue #384): the next step is to sign in, not

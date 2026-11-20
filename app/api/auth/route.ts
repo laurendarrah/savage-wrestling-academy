@@ -1,7 +1,7 @@
 import { rateLimited } from '../../../lib/rate-limit';
 import { accountRole,roleDestination } from '../../../lib/access-control';
 import { accountClient, accountReply, sameOrigin, appOrigin, sessionClaims, verifiedAccount } from '../../../lib/account-auth';
-import { hasOpenInvite } from '../../../lib/coach-invites';
+import { hasOpenInvite, acceptOpenInvite } from '../../../lib/coach-invites';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 // Sign-in attempts per email: 10 a minute, and 30 an hour as the back-off for anyone who keeps trying (issue #274).
@@ -50,8 +50,9 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  return reply({error:'The sign-in service is temporarily unavailable. Your password has not been checked. Please try again shortly.'},503);
  }
  const {role}=await accountRole(data.user);
- // Someone invited as a coach goes back to accept the invite first (issue #190).
- if(role==='family'&&data.user.email_confirmed_at&&await hasOpenInvite(data.user.email))return reply({redirect:'/coach-join'});
+ // Someone invited as a coach gets coach access now and goes to coach home (issues #190, #392). If that could not
+ // finish, the invite page says why.
+ if(role==='family'&&data.user.email_confirmed_at&&await hasOpenInvite(data.user.email))return reply({redirect:await acceptOpenInvite(data.user).catch(()=>false)?'/coach':'/coach-join'});
  // The password is the whole sign-in (issues #306, #347): everyone goes straight to their own home.
  return reply({redirect:roleDestination(role)});
  }

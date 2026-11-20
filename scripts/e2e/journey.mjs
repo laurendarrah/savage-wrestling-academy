@@ -893,10 +893,9 @@ await step('owner invites a coach; the coach accepts and lands on coach home; Ac
   await waitText(owner, '#invites', /Coach Lee[\s\S]*Waiting/);
   await shot(owner, 'staff-invite');
   lee = await as('invitee');
-  await lee.goto(link); await lee.waitForSelector('#acceptInvite', {state: 'visible'});
-  await waitText(lee, '#details', /Coach Lee[\s\S]*SWA Development/);
+  // Signed in with the invited email, the link adds coach access straight away and opens coach home (#392): no Accept tap.
+  await lee.goto(link); await lee.waitForURL(/\/coach$/, {timeout: 20000});
   await shot(lee, 'coach-join');
-  await lee.click('#acceptInvite'); await lee.waitForURL(/\/coach$/); // straight to coach home (#306, #347)
   const reuse = await api(lee, '/api/coach-invite', {action: 'accept', token: link.split('#invite=')[1]});
   expect(reuse.status === 410, 'an invite works once: ' + reuse.status);
   // Account security, from coach home's Account menu (#347): who is signed in, Change password, and the way back.
