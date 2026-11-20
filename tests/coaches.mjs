@@ -137,6 +137,34 @@ users.dana = {id: 'dana-uuid', email: 'dana.coach@example.test', email_confirmed
   assert.equal(await go('?token_hash=x&type=signup'), '/coach-join');
   assert.equal(await go('?code=abc'), '/coach-join');
   assert.equal(await go('?token_hash=x&type=recovery'), '/login?mode=change', 'a password reset still goes to the reset form');
+  assert.equal(await go('?token_hash=x&type=email'), '/coach-join', 'the link in the email template (issue #384) is checked by the site itself, in any browser');
+}
+// Issue #384: a link that cannot sign the person in here. On a phone the email often opens in a different app from the
+// one the coach signed up in, where the sign-in code does not work; the email is confirmed all the same. They are sent to
+// sign in and told so. They are never told the link "expired" or to start again.
+{
+  const file = 'app/auth/confirm/route.ts', module = {exports: {}};
+  const ts = (await import('typescript')).default;
+  const calls = [];
+  vm.runInNewContext(ts.transpileModule(readFileSync(file, 'utf8'), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}}).outputText, {module, exports: module.exports, URL, Response, Headers,
+    require: n => n.endsWith('/account-auth') ? {accountClient: () => ({headers: new Headers(), client: {auth: {verifyOtp: async a => { calls.push(a); return {data: {user: null}, error: {message: 'Token has expired or is invalid'}}; }, exchangeCodeForSession: async () => ({data: {user: null}, error: {message: 'invalid request: both auth code and code verifier should be non-empty'}})}}})}
+      : n.endsWith('/coach-invites') ? {hasOpenInvite: async () => { throw Error('must not be asked: nobody is signed in'); }} : null});
+  const go = async q => { const r = await module.exports.GET(new Request('https://academy.test/auth/confirm' + q)), u = new URL(r.headers.get('location')); assert.equal(r.status, 303); assert.equal(u.origin, 'https://academy.test'); return u.pathname + u.search; };
+  assert.equal(await go('?code=abc'), '/login?confirmation=failed', 'opened in another browser: sign in');
+  assert.equal(await go('?token_hash=x&type=email'), '/login?confirmation=failed', 'a link opened before');
+  assert.deepEqual({...calls.at(-1)}, {token_hash: 'x', type: 'email'}, 'the site checks the link with the type in it');
+  assert.equal(await go('?error=access_denied&error_code=otp_expired'), '/login?confirmation=failed', 'Supabase said the link expired');
+  assert.equal(await go(''), '/login?confirmation=failed');
+  assert.equal(await go('?code=abc&next=change'), '/login?reset=failed', 'a password reset link that fails is said as that');
+  assert.equal(await go('?token_hash=x&type=recovery'), '/login?reset=failed');
+  assert.equal(await go('?token_hash=x&type=magiclink'), '/login?confirmation=failed', 'a type the site does not use is never sent to Supabase');
+  assert.equal(calls.filter(c => c.type === 'magiclink').length, 0);
+  // What the sign-in page then says.
+  const login = readFileSync('app/login/screen.html', 'utf8');
+  assert.match(login, /if\(params\.has\('confirmation'\)\)\$\('message'\)\.textContent='That link could not sign you in here\. It may have opened in a different app or browser than the one you signed up in, or been opened before\. Your email is most likely confirmed: sign in with your email and password\. If that does not work, choose “Didn’t get the confirmation email\?” for a new link\.'/);
+  assert.match(login, /if\(params\.has\('reset'\)\)\$\('message'\)\.textContent='That password reset link did not work here\. Open it in the same browser where you asked for it, or choose “Forgot your password\?” for a new link\.'/);
+  assert.doesNotMatch(login, /expired or could not be verified|Request another confirmation email/);
+  assert.match(login, /Didn’t get the confirmation email\?/); assert.match(login, /Forgot your password\?/);
 }
 
 // ---------- Profiles ----------

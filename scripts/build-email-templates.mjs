@@ -5,8 +5,13 @@
 //   node scripts/build-email-templates.mjs
 //
 // tests/email-templates.mjs fails if the files are out of date. Only Supabase's own variables are used:
-// {{ .ConfirmationURL }} (the link), {{ .Token }} (the one-time code) and {{ .SiteURL }} (the site address, for the
-// logo). No address is written into the files.
+// {{ .ConfirmationURL }} (Supabase's own link), {{ .TokenHash }} (for a link the site checks itself), {{ .Token }} (the
+// one-time code) and {{ .SiteURL }} (the site address). No address is written into the files.
+//
+// The two emails the site sends today, Confirm sign up and Reset password, link straight to the site's /auth/confirm
+// with {{ .TokenHash }} (issue #384). Supabase's own link signs a person in only in the browser where they asked for
+// it; on a phone the email usually opens in another app, and they were sent back to the start. A link the site checks
+// itself works in any browser or app. This is the link Supabase's guide for server-side sign-in gives.
 import {readFileSync, writeFileSync} from 'node:fs';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import path from 'node:path';
@@ -18,10 +23,13 @@ const brand = await import('data:text/javascript;base64,' + Buffer.from(source).
 const {emailShell, headlineHtml, paragraphHtml, noteHtml, buttonHtml, codeHtml, fallbackHtml, escapeHtml, WHY, LOGO_PATH} = brand;
 
 const LINK = '{{ .ConfirmationURL }}', CODE = '{{ .Token }}', LOGO = '{{ .SiteURL }}' + LOGO_PATH;
+// type is what /auth/confirm passes to Supabase to check the link: 'email' confirms a new account, 'recovery' opens the
+// form to choose a new password. Written as HTML (&amp;), since it goes into an href and into the page text.
+export const siteLink = type => `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=${type}`;
 
 // One entry per template in Supabase → Authentication → Emails → Templates. `subject` goes in the Subject box there.
 export const TEMPLATES = [
-  {file: 'confirm-signup.html', supabase: 'Confirm sign up', subject: 'Confirm your email · Savage Wrestling Academy',
+  {file: 'confirm-signup.html', supabase: 'Confirm sign up', subject: 'Confirm your email · Savage Wrestling Academy', link: siteLink('email'),
     headline: 'Confirm your email', preheader: 'One tap to confirm your email and finish setting up your family account.',
     body: 'Thanks for signing up. Confirm this is your email address, then sign in to add your wrestler and choose training.',
     button: 'Confirm my email', note: 'Didn’t sign up? You can ignore this email and no account will be created.',
@@ -39,7 +47,7 @@ export const TEMPLATES = [
     headline: 'Confirm your new email', preheader: 'Confirm the new email address for your Savage Wrestling Academy account.',
     body: 'Confirm that this is the new email address for your Savage Wrestling Academy account. You’ll use it to sign in from now on.',
     button: 'Confirm new email', note: 'Didn’t ask for this? Ignore this email and nothing changes.', why: WHY.account},
-  {file: 'reset-password.html', supabase: 'Reset password', subject: 'Reset your password · Savage Wrestling Academy',
+  {file: 'reset-password.html', supabase: 'Reset password', subject: 'Reset your password · Savage Wrestling Academy', link: siteLink('recovery'),
     headline: 'Reset your password', preheader: 'Choose a new password for your Savage Wrestling Academy account.',
     body: 'Someone asked to reset the password for this email address. Choose a new one with the button below. The link works once and expires soon.',
     button: 'Choose a new password', note: 'Didn’t ask for this? Ignore this email and your password stays the same.', why: WHY.account},
@@ -53,7 +61,7 @@ export const TEMPLATES = [
 export function buildTemplates() {
   return Object.fromEntries(TEMPLATES.map(t => [t.file, emailShell({title: t.headline, preheader: t.preheader, why: t.why, logoUrl: LOGO,
     inner: [headlineHtml(escapeHtml(t.headline)), paragraphHtml(escapeHtml(t.body)),
-      t.code ? codeHtml(CODE) : buttonHtml(LINK, escapeHtml(t.button)), noteHtml(escapeHtml(t.note)), ...(t.code ? [] : [fallbackHtml(LINK)])].join('\n')}) + '\n']));
+      t.code ? codeHtml(CODE) : buttonHtml(t.link ?? LINK, escapeHtml(t.button)), noteHtml(escapeHtml(t.note)), ...(t.code ? [] : [fallbackHtml(t.link ?? LINK)])].join('\n')}) + '\n']));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
