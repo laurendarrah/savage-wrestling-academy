@@ -4,6 +4,7 @@ import {registrationCatalog} from '../../../lib/registration-catalog';
 import {scholarshipDraft,scholarshipView,newInviteToken,inviteHash,type Scholarship} from '../../../lib/scholarships';
 import {securityEvent} from '../../../lib/security-events';
 import {withApi} from '../../../lib/api';
+import {confirmsDelete, TYPE_DELETE} from '../../../lib/delete-confirm';
 // Invite links are built from appOrigin() (issue #274), like every other emailed link, never from the request's host.
 export const dynamic='force-dynamic';
 export const GET = withApi(GET_); async function GET_(request:Request){
@@ -49,6 +50,15 @@ export const POST = withApi(POST_); async function POST_(request:Request){
   const token=newInviteToken();
   updated=await env.DB!.prepare("UPDATE scholarship_awards SET token_hash=?,expires_at=?,revision=revision+1 WHERE id=? AND revision=? AND status='offered' RETURNING *").bind(await inviteHash(token),new Date(now.getTime()+30*86400000).toISOString(),award.id,input.revision).first<Scholarship>();
   return updated?reply({award:scholarshipView(updated),inviteUrl:appOrigin()+'/scholarship#token='+token}):reply({error:'Award changed. Refresh before editing.'},409);
+ }else if(input.action==='delete'){
+  // Delete for good (issue #388), after the owner typed DELETE. An active scholarship is ended first, so a family's
+  // free tuition never stops without the owner choosing to end it. A signed agreement goes with the award.
+  if(!confirmsDelete(input.confirm))return reply({error:TYPE_DELETE},400);
+  if(award.status==='active')return reply({error:'End this scholarship first (End future scholarship assistance), then delete it.'},409);
+  const gone=await env.DB!.prepare("DELETE FROM scholarship_awards WHERE id=? AND revision=? AND status<>'active' RETURNING id").bind(award.id,input.revision).first<{id:string}>();
+  if(!gone)return reply({error:'Award changed. Refresh the list.'},409);
+  await securityEvent(auth.owner.userId,'scholarship_deleted',`${award.wrestler_name} · ${award.program} · ${award.status}${award.accepted_at?' · signed':''}`);
+  return reply({ok:true,deleted:award.id});
  }else return reply({error:'Choose a valid scholarship action.'},400);
  return updated?reply({award:scholarshipView(updated)}):reply({error:'Award changed or is no longer editable. Refresh the list.'},409);
 }

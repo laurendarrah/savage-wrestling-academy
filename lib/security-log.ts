@@ -44,6 +44,7 @@ const TITLES: Record<string, string> = {
   program_approval_requested: 'SWA Advanced approval requested',
   program_approval_approved: 'SWA Advanced approved',
   program_approval_declined: 'SWA Advanced declined',
+  program_approval_deleted: 'SWA Advanced request deleted',
   program_curriculum_saved: 'Curriculum saved',
   curriculum_lesson_created: 'Curriculum lesson added',
   curriculum_lesson_updated: 'Curriculum lesson updated',
@@ -106,6 +107,7 @@ const TITLES: Record<string, string> = {
   scholarship_offered: 'Scholarship offered',
   scholarship_revoked: 'Scholarship offer withdrawn',
   scholarship_ended: 'Scholarship ended',
+  scholarship_deleted: 'Scholarship deleted',
 };
 const DISPUTE_REASONS: Record<string, string> = {fraudulent: 'the family says they did not make it', duplicate: 'the family says it was charged twice', product_not_received: 'the family says they did not get what they paid for',
   subscription_canceled: 'the family says the membership was canceled', unrecognized: 'the family did not recognise the charge', credit_not_processed: 'the family says a refund was promised', general: 'no reason given'};
@@ -140,6 +142,10 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     case 'practice_plan_shared': case 'practice_plan_draft': case 'practice_plan_hidden': {
       const [p, d] = t.split(':'); detail = d ? `${program(p)} · ${dayDate(d)}` : program(p); break;
     }
+    // A deleted request or scholarship (issue #388) is gone, so its line says what it was: "Sam Example · approved",
+    // "Sam Example · Advanced · ended · signed".
+    case 'program_approval_deleted': detail = t; break;
+    case 'scholarship_deleted': { const [who = '', prog = '', ...was] = t.split(' · '); detail = [who, prog ? program(prog) : '', ...was].filter(Boolean).join(' · '); break; }
     case 'program_approval_requested': case 'program_approval_approved': case 'program_approval_declined':
       detail = names.approvals[t] ?? ''; break;
     case 'waitlist_offer': detail = names.waitlist[t] ?? ''; break;
