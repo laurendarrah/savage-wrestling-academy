@@ -103,6 +103,52 @@ export async function findInvite(token: string | null, email: string | null): Pr
 export async function hasOpenInvite(email: string | undefined | null) {
   return !!email && !!(await findInvite(null, email));
 }
+// A coach who signed in on the family side before their invite was accepted (issue #392) can leave a family account
+// with no wrestler in it, which then shows on the owner's Families list. Once they are an active coach it is deleted,
+// but only while it holds nothing: no wrestler, payment, cash booking, message or data request. A coach who is also a
+// parent keeps their family account.
+export function emptyFamilyGone(by: 'user_id' | 'email', key: string) {
+  const match = by === 'user_id' ? 'user_id=?' : 'lower(email)=?';
+  return env.DB!.prepare(`DELETE FROM family_accounts WHERE ${match} AND COALESCE(json_array_length(payload,'$.wrestlers'),0)=0
+    AND EXISTS (SELECT 1 FROM staff_access s WHERE s.email=lower(family_accounts.email) AND s.active=1)
+    AND NOT EXISTS (SELECT 1 FROM orders x WHERE x.user_id=family_accounts.user_id) AND NOT EXISTS (SELECT 1 FROM cash_bookings c WHERE c.user_id=family_accounts.user_id)
+    AND NOT EXISTS (SELECT 1 FROM family_messages m WHERE m.user_id=family_accounts.user_id) AND NOT EXISTS (SELECT 1 FROM data_requests d WHERE d.user_id=family_accounts.user_id)`).bind(by === 'user_id' ? key : key.toLowerCase());
+}
+// The owner gives an invited coach access straight away (issue #392), without waiting for them to use the link: for a
+// coach who signed up but landed on the family side, or one the owner would rather not chase. The invite is marked used,
+// so its link stops; the coach signs in with that email and lands on coach home. A canceled or used invite can't be.
+export async function grantInvite(id: unknown, ownerId: string) {
+  if (typeof id !== 'string' || id.length > 80) return {status: 404, error: 'Invite not found.'};
+  const row = await env.DB!.prepare('SELECT * FROM coach_invites WHERE id=?').bind(id).first<InviteRow>();
+  if (!row) return {status: 404, error: 'Invite not found.'};
+  if (row.used_at) return {status: 410, error: 'This invite was already used, so the coach has access.'};
+  if (row.revoked_at) return {status: 410, error: 'This invite was canceled. Send a new invite to give access.'};
+  const at = new Date().toISOString(), by = 'owner:' + ownerId;
+  const [claimed] = await env.DB!.batch([
+    env.DB!.prepare('UPDATE coach_invites SET used_at=?,used_by=? WHERE id=? AND used_at IS NULL AND revoked_at IS NULL RETURNING id').bind(at, by, row.id),
+    env.DB!.prepare(`INSERT INTO staff_access(email,name,programs,active,updated_at) SELECT email,name,programs,1,? FROM coach_invites WHERE id=? AND used_by=? AND used_at=?
+      ON CONFLICT(email) DO UPDATE SET name=excluded.name,programs=excluded.programs,active=1,updated_at=excluded.updated_at`).bind(at, row.id, by, at),
+    env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM coach_invites WHERE id=? AND used_by=? AND used_at=?)')
+      .bind(crypto.randomUUID(), ownerId, 'coach_access_granted', row.email, at, row.id, by, at),
+    emptyFamilyGone('email', row.email)
+  ]);
+  if (!(claimed as any).results?.length) return {status: 410, error: 'This invite was just used or changed. Refresh the page.'};
+  return {status: 200, name: row.name};
+}
+// A signed-in active coach with no family account who opens the family home goes to coach home instead (issue #392).
+export async function coachWithoutFamily(user: {id: string; email?: string | null; email_confirmed_at?: string | null} | null) {
+  if (!user?.email || !user.email_confirmed_at || user.email.toLowerCase() === OWNER_EMAIL) return false;
+  return !!(await env.DB!.prepare('SELECT 1 FROM staff_access s WHERE s.email=? AND s.active=1 AND NOT EXISTS (SELECT 1 FROM family_accounts f WHERE f.user_id=?)')
+    .bind(user.email.toLowerCase(), user.id).first());
+}
+// An invited coach gets coach access as soon as the site sees them signed in with the confirmed, invited email (issue
+// #392): at sign-in, at the email confirmation link, on the family home and on the invite page. There is no Accept step
+// to miss. The rules are acceptInvite's: an open invite for that exact email, never the owner's. True when it was accepted.
+export async function acceptOpenInvite(user: {id: string; email?: string | null; email_confirmed_at?: string | null} | null) {
+  if (!user?.email || !user.email_confirmed_at || user.email.toLowerCase() === OWNER_EMAIL) return false;
+  if (!(await hasOpenInvite(user.email))) return false;
+  return (await acceptInvite(user, null)).status === 200;
+}
 
 // Accept an invite as the signed-in person. Their email must be confirmed and match the invite. Marking the invite
 // used and granting access happen in one transaction, so a link can never be used twice.
@@ -124,7 +170,8 @@ export async function acceptInvite(user: {id: string; email?: string | null; ema
     env.DB!.prepare(`INSERT INTO staff_access(email,name,programs,active,updated_at) SELECT email,name,programs,1,? FROM coach_invites WHERE id=? AND used_by=? AND used_at=?
       ON CONFLICT(email) DO UPDATE SET name=excluded.name,programs=excluded.programs,active=1,updated_at=excluded.updated_at`).bind(at, row.id, user.id, at),
     env.DB!.prepare(`INSERT INTO security_events(id,actor,action,target,created_at) SELECT ?,?,?,?,? WHERE EXISTS (${claimed})`)
-      .bind(crypto.randomUUID(), user.id, 'coach_invite_accepted', email, at, row.id, user.id, at)
+      .bind(crypto.randomUUID(), user.id, 'coach_invite_accepted', email, at, row.id, user.id, at),
+    emptyFamilyGone('user_id', user.id)
   ]);
   if (!(results[0] as any).results?.length) return {status: 410, error: 'This invite was just used or changed. Ask the academy for a new one.'};
   return {status: 200, name: row.name};

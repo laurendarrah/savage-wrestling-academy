@@ -86,11 +86,15 @@ for (const opts of [{store: {'swa-coach-join-started': 'someone.else@example.tes
   assert.doesNotMatch(html, /Opening it brings you back here to finish/, 'the page no longer promises the email link returns here');
 }
 
-// ---------- Confirmed in the same browser: the confirm step brings the coach back signed in, to Accept ----------
+// ---------- Signed in with the invited email: coach access straight away (issue #392) ----------
 {
+  // Issue #392: signed in with the invited email, coach access is added straight away, with no tap.
   const v = visit({signedIn: {email: EMAIL, matches: true}}); await settle();
-  assert.deepEqual(v.shown(), ['acceptBox']); assert.equal(v.step(), 'done,done,on,'); assert.equal(v.el('signedAs').textContent, EMAIL);
-  await v.el('acceptInvite').onclick(); await settle(); assert.deepEqual(v.went, ['/coach']);
+  assert.deepEqual(v.went, ['/coach']); assert.deepEqual(v.sent.at(-1), ['/api/coach-invite', {action: 'accept', token: TOKEN}]);
+  assert.equal(v.el('message').textContent, 'Coach access added. Opening coach home…');
+  // If that could not finish, the reason shows and the button is there to try again.
+  const stuck = visit({signedIn: {email: EMAIL, matches: true}, answers: {accept: reply({error: 'This invite was just used or changed. Ask the academy for a new one.'}, 410)}}); await settle();
+  assert.deepEqual(stuck.went, []); assert.deepEqual(stuck.shown(), ['acceptBox']); assert.match(stuck.el('message').textContent, /just used or changed/);
   const other = visit({signedIn: {email: 'parent@example.test', matches: false}}); await settle(); assert.deepEqual(other.shown(), ['otherBox']);
 }
 console.log('Passed: after a coach creates their account the invite page shows what to do and a sign-in form (confirm the email, come back, sign in), can send the email again, and remembers on that device so the link opens at sign-in, not at “create your account”; signing in accepts the invite and opens coach home.');
