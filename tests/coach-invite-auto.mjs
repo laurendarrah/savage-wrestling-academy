@@ -60,6 +60,24 @@ assert.equal((await call(staff, '/api/staff', {method: 'POST', body: {action: 'g
   assert.match(page, /\$\{i\.signedUp\?`<p class="warn">\$\{esc\(i\.name\)\} has already signed up with \$\{esc\(i\.email\)\}, so they show under Families\. Give coach access now and they open coach home the next time they visit\.<\/p>`:''\}/);
 }
 
+// ---------- Inviting someone who already has an account makes them a coach at once (issue #394) ----------
+{
+  // His first invite was canceled (so nothing waiting picked him up); he has a family account with the same email.
+  invite('i7', 'ryan.again@example.test', {revoked: now}); family('u-ra', 'Ryan.Again@example.test');
+  as('owner');
+  let r = await call(staff, '/api/staff', {method: 'POST', body: {action: 'invite', name: 'Coach Ryan', email: 'ryan.again@example.test', programs: ['Intermediate']}});
+  assert.deepEqual([r.status, r.body.granted, r.body.name, r.body.link], [200, true, 'Coach Ryan', undefined], 'no link to send');
+  assert.deepEqual({...row("SELECT name,programs,active FROM staff_access WHERE email='ryan.again@example.test'")}, {name: 'Coach Ryan', programs: '["Intermediate"]', active: 1}, 'he is under Coaches');
+  assert.equal(count("SELECT count(*) n FROM family_accounts WHERE user_id='u-ra'"), 0, 'and no longer under Families');
+  assert.equal(count("SELECT count(*) n FROM coach_invites WHERE email='ryan.again@example.test' AND used_at IS NULL AND revoked_at IS NULL"), 0, 'no invite is left waiting');
+  assert.equal(count("SELECT count(*) n FROM security_events WHERE action='coach_access_granted' AND target='ryan.again@example.test'"), 1);
+  // Someone with no account gets the invite link, as before.
+  r = await call(staff, '/api/staff', {method: 'POST', body: {action: 'invite', name: 'Coach New', email: 'brand.new@example.test', programs: []}});
+  assert.equal(r.status, 200); assert.equal(r.body.granted, undefined); assert.match(r.body.link, /\/coach-join#invite=[a-f0-9]{64}$/);
+  assert.equal(count("SELECT count(*) n FROM staff_access WHERE email='brand.new@example.test'"), 0);
+  assert.match(readFileSync('app/staff/screen.html', 'utf8'), /if\(r\.granted\)\{await load\(\);say\(r\.name\+' already has an account, so they are a coach now\. They land on coach home the next time they visit\.'\);return\}/);
+}
+
 // ---------- The one-time step at deploy, for coaches already waiting ----------
 {
   const db = makeDb().sqlite, step = readFileSync('drizzle/0051_accept_waiting_coach_invites.sql', 'utf8');
