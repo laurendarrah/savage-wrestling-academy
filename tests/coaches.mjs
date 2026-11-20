@@ -161,9 +161,10 @@ users.dana = {id: 'dana-uuid', email: 'dana.coach@example.test', email_confirmed
   assert.equal(calls.filter(c => c.type === 'magiclink').length, 0);
   // What the sign-in page then says.
   const login = readFileSync('app/login/screen.html', 'utf8');
-  assert.match(login, /if\(params\.has\('confirmation'\)\)\$\('message'\)\.textContent='That link could not sign you in here\. It may have opened in a different app or browser than the one you signed up in, or been opened before\. Your email is most likely confirmed: sign in with your email and password\. If that does not work, choose “Didn’t get the confirmation email\?” for a new link\.'/);
-  assert.match(login, /if\(params\.has\('reset'\)\)\$\('message'\)\.textContent='That password reset link did not work here\. Open it in the same browser where you asked for it, or choose “Forgot your password\?” for a new link\.'/);
-  assert.doesNotMatch(login, /expired or could not be verified|Request another confirmation email/);
+  assert.match(login, /if\(params\.has\('confirmation'\)\)\$\('message'\)\.textContent='That link could not sign you in\. It may have been used already, or it has expired\. Your email is most likely confirmed: sign in with your email and password\. If that does not work, choose “Didn’t get the confirmation email\?” for a new link\.'/);
+  assert.match(login, /if\(params\.has\('reset'\)\)\$\('message'\)\.textContent='That password reset link did not work\. It may have been used already, or it has expired\. Choose “Forgot your password\?” for a new one\.'/);
+  assert.doesNotMatch(login, /expired or could not be verified|Request another confirmation email|same browser/, 'email links open in any app or browser now (issue #386)');
+  assert.match(login, /change:\['Choose a new password','Type a new password for your account, twice\.','Save new password'\]/);
   assert.match(login, /Didn’t get the confirmation email\?/); assert.match(login, /Forgot your password\?/);
 }
 

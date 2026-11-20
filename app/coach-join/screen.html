@@ -75,7 +75,7 @@ function markStarted(email){try{localStorage.setItem(STARTED,email)}catch{}}
 const SIGNIN_INTRO='Sign in with the invited email. Coach access is added to your account.';
 // Step 2: the account exists and the email has a confirmation link in it. The link may open in another app or browser,
 // where the site cannot sign the coach in, so the way forward is always here: confirm, come back, sign in.
-function afterSignup(){show('signinForm');steps(2);$('signinIntro').textContent='Open the confirmation email we sent to '+invite.email+' and tap the button in it. Then come back to this page and sign in with the password you just made.';$('resendConfirm').hidden=false;$('toSignup').hidden=true}
+function afterSignup(){show('signinForm');steps(2);$('signinIntro').textContent='Open the confirmation email we sent to '+invite.email+' and tap the button in it. It brings you to the last step. If it does not, come back to this page and sign in with the password you just made.';$('resendConfirm').hidden=false;$('toSignup').hidden=true}
 async function acceptAndGo(){const r=await post('/api/coach-invite',{action:'accept',token});say('Coach access added. Opening coach home…');location.assign(r.redirect)}
 $('acceptInvite').onclick=async()=>{$('acceptInvite').disabled=true;try{await acceptAndGo()}catch(e){say(e.message);$('acceptInvite').disabled=false}};
 $('switchAccount').onclick=async()=>{try{await post('/api/auth',{action:'logout'});location.reload()}catch(e){say(e.message)}};

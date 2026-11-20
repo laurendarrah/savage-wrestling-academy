@@ -283,7 +283,7 @@ Everyone (the owner, coaches and families) signs in with an email and a password
 
 Work down this list:
 1. **Wrong account:** the owner is only `savagewrestlingclub@gmail.com`. Signed in with another email, the site shows a family account. Sign out and sign in with the owner email.
-2. **Forgot the password:** **/login → Forgot your password?** The reset link opens in any browser once the current email templates are pasted into Supabase (`docs/email-templates/README.md`, #384); with the older templates, open it in the same browser you asked from. If the reset email doesn't arrive, see [the email limit](#sign-up-or-reset-emails-blocked-by-the-email-limit).
+2. **Forgot the password:** **/login → Forgot your password?** The reset link opens in any app or browser (the email templates in `docs/email-templates/` were pasted into Supabase on Nov 20, #384). If it ever stops doing so, check they are still the saved templates and that the Site URL is right. If the reset email doesn't arrive, see [the email limit](#sign-up-or-reset-emails-blocked-by-the-email-limit).
 3. **Email never confirmed:** **/login → Didn't get the confirmation email?** If that is blocked too, a Supabase admin uses the workaround above.
 4. **"Too many sign-in attempts":** wait a minute.
 5. **Can't get into Supabase itself** (needed for 3): Lauren is a Supabase admin and can do those steps. If neither of you can sign in to Supabase, contact Supabase support.
