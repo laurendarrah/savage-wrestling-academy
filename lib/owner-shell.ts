@@ -40,6 +40,7 @@ export const OWNER_ICONS: Record<string, string> = {
   '/coach': '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   '/contracts': '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   '/lesson-settings': '<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+  '/lesson-calendar': '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 15h3"/>',
   '/timesheets': '<path d="M5 2h14M5 22h14M17 2v4l-5 6 5 6v4M7 2v4l5 6-5 6v4"/>',
   '/financials': '<path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17V9"/>',
   '/coach-pay': '<path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.6 7 6.8c0 4.7 10 2.4 10 7.2 0 2.3-2.2 3.5-5 3.5s-5-1.2-5-3"/>',

@@ -1,0 +1,79 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lesson calendar | Savage Wrestling Academy</title><style>
+/* The lesson calendar (issue #390): on the design system in public/savage.css; this is the page's own layout. The
+   month as a grid of days, each with its lesson count; the chosen day's lessons below, each with who is booked, Public
+   or Private, and the link to send a parent. */
+*{box-sizing:border-box}body{margin:0}main{max-width:1000px;margin:auto;padding:20px 16px 60px}
+[hidden]{display:none!important}.muted{color:var(--swa-muted)}
+.bar{display:flex;flex-wrap:wrap;align-items:end;gap:var(--swa-s-12);margin:0 0 var(--swa-s-16)}.bar .month-picker{flex:0 1 320px}
+#status{margin:0 0 var(--swa-s-12);font-weight:600;font-size:var(--swa-t-15)}
+#summary{margin:0 0 var(--swa-s-12);font-size:var(--swa-t-15)}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--swa-line);border:1px solid var(--swa-line);border-radius:var(--swa-r-card);overflow:hidden;margin:0 0 var(--swa-s-24)}
+.wd{background:var(--swa-surface);padding:6px 8px;font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--swa-muted)}
+.day{background:var(--swa-surface);min-height:84px;padding:6px 8px;min-width:0;border:0;border-radius:0;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:4px;font:inherit;color:var(--swa-ink);cursor:default}
+button.day{cursor:pointer}button.day:hover{background:var(--swa-surface-2)}
+.day.blank{background:var(--swa-surface-2)}
+.day .n{font-weight:700;font-size:var(--swa-t-15)}.day.today .n{color:var(--swa-red-dark)}
+.day[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--swa-ink)}
+.day .count{font-size:var(--swa-t-13);font-weight:600;line-height:1.3}.day .count small{display:block;font-weight:400;color:var(--swa-muted)}
+.day .hol{font-size:11px;color:var(--swa-muted);line-height:1.2}
+#dayTitle{margin:0 0 var(--swa-s-12)}
+#dayList{display:grid;gap:var(--swa-s-12)}
+.lesson h3{margin:0 0 4px;font-size:var(--swa-t-17);display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.lesson p{margin:0 0 6px;font-size:var(--swa-t-15);overflow-wrap:anywhere}
+.lesson .acts{display:flex;flex-wrap:wrap;gap:var(--swa-s-8);margin-top:var(--swa-s-12)}
+.lesson .link{display:flex;flex-wrap:wrap;gap:var(--swa-s-8);align-items:end;margin-top:var(--swa-s-12)}.lesson .link label{flex:1 1 260px;display:grid;gap:4px;font-size:var(--swa-t-13);font-weight:600}.lesson .link input{width:100%}
+@media(max-width:640px){.day{min-height:56px;padding:4px}.day .count{font-size:11px;line-height:1.2}.day .count small,.day .hol{display:none}.wd{padding:4px;font-size:10px;letter-spacing:.5px}.lesson .acts>button{flex:1 1 100%}}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Lesson calendar</h1>
+<p class="muted">Every coach’s private lesson times, by day. <strong>Public</strong> times show for families on Book a private lesson, and open ones on the public calendar. <strong>Private</strong> times show nowhere: only someone with the lesson’s link can book it. Copy a lesson’s link to send it to a parent; it works for Public and Private times. Coaches add their times on coach home, and you can add them for a coach from Coaches → Lesson openings.</p>
+<div class="bar"><div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="month"></select></label><button type="button" class="month-step" id="next" aria-label="Next month">→</button></div></div>
+<p id="status" role="status" aria-live="polite">Loading…</p><p id="summary"></p>
+<div id="grid" class="grid" role="group" aria-label="Days with lessons"></div>
+<section id="day" aria-labelledby="dayTitle" hidden><h2 id="dayTitle"></h2><div id="dayList"></div></section>
+</main><script src="/month-picker.js"></script><script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clock=t=>{if(!t)return '';const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
+const longDay=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'long',month:'long',day:'numeric'});
+const plural=(n,one,many=one+'s')=>n+' '+(n===1?one:many);
+const picker={select:$('month'),prev:$('prev'),next:$('next')};
+let data=null,chosen='',links={};
+async function call(body,query=''){const r=await fetch('/api/lesson-calendar'+query,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
+const say=t=>{$('status').textContent=t;if(t&&typeof swaToast==='function')swaToast(t)};
+// One day's cell: its number, how many lessons and how many are booked. A day with lessons is a button.
+function cell(date){const list=data.lessons.filter(l=>l.date===date),n=Number(date.slice(8)),hol=(data.holidays||[]).filter(h=>h.date===date).map(h=>h.name).join(', ');
+ const cls='day'+(date===data.today?' today':''),head='<span class="n">'+n+'</span>'+(hol?'<span class="hol">'+esc(hol)+'</span>':'');
+ if(!list.length)return '<div class="'+cls+'">'+head+'</div>';
+ const booked=list.filter(l=>l.booked.length).length,hidden=list.filter(l=>l.private).length;
+ return '<button type="button" class="'+cls+'" data-day="'+date+'" aria-pressed="'+(date===chosen)+'" aria-label="'+esc(longDay(date)+': '+plural(list.length,'lesson')+', '+booked+' booked')+'">'+head
+  +'<span class="count">'+plural(list.length,'lesson')+'<small>'+booked+' booked'+(hidden?' · '+hidden+' private':'')+'</small></span></button>'}
+function renderGrid(){const [y,m]=data.month.split('-').map(Number),days=new Date(Date.UTC(y,m,0)).getUTCDate(),offset=(new Date(data.month+'-01T12:00:00Z').getUTCDay()+6)%7;
+ $('grid').innerHTML=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>'<div class="wd">'+d+'</div>').join('')+Array.from({length:offset},()=>'<div class="day blank"></div>').join('')
+  +Array.from({length:days},(_,i)=>cell(data.month+'-'+String(i+1).padStart(2,'0'))).join('');
+ document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{chosen=b.dataset.day;render();if($('day').scrollIntoView)$('day').scrollIntoView({behavior:'smooth',block:'start'})})}
+// Who is in the lesson, as a short line.
+function bookedText(l){if(!l.booked.length)return l.capacity>1?plural(l.spotsLeft,'spot')+' left':'Open, nobody booked yet';
+ return 'Booked: '+l.booked.map(b=>b.wrestler+(b.status==='paid'?'':' (paying now)')).join(', ')+(l.capacity>1?' · '+plural(l.spotsLeft,'spot')+' left':'')}
+function lessonCard(l){const past=l.date<data.today,what=l.formatName||'Open time',type=l.familyGroup?'Family’s private group':l.private?'Private':'Public',tint=l.familyGroup||l.private?'neutral':'ok';
+ const head='<h3>'+esc(clock(l.start))+'–'+esc(clock(l.end))+' · '+esc(l.coach)+' <span class="pill '+tint+'">'+esc(type)+'</span></h3>';
+ const body='<p>'+esc(what)+(l.familyGroup?' · set up by '+esc(l.organizer):'')+'</p><p class="muted">'+esc(bookedText(l))+'</p>';
+ if(past)return '<article class="card lesson">'+head+body+'</article>';
+ if(l.familyGroup)return '<article class="card lesson">'+head+body+'<p class="muted">The family set this up and sends its invite link themselves. It shows to nobody else.</p></article>';
+ const link=links[l.id]?'<div class="link"><label>Link to send a parent<input readonly id="link-'+esc(l.id)+'" value="'+esc(links[l.id])+'"></label><button type="button" class="sm" data-copy="'+esc(l.id)+'">Copy again</button></div>':'';
+ return '<article class="card lesson">'+head+body+'<div class="acts"><button type="button" data-link="'+esc(l.id)+'">Copy link for parents</button><button type="button" class="quiet" data-flip="'+esc(l.id)+'" data-private="'+(l.private?'0':'1')+'">'+(l.private?'Make public':'Make private')+'</button></div>'+link
+  +'<p class="muted">'+(l.private?'Only someone with the link can book this time.':'Families can find and book this time'+(l.booked.length&&!l.spotsLeft?'; it is full.':'.'))+'</p></article>'}
+function renderDay(){const list=data.lessons.filter(l=>l.date===chosen);$('day').hidden=!chosen;if(!chosen)return;
+ $('dayTitle').textContent=longDay(chosen);$('dayList').innerHTML=list.length?list.map(lessonCard).join(''):'<p class="muted">No lessons on this day.</p>';
+ document.querySelectorAll('[data-flip]').forEach(b=>b.onclick=()=>flip(b.dataset.flip,b.dataset.private==='1'));
+ document.querySelectorAll('[data-link]').forEach(b=>b.onclick=()=>shareLink(b.dataset.link));
+ document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copy(b.dataset.copy))}
+function render(){const n=data.lessons.length,booked=data.lessons.filter(l=>l.booked.length).length,hidden=data.lessons.filter(l=>l.private).length;
+ $('summary').textContent=n?plural(n,'lesson time')+' · '+booked+' booked · '+hidden+' private':'No lesson times this month. Coaches add them on coach home.';
+ renderGrid();renderDay()}
+// The day to open first: the chosen one if it still has lessons, else today, else the first day with lessons.
+function firstDay(){const days=[...new Set(data.lessons.map(l=>l.date))];if(days.includes(chosen))return chosen;if(days.includes(data.today))return data.today;return days.find(d=>d>=data.today)||days[0]||''}
+async function load(month){$('status').textContent='Loading…';try{data=await call(null,month?'?month='+encodeURIComponent(month):'');if(typeof MonthPicker!=='undefined')MonthPicker.set(picker,data.month);chosen=firstDay();render();$('status').textContent=''}catch(e){$('status').textContent=e.message}}
+async function flip(id,makePrivate){try{await call({action:'visibility',id,private:makePrivate});await load(data.month);say(makePrivate?'Made private. Only someone with its link can book it.':'Made public. Families can find and book it.')}catch(e){say(e.message)}}
+async function copy(id){const input=$('link-'+id);if(!input)return;try{await navigator.clipboard.writeText(input.value);say('Link copied. Send it to the parent.')}catch{input.focus();input.select();say('The link is selected. Copy it and send it to the parent.')}}
+async function shareLink(id){try{const d=await call({action:'link',id});links[id]=d.url;renderDay();await copy(id)}catch(e){say(e.message)}}
+if(typeof MonthPicker!=='undefined')MonthPicker.wire(picker,load);
+load(new URLSearchParams(location.search).get('month')||'');
+</script></body></html>

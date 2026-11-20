@@ -8,7 +8,7 @@ export const BACKUP_PROJECT='appgprj_6ad13665e8c881918c12b096132b4cae';
 export const METADATA_SQL=`SELECT COALESCE((SELECT revision FROM academy_state WHERE id='academy'),0) AS academy, COALESCE((SELECT group_concat(token,'|') FROM (SELECT user_id||':'||revision AS token FROM family_accounts ORDER BY user_id)),'') AS families, COALESCE((SELECT json_group_array(json_array(id,user_id,date,start,end)) FROM (SELECT id,user_id,date,start,end FROM coach_openings ORDER BY id)),'[]') AS openings`;
 export type Row=Record<string,string|number|null>;
 // Lesson type, spots and private-group fields arrived with issue #177; files made before then do not have them.
-type Opening={id:string;user_id:string;date:string;start:string;end:string;coach_email?:string|null;format?:string|null;capacity?:number|null;closed?:number;invite_code?:string|null;organizer_id?:string|null;organizer_wrestlers?:string|null};
+type Opening={id:string;user_id:string;date:string;start:string;end:string;coach_email?:string|null;format?:string|null;capacity?:number|null;closed?:number;invite_code?:string|null;organizer_id?:string|null;organizer_wrestlers?:string|null;hidden?:number;share_code?:string|null};
 export type Backup={version:1|2|3;project:string;createdAt:string;academy:any;families:{user_id:string;email:string;payload:any}[];openings:Opening[];records?:Record<string,Row[]>;archive?:{security_events:Row[];truncated:boolean}};
 // Version 2 adds every other business table. Restore only re-creates rows that are missing by primary key
 // and never overwrites an existing row, so a backup cannot alter a signed agreement or a decided approval.
@@ -129,7 +129,7 @@ function validRow(r:any,spec:Col[],later:Record<string,string>={}){
 }
 export async function metadata(){return await env.DB!.prepare(METADATA_SQL).first<{academy:number;families:string;openings:string}>()}
 export async function fingerprint(value:unknown){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(value))))).map(b=>b.toString(16).padStart(2,'0')).join('')}
-const OPENING_COLS='id,user_id,date,start,end,coach_email,format,capacity,closed,invite_code,organizer_id,organizer_wrestlers';
+const OPENING_COLS='id,user_id,date,start,end,coach_email,format,capacity,closed,invite_code,organizer_id,organizer_wrestlers,hidden,share_code';
 export async function readCore():Promise<Backup>{
  const a=await env.DB!.prepare("SELECT payload FROM academy_state WHERE id='academy'").first<{payload:string}>();
  const families=await readAll<{user_id:string;email:string;payload:string}>('user_id,email,payload','family_accounts',['user_id'],ROW_LIMIT);
@@ -190,7 +190,9 @@ function validGroup(r:any){
  if(!groupFields.every(k=>k in r))return false;
  let kept:unknown=null;if(r.organizer_wrestlers!==null){try{kept=JSON.parse(r.organizer_wrestlers)}catch{return false}if(!Array.isArray(kept)||kept.length>6||!kept.every(identifier))return false}
  return (r.format===null||['one-on-one','partner','small-group'].includes(r.format))&&(r.capacity===null||(Number.isInteger(r.capacity)&&r.capacity>=1&&r.capacity<=6))&&(r.closed===0||r.closed===1)
-  &&(r.invite_code===null||(typeof r.invite_code==='string'&&/^[A-Za-z0-9_-]{32}$/.test(r.invite_code)))&&(r.organizer_id===null||identifier(r.organizer_id));
+  &&(r.invite_code===null||(typeof r.invite_code==='string'&&/^[A-Za-z0-9_-]{32}$/.test(r.invite_code)))&&(r.organizer_id===null||identifier(r.organizer_id))
+  // Public or Private and the owner's link (issue #390): in files made after they were added; older files leave them out.
+  &&(r.hidden===undefined||r.hidden===0||r.hidden===1)&&(r.share_code===undefined||r.share_code===null||(typeof r.share_code==='string'&&/^[A-Za-z0-9_-]{32}$/.test(r.share_code)));
 }
 // Every section a backup can hold, in restore order: the core, each record table, then the audit archive (checked, never
 // restored).
@@ -235,9 +237,11 @@ type Meta={academy:number;families:string;openings:string};
 // the id of the restore_staging row that holds it. Openings with lesson type, spots and private-group fields (issue #177)
 // are written with them; openings from older files leave those fields as they are.
 type Part={section:string;value:string;grouped:boolean};
+// Public or Private and the owner's link (issue #390) go with the group fields; a file made before them restores a time
+// as Public and keeps any link the site already has.
 function openingSql(grouped:boolean,src:string){
- const extra=grouped?','+groupFields.join(','):'',vals=grouped?','+groupFields.map(k=>k==='closed'?"COALESCE(json_extract(value,'$.closed'),0)":`json_extract(value,'$.${k}')`).join(','):'';
- return `INSERT INTO coach_openings(id,user_id,date,start,end,coach_email${extra}) SELECT json_extract(value,'$.id'),json_extract(value,'$.user_id'),json_extract(value,'$.date'),json_extract(value,'$.start'),json_extract(value,'$.end'),json_extract(value,'$.coach_email')${vals} FROM json_each(${src}) WHERE 1 ON CONFLICT(id) DO UPDATE SET user_id=excluded.user_id,date=excluded.date,start=excluded.start,end=excluded.end,coach_email=COALESCE(excluded.coach_email,coach_openings.coach_email)${grouped?','+groupFields.map(k=>`${k}=excluded.${k}`).join(','):''}`;
+ const extra=grouped?','+groupFields.join(',')+',hidden,share_code':'',vals=grouped?','+groupFields.map(k=>k==='closed'?"COALESCE(json_extract(value,'$.closed'),0)":`json_extract(value,'$.${k}')`).join(',')+",COALESCE(json_extract(value,'$.hidden'),0),json_extract(value,'$.share_code')":'';
+ return `INSERT INTO coach_openings(id,user_id,date,start,end,coach_email${extra}) SELECT json_extract(value,'$.id'),json_extract(value,'$.user_id'),json_extract(value,'$.date'),json_extract(value,'$.start'),json_extract(value,'$.end'),json_extract(value,'$.coach_email')${vals} FROM json_each(${src}) WHERE 1 ON CONFLICT(id) DO UPDATE SET user_id=excluded.user_id,date=excluded.date,start=excluded.start,end=excluded.end,coach_email=COALESCE(excluded.coach_email,coach_openings.coach_email)${grouped?','+groupFields.map(k=>`${k}=excluded.${k}`).join(',')+',hidden=excluded.hidden,share_code=COALESCE(excluded.share_code,coach_openings.share_code)':''}`;
 }
 const recordSql=(t:string,src:string)=>`INSERT OR IGNORE INTO ${t}(${cols(RECORD_TABLES[t])}) SELECT ${RECORD_TABLES[t].map(c=>LATER_COLUMNS[t]?.[c[0]]!==undefined?`COALESCE(json_extract(value,'$.${c[0]}'),'${LATER_COLUMNS[t][c[0]]}')`:`json_extract(value,'$.${c[0]}')`).join(',')} FROM json_each(${src})`;
 const groupedOpening=(o:any)=>!!o&&typeof o==='object'&&'closed' in o;

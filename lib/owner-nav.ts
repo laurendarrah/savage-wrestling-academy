@@ -31,7 +31,7 @@ const DOCUMENT_TABS: OwnerNavTab[] = [
 ];
 const APPROVAL_TABS: OwnerNavTab[] = [{href: '/approvals', label: 'SWA Advanced approvals'}, {href: '/scholarships', label: 'Scholarships'}, {href: '/transfers', label: 'Program transfers'}];
 const ACADEMY_TABS: OwnerNavTab[] = [{href: '/#programs', label: 'Programs & pricing'}, {href: '/#schedules', label: 'Schedules'}, {href: '/#events', label: 'Camps & events'}];
-const COACH_TABS: OwnerNavTab[] = [{href: '/staff', label: 'Coaches'}, {href: '/lesson-settings', label: 'Private lesson prices'}, {href: '/timesheets', label: 'Coach hours'}, {href: '/coach', label: 'Coach view'}];
+const COACH_TABS: OwnerNavTab[] = [{href: '/staff', label: 'Coaches'}, {href: '/lesson-calendar', label: 'Lesson calendar'}, {href: '/lesson-settings', label: 'Private lesson prices'}, {href: '/timesheets', label: 'Coach hours'}, {href: '/coach', label: 'Coach view'}];
 const MONEY_TABS: OwnerNavTab[] = [{href: '/financials', label: 'Income & expenses'}, {href: '/coach-pay', label: 'Coach pay'}];
 const CALENDAR_TABS: OwnerNavTab[] = [{href: '/#practice-calendar', label: 'Practice calendar'}, {href: '/curricula', label: 'Curricula'}];
 
@@ -52,7 +52,7 @@ export const OWNER_NAV: OwnerNavGroup[] = [
     {href: '/#programs', label: 'Programs, schedules & events', section: 'Programs & pricing', tabs: ACADEMY_TABS},
     {href: '/#schedules', label: 'Schedules', section: 'Schedules', under: '/#programs'},
     {href: '/#events', label: 'Camps & events', section: 'Camps & events', under: '/#programs'},
-    {href: '/staff', label: 'Coaches & lessons', also: ['/coach-openings', '/coach-profile', '/lesson-settings', '/timesheets'], tabs: COACH_TABS},
+    {href: '/staff', label: 'Coaches & lessons', also: ['/coach-openings', '/coach-profile', '/lesson-calendar', '/lesson-settings', '/timesheets'], tabs: COACH_TABS},
     {href: '/financials', label: 'Money', also: ['/coach-pay'], tabs: MONEY_TABS},
     {href: '/website', label: 'Public website'},
   ]},

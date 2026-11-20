@@ -351,6 +351,13 @@
       "when": 1795095309891,
       "tag": "0049_yellow_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "6",
+      "when": 1795202807309,
+      "tag": "0050_lesson_visibility",
+      "breakpoints": true
     }
   ]
 }

@@ -48,7 +48,7 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
     if (join !== null) {
       if (await rateLimited(request, 'lesson-invite:' + userId, 30)) return accountReply({error: 'Too many tries. Please wait a minute.'}, 429, headers);
       const o = await openingByInvite(join, today);
-      if (!o) return accountReply({...body, error: 'This invite link isn’t working. The lesson may have passed or been called off. Ask the family who sent it.'}, 404, headers);
+      if (!o) return accountReply({...body, error: 'This invite link isn’t working. The lesson may have passed, filled up or been called off. Ask whoever sent it for another time.'}, 404, headers);
       body.invite = await groupView(o, userId);
     }
   }

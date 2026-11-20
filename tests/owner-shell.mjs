@@ -68,7 +68,7 @@ const ownerRoutes = {
   '/accounts': '/accounts', '/account-setup': '/accounts', '/approvals': '/approvals', '/scholarships': '/approvals', '/waivers': '/cards',
   '/consent-forms': '/cards', '/transfers': '/approvals', '/practice-plans?date=2026-11-09&program=Elementary': '/#practice-calendar',
   '/curricula': '/#practice-calendar', '/website': '/website', '/staff': '/staff', '/coach-openings?email=coach%40example.test': '/staff',
-  '/coach-profile?email=coach%40example.test': '/staff', '/contracts': '/cards', '/lesson-settings': '/staff', '/timesheets': '/staff',
+  '/coach-profile?email=coach%40example.test': '/staff', '/contracts': '/cards', '/lesson-calendar': '/staff', '/lesson-settings': '/staff', '/timesheets': '/staff',
   '/financials': '/financials', '/coach-pay': '/financials', '/payment-setup': '/payment-setup', '/backups': '/backups', '/site-health': '/site-health',
   '/site-requests': '/site-requests', '/data-requests': '/data-requests', '/security-log': '/security-log', '/help/owner': '/help/owner', '/security': null,
 };

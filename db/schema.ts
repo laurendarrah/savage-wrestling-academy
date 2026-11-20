@@ -30,8 +30,12 @@ export const coachProfiles=sqliteTable("coach_profiles",{
 // never listed, joined only with invite_code (random, 192 bits). organizer_wrestlers holds the organising family's own
 // wrestlers, whose spots are kept for them until they are paid for.
 export const coachOpenings=sqliteTable("coach_openings",{id:text("id").primaryKey(),userId:text("user_id").notNull(),date:text("date").notNull(),start:text("start").notNull(),end:text("end").notNull(),coachEmail:text("coach_email"),
- format:text("format"),capacity:integer("capacity"),closed:integer("closed").notNull().default(0),inviteCode:text("invite_code"),organizerId:text("organizer_id"),organizerWrestlers:text("organizer_wrestlers")
-},t=>[uniqueIndex("coach_openings_invite").on(t.inviteCode)]);
+ format:text("format"),capacity:integer("capacity"),closed:integer("closed").notNull().default(0),inviteCode:text("invite_code"),organizerId:text("organizer_id"),organizerWrestlers:text("organizer_wrestlers"),
+ // Issue #390: hidden=1 is a Private lesson time, listed for no family and not on the public calendar; only its link
+ // (share_code) books it. share_code is the owner's link to send parents, for a Public or Private time. A family's
+ // private group keeps its own invite_code.
+ hidden:integer("hidden").notNull().default(0),shareCode:text("share_code")
+},t=>[uniqueIndex("coach_openings_invite").on(t.inviteCode),uniqueIndex("coach_openings_share").on(t.shareCode)]);
 export const securityEvents=sqliteTable("security_events",{id:text("id").primaryKey(),actor:text("actor").notNull(),action:text("action").notNull(),target:text("target").notNull(),createdAt:text("created_at").notNull()},
  t=>[index("security_events_created").on(t.createdAt,t.id)]);   // the Security activity page's keyset order (issue #274)
 export const recoverySnapshots=sqliteTable("recovery_snapshots",{id:text("id").primaryKey(),payload:text("payload").notNull(),createdAt:text("created_at").notNull()});

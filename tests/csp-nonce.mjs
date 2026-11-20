@@ -71,7 +71,7 @@ assert.equal(nonceApplies(new Headers({'Cache-Control': 'private, no-store'}), '
 const PAGES = {
   owner: ['/', '/roster', '/payments', '/messages', '/cards', '/accounts', '/account-setup', '/approvals', '/scholarships', '/waivers', '/consent-forms', '/transfers',
     '/practice-plans?date=2026-11-09&program=Elementary', '/curricula', '/website', '/staff', '/coach-openings?email=coach%40example.test', '/coach-profile?email=coach%40example.test',
-    '/contracts', '/lesson-settings', '/timesheets', '/financials', '/coach-pay', '/payment-setup', '/backups', '/site-health', '/site-requests', '/data-requests', '/security-log', '/help/owner', '/security'],
+    '/contracts', '/lesson-calendar', '/lesson-settings', '/timesheets', '/financials', '/coach-pay', '/payment-setup', '/backups', '/site-health', '/site-requests', '/data-requests', '/security-log', '/help/owner', '/security'],
   coach: ['/coach', '/coach-time', '/contract', '/help/coach'],
   family: ['/family', '/register', '/booking', '/lesson', '/inbox', '/pass', '/wrestler?id=w1', '/waiver', '/consent', '/scholarship', '/membership-terms'],
 };

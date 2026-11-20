@@ -255,8 +255,10 @@ $('interestButton').onclick=async()=>{if(!review||review.kind==='request'||inter
  finally{interestBusy=false}};
 function renderJoin(){
  const g=data.invite,mine=g.mine,free=(family.wrestlers||[]).filter(w=>!(g.booked||[]).includes(w.id));
- $('joinHeading').textContent=mine?'This is your group':'Join '+(g.organizer||'a family')+'’s group';
- $('joinInfo').innerHTML=`<div class="summary"><p><strong>Private ${esc(nameOf(g.format).toLowerCase())}</strong> with ${esc(g.coach)}</p><p>${esc(day(g.date))} · ${esc(clock(g.start))}–${esc(clock(g.end))}</p><p>${g.spotsLeft?spotsText(g.spotsLeft,g.capacity):'This group is full.'}${priced(g.format)?' · '+money(fmt(g.format).cents)+' per wrestler':''}</p></div>`+(mine?'<p class="calm">Its invite link and who has joined are under Your private groups below.</p>':(g.booked||[]).length?'<p class="calm">Your wrestler is booked into this group.</p>':'');
+ // A lesson time the academy shared (issue #390) is booked like any other: an open time is a one-on-one.
+ const f=g.shared?(g.format||'one-on-one'):g.format;
+ $('joinHeading').textContent=g.shared?'Book this lesson':mine?'This is your group':'Join '+(g.organizer||'a family')+'’s group';
+ $('joinInfo').innerHTML=`<div class="summary"><p><strong>${g.shared?esc(nameOf(f)):'Private '+esc(nameOf(f).toLowerCase())}</strong> with ${esc(g.coach)}</p><p>${esc(day(g.date))} · ${esc(clock(g.start))}–${esc(clock(g.end))}</p><p>${g.spotsLeft?spotsText(g.spotsLeft,g.capacity):g.shared?'This lesson is full.':'This group is full.'}${priced(f)?' · '+money(fmt(f).cents)+' per wrestler':''}</p></div>`+(mine?'<p class="calm">Its invite link and who has joined are under Your private groups below.</p>':(g.booked||[]).length?(g.shared?'<p class="calm">Your wrestler is booked into this lesson.</p>':'<p class="calm">Your wrestler is booked into this group.</p>'):'');
  // With more than one wrestler, the family chooses; nobody is picked for them (issue #273).
  const sel=$('joinWrestler'),before=sel.value,several=free.length>1;
  sel.innerHTML=(several?'<option value="">Choose a wrestler</option>':'')+free.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');sel.value=free.some(w=>w.id===before)?before:several?'':free[0]?.id||'';
