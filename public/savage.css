@@ -472,3 +472,11 @@ html body[data-swa-page="/wrestler"] .card.next h2.swa-label{color:var(--swa-dar
 html body[data-swa-page="/login"] h1{font-size:var(--swa-t-35);letter-spacing:-.3px}
 html body[data-swa-page="/login"] main>section.card{padding:var(--swa-s-24)}
 html body[data-swa-page="/login"] main::before{margin:0 auto var(--swa-s-16)}
+/* Delete after typing DELETE (issue #388, public/delete-confirm.js): what will happen, then type DELETE, then the red button. */
+html body .del-box{margin-top:var(--swa-s-12);padding:var(--swa-s-12) var(--swa-s-16);border:1px solid var(--swa-red);border-radius:var(--swa-r-control);background:var(--swa-red-soft)}
+html body .del-box .del-warn{margin:0 0 var(--swa-s-12);font-size:var(--swa-t-15);color:var(--swa-bad);overflow-wrap:anywhere}
+html body .del-box .del-label{display:grid;gap:6px;font-weight:600;font-size:var(--swa-t-15)}
+html body .del-box .del-input{max-width:220px;text-transform:uppercase;letter-spacing:1px}
+html body .del-box .del-row{display:flex;flex-wrap:wrap;gap:var(--swa-s-8);margin-top:var(--swa-s-12)}
+html body .del-box .del-note{margin:var(--swa-s-8) 0 0;font-weight:600;font-size:var(--swa-t-15)}html body .del-box .del-note:empty{display:none}
+@media(max-width:600px){html body .del-box .del-input{max-width:none}html body .del-box .del-row>button{flex:1 1 100%}}

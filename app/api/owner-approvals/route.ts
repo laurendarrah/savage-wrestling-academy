@@ -4,6 +4,7 @@ import {securityEvent} from '../../../lib/security-events';
 import {noticeApproval, quietly} from '../../../lib/notify';
 import {approvalAppliesSql} from '../../../lib/program-approval';
 import {withApi} from '../../../lib/api';
+import {confirmsDelete, TYPE_DELETE} from '../../../lib/delete-confirm';
 export const dynamic='force-dynamic';
 export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in required.'},403,auth.headers);
@@ -17,6 +18,21 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  if(!sameOrigin(request))return reply({error:'Invalid request origin.'},403);
  if(!request.headers.get('content-type')?.includes('application/json'))return reply({error:'JSON required.'},415);
  const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large.'},413);let input;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid request.'},400)}
+ // Delete a request for good (issue #388): the owner typed DELETE. The request, its private conversation and the
+ // notices about it go. An approved request's approval goes with it; the family can ask again and is not told.
+ if(input?.action==='delete'){
+  if(typeof input.id!=='string'||input.id.length>80)return reply({error:'Choose a request.'},400);
+  if(!confirmsDelete(input.confirm))return reply({error:TYPE_DELETE},400);
+  const a=await env.DB!.prepare('SELECT id,wrestler_name,status FROM program_approvals WHERE id=?').bind(input.id).first<{id:string;wrestler_name:string;status:string}>();
+  if(!a)return reply({error:'This request is already gone. Refresh the requests.'},404);
+  const [notices,messages,gone]=await env.DB!.batch([
+   env.DB!.prepare("DELETE FROM notifications WHERE substr(dedupe_key,1,length(?))=? OR substr(dedupe_key,1,length(?))=?").bind('approval:'+a.id+':','approval:'+a.id+':','approval-changed:'+a.id+':','approval-changed:'+a.id+':'),
+   env.DB!.prepare('DELETE FROM approval_messages WHERE approval_id=?').bind(a.id),
+   env.DB!.prepare('DELETE FROM program_approvals WHERE id=? RETURNING id').bind(a.id)]);
+  if(!gone.results.length)return reply({error:'This request is already gone. Refresh the requests.'},404);
+  await securityEvent(auth.user!.id,'program_approval_deleted',`${a.wrestler_name} · ${a.status}`);
+  return reply({ok:true,messages:Number(messages.meta?.changes??0),notices:Number(notices.meta?.changes??0)});
+ }
  if(!input||!['approved','declined'].includes(input.status)||typeof input.id!=='string'||input.id.length>80||typeof input.updatedAt!=='string'||input.updatedAt.length>40||!Number.isFinite(Date.parse(input.updatedAt)))return reply({error:'Choose a valid approval decision.'},400);
  const now=new Date(Math.max(Date.now(),Date.parse(input.updatedAt)+1)).toISOString();
  // Decidable while the request still applies to the wrestler (issue #271): the same name, in grades 7–12 today.
