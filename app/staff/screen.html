@@ -97,7 +97,10 @@ async function load(){try{state=await call();$('inviteDays').textContent=state.i
  $('invites').innerHTML=state.invites.map(inviteCard).join('');$('invitesBox').hidden=!state.invites.length;
  $('selfBody').innerHTML=selfHtml(state.self);bind()}catch(e){say(e.message)}}
 $('invitePrograms').innerHTML=checks('programs');
-$('inviteForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);$('sendInvite').disabled=true;try{const r=await call({action:'invite',name:f.get('name'),email:f.get('email'),programs:f.getAll('programs')});e.target.reset();showLink(r);await load();say('Invite created for '+r.invite.name+'.')}catch(error){say(error.message)}finally{$('sendInvite').disabled=false}};
+$('inviteForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);$('sendInvite').disabled=true;try{const r=await call({action:'invite',name:f.get('name'),email:f.get('email'),programs:f.getAll('programs')});e.target.reset();
+  // Someone who already has an account becomes a coach at once (issue #394): there is no link to send.
+  if(r.granted){await load();say(r.name+' already has an account, so they are a coach now. They land on coach home the next time they visit.');return}
+  showLink(r);await load();say('Invite created for '+r.invite.name+'.')}catch(error){say(error.message)}finally{$('sendInvite').disabled=false}};
 $('copyLink').onclick=async()=>{try{await navigator.clipboard.writeText($('inviteLink').value);say('Invite link copied.')}catch{$('inviteLink').select();say('Select and copy the invite link above.')}};
 load();
 </script></body></html>

@@ -52,6 +52,12 @@ export async function createInvite(input: any, ownerId: string) {
     env.DB!.prepare('INSERT INTO security_events(id,actor,action,target,created_at) VALUES (?,?,?,?,?)').bind(crypto.randomUUID(), ownerId, 'coach_invited', clean.email, at)
   ]);
   const row = (await env.DB!.prepare('SELECT * FROM coach_invites WHERE id=?').bind(id).first<InviteRow>())!;
+  // Someone who already has an account on the site (a family account exists only for a confirmed email) becomes a
+  // coach at once (issue #394): no link to send and nothing for them to do. They land on coach home next visit.
+  if (await env.DB!.prepare('SELECT 1 FROM family_accounts WHERE lower(email)=? LIMIT 1').bind(clean.email).first()) {
+    const granted = await grantInvite(id, ownerId);
+    if (granted.status === 200) return {status: 200, invite: inviteView(row), granted: true, name: row.name};
+  }
   return {status: 200, invite: inviteView(row), link: inviteLink(token), emailStatus: await emailInvite(row, token)};
 }
 
