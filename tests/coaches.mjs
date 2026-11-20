@@ -355,7 +355,7 @@ const ok = body => ({ok: true, status: 200, json: async () => body});
   // The owner navigation (the shell's sidebar, issue #261; folded in #283): Coaches & lessons opens /staff, and its
   // switch carries Coach view; Coach view also sits in the folded Settings & records group, leaving the shell.
   const navSource = readFileSync('lib/owner-nav.ts', 'utf8');
-  assert.match(navSource, /\{href: '\/staff', label: 'Coaches & lessons', also: \['\/coach-openings', '\/coach-profile', '\/lesson-settings', '\/timesheets'\], tabs: COACH_TABS\}/);
+  assert.match(navSource, /\{href: '\/staff', label: 'Coaches & lessons', also: \['\/coach-openings', '\/coach-profile', '\/lesson-calendar', '\/lesson-settings', '\/timesheets'\], tabs: COACH_TABS\}/);
   assert.match(navSource, /const COACH_TABS[^\n]*\{href: '\/staff', label: 'Coaches'\}[^\n]*\{href: '\/coach', label: 'Coach view'\}/);
   assert.match(navSource, /\{href: '\/coach', label: 'Coach view', leaves: true\}/);
 }

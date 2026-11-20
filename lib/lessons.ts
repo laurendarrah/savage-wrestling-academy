@@ -90,15 +90,17 @@ export function lessonSpots(format: unknown, spots: unknown): {format: string | 
 }
 
 export type Opening = {id: string; date: string; start: string; end: string; coach: string; coachEmail: string; format: string | null; capacity: number;
-  closed: boolean; inviteCode: string | null; organizerId: string | null; organizerWrestlers: string[]};
+  closed: boolean; inviteCode: string | null; organizerId: string | null; organizerWrestlers: string[];
+  // Issue #390: a Private time (hidden) is listed for no family; its link (shareCode) books it.
+  hidden: boolean; shareCode: string | null};
 export type Holder = {id: string; userId: string; wrestlerId: string; wrestler: string; status: string; email: string; family: string | null; pricing: string};
 
 // The coach's name is the one on their profile (issue #190), or their staff name until they save one.
-const SELECT = `SELECT o.id,o.date,o.start,o.end,o.format,o.capacity,o.closed,o.invite_code,o.organizer_id,o.organizer_wrestlers,COALESCE(p.display_name,s.name) AS coach,s.email AS coachEmail
+const SELECT = `SELECT o.id,o.date,o.start,o.end,o.format,o.capacity,o.closed,o.invite_code,o.organizer_id,o.organizer_wrestlers,o.hidden,o.share_code,COALESCE(p.display_name,s.name) AS coach,s.email AS coachEmail
   FROM coach_openings o JOIN staff_access s ON s.email=o.coach_email AND s.active=1 LEFT JOIN coach_profiles p ON p.email=s.email`;
 const opening = (r: any): Opening => ({id: r.id, date: r.date, start: r.start, end: r.end, coach: r.coach, coachEmail: r.coachEmail, format: r.format ?? null,
   capacity: Number.isInteger(r.capacity) && r.capacity > 0 ? r.capacity : 1, closed: r.closed === 1, inviteCode: r.invite_code ?? null,
-  organizerId: r.organizer_id ?? null, organizerWrestlers: r.organizer_wrestlers ? JSON.parse(r.organizer_wrestlers) : []});
+  organizerId: r.organizer_id ?? null, organizerWrestlers: r.organizer_wrestlers ? JSON.parse(r.organizer_wrestlers) : [], hidden: r.hidden === 1, shareCode: r.share_code ?? null});
 const upcoming = (o: {date: string; start: string}, today: string, nowMinutes: number) => o.date > today || (o.date === today && toMinutes(o.start) > nowMinutes);
 
 // Paid orders and checkouts in progress on each opening, oldest first.
@@ -123,10 +125,11 @@ function keptWrestlers(o: Opening, holders: Holder[], profile: any) {
 }
 export const spotsLeft = (o: Opening, holders: Holder[]) => Math.max(0, o.capacity - holders.length - keptWrestlers(o, holders, null).length);
 
-// Openings a family can still book: in the future, from an active coach, not a private group, with a spot left.
-// The owner (recording payments) also sees private groups. Invite codes are never included.
+// Openings a family can still book: in the future, from an active coach, not a private group, not a Private time
+// (issue #390), with a spot left. The owner (recording payments) also sees private groups and Private times. Invite
+// codes and links are never included.
 export async function openLessons(today: string, nowMinutes = academyMinutes(), opts: {includeClosed?: boolean} = {}) {
-  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.date>=? ${opts.includeClosed ? '' : 'AND o.closed=0'} ORDER BY o.date,o.start,coach`).bind(today).all<any>()).results
+  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.date>=? ${opts.includeClosed ? '' : 'AND o.closed=0 AND o.hidden=0'} ORDER BY o.date,o.start,coach`).bind(today).all<any>()).results
     .map(opening).filter(o => upcoming(o, today, nowMinutes));
   const holders = await lessonHolders(rows.map(o => o.id));
   const organizers = new Map<string, string>();
@@ -147,15 +150,19 @@ export async function lessonOpening(id: unknown, today: string, nowMinutes = aca
   return upcoming(o, today, nowMinutes) ? o : null;
 }
 const validCode = (code: unknown): code is string => typeof code === 'string' && /^[A-Za-z0-9_-]{32}$/.test(code);
+// A link opens a family's private group (its invite code) or a lesson time the owner shared (its share code, #390).
 export async function openingByInvite(code: unknown, today: string, nowMinutes = academyMinutes()): Promise<Opening | null> {
   if (!validCode(code)) return null;
-  const r = await env.DB!.prepare(`${SELECT} WHERE o.invite_code=? AND o.closed=1`).bind(code).first<any>();
+  const r = await env.DB!.prepare(`${SELECT} WHERE (o.invite_code=? AND o.closed=1) OR (o.share_code=? AND o.closed=0)`).bind(code, code).first<any>();
   if (!r) return null;
   const o = opening(r);
   return upcoming(o, today, nowMinutes) ? o : null;
 }
-// May this family book into this opening? A private group needs its organiser or its invite code.
-export const mayJoin = (o: Opening, userId: string, invite?: unknown) => !o.closed || o.organizerId === userId || (validCode(invite) && invite === o.inviteCode);
+// May this family book into this opening? A private group needs its organiser or its invite code; a Private time
+// (issue #390) needs its link. A Public time's link works as well as the list.
+export const mayJoin = (o: Opening, userId: string, invite?: unknown) => o.closed
+  ? o.organizerId === userId || (validCode(invite) && invite === o.inviteCode)
+  : !o.hidden || (validCode(invite) && invite === o.shareCode);
 
 // Is any spot in this opening taken by a paid lesson or held by a checkout in progress?
 export async function openingTaken(openingId: string) {
@@ -169,13 +176,14 @@ function inviteCode() {
 }
 
 // A private group as a family sees it. The organiser also gets the invite code and who has joined; an invited family
-// sees the lesson, who organised it and the spots left.
+// sees the lesson, who organised it and the spots left. A lesson time the academy shared (issue #390) is `shared`, with
+// no organiser.
 export async function groupView(o: Opening, userId: string) {
   const holders = (await lessonHolders([o.id])).get(o.id)!;
   const profile = o.organizerId ? await familyProfile(o.organizerId) : null;
-  const mine = o.organizerId === userId;
+  const mine = o.closed && o.organizerId === userId;
   return {id: o.id, date: o.date, start: o.start, end: o.end, coach: o.coach, format: o.format, capacity: o.capacity, spotsLeft: spotsLeft(o, holders),
-    organizer: profile?.parentName || 'A family', mine, booked: holders.filter(h => h.userId === userId).map(h => h.wrestlerId),
+    shared: !o.closed, organizer: o.closed ? profile?.parentName || 'A family' : null, mine, booked: holders.filter(h => h.userId === userId).map(h => h.wrestlerId),
     ...(mine ? {inviteCode: o.inviteCode, roster: [...holders.map(h => ({wrestler: h.wrestler, status: h.status === 'paid' ? 'paid' : 'paying', own: h.userId === userId})),
       ...keptWrestlers(o, holders, profile).map(k => ({wrestler: k.name, status: 'kept', own: true}))]} : {})};
 }
@@ -200,7 +208,7 @@ export async function requestGroup(userId: string, input: any, today: string): P
   const profile = await familyProfile(userId), wrestlers = ids.map(id => profile?.wrestlers.find(w => w.id === id));
   if (wrestlers.some(w => !w)) return {status: 404, error: 'Saved wrestler not found in your account.'};
   const o = await lessonOpening(input.openingId, today);
-  if (!o || o.closed || o.format !== null || await openingTaken(o.id)) return {status: 409, error: 'This lesson time is no longer available. Choose another time.'};
+  if (!o || o.closed || o.hidden || o.format !== null || await openingTaken(o.id)) return {status: 409, error: 'This lesson time is no longer available. Choose another time.'};
   const name = privateFormats.find(f => f.id === input.format)!.name;
   if (typeof (await lessonSettings()).prices[input.format] !== 'number') return {status: 409, error: `${name}s are not open for online booking yet. Contact the academy to arrange one.`};
   for (const w of wrestlers) {
@@ -324,7 +332,7 @@ export async function updateOpening(coach: CoachRef, input: any, who: Who = {}) 
 // parent's name and phone, as on the practice roster.
 export async function coachSchedule(coach: CoachRef, from = '', withEmail = false) {
   const rows = (await env.DB!.prepare(
-    `SELECT o.id,o.date,o.start,o.end,o.format,o.capacity,o.closed,o.organizer_id,o.organizer_wrestlers,f.payload AS organizer FROM coach_openings o
+    `SELECT o.id,o.date,o.start,o.end,o.format,o.capacity,o.closed,o.organizer_id,o.organizer_wrestlers,o.hidden,o.share_code,f.payload AS organizer FROM coach_openings o
      LEFT JOIN family_accounts f ON f.user_id=o.organizer_id WHERE (o.coach_email=? OR o.user_id=?) AND o.date>=? ORDER BY o.date,o.start`
   ).bind(...mine(coach), from).all<any>()).results;
   const holders = await lessonHolders(rows.map(r => r.id));
@@ -336,9 +344,57 @@ export async function coachSchedule(coach: CoachRef, from = '', withEmail = fals
     const old = list.length ? JSON.parse(list[0].pricing || '{}') : null;
     const format = o.format ?? (list.length ? old?.format ?? 'one-on-one' : null);
     return {id: r.id, date: r.date, start: r.start, end: r.end, format, formatName: format ? names.get(format) ?? old?.formatName ?? '' : '',
-      capacity: o.capacity, spotsLeft: spotsLeft(o, list), hosted: o.closed ? 'family' : o.format && o.capacity > 1 ? 'coach' : null,
+      capacity: o.capacity, spotsLeft: spotsLeft(o, list), hosted: o.closed ? 'family' : o.format && o.capacity > 1 ? 'coach' : null, private: o.closed || o.hidden,
       organizer: o.closed ? org?.parentName || 'A family' : null, partners: old?.partners ?? '',
       roster: [...list.map(h => ({wrestler: h.wrestler, parent: fam(h).parentName ?? '', phone: fam(h).phone ?? '', email: withEmail ? h.email : '', status: h.status === 'paid' ? 'paid' : 'paying'})),
         ...keptWrestlers(o, list, org).map(k => ({wrestler: k.name, parent: org?.parentName ?? '', phone: org?.phone ?? '', email: '', status: 'kept'}))]};
   });
+}
+
+// ---------- The lesson calendar (issue #390) ----------
+// Every coach's lesson times in a month, for the owner: who teaches, the lesson type, who is booked and the spots left,
+// Public or Private, and whether a family set it up as their private group (theirs, already private, no switch).
+export async function lessonCalendar(month: string) {
+  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.date>=? AND o.date<=? ORDER BY o.date,o.start,coach`).bind(month + '-01', month + '-31').all<any>()).results.map(opening);
+  const holders = await lessonHolders(rows.map(o => o.id)), names = new Map(privateFormats.map(f => [f.id, f.name]));
+  const organizers = new Map<string, string>();
+  for (const o of rows) if (o.closed && o.organizerId && !organizers.has(o.organizerId)) organizers.set(o.organizerId, (await familyProfile(o.organizerId))?.parentName || 'A family');
+  return rows.map(o => {
+    const list = holders.get(o.id)!, old = list.length ? JSON.parse(list[0].pricing || '{}') : null, format = o.format ?? (list.length ? old?.format ?? 'one-on-one' : null);
+    return {id: o.id, date: o.date, start: o.start, end: o.end, coach: o.coach, coachEmail: o.coachEmail, format, formatName: format ? names.get(format) ?? '' : '',
+      capacity: o.capacity, booked: list.map(h => ({wrestler: h.wrestler, status: h.status === 'paid' ? 'paid' : 'paying'})), spotsLeft: spotsLeft(o, list),
+      familyGroup: o.closed, organizer: o.closed ? organizers.get(o.organizerId!) ?? 'A family' : null, private: o.hidden || o.closed, shared: !!o.shareCode};
+  });
+}
+// Public lesson times with a spot left, for the public calendar (issue #390): the coach, the time and the lesson type.
+// No family, booking or link is ever in it.
+export async function publicLessons(month: string, today: string, nowMinutes = academyMinutes()) {
+  const rows = (await env.DB!.prepare(`${SELECT} WHERE o.date>=? AND o.date<=? AND o.date>=? AND o.closed=0 AND o.hidden=0 ORDER BY o.date,o.start,coach`).bind(month + '-01', month + '-31', today).all<any>()).results
+    .map(opening).filter(o => upcoming(o, today, nowMinutes));
+  const holders = await lessonHolders(rows.map(o => o.id)), names = new Map(privateFormats.map(f => [f.id, f.name]));
+  return rows.map(o => ({date: o.date, start: o.start, end: o.end, coach: o.coach, format: o.format ?? 'one-on-one', formatName: names.get(o.format ?? 'one-on-one') ?? '', spotsLeft: spotsLeft(o, holders.get(o.id)!)}))
+    .filter(o => o.spotsLeft > 0);
+}
+// Public or Private (issue #390), by the owner. A family's private group is theirs and already private.
+export async function setLessonPrivate(id: unknown, hidden: unknown): Promise<{status: number; error?: string; private?: boolean; when?: string; coach?: string}> {
+  if (typeof id !== 'string' || id.length > 80 || typeof hidden !== 'boolean') return {status: 400, error: 'Choose a lesson time.'};
+  const o = await env.DB!.prepare(`${SELECT} WHERE o.id=?`).bind(id).first<any>();
+  if (!o) return {status: 404, error: 'This lesson time is gone. Refresh the calendar.'};
+  if (o.closed === 1) return {status: 409, error: 'A family set this time up as their private group, so it is already private. Its invite link is theirs.'};
+  await env.DB!.prepare('UPDATE coach_openings SET hidden=? WHERE id=? AND closed=0').bind(hidden ? 1 : 0, id).run();
+  return {status: 200, private: hidden, when: dayTime(o.date, o.start), coach: o.coach};
+}
+// The link the owner sends parents to book a lesson time (issue #390). The code is made once and kept, so a link
+// already sent keeps working; it works for a Public or a Private time, until the lesson has passed or is removed.
+export async function lessonShareCode(id: unknown): Promise<{status: number; error?: string; code?: string}> {
+  if (typeof id !== 'string' || id.length > 80) return {status: 400, error: 'Choose a lesson time.'};
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const o = await env.DB!.prepare('SELECT closed,share_code FROM coach_openings WHERE id=?').bind(id).first<{closed: number; share_code: string | null}>();
+    if (!o) return {status: 404, error: 'This lesson time is gone. Refresh the calendar.'};
+    if (o.closed === 1) return {status: 409, error: 'A family set this time up as their private group. Its invite link is theirs to send.'};
+    if (o.share_code) return {status: 200, code: o.share_code};
+    const r = await env.DB!.prepare('UPDATE coach_openings SET share_code=? WHERE id=? AND share_code IS NULL AND closed=0 RETURNING share_code').bind(inviteCode(), id).first<{share_code: string}>();
+    if (r) return {status: 200, code: r.share_code};
+  }
+  return {status: 409, error: 'The link could not be made. Try again.'};
 }

@@ -151,6 +151,8 @@ function slotHtml(item){const s=item;
  }else if(roster.length){const r=roster[0];
   body=`<p><strong>Booked: ${esc(s.formatName)} with ${esc(r.wrestler)}</strong>${statusTag[r.status]?' <span class="tag pill warn">'+statusTag[r.status]+'</span>':''}${s.partners?'<br>Training partners: '+esc(s.partners):''}<br>Parent: ${esc(r.parent||'Not saved')}${r.phone?' · <a href="tel:'+esc(r.phone)+'">'+esc(r.phone)+'</a>':''}${r.email?' · '+esc(r.email):''}</p>`;
  }else body=`<p class="muted">${s.format==='one-on-one'?'Open for families to book a one-on-one.':'Open for families to book. A family can book a one-on-one or ask for a private partner or small group.'}</p>`;
+ // A time the owner made Private (issue #390) is booked only by its link.
+ if(s.private&&s.hosted!=='family')body+='<p class="kind muted">Private: the academy hid this time from families. Only someone with its link can book it.</p>';
  // The coach can change the type of their own lesson; once anyone is booked the type stays and spots can only cover them.
  const edit=s.hosted==='family'?'':`<details class="edit"><summary>Change lesson type</summary><div class="pair"><label>Lesson type<select data-edit-format="${esc(s.id)}">${formatOptions(s.format)}</select></label><label>Spots (small group)<select data-edit-spots="${esc(s.id)}">${[3,4,5,6].map(n=>`<option${n===(s.format==='small-group'?s.capacity:4)?' selected':''}>${n}</option>`).join('')}</select></label></div><button type="button" data-edit="${esc(s.id)}">Save lesson type</button></details>`;
  const remove=taken?'':`<button type="button" data-slot="${esc(s.id)}"${s.hosted==='family'?' data-family="1"':''}>Remove opening</button>`;

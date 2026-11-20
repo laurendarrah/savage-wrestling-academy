@@ -43,6 +43,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Practice plans and curricula | Owner writes and publishes plans; reusable curricula | `/practice-plans`, `/curricula` | |
 | Coach hours and time off | Clock in and out, corrections, owner approval, monthly file; time off tells same-program coaches (#193) | `/coach-time`, `/timesheets` | Coaches are contractors (#331): hours and amounts owed, no withholding |
 | Coach pay from lessons | Totals per coach at the owner's share, CSV (#75) | `/coach-pay` | |
+| Lesson calendar | Every coach's lesson times by day on Coaches & lessons; each time Public or Private; a link the owner sends parents to book a time; open Public times on the public calendar (#390) | `/lesson-calendar`, `/calendar` | Owner switches Public/Private; coaches' new times start Public |
 | Payments to coaches | The owner records each payment to a coach; every coach has a balance (approved practice pay plus lesson shares for lessons taught, less what was paid); payments are money out in the books; the dashboard shows money in, money out and what is still owed (#370) | `/coach-pay`, `/` | The site does not send money to coaches |
 | Removed coaches | Records kept 3 years, then deleted or anonymized by the daily job (#212) | `lib/coach-retention.ts` | |
 | **Running the academy** | | | |

@@ -108,6 +108,8 @@ const TITLES: Record<string, string> = {
   scholarship_revoked: 'Scholarship offer withdrawn',
   scholarship_ended: 'Scholarship ended',
   scholarship_deleted: 'Scholarship deleted',
+  lesson_made_private: 'Lesson time made private',
+  lesson_made_public: 'Lesson time made public',
 };
 const DISPUTE_REASONS: Record<string, string> = {fraudulent: 'the family says they did not make it', duplicate: 'the family says it was charged twice', product_not_received: 'the family says they did not get what they paid for',
   subscription_canceled: 'the family says the membership was canceled', unrecognized: 'the family did not recognise the charge', credit_not_processed: 'the family says a refund was promised', general: 'no reason given'};
@@ -144,7 +146,7 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
     }
     // A deleted request or scholarship (issue #388) is gone, so its line says what it was: "Sam Example · approved",
     // "Sam Example · Advanced · ended · signed".
-    case 'program_approval_deleted': detail = t; break;
+    case 'program_approval_deleted': case 'lesson_made_private': case 'lesson_made_public': detail = t; break;   // "Coach Dana · Mon, Nov 23 · 10:00 AM" (#390)
     case 'scholarship_deleted': { const [who = '', prog = '', ...was] = t.split(' · '); detail = [who, prog ? program(prog) : '', ...was].filter(Boolean).join(' · '); break; }
     case 'program_approval_requested': case 'program_approval_approved': case 'program_approval_declined':
       detail = names.approvals[t] ?? ''; break;

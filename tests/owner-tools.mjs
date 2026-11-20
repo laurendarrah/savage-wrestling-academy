@@ -47,12 +47,12 @@ assert.equal(new Set(Object.values(OWNER_ICONS)).size, Object.keys(OWNER_ICONS).
 // The pages inside the shell are exactly what they were before the fold (issue #261's list), plus Request a site
 // change (issue #361).
 assert.deepEqual([...OWNER_SHELL_PAGES].sort(), ['/', '/account-setup', '/accounts', '/approvals', '/backups', '/cards', '/coach-openings', '/coach-pay', '/coach-profile', '/consent-forms', '/contracts',
-  '/curricula', '/data-requests', '/financials', '/help/owner', '/lesson-settings', '/messages', '/payment-setup', '/payments', '/practice-plans', '/roster', '/scholarships', '/security', '/security-log',
+  '/curricula', '/data-requests', '/financials', '/help/owner', '/lesson-calendar', '/lesson-settings', '/messages', '/payment-setup', '/payments', '/practice-plans', '/roster', '/scholarships', '/security', '/security-log',
   '/site-health', '/site-requests', '/staff', '/timesheets', '/transfers', '/waivers', '/website']);
 
 // ---------- Aliases: a merged page marks the item it lives under, and gets that item's switch ----------
 const marks = {'/waivers': '/cards', '/consent-forms': '/cards', '/contracts': '/cards', '/scholarships': '/approvals', '/transfers': '/approvals', '/account-setup': '/accounts',
-  '/lesson-settings': '/staff', '/timesheets': '/staff', '/coach-openings': '/staff', '/coach-profile': '/staff', '/coach-pay': '/financials', '/curricula': '/#practice-calendar', '/practice-plans': '/#practice-calendar',
+  '/lesson-calendar': '/staff', '/lesson-settings': '/staff', '/timesheets': '/staff', '/coach-openings': '/staff', '/coach-profile': '/staff', '/coach-pay': '/financials', '/curricula': '/#practice-calendar', '/practice-plans': '/#practice-calendar',
   '/payments': '/payments', '/security': null, '/nowhere': null};
 for (const [path, current] of Object.entries(marks)) assert.equal(currentOwnerHref(path), current, path);
 assert.equal(currentOwnerHref('/', '#schedules'), '/#programs', 'the Schedules section marks Programs, schedules & events');
@@ -65,7 +65,7 @@ assert.deepEqual(plain(ownerNavPlace('/')), {group: '', label: 'Dashboard'}, 'th
 assert.deepEqual(plain(ownerNavPlace('/cards')), {group: 'Families', label: 'Cards & documents'});
 assert.deepEqual(plain(ownerNavTabs('/consent-forms').map(t => t.href)), ['/cards', '/waivers', '/consent-forms', '/contracts'], 'the documents switch');
 assert.deepEqual(plain(ownerNavTabs('/transfers').map(t => t.label)), ['SWA Advanced approvals', 'Scholarships', 'Program transfers']);
-assert.deepEqual(plain(ownerNavTabs('/timesheets').map(t => t.href)), ['/staff', '/lesson-settings', '/timesheets', '/coach']);
+assert.deepEqual(plain(ownerNavTabs('/timesheets').map(t => t.href)), ['/staff', '/lesson-calendar', '/lesson-settings', '/timesheets', '/coach']);
 assert.deepEqual(plain(ownerNavTabs('/coach-pay').map(t => t.href)), ['/financials', '/coach-pay']);
 assert.deepEqual(plain(ownerNavTabs('/', '#events').map(t => t.href)), ['/#programs', '/#schedules', '/#events'], 'the academy sections switch between themselves');
 assert.deepEqual(plain(ownerNavTabs('/', '#practice-calendar').map(t => t.href)), ['/#practice-calendar', '/curricula']);
