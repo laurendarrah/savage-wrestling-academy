@@ -1397,7 +1397,8 @@ await step('owner moves through the owner shell with the sidebar: dashboard, Pay
 await step('backup export includes payments and signed waivers', async () => {
   const r = await api(owner, '/api/backups');
   const b = r.body?.backup;
-  expect(r.status === 200 && b?.version === 3 && b.records.orders.length >= 3 && b.records.waiver_signatures.length === 3 && b.records.wrestler_passes.length >= 1, 'backup export ' + r.status + ' ' + JSON.stringify(r.body).slice(0, 200));
+  // Signatures: Sam's waiver and consent form, Riley's waiver (signed to be checked in, #402) and the coach contract.
+  expect(r.status === 200 && b?.version === 3 && b.records.orders.length >= 3 && b.records.waiver_signatures.length === 4 && b.records.wrestler_passes.length >= 1, 'backup export ' + r.status + ' ' + JSON.stringify(r.body).slice(0, 200));
   // Restoring the same backup is accepted (real data passes validation) and changes nothing.
   const fp = (await api(owner, '/api/backups?mode=preview')).body.fingerprint;
   const back = await api(owner, '/api/backups', {action: 'restore', fingerprint: fp, backup: b});
