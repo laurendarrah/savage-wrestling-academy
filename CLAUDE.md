@@ -33,6 +33,7 @@ Known issues and priorities are in `docs/ISSUES.md` and `docs/LAUNCH_PLAN.md`.
 - Decisions live in issues labeled `needs-decision`. Never encode a business policy that is not decided there.
 - When a plan changes, update `docs/LAUNCH_PLAN.md` in the same pull request.
 - More than one person works here with their own Claude (Lauren and Justin). Before starting, check the open pull requests and issues labeled `in-progress`. If someone is already on it, don't start it; ask in the issue. Label your own issue `in-progress` when you start and remove the label if you stop.
+- No review step (#406): nobody waits for Lauren or Justin to review. Merge your own pull request once every check passes.
 - Rebase on `origin/main` right before opening a pull request, and again if another one merges first. Merge one pull request at a time and let its Deploy finish before the next, because a newer push to `main` cancels the older checks and skips that deploy.
 - Never overwrite the owner's saved settings with a data migration. A migration may only change rows that a setup migration wrote and nobody has saved since (match on `updated_by`).
 - Full process: `CONTRIBUTING.md`.

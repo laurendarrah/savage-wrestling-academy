@@ -92,7 +92,7 @@ Every change goes live through GitHub's **Deploy** workflow, and only after the 
 3. Database changes are add-only, so the older version keeps working with the current data.
 4. Tell whoever maintains the site what broke, and the time, so they can fix it and publish again.
 
-A Cloudflare rollback lasts only until the next Deploy, which publishes `main` again, bad change included. To undo the change for good, Lauren opens the merged pull request on GitHub and chooses **Revert**. That makes a new pull request; it goes through checks, review and Deploy like any other.
+A Cloudflare rollback lasts only until the next Deploy, which publishes `main` again, bad change included. To undo the change for good, Lauren opens the merged pull request on GitHub and chooses **Revert**. That makes a new pull request; it goes through checks and Deploy like any other.
 
 ## Data looks wrong or is missing
 
