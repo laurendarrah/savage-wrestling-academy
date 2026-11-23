@@ -15,7 +15,7 @@ html body [data-coach-clock] .cc-on{padding:10px 14px;border:1px solid var(--swa
 /* The month: the picker is its heading (the h2 stays for screen readers), then where the month stands in a sentence. */
 .month-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}.month-head .month-picker{flex:1 1 260px;max-width:360px}
 .month-head h2{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.state{margin:12px 0 0;font-weight:600}.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0 12px}
+.state{margin:12px 0 0;font-weight:600}.ready{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:12px 0 0;padding:12px;border:1px solid var(--swa-hair);border-radius:var(--swa-r-card);background:var(--swa-surface)}.ready p{margin:0;font-weight:600;flex:1 1 16ch;min-width:0}.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0 12px}
 /* Phones: paid time across the top, amount and shifts side by side under it, so no tile sits alone (issue #223). */
 @media(max-width:520px){.tiles{grid-template-columns:1fr 1fr}.tiles .tile:first-child{grid-column:1/-1}}
 html body .tile{box-shadow:none;border-color:var(--swa-line);border-radius:var(--swa-r-control,8px);padding:12px 16px}
@@ -71,6 +71,7 @@ main section{scroll-margin-top:76px}
 <section class="card" id="clock" data-coach-clock data-link="off" aria-labelledby="clockTitle"><h2 id="clockTitle">Clock in</h2><p class="muted">Loading your clock…</p></section>
 <section class="card" id="monthCard" aria-labelledby="monthTitle"><div class="month-head"><h2 id="monthTitle">This pay period</h2><div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous pay period">←</button><label class="month-pick"><span>Pay period</span><select id="period"></select></label><button type="button" class="month-step" id="next" aria-label="Next pay period">→</button></div></div>
 <p id="monthState" class="state" hidden></p>
+<div id="readyBox" class="ready" hidden><p id="readyText"></p><button type="button" class="primary" id="openReady"></button></div>
 <div id="monthTotals" hidden><div class="tiles"><div class="tile">Paid time<b id="tMinutes">–</b></div><div class="tile">Amount<b id="tAmount">–</b></div><div class="tile">Shifts<b id="tShifts">–</b></div></div>
 <ul id="breakdown" class="breakdown"></ul><p id="timeOffNote" class="muted" hidden></p></div>
 <div id="shifts"><span class="skeleton row"></span><span class="skeleton row"></span><span class="skeleton row"></span></div>
@@ -140,6 +141,8 @@ function noticesHtml(list,older){const first=list.slice(0,NOTICES_SHOWN),rest=li
  return first.map(noticeHtml).join('')+(rest.length?'<details class="older"><summary>Show '+rest.length+' earlier notice'+(rest.length===1?'':'s')+'</summary>'+rest.map(noticeHtml).join('')+'</details>':'')+(older?'<p class="muted">Showing your newest '+list.length+' notices. Older ones were emailed to you.</p>':'')}
 // A pay period with no shifts: one sentence that says what will show here, instead of three tiles of zeros.
 const noShiftsHtml=d=>'<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><p>No shifts in '+esc(d.label)+' yet. Clock in at practice and each shift shows here.</p></div>';
+// What the ready box says about the earlier pay period (issue #405).
+const readyText=r=>r.label+' is ready to send: '+r.shifts+' shift'+(r.shifts===1?'':'s')+' not sent yet.';
 let current=null,data=null;
 // The pay-period picker shared with /timesheets (public/period-picker.js, issue #399). A whole month (an older
 // ?month= link) is shown with the picker on its first pay period, and is sent one period at a time.
@@ -147,6 +150,8 @@ const picker={select:$('period'),prev:$('prev'),next:$('next')};
 function render(d){data=d;current=d.period||PeriodPicker.of(d.from);
  const any=!!d.totals.shifts;
  $('monthTitle').textContent=d.label;$('monthState').textContent=monthText(d);$('monthState').hidden=!any;$('monthTotals').hidden=!any;$('sendBox').hidden=!any;NOTES.forEach(id=>{$(id).textContent=''});PeriodPicker.set(picker,current,{max:[current,PeriodPicker.of(String(d.today||''))].sort().pop()});$('next').disabled=!d.next;
+ // Issue #405: an earlier pay period that has ended with shifts not sent yet (the 1st-15th, from the 16th on).
+ const ready=d.ready;$('readyBox').hidden=!ready;if(ready){$('readyText').textContent=readyText(ready);$('openReady').textContent='Open '+ready.label;$('openReady').onclick=()=>load(ready.period)}
  $('rates').textContent='Rates: '+d.rates.map(r=>r.label+' '+money(r.centsPerHour)+' an hour').join(', ')+'. Only the scheduled practice time is paid.';
  $('tMinutes').textContent=hoursText(d.totals.minutes);$('tAmount').textContent=money(d.totals.amountCents);$('tShifts').textContent=d.totals.shifts;
  $('breakdown').innerHTML=d.totals.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)}</span><span>${esc(hoursText(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('');
