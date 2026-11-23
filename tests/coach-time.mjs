@@ -445,4 +445,46 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   ctx.s = {...ctx.c.shifts[0], status: 'approved'};
   assert.doesNotMatch(vm.runInContext('shiftHtml(s)', ctx), /data-correct|data-remove/, 'approved shifts are changed only after undoing approval');
 }
-console.log('Coach timesheet tests passed: academy time across daylight saving, $40/$30 rates in one place, pay for scheduled practice time only in whole cents, flags (early, late, long, back to back, by hand, changed, open, time off), each half-month pay period sent only on or after its last day in New York time, coach fixes and removals with reasons, owner corrections audited before and after, removed shifts deleted (the coach emailed when the academy removes one), approval of exactly the reviewed shifts with amounts frozen, undo with a reason, the month file with lesson shares and neutral wording, owner-only access, and the clock card and page scripts.');
+// ---------- Issue #405: the pages open on the pay period that needs action ----------
+{
+  sqlite.prepare('DELETE FROM coach_time_entries').run();
+  const add = (id, date, sent) => sqlite.prepare(`INSERT INTO coach_time_entries(id,user_id,coach_email,coach_name,work_date,session_key,session_title,session_start,session_end,duty,source,clock_in,clock_out,submitted_at,history,created_at)
+    VALUES (?,'dana-uuid','dana.coach@example.test','Coach Dana',?,?,'SWA Intermediate','18:00','19:30','head','clock',?,?,?,'[]',?)`)
+    .run(id, date, `practice:Intermediate:${date}:18:00`, date + 'T23:00:00.000Z', date + 'T23:59:00.000Z', sent ? '2027-01-16T12:00:00.000Z' : null, date + 'T23:00:00.000Z');
+  const ok = x => { assert.equal(x.status ?? 200, 200, x.error); return x; };
+  const jan20 = at('2027-01-20T15:00:00Z');
+  // Nothing sent yet: the owner's page opens on today's pay period and nothing is waiting.
+  add('p-a', '2027-01-05', false); add('p-b', '2027-01-12', false); add('p-c', '2027-01-18', false);
+  let o = await S.ownerPeriod(null, null, jan20); deq([o.period, o.waiting], ['2027-01-2', null]);
+  // The coach, on Jan 20, is on Jan 16–31 (not sendable yet) and is offered Jan 1–15, which has ended with 2 shifts unsent.
+  let c = await S.coachPeriod(dana, null, jan20);
+  deq([c.period, c.canSubmit, c.ready], ['2027-01-2', false, {period: '2027-01-1', label: 'Jan 1–15, 2027', shifts: 2}]);
+  deq((await S.coachPeriod(dana, '2027-01-1', jan20)).ready, null, 'not offered while it is the period shown');
+  deq((await S.coachPeriod(dana, null, at('2027-01-10T15:00:00Z'))).ready, null, 'a period that has not ended is not offered');
+  ok(await S.submitPeriod(dana, 'dana-uuid', {period: '2027-01-1'}, jan20));
+  deq((await S.coachPeriod(dana, null, jan20)).ready, null, 'nothing left to send in an earlier period');
+  // The owner's page now opens on Jan 1–15, where the sent shifts are, and says what is waiting.
+  o = await S.ownerPeriod(null, null, jan20);
+  deq([o.period, o.label, o.waiting], ['2027-01-1', 'Jan 1–15, 2027', {period: '2027-01-1', label: 'Jan 1–15, 2027', shifts: 2}]);
+  assert.equal(o.coaches[0].state, 'submitted');
+  o = await S.ownerPeriod('2027-01-2', null, jan20); deq([o.period, o.waiting.period], ['2027-01-2', '2027-01-1'], 'a period asked for is the one shown');
+  o = await S.ownerPeriod('2027-01', null, jan20); deq([o.period, o.month], [null, '2027-01'], 'a whole month still opens as a month (the dashboard counts)');
+  // The coach page shows the offer and opens that pay period.
+  {
+    // Jan 16–31 is sent first, so the only earlier period with unsent shifts is Feb 1–15.
+    ok(await S.submitPeriod(dana, 'dana-uuid', {period: '2027-01-2'}, at('2027-02-17T15:00:00Z')));
+    const reply = await S.coachPeriod(dana, null, at('2027-02-17T15:00:00Z'));
+    add('p-d', '2027-02-03', false);
+    const data = {...(await S.coachPeriod(dana, null, at('2027-02-17T15:00:00Z'))), name: 'Coach Dana', owner: false, timeOffRequests: [], notices: [], olderNotices: false};
+    assert.equal(reply.ready, null); deq(data.ready, {period: '2027-02-1', label: 'Feb 1–15, 2027', shifts: 1});
+    const asked = [];
+    const {el} = page('app/coach-time/screen.html', async url => { asked.push(String(url)); return okJson(data); });
+    await settle(); await settle();
+    assert.equal(el('readyBox').hidden, false); assert.equal(el('readyText').textContent, 'Feb 1–15, 2027 is ready to send: 1 shift not sent yet.');
+    assert.equal(el('openReady').textContent, 'Open Feb 1–15, 2027');
+    el('openReady').onclick(); await settle();
+    assert.match(asked.at(-1), /\?period=2027-02-1$/);
+  }
+  assert.match(readFileSync('app/coach/screen.html', 'utf8'), /Your hours<small>Check your hours and send them<\/small>/);
+}
+console.log('Coach timesheet tests passed: academy time across daylight saving, $40/$30 rates in one place, pay for scheduled practice time only in whole cents, flags (early, late, long, back to back, by hand, changed, open, time off), each half-month pay period sent only on or after its last day in New York time, coach fixes and removals with reasons, owner corrections audited before and after, removed shifts deleted (the coach emailed when the academy removes one), approval of exactly the reviewed shifts with amounts frozen, undo with a reason, the month file with lesson shares and neutral wording, owner-only access, the clock card and page scripts, and pages that open on the pay period needing action (#405).');

@@ -105,7 +105,7 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   // The four doors (the shared .swa-door, as on the family calendar): where a coach goes next, each with one line.
   const doors = s.match(/<nav class="swa-doors four"[\s\S]*?<\/nav>/)[0];
   deq([...doors.matchAll(/<a class="swa-door" href="([^"]+)"><svg[^>]*>[\s\S]*?<\/svg>([^<]+)<small(?: id="\w+")?>([^<]+)<\/small><\/a>/g)].map(m => [m[2], m[1], m[3]]),
-    [['Lessons', '#lessons', 'Booked lessons and open times'], ['Your hours', '/coach-time', 'Check your month and send it'], ['Practice plans', '/practice-plans', 'Your month and shared plans'], ['Time off', '/coach-time#timeOff', 'Ask for days away']]);
+    [['Lessons', '#lessons', 'Booked lessons and open times'], ['Your hours', '/coach-time', 'Check your hours and send them'], ['Practice plans', '/practice-plans', 'Your month and shared plans'], ['Time off', '/coach-time#timeOff', 'Ask for days away']]);
   // The Account menu, as on the family home: the pages a coach opens now and then, and Sign out. No "More" row of loose links.
   const menu = s.match(/<details class="account-menu" id="accountMenu">([\s\S]*?)<\/details>/)[1];
   deq([...menu.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)].map(m => [m[2], m[1]]), [['Your profile', '/coach-profile'], ['Your contract', '/contract'], ['Coach help', '/help/coach'], ['Account security', '/security']]);

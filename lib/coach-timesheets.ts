@@ -59,6 +59,18 @@ function sessionsFor(state: any, dates: string[]) {
 async function entries(where: string, ...args: unknown[]) {
   return (await db().prepare(`SELECT ${ENTRY_COLUMNS} FROM coach_time_entries WHERE voided_at IS NULL AND (${where}) ORDER BY work_date,clock_in,id LIMIT 3001`).bind(...args).all<Entry>()).results;
 }
+// The earliest pay period with shifts in a state, and how many shifts are in it (issue #405), so a page can open on
+// the period that needs action instead of today's. `where` picks the state; `before` keeps it to periods before one.
+async function firstPeriodWith(where: string, args: unknown[], before?: string) {
+  const cut = before ? ' AND work_date<?' : '';
+  const first = await db().prepare(`SELECT min(work_date) AS d FROM coach_time_entries WHERE voided_at IS NULL AND ${where}${cut}`).bind(...args, ...(before ? [before] : [])).first<{d: string | null}>();
+  if (!first?.d) return null;
+  const period = periodOf(first.d);
+  const n = await db().prepare(`SELECT count(*) AS n FROM coach_time_entries WHERE voided_at IS NULL AND ${where} AND work_date BETWEEN ? AND ?`).bind(...args, periodStart(period), periodEnd(period)).first<{n: number}>();
+  return {period, label: periodLabel(period), shifts: Number(n?.n) || 0};
+}
+const SENT = 'clock_out IS NOT NULL AND submitted_at IS NOT NULL AND approved_at IS NULL';
+const UNSENT = 'clock_out IS NOT NULL AND submitted_at IS NULL AND approved_at IS NULL';
 async function approvedTimeOff(email: string | null, from: string, to: string) {
   const sql = `SELECT id,coach_email,coach_name,start_date,end_date FROM coach_time_off WHERE status='approved' AND start_date<=? AND end_date>=?${email ? ' AND coach_email=?' : ''} ORDER BY start_date`;
   return (await db().prepare(sql).bind(to, from, ...(email ? [email] : [])).all<TimeOff & {id: string; coach_email: string; coach_name: string}>()).results;
@@ -85,10 +97,14 @@ export async function coachPeriod(coach: Coach, input: unknown, now = new Date()
   const last = await db().prepare('SELECT duty FROM coach_time_entries WHERE coach_email=? ORDER BY created_at DESC LIMIT 1').bind(coach.email).first<{duty: string}>();
   const choices = choicesOn(state, today, coach.programs);
   const t = totals(views);
+  // An earlier pay period that has ended with shifts not sent yet (issue #405): from the 16th, the 1st-15th is one
+  // period back, so the page offers it instead of leaving the coach on a period they can't send yet.
+  const back = await firstPeriodWith(`coach_email=? AND ${UNSENT}`, [coach.email], periodStart(periodOf(today)));
+  const ready = back && back.period !== r.period ? back : null;
   return {
     period: r.period, month: r.month, label: r.label, from, to, today, ...steps(r, today, true),
     rates: rateList(), shifts: views, totals: t, state: monthState(t), canSubmit: !!r.period && canSubmitPeriod(r.period, today) && t.drafts > 0 && !t.open,
-    submitOpens: to, submitOpensText: fullDate(to), timeOff: off.map(timeOffView),
+    submitOpens: to, submitOpensText: fullDate(to), timeOff: off.map(timeOffView), ready,
     open: open ? shiftView(open, {sessions: sessionsFor(state, [open.work_date])}) : null,
     choices: choices.map(s => ({key: s.key, title: s.title, start: s.start, end: s.end})), suggested: suggestedChoice(choices, now.getTime()),
     lastDuty: isDuty(last?.duty) ? last!.duty : null, handMonths: [monthOf(today), addMonths(monthOf(today), -1)]
@@ -237,7 +253,11 @@ export async function submitPeriod(coach: Coach, userId: string, input: any, now
 
 // ---------- Owner ----------
 export async function ownerPeriod(input: unknown, coachInput: unknown, now = new Date()) {
-  const today = academyDay(now), r = hoursRange(input, today), {from, to} = r;
+  // Shifts sent by coaches and not approved yet, in any dates (issue #405). With no period asked for, the page opens on
+  // the earliest of them, so the shifts the dashboard counts are the ones on screen.
+  const waiting = await firstPeriodWith(SENT, []);
+  const today = academyDay(now), asked = validPeriod(input) || validMonth(input) ? input : waiting?.period;
+  const r = hoursRange(asked, today), {from, to} = r;
   const filter = typeof coachInput === 'string' && coachInput ? coachInput.toLowerCase() : null;
   const state = await academyState();
   const rows = await entries(filter ? 'work_date BETWEEN ? AND ? AND coach_email=?' : 'work_date BETWEEN ? AND ?', from, to, ...(filter ? [filter] : []));
@@ -259,7 +279,7 @@ export async function ownerPeriod(input: unknown, coachInput: unknown, now = new
   }).sort((a, b) => a.name.localeCompare(b.name));
   const sum = (f: (c: typeof coaches[number]) => number) => coaches.reduce((n, c) => n + f(c), 0);
   return ok({
-    period: r.period, month: r.month, label: r.label, from, to, today, ...steps(r, today, false), rates: rateList(), coach: filter,
+    period: r.period, month: r.month, label: r.label, from, to, today, ...steps(r, today, false), rates: rateList(), coach: filter, waiting,
     coaches, choices: staff.map(s => ({email: s.email, name: s.name, active: s.active === 1})),
     overall: {minutes: sum(c => c.totals.minutes), practiceCents: sum(c => c.totals.amountCents), approvedCents: sum(c => c.shifts.filter(v => v.status === 'approved').reduce((n, v) => n + v.amountCents, 0)),
       lessonCents: sum(c => c.lessons?.owedCents ?? 0), waiting: sum(c => c.totals.submitted), notSent: sum(c => c.totals.drafts + c.totals.open), flagged: sum(c => c.totals.flagged)}
