@@ -3,8 +3,7 @@
 import {env} from 'cloudflare:workers';
 import {publicSchedule} from './public-schedule';
 import {cardStatus, type CardStatus} from './usaw';
-import {currentWaiver} from './waivers';
-import {CARRIED_NAME, LIVE_SIGNATURE, SIGNATURE_JOIN, signatureCounts} from './documents';
+import {CARRIED_NAME, DOCUMENTS, FAMILY_KINDS, LIVE_SIGNATURE, SIGNATURE_JOIN, currentVersion, signatureCounts, type Kind} from './documents';
 import {PROGRAM_ON} from './transfers';
 import {fullDate} from './datetime';
 import {programName} from './program-names';
@@ -15,7 +14,7 @@ export type Session = {key: string; type: 'practice' | 'live' | 'event'; title: 
 // received button; 'paid' shows when it was collected and by whom ("Received by Coach Dana · 6:05 PM", issue #250: the
 // coach's display name, never an email). An unpaid booking can still be checked in.
 export type CashInfo = {bookingId: string; status: 'due' | 'paid'; cents: number; orderId: string | null; collectedAt: string | null; collectedBy: string | null};
-export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; exceptions: string[]; checkInBlocked: string | null; cash: CashInfo | null};
+export type Entry = {userId: string; wrestlerId: string; name: string; grade: string | null; parentName: string | null; phone: string | null; email: string | null; sources: string[]; checkedInAt: string | null; checkedInBy: string | null; card: CardStatus['state']; cardExpires: string | null; cardNote: string; waiverSigned: boolean | null; consentSigned: boolean | null; documentsMissing: Kind[]; exceptions: string[]; cardBlock: string | null; checkInBlocked: string | null; cash: CashInfo | null};
 export const PAY_AT_ACADEMY = 'Pay at the academy';
 // The cash booking key for a session: walk-ins name the program and date, extra practices and events (#273) their id. A
 // program has one practice a day, so the start time is left out (issue #272): the owner moving a practice's time keeps its
@@ -67,7 +66,8 @@ export function sessionsOn(state: any, date: string): Session[] {
 // the same answer as cardVerification() in lib/usaw.ts, with the day's reviews loaded in one query in rosterFor(). A
 // missing, expired, rejected or not-yet-verified card blocks check-in. The owner's card exception (issue #89), which lets
 // a wrestler book despite the card, also lets them be checked in on the dates it covers, exactly as it does for booking.
-// Returns the plain reason staff see, or null when check-in is allowed.
+// Returns the plain reason staff see about the card, or null when the card allows check-in. The cards page counts only
+// this (lib/usaw.ts blocksToday); the roster adds the documents below (documentBlock, checkInBlocked).
 export function checkInBlock(e: Pick<Entry, 'name' | 'card' | 'cardExpires' | 'cardNote' | 'exceptions'>, scope: Scope): string | null {
   if (e.card === 'verified' || e.exceptions.includes('usaw')) return null;
   const why = e.card === 'missing' ? 'there is no USA Wrestling card on file'
@@ -80,6 +80,18 @@ export function checkInBlock(e: Pick<Entry, 'name' | 'card' | 'cardExpires' | 'c
   return `${e.name} can't be checked in: ${why}. ` + (scope.role === 'owner'
     ? (check ? 'Check it and mark it verified on the USA Wrestling cards page.' : 'The family needs to update the card. To let the wrestler in meanwhile, allow an exception on the USA Wrestling cards page.')
     : (check ? 'Ask the owner to verify the card.' : 'Ask the family to update the card, or the owner to allow an exception.'));
+}
+
+// Signed documents at check-in (Justin's decision of Nov 9, confirmed Nov 23 on #246; issue #402): a wrestler is checked
+// in at any practice, camp, clinic, Friday Night Live or event only when every family document in force (the waiver and
+// the Parent Consent Form, lib/documents.ts FAMILY_KINDS) is signed for them. A document counts only while a version of it
+// is published. Unlike booking, no owner exception lets a wrestler in without it.
+export function documentBlock(e: {name: string; documentsMissing: Kind[]}, scope: Scope): string | null {
+  if (!e.documentsMissing.length) return null;
+  const names = e.documentsMissing.map(k => k === 'waiver' ? 'the waiver' : 'the ' + DOCUMENTS[k].name);
+  const list = names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  return `${e.name} can't be checked in: ${list} ${names.length === 1 ? 'is' : 'are'} not signed. `
+    + (scope.role === 'owner' ? 'A parent signs in their family account. No exception lets a wrestler in without it.' : 'Ask a parent to sign in their family account.');
 }
 
 // Coaches see their own programs' practices and, since issue #250, every extra practice (Friday Night Live and the like),
@@ -129,11 +141,14 @@ export async function rosterFor(date: string, scope: Scope) {
   for (const session of sessions) lists.push(await entitled(session));
   const userIds = [...new Set(lists.flat().map(r => r.userId))];
   // Everything per wrestler is loaded once for the whole day (issue #92), not queried entry by entry.
-  const ids = JSON.stringify(userIds), waiver = await currentWaiver();
+  // The family documents in force today, each with its published version (issue #402).
+  const docs = (await Promise.all(FAMILY_KINDS.map(async kind => ({kind, version: await currentVersion(kind)}))))
+    .filter((d): d is {kind: Kind; version: NonNullable<Awaited<ReturnType<typeof currentVersion>>>} => !!d.version);
+  const ids = JSON.stringify(userIds), versionIds = JSON.stringify(docs.map(d => d.version.id));
   const [fams, reviews, signed, exceptions, attendance, cashRows] = await env.DB!.batch([
     env.DB!.prepare('SELECT user_id,email,payload FROM family_accounts WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,number,expires,status,note,reviewed_at FROM usaw_reviews WHERE user_id IN (SELECT value FROM json_each(?))').bind(ids),
-    env.DB!.prepare(`SELECT s.user_id,s.wrestler_id,s.wrestler_name,${CARRIED_NAME} FROM waiver_signatures s ${SIGNATURE_JOIN} WHERE s.version_id=? AND s.user_id IN (SELECT value FROM json_each(?)) AND ${LIVE_SIGNATURE}`).bind(waiver?.id ?? '', ids),
+    env.DB!.prepare(`SELECT s.version_id,s.user_id,s.wrestler_id,s.wrestler_name,${CARRIED_NAME} FROM waiver_signatures s ${SIGNATURE_JOIN} WHERE s.version_id IN (SELECT value FROM json_each(?)) AND s.user_id IN (SELECT value FROM json_each(?)) AND ${LIVE_SIGNATURE}`).bind(versionIds, ids),
     env.DB!.prepare('SELECT user_id,wrestler_id,rule FROM booking_exceptions WHERE revoked_at IS NULL AND starts_on<=? AND ends_on>=? AND user_id IN (SELECT value FROM json_each(?))').bind(date, date, ids),
     env.DB!.prepare('SELECT session_key,user_id,wrestler_id,checked_in_at,checked_in_by FROM attendance WHERE session_date=?').bind(date),
     env.DB!.prepare(`SELECT b.id,b.kind,b.program,b.item_id,b.session_date,b.user_id,b.wrestler_id,b.amount_cents,b.status,b.order_id,o.paid_at,${collectorNameSql('o')} AS collected_by
@@ -142,9 +157,10 @@ export async function rosterFor(date: string, scope: Scope) {
   const families = new Map<string, any>((fams.results as any[]).map(r => [r.user_id, {email: r.email, ...JSON.parse(r.payload)}]));
   const review = new Map<string, any>((reviews.results as any[]).map(r => [`${r.user_id}|${r.wrestler_id}`, r]));
   // Signed for this wrestler (issue #271): the same entry, by the family's saved names (lib/documents.ts signatureCounts).
+  // Keyed by document version, so the waiver and the consent form are each checked against their own signatures.
   const signedBy = new Map<string, any[]>();
-  for (const r of signed.results as any[]) { const k = `${r.user_id}|${r.wrestler_id}`; if (!signedBy.has(k)) signedBy.set(k, []); signedBy.get(k)!.push(r); }
-  const hasSigned = (k: string, w: any, kids: any[]) => (signedBy.get(k) ?? []).some(s => signatureCounts(s, w, kids));
+  for (const r of signed.results as any[]) { const k = `${r.version_id}|${r.user_id}|${r.wrestler_id}`; if (!signedBy.has(k)) signedBy.set(k, []); signedBy.get(k)!.push(r); }
+  const hasSigned = (versionId: string, k: string, w: any, kids: any[]) => (signedBy.get(`${versionId}|${k}`) ?? []).some(s => signatureCounts(s, w, kids));
   const excepted = new Map<string, string[]>();
   for (const r of exceptions.results as any[]) { const k = `${r.user_id}|${r.wrestler_id}`; if (!excepted.has(k)) excepted.set(k, []); if (!excepted.get(k)!.includes(r.rule)) excepted.get(k)!.push(r.rule); }
   const checked = new Map<string, {checked_in_at: string; checked_in_by: string}>();
@@ -165,15 +181,20 @@ export async function rosterFor(date: string, scope: Scope) {
       const card = w ? cardStatus(w, review.get(k) ?? null, date) : {state: 'missing' as const, expires: '', note: ''};
       const entryExceptions = ['usaw', 'waiver'].filter(x => excepted.get(k)?.includes(x));
       const name = w?.name ?? r.name, ck = cashKey(session);
+      const signedNow = new Map(docs.map(d => [d.kind, hasSigned(d.version.id, k, {id: r.wrestlerId, name}, f?.wrestlers ?? [])]));
+      const documentsMissing = docs.filter(d => !signedNow.get(d.kind)).map(d => d.kind);
+      const cardBlock = checkInBlock({name, card: card.state, cardExpires: card.expires || null, cardNote: card.note, exceptions: entryExceptions}, scope);
+      const docBlock = documentBlock({name, documentsMissing}, scope);
       merged.set(k, {
         userId: r.userId, wrestlerId: r.wrestlerId, name, grade: w?.grade ?? null,
         parentName: f?.parentName || null, phone: f?.phone || null, email: scope.role === 'owner' ? f?.email ?? null : null,
         allergies: w?.allergies || null, emergencyName: f?.emergencyContactName || null, emergencyPhone: f?.emergencyContactPhone || null,
         sources: [r.source], checkedInAt: c?.checked_in_at ?? null, checkedInBy: scope.role === 'owner' ? c?.checked_in_by ?? null : null,
         card: card.state, cardExpires: card.expires || null, cardNote: card.note,
-        waiverSigned: waiver ? hasSigned(k, {id: r.wrestlerId, name}, f?.wrestlers ?? []) : null,
-        exceptions: entryExceptions,
-        checkInBlocked: checkInBlock({name, card: card.state, cardExpires: card.expires || null, cardNote: card.note, exceptions: entryExceptions}, scope),
+        waiverSigned: signedNow.has('waiver') ? signedNow.get('waiver')! : null, consentSigned: signedNow.has('parent_consent') ? signedNow.get('parent_consent')! : null,
+        documentsMissing, exceptions: entryExceptions, cardBlock,
+        // Both reasons when both apply: the card, then the documents.
+        checkInBlocked: [cardBlock, docBlock].filter(Boolean).join(' ') || null,
         cash: ck ? cashOf.get(`${ck}|${k}`) ?? null : null
       });
     }
@@ -183,7 +204,8 @@ export async function rosterFor(date: string, scope: Scope) {
   return result;
 }
 
-// Check-in only succeeds for a wrestler who is on that session's roster and whose USA Wrestling card allows it (#210).
+// Check-in only succeeds for a wrestler who is on that session's roster, whose USA Wrestling card allows it (#210) and
+// who has every family document in force signed (#402).
 // A walk-in booked to pay at the academy and not paid yet can be checked in (issue #248): cash is often handed over at the
 // door, so the amount due stays on the roster instead of blocking the wrestler.
 export async function checkIn(date: string, sessionKey: string, userId: string, wrestlerId: string, scope: Scope, actor: string) {
@@ -192,7 +214,7 @@ export async function checkIn(date: string, sessionKey: string, userId: string, 
   if (!session) return {status: 404, error: 'This session is not on your roster for that date.'};
   const entry = session.entries.find(e => e.userId === userId && e.wrestlerId === wrestlerId);
   if (!entry) return {status: 409, error: 'This wrestler is not registered or paid for this session.'};
-  if (entry.checkInBlocked) return {status: 409, error: entry.checkInBlocked, cardBlocked: true};
+  if (entry.checkInBlocked) return {status: 409, error: entry.checkInBlocked, cardBlocked: !!entry.cardBlock, documentsMissing: entry.documentsMissing};
   // Already checked in, possibly under the practice's earlier time: nothing to add.
   if (entry.checkedInAt) return {status: 200};
   await env.DB!.prepare('INSERT OR IGNORE INTO attendance(id,session_key,session_date,user_id,wrestler_id,wrestler_name,source,checked_in_at,checked_in_by) VALUES (?,?,?,?,?,?,?,?,?)')

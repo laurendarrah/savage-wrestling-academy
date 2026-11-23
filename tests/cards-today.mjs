@@ -114,8 +114,11 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
   const html = readFileSync('app/roster/screen.html', 'utf8'), script = html.slice(html.lastIndexOf('<script>') + 8, html.lastIndexOf('</script>'));
   const line = script.slice(script.indexOf('const cardsLink='), script.indexOf('\n', script.indexOf('const cardsLink=')));
   const ctx = {encodeURIComponent, data: {role: 'owner'}}; vm.runInNewContext('var data=this.data;' + line + ';this.cardsLink=cardsLink', ctx);
-  assert.equal(ctx.cardsLink({card: 'current', name: 'Riley Two'}), ' <a class="fix-link" href="/cards?show=waiting&q=Riley%20Two">Open USA Wrestling cards →</a>');
-  assert.equal(ctx.cardsLink({card: 'missing', name: 'Nico'}), ' <a class="fix-link" href="/cards?show=problems&q=Nico">Open USA Wrestling cards →</a>');
+  assert.equal(ctx.cardsLink({card: 'current', cardBlock: 'x', name: 'Riley Two'}), ' <a class="fix-link" href="/cards?show=waiting&q=Riley%20Two">Open USA Wrestling cards →</a>');
+  assert.equal(ctx.cardsLink({card: 'missing', cardBlock: 'x', name: 'Nico'}), ' <a class="fix-link" href="/cards?show=problems&q=Nico">Open USA Wrestling cards →</a>');
+  // Issue #402: unsigned forms link to their own pages; a card that is fine links nowhere.
+  assert.equal(ctx.cardsLink({card: 'verified', cardBlock: null, documentsMissing: ['waiver', 'parent_consent'], name: 'Nico'}), ' <a class="fix-link" href="/waivers">Open Waivers →</a> <a class="fix-link" href="/consent-forms">Open Parent Consent Forms →</a>');
+  assert.equal(ctx.cardsLink({card: 'verified', cardBlock: null, documentsMissing: [], name: 'Nico'}), '');
   ctx.data.role = 'coach'; vm.runInNewContext('data.role="coach"', ctx);
   assert.equal(ctx.cardsLink({card: 'current', name: 'Riley Two'}), '');
   assert.ok(script.includes('${esc(e.checkInBlocked)}${cardsLink(e)}'), 'shown with the reason');
