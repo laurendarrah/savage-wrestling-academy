@@ -1,7 +1,7 @@
-import {verifiedAccount,sameOrigin,accountReply} from '../../../lib/account-auth';
+import {verifiedAccount,sameOrigin,accountReply,appOrigin} from '../../../lib/account-auth';
 import {coachAccess} from '../../../lib/access-control';
 import {securityEvent} from '../../../lib/security-events';
-import {coachSchedule, updateOpening, addOpenings, removeOpening, claimOpenings, MAX_WEEKS, type CoachRef} from '../../../lib/lessons';
+import {coachSchedule, updateOpening, addOpenings, removeOpening, claimOpenings, setLessonPrivate, lessonShareCode, MAX_WEEKS, type CoachRef} from '../../../lib/lessons';
 import {profileView} from '../../../lib/coach-profile';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
@@ -29,6 +29,10 @@ export const POST = withApi(POST_); async function POST_(request:Request){
   await securityEvent(auth.user!.id,'coach_opening_removed');return reply({ok:true});
  }
  if(input?.action==='update'){const r=await updateOpening(me,input);if(r.status!==200)return reply({error:r.error},r.status);await securityEvent(auth.user!.id,'coach_opening_changed');return reply({ok:true})}
+ // Public or Private, and the link for parents, on the coach's own times (issue #397), as on the owner's Lesson calendar.
+ if(input?.action==='visibility'){const r=await setLessonPrivate(input.id,input.private,me);if(r.status!==200)return reply({error:r.error},r.status);
+  await securityEvent(auth.user!.id,r.private?'lesson_made_private':'lesson_made_public',`${r.coach} · ${r.when}`);return reply({ok:true,private:r.private})}
+ if(input?.action==='link'){const r=await lessonShareCode(input.id,me);if(r.status!==200)return reply({error:r.error},r.status);return reply({ok:true,url:appOrigin()+'/lesson?join='+encodeURIComponent(r.code!)})}
  if(input?.action!=='add')return reply({error:'Choose a valid date and times.'},400);
  const r=await addOpenings(me,input);if(r.status!==200)return reply({error:r.error},r.status);
  const weeks=Number(input.weeks)||1;

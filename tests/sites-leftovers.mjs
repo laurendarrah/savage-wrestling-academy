@@ -216,7 +216,7 @@ function page(file, {fetch, search = '', before = ''}) {
   Object.assign(p.el('date'), {value: '2026-12-01'}); Object.assign(p.el('start'), {value: '18:00'}); p.el('start').onchange(); assert.equal(p.el('end').value, '19:00', 'the end follows the start');
   p.el('format').value = 'small-group'; p.el('format').onchange(); assert.equal(p.el('spotsLabel').hidden, false); p.el('spots').value = '5'; p.el('weeks').value = '3'; p.el('weeks').onchange();
   assert.match(p.el('repeatHelp').textContent, /Adds 3 openings, one each week from Tue, Dec 1 to Tue, Dec 15/);
-  assert.deepEqual(plain(p.run('openingInput()')), {action: 'add', email: CORA, date: '2026-12-01', start: '18:00', end: '19:00', format: 'small-group', spots: 5, weeks: 3});
+  assert.deepEqual(plain(p.run('openingInput()')), {action: 'add', email: CORA, date: '2026-12-01', start: '18:00', end: '19:00', format: 'small-group', private: false, spots: 5, weeks: 3});
   await p.el('openingForm').onsubmit({preventDefault() {}}); await settle();
   assert.deepEqual(p.calls.find(c => c.body?.action === 'add').body.weeks, 3);
   assert.equal(p.el('status').textContent, '2 openings saved. Skipped Tue, Dec 1: it overlaps one of Cora Coach’s openings.');

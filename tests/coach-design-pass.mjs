@@ -144,7 +144,7 @@ function page(file, fetch, {hash = '', extra = {}} = {}) {
 {
   const s = read('app/coach-openings/screen.html'), home = read('app/coach/screen.html');
   for (const f of [s, home]) { assert.match(f, /Family-requested private group, organized by /); assert.doesNotMatch(f, /organised|cancelled/); }
-  assert.match(s, /return `<article\$\{roster\.length\?' class="booked"':''\}>\$\{when\}<div class="what">\$\{body\}\$\{edit\}\$\{remove\}<\/div><\/article>`;/);
+  assert.match(s, /return `<article\$\{roster\.length\?' class="booked"':''\}>\$\{when\}<div class="what">\$\{body\}\$\{shareHtml\(s,links\)\}\$\{edit\}\$\{remove\}<\/div><\/article>`;/);
   assert.match(s, /<span class="pill neutral spots">/); assert.doesNotMatch(s, /border-color:var\(--swa-ok\)/, 'a booked lesson is marked by its green bar, not a green outline');
   assert.match(s, /<div class="flow"><label>Lesson type<select id="format">[\s\S]*?<label>Repeat<select id="weeks">[\s\S]*?<\/label><\/div><p class="muted" id="repeatHelp" hidden><\/p>/);
 }
