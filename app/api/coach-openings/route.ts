@@ -4,9 +4,9 @@
 // stays the coach's: families book it with that coach, and the lesson's pay goes to that coach (lib/coach-pay.ts reads
 // the coach from the opening). Each change is in the security log, and the coach gets an email notice.
 import {env} from 'cloudflare:workers';
-import {ownerIdentity, sameOrigin, accountReply, OWNER_EMAIL} from '../../../lib/account-auth';
+import {ownerIdentity, sameOrigin, accountReply, OWNER_EMAIL, appOrigin} from '../../../lib/account-auth';
 import {securityEvent} from '../../../lib/security-events';
-import {coachSchedule, addOpenings, updateOpening, removeOpening, coachAccount, MAX_WEEKS, GROUP_SPOTS, type CoachRef} from '../../../lib/lessons';
+import {coachSchedule, addOpenings, updateOpening, removeOpening, coachAccount, setLessonPrivate, lessonShareCode, MAX_WEEKS, GROUP_SPOTS, type CoachRef} from '../../../lib/lessons';
 import {academyToday} from '../../../lib/public-schedule';
 import {notify, quietly} from '../../../lib/notify';
 import {dayDate, dayTime, clockTime} from '../../../lib/datetime';
@@ -73,6 +73,18 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
     await securityEvent(actor, 'owner_opening_removed', `${s.email} ${r.removed!.date} ${r.removed!.start}`);
     await tell(`The academy removed your lesson opening: ${when}`, `The academy removed your open lesson time on ${when}. Nobody had booked it.`);
     return reply({ok: true});
+  }
+  // Public or Private, and the link for parents (issues #390, #397), on this coach's times.
+  if (input.action === 'visibility') {
+    const r = await setLessonPrivate(input.id, input.private, coach);
+    if (r.status !== 200) return reply({error: r.error}, r.status);
+    await securityEvent(actor, r.private ? 'lesson_made_private' : 'lesson_made_public', `${r.coach} · ${r.when}`);
+    return reply({ok: true, private: r.private});
+  }
+  if (input.action === 'link') {
+    const r = await lessonShareCode(input.id, coach);
+    if (r.status !== 200) return reply({error: r.error}, r.status);
+    return reply({ok: true, url: appOrigin() + '/lesson?join=' + encodeURIComponent(r.code!)});
   }
   return reply({error: 'Choose add, update or remove.'}, 400);
 }

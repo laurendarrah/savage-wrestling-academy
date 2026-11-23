@@ -29,6 +29,9 @@ details.edit button{margin-top:12px}
 @media(min-width:720px){html body .list article{grid-template-columns:132px minmax(0,1fr);gap:8px 24px;padding:16px}.when{flex-direction:column;gap:2px}}
 @media(max-width:640px){#slots a[href^="tel:"]{display:inline-flex;align-items:center;min-height:44px;padding:0 4px}}
 .note{margin:12px 0 0;padding:10px 14px;border-left:3px solid var(--swa-silver);background:var(--swa-surface-2,#F8F9FA);border-radius:0 6px 6px 0;font-size:var(--swa-t-15,15px)}
+
+/* The link for parents (issue #397): read-only, full width, under the lesson's buttons. */
+.share-link{display:grid;gap:4px;margin:8px 0 0;font-size:var(--swa-t-13);font-weight:600}.share-link input{width:100%}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <a class="swa-back" href="/staff">← Coaches</a>
 <h1 id="heading">Lesson openings</h1>
@@ -38,7 +41,7 @@ details.edit button{margin-top:12px}
 <section aria-labelledby="addTitle"><h2 id="addTitle">Add a one-hour opening</h2>
 <form id="openingForm"><div class="three"><label>Date<input id="date" type="date" required></label><label>Start time<input id="start" type="time" required></label><label>End time<input id="end" type="time" required></label></div>
 <div class="flow"><label>Lesson type<select id="format"><option value="">Open time: families choose</option><option value="one-on-one">One-on-one only</option><option value="partner">Partner lesson: 2 wrestlers</option><option value="small-group">Small group: 3 to 6 wrestlers</option></select></label><label id="spotsLabel" hidden>Spots<select id="spots"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
-<label>Repeat<select id="weeks"><option value="1">Just this date</option></select></label></div><p class="muted" id="repeatHelp" hidden></p>
+<label>Repeat<select id="weeks"><option value="1">Just this date</option></select></label><label>Who can book<select id="visibility"><option value="public">Public: families see it</option><option value="private">Private: only by its link</option></select></label></div><p class="muted" id="repeatHelp" hidden></p>
 <button class="primary" id="save">Save opening</button></form>
 <p class="note">An open time is booked as a one-on-one, or a family can ask for it as a private partner or small group and invite other families. A partner or small-group lesson is listed for every family, one spot per wrestler, until it fills. The coach gets an email when you add or remove their openings.</p></section>
 <section aria-labelledby="listTitle"><h2 id="listTitle">Coming up</h2><p class="muted">Booked lessons first, then open times. An opening can be removed until a family books it.</p><div id="slots" class="list"></div></section>
@@ -66,12 +69,18 @@ function slotHtml(s){
   body=`<p><strong>Booked: ${esc(s.formatName)}</strong></p>${rosterHtml(roster)}`;
  }else body=`<p class="muted">${s.format==='one-on-one'?'Open for families to book a one-on-one.':'Open for families to book. A family can book a one-on-one or ask for a private partner or small group.'}</p>`;
  // A time the owner made Private (issue #390) is booked only by its link.
- if(s.private&&s.hosted!=='family')body+='<p class="kind muted">Private: hidden from families and the public calendar. Only someone with its link can book it. Change it on Lesson calendar.</p>';
+ if(s.private&&s.hosted!=='family')body+='<p class="kind muted">Private: hidden from families and the public calendar. Only someone with its link can book it.</p>';
  const edit=s.hosted==='family'?'':`<details class="edit"><summary>Change lesson type</summary><div class="pair"><label>Lesson type<select data-edit-format="${esc(s.id)}">${formatOptions(s.format)}</select></label><label>Spots (small group)<select data-edit-spots="${esc(s.id)}">${[3,4,5,6].map(n=>`<option${n===(s.format==='small-group'?s.capacity:4)?' selected':''}>${n}</option>`).join('')}</select></label></div><button type="button" data-edit="${esc(s.id)}">Save lesson type</button></details>`;
  const remove=taken?'':`<div class="actions"><button type="button" data-slot="${esc(s.id)}"${s.hosted==='family'?' data-family="1"':''}>Remove opening</button></div>`;
- return `<article${roster.length?' class="booked"':''}>${when}<div class="what">${body}${edit}${remove}</div></article>`;
+ return `<article${roster.length?' class="booked"':''}>${when}<div class="what">${body}${shareHtml(s,links)}${edit}${remove}</div></article>`;
 }
-function openingInput(){const f=$('format').value,w=Number($('weeks').value)||1;return {action:'add',email:coachEmail,date:$('date').value,start:$('start').value,end:$('end').value,format:f||null,...(f==='small-group'?{spots:Number($('spots').value)}:{}),...(w>1?{weeks:w}:{})}}
+// Public or Private, and the link for parents (issue #397), on each time except a family's own group.
+const links={};
+function shareHtml(s,known){if(s.hosted==='family')return '';
+ return `<div class="actions share"><button type="button" data-link="${esc(s.id)}">Copy link for parents</button><button type="button" class="quiet" data-flip="${esc(s.id)}" data-private="${s.hidden?'0':'1'}">${s.hidden?'Make public':'Make private'}</button></div>`
+  +(known[s.id]?`<label class="share-link">Link to send a parent<input readonly id="link-${esc(s.id)}" value="${esc(known[s.id])}"></label>`:'')}
+async function copyShare(id){const input=$('link-'+id);if(!input)return;try{await navigator.clipboard.writeText(input.value);say('Link copied. Send it to the parent.','ok')}catch{input.focus();input.select();say('The link is selected. Copy it and send it to the parent.','ok')}}
+function openingInput(){const f=$('format').value,w=Number($('weeks').value)||1;return {action:'add',email:coachEmail,date:$('date').value,start:$('start').value,end:$('end').value,format:f||null,private:$('visibility').value==='private',...(f==='small-group'?{spots:Number($('spots').value)}:{}),...(w>1?{weeks:w}:{})}}
 function repeatOptions(max){const n=Number(max)||1,sel=$('weeks');if(sel.dataset.max===String(n))return;const keep=sel.value||'1';sel.dataset.max=String(n);
  sel.innerHTML='<option value="1">Just this date</option>'+Array.from({length:n-1},(_,i)=>i+2).map(w=>`<option value="${w}">Every week for ${w} weeks</option>`).join('');sel.value=Number(keep)<=n?keep:'1';repeatHelp()}
 function repeatHelp(){const w=Number($('weeks').value)||1,d=$('date').value;$('repeatHelp').hidden=w<2;if(w<2)return;
@@ -85,6 +94,8 @@ function render(){
  const booked=data.openings.filter(s=>(s.roster||[]).length),open=data.openings.filter(s=>!(s.roster||[]).length);
  $('slots').innerHTML=[...booked,...open].map(slotHtml).join('')||'<p class="empty">No lessons or open times coming up. Add an opening above.</p>';
  document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>removeSlot(b.dataset.slot,!!b.dataset.family));
+ document.querySelectorAll('[data-flip]').forEach(b=>b.onclick=async()=>{try{const p=b.dataset.private==='1';await call('/api/coach-openings',{action:'visibility',email:coachEmail,id:b.dataset.flip,private:p});await load(coachEmail);say(p?'Made private. Only someone with its link can book it.':'Made public. Families can find and book it.','ok')}catch(e){say(e.message,'bad')}});
+ document.querySelectorAll('[data-link]').forEach(b=>b.onclick=async()=>{try{const d=await call('/api/coach-openings',{action:'link',email:coachEmail,id:b.dataset.link});links[b.dataset.link]=d.url;await load(coachEmail);await copyShare(b.dataset.link)}catch(e){say(e.message,'bad')}});
  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>saveType(b.dataset.edit));
 }
 async function removeSlot(id,family){if(!confirm(family?'A family asked for this time as a private group. Remove it and tell them it is called off?':'Remove this opening? Families can no longer book it.'))return;

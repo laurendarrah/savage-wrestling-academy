@@ -405,9 +405,9 @@ const myGroup = {id: 'pg', date: '2026-11-10', start: '09:30', end: '10:30', coa
   p.el('format').value = 'partner'; p.el('format').onchange(); assert.equal(p.el('spotsLabel').hidden, true);
   const fd = {date: '2026-11-12', start: '10:00', end: '11:00', format: 'small-group', spots: '5'};
   vm.runInContext('globalThis.FormData=function(){return Object.entries(globalThis.__fd)}', p.ctx); p.ctx.__fd = fd;
-  assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('openingInput({})', p.ctx))), {action: 'add', date: '2026-11-12', start: '10:00', end: '11:00', format: 'small-group', spots: 5});
+  assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('openingInput({})', p.ctx))), {action: 'add', date: '2026-11-12', start: '10:00', end: '11:00', format: 'small-group', private: false, spots: 5});
   p.ctx.__fd = {...fd, format: ''};
-  assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('openingInput({})', p.ctx))), {action: 'add', date: '2026-11-12', start: '10:00', end: '11:00', format: null});
+  assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext('openingInput({})', p.ctx))), {action: 'add', date: '2026-11-12', start: '10:00', end: '11:00', format: null, private: false});
 }
 
 // Payments: the owner picks the time or group (with spots left and private groups named), and the lesson type follows it.

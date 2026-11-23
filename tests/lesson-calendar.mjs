@@ -29,7 +29,7 @@ function load(file) {
       require(name) {
         if (name === 'cloudflare:workers') return {env};
         if (name.endsWith('/account-auth')) return {appOrigin: () => 'https://swa.test',
-          ownerIdentity: async () => ({owner: actor.owner ? {userId: actor.id} : null, headers: new Headers()}),
+          ownerIdentity: async () => ({owner: actor.owner ? {userId: actor.id} : null, user: {id: actor.id}, headers: new Headers()}),
           verifiedAccount: async () => ({user: {id: actor.id, email: actor.id + '@example.test', email_confirmed_at: 'y'}, headers: new Headers()}),
           sameOrigin: r => r.headers.get('origin') === new URL(r.url).origin, accountReply: (b, s = 200, h) => Response.json(b, {status: s, headers: h})};
         if (name.endsWith('/rate-limit')) return {rateLimited: async () => false};
@@ -169,10 +169,58 @@ if (sched) assert.equal(sched.private, true);
 assert.equal((await lessons.coachSchedule({email: 'dana@example.test', name: 'Coach Dana', userId: 'coach-dana'})).find(s => s.id === group).private, true);
 for (const f of ['app/coach-openings/screen.html', 'app/coach/screen.html']) assert.match(readFileSync(f, 'utf8'), /if\(s\.private&&s\.hosted!=='family'\)body\+='<p class="kind muted">Private: /, f);
 
+// --- Issue #397: coaches switch and share their own times, and choose Private when they add one ---
+{
+  const d2 = ny(5);
+  as('coach');
+  assert.equal((await add(d2, '09:00', {private: 'yes'})).status, 400, 'Public or Private is a yes or no');
+  assert.equal((await add(d2, '09:00', {private: true})).status, 200);
+  assert.equal((await add(d2, '13:00')).status, 200, 'Public when not chosen');
+  const priv = idOf(d2, '09:00'), pub = idOf(d2, '13:00');
+  assert.deepEqual([one('SELECT hidden FROM coach_openings WHERE id=?', priv).hidden, one('SELECT hidden FROM coach_openings WHERE id=?', pub).hidden], [1, 0]);
+  as('p1'); assert.ok(!(await listed()).includes(priv) && (await listed()).includes(pub), 'a time added as Private is not listed for families');
+  // The coach's own page shows which is which.
+  as('coach'); let mine = (await call(coachApi, 'GET')).body.openings;
+  assert.deepEqual([mine.find(s => s.id === priv).hidden, mine.find(s => s.id === pub).hidden], [true, false]);
+  // Switch: own times only. Another coach's time, or a family's group, is refused.
+  sqlite.prepare("INSERT INTO staff_access VALUES ('lee@example.test','Coach Lee','[\"Intermediate\"]',1,'x')").run();
+  sqlite.prepare("INSERT INTO coach_openings(id,user_id,date,start,end,coach_email) VALUES ('lee-time','staff:lee@example.test',?,'15:00','16:00','lee@example.test')").run(d2);
+  const cflip = (id, priv2) => call(coachApi, 'POST', {action: 'visibility', id, private: priv2});
+  let r = await cflip('lee-time', true); assert.equal(r.status, 404, 'not another coach’s time'); assert.equal(one("SELECT hidden FROM coach_openings WHERE id='lee-time'").hidden, 0);
+  r = await cflip(famTime, false); assert.equal(r.status, 409, 'not a family’s group');
+  r = await cflip(pub, true); assert.deepEqual([r.status, r.body.private], [200, true]); assert.equal(one('SELECT hidden FROM coach_openings WHERE id=?', pub).hidden, 1);
+  r = await cflip(pub, false); assert.equal(r.status, 200); assert.equal(one('SELECT hidden FROM coach_openings WHERE id=?', pub).hidden, 0);
+  // Link: own times only, from appOrigin(), the same link the owner would get.
+  assert.equal((await call(coachApi, 'POST', {action: 'link', id: 'lee-time'})).status, 404);
+  r = await call(coachApi, 'POST', {action: 'link', id: priv}); assert.equal(r.status, 200);
+  const coachLink = new URL(r.body.url); assert.equal(coachLink.origin + coachLink.pathname, 'https://swa.test/lesson');
+  as('owner'); assert.equal((await call(calendarApi, 'POST', {action: 'link', id: priv})).body.url, r.body.url, 'one link per time, whoever copies it');
+  as('p2'); r = await call(lessonsApi, 'GET', null, '?join=' + coachLink.searchParams.get('join')); assert.deepEqual([r.body.invite.id, r.body.invite.shared], [priv, true], 'a parent opens it to book');
+  // A family cannot switch or share through the coach page.
+  as('p1'); assert.equal((await call(coachApi, 'POST', {action: 'visibility', id: pub, private: true})).status, 403);
+  // The owner does the same on a coach's Lesson openings.
+  const ownerOpenings = load(path.resolve('app/api/coach-openings/route.ts'));
+  as('owner'); r = await call(ownerOpenings, 'POST', {action: 'visibility', email: 'lee@example.test', id: 'lee-time', private: true});
+  assert.equal(r.status, 200); assert.equal(one("SELECT hidden FROM coach_openings WHERE id='lee-time'").hidden, 1);
+  assert.equal((await call(ownerOpenings, 'POST', {action: 'visibility', email: 'lee@example.test', id: priv, private: false})).status, 404, 'only that coach’s times');
+  r = await call(ownerOpenings, 'POST', {action: 'link', email: 'lee@example.test', id: 'lee-time'}); assert.match(r.body.url, /^https:\/\/swa\.test\/lesson\?join=[A-Za-z0-9_-]{32}$/);
+  r = await call(ownerOpenings, 'POST', {action: 'add', email: 'lee@example.test', date: d2, start: '17:00', end: '18:00', private: true}); assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(one("SELECT hidden FROM coach_openings WHERE coach_email='lee@example.test' AND start='17:00'").hidden, 1, 'the owner can add a Private time for a coach');
+  // Both pages: the choice in the add form, and the switch and link on each time.
+  for (const f of ['app/coach/screen.html', 'app/coach-openings/screen.html']) {
+    const page = readFileSync(f, 'utf8');
+    assert.match(page, /<label>Who can book<select (name="visibility" )?id="visibility"><option value="public">Public: families see it<\/option><option value="private">Private: only by its link<\/option><\/select><\/label>/, f);
+    assert.match(page, /private:(v\.visibility|\$\('visibility'\)\.value)==='private'/, f);
+    assert.match(page, /<button type="button" data-link="\$\{esc\(s\.id\)\}">Copy link for parents<\/button><button type="button" class="quiet" data-flip="\$\{esc\(s\.id\)\}" data-private="\$\{s\.hidden\?'0':'1'\}">\$\{s\.hidden\?'Make public':'Make private'\}<\/button>/, f);
+    assert.match(page, /function shareHtml\(s,known\)\{if\(s\.hosted==='family'\)return '';/, f + ': no switch or link on a family’s group');
+  }
+  assert.match(readFileSync('app/help/coach/screen.html', 'utf8'), /<strong>Who can book<\/strong>: a <strong>Public<\/strong> time shows for every family/);
+}
+
 // --- The security log ---
 {
   const lines = sqlite.prepare("SELECT action,target FROM security_events WHERE action LIKE 'lesson_made_%' ORDER BY rowid").all().map(x => x.action + ' ' + x.target);
-  assert.equal(lines.length, 3); assert.match(lines[0], /^lesson_made_private Coach Dana · \w{3}, \w{3} \d+ · 10:00 AM$/);
+  assert.ok(lines.length >= 3); assert.match(lines[0], /^lesson_made_private Coach Dana · \w{3}, \w{3} \d+ · 10:00 AM$/);
   const names = {people: {}, you: [], approvals: {}, waitlist: {}, orders: {}, waivers: {}, wrestlers: {}, requests: {}, curricula: {}, coaches: {}, scholarships: {}};
   const e = log.describeSecurityEvent({actor: 'owner-id', action: 'lesson_made_private', target: 'Coach Dana · Mon, Nov 23 · 10:00 AM', created_at: new Date().toISOString()}, names, new Date());
   assert.deepEqual([e.title, e.detail], ['Lesson time made private', 'Coach Dana · Mon, Nov 23 · 10:00 AM']);

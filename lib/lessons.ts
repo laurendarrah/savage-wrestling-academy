@@ -279,9 +279,12 @@ export async function addOpenings(coach: CoachRef, input: any, who: Who = {}): P
   const weeks = input.weeks === undefined || input.weeks === null ? 1 : typeof input.weeks === 'string' && /^\d+$/.test(input.weeks) ? Number(input.weeks) : input.weeks;
   if (!Number.isInteger(weeks) || weeks < 1 || weeks > MAX_WEEKS) return {status: 400, error: `Repeat for 1 to ${MAX_WEEKS} weeks.`};
   const dates = Array.from({length: weeks}, (_, i) => addDays(input.date, 7 * i));
-  const insert = (date: string) => env.DB!.prepare(`INSERT INTO coach_openings (id,user_id,date,start,end,coach_email,format,capacity) SELECT ?,?,?,?,?,?,?,?
+  // Public or Private (issue #397): Public unless the coach chose Private.
+  if (input.private !== undefined && typeof input.private !== 'boolean') return {status: 400, error: 'Choose Public or Private.'};
+  const hidden = input.private === true ? 1 : 0;
+  const insert = (date: string) => env.DB!.prepare(`INSERT INTO coach_openings (id,user_id,date,start,end,coach_email,format,capacity,hidden) SELECT ?,?,?,?,?,?,?,?,?
     WHERE NOT EXISTS (SELECT 1 FROM coach_openings WHERE ${MINE} AND date=? AND start<? AND end>?) RETURNING date`)
-    .bind(crypto.randomUUID(), coach.userId, date, input.start, input.end, coach.email.toLowerCase(), type.format, type.capacity, ...mine(coach), date, input.end, input.start);
+    .bind(crypto.randomUUID(), coach.userId, date, input.start, input.end, coach.email.toLowerCase(), type.format, type.capacity, hidden, ...mine(coach), date, input.end, input.start);
   const results = await env.DB!.batch(dates.map(insert));
   const created = dates.filter((_, i) => (results[i] as any).results?.length), skipped = dates.filter(d => !created.includes(d));
   const theirs = who.byOwner ? `one of ${coach.name}’s existing openings` : 'one of your existing openings';
@@ -344,7 +347,7 @@ export async function coachSchedule(coach: CoachRef, from = '', withEmail = fals
     const old = list.length ? JSON.parse(list[0].pricing || '{}') : null;
     const format = o.format ?? (list.length ? old?.format ?? 'one-on-one' : null);
     return {id: r.id, date: r.date, start: r.start, end: r.end, format, formatName: format ? names.get(format) ?? old?.formatName ?? '' : '',
-      capacity: o.capacity, spotsLeft: spotsLeft(o, list), hosted: o.closed ? 'family' : o.format && o.capacity > 1 ? 'coach' : null, private: o.closed || o.hidden,
+      capacity: o.capacity, spotsLeft: spotsLeft(o, list), hosted: o.closed ? 'family' : o.format && o.capacity > 1 ? 'coach' : null, private: o.closed || o.hidden, hidden: o.hidden && !o.closed,
       organizer: o.closed ? org?.parentName || 'A family' : null, partners: old?.partners ?? '',
       roster: [...list.map(h => ({wrestler: h.wrestler, parent: fam(h).parentName ?? '', phone: fam(h).phone ?? '', email: withEmail ? h.email : '', status: h.status === 'paid' ? 'paid' : 'paying'})),
         ...keptWrestlers(o, list, org).map(k => ({wrestler: k.name, parent: org?.parentName ?? '', phone: org?.phone ?? '', email: '', status: 'kept'}))]};
@@ -375,22 +378,24 @@ export async function publicLessons(month: string, today: string, nowMinutes = a
   return rows.map(o => ({date: o.date, start: o.start, end: o.end, coach: o.coach, format: o.format ?? 'one-on-one', formatName: names.get(o.format ?? 'one-on-one') ?? '', spotsLeft: spotsLeft(o, holders.get(o.id)!)}))
     .filter(o => o.spotsLeft > 0);
 }
-// Public or Private (issue #390), by the owner. A family's private group is theirs and already private.
-export async function setLessonPrivate(id: unknown, hidden: unknown): Promise<{status: number; error?: string; private?: boolean; when?: string; coach?: string}> {
+// Public or Private (issue #390), by the owner, or by a coach for their own times (issue #397). A family's private
+// group is theirs and already private.
+export async function setLessonPrivate(id: unknown, hidden: unknown, coach?: CoachRef): Promise<{status: number; error?: string; private?: boolean; when?: string; coach?: string}> {
   if (typeof id !== 'string' || id.length > 80 || typeof hidden !== 'boolean') return {status: 400, error: 'Choose a lesson time.'};
-  const o = await env.DB!.prepare(`${SELECT} WHERE o.id=?`).bind(id).first<any>();
-  if (!o) return {status: 404, error: 'This lesson time is gone. Refresh the calendar.'};
+  const o = await env.DB!.prepare(`${SELECT} WHERE o.id=?${coach ? ' AND (o.coach_email=? OR o.user_id=?)' : ''}`).bind(id, ...(coach ? mine(coach) : [])).first<any>();
+  if (!o) return {status: 404, error: 'This lesson time is gone. Refresh the page.'};
   if (o.closed === 1) return {status: 409, error: 'A family set this time up as their private group, so it is already private. Its invite link is theirs.'};
   await env.DB!.prepare('UPDATE coach_openings SET hidden=? WHERE id=? AND closed=0').bind(hidden ? 1 : 0, id).run();
   return {status: 200, private: hidden, when: dayTime(o.date, o.start), coach: o.coach};
 }
-// The link the owner sends parents to book a lesson time (issue #390). The code is made once and kept, so a link
-// already sent keeps working; it works for a Public or a Private time, until the lesson has passed or is removed.
-export async function lessonShareCode(id: unknown): Promise<{status: number; error?: string; code?: string}> {
+// The link the owner, or a coach for their own times (issue #397), sends parents to book a lesson time (issue #390).
+// The code is made once and kept, so a link already sent keeps working; it works for a Public or a Private time,
+// until the lesson has passed or is removed.
+export async function lessonShareCode(id: unknown, coach?: CoachRef): Promise<{status: number; error?: string; code?: string}> {
   if (typeof id !== 'string' || id.length > 80) return {status: 400, error: 'Choose a lesson time.'};
   for (let attempt = 0; attempt < 3; attempt++) {
-    const o = await env.DB!.prepare('SELECT closed,share_code FROM coach_openings WHERE id=?').bind(id).first<{closed: number; share_code: string | null}>();
-    if (!o) return {status: 404, error: 'This lesson time is gone. Refresh the calendar.'};
+    const o = await env.DB!.prepare(`SELECT closed,share_code FROM coach_openings WHERE id=?${coach ? ' AND (coach_email=? OR user_id=?)' : ''}`).bind(id, ...(coach ? mine(coach) : [])).first<{closed: number; share_code: string | null}>();
+    if (!o) return {status: 404, error: 'This lesson time is gone. Refresh the page.'};
     if (o.closed === 1) return {status: 409, error: 'A family set this time up as their private group. Its invite link is theirs to send.'};
     if (o.share_code) return {status: 200, code: o.share_code};
     const r = await env.DB!.prepare('UPDATE coach_openings SET share_code=? WHERE id=? AND share_code IS NULL AND closed=0 RETURNING share_code').bind(inviteCode(), id).first<{share_code: string}>();
