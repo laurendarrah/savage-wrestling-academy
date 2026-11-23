@@ -16,8 +16,8 @@ Every issue carries a `who:` label:
 | Label | Meaning |
 |---|---|
 | `who: justin` | Only Justin can do or decide it: the academy's accounts (Cloudflare, Stripe, Resend), business decisions |
-| `who: lauren` | Lauren does it: settings, accounts, email, reviewing and merging |
-| `who: claude` | Code work a Claude Code session can do, reviewed like anyone's |
+| `who: lauren` | Lauren does it: settings, accounts and email |
+| `who: claude` | Code work a Claude Code session can do |
 
 The full label list is in [CONTRIBUTING.md](CONTRIBUTING.md#labels).
 

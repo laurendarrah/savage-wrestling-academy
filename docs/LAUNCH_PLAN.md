@@ -202,5 +202,5 @@ The November 5 handoff package had its own roadmap and task list, written before
 |---|---|
 | Owner | Decisions 1 to 6, Stripe ownership, terms, soft-launch families |
 | Justin | Cloudflare account, domain, Supabase, his own Stripe and Resend accounts (Lauren helps only if asked), the live data export, decisions |
-| Lauren | Coordination, review and merge of each change |
-| Claude Code | Builds each day's work on a branch with tests, for review before merge |
+| Lauren | Coordination |
+| Claude Code | Builds each day's work on a branch with tests, merged once the checks pass (no review step, #406) |

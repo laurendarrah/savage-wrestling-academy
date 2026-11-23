@@ -14,7 +14,7 @@ Lauren and Justin both work in this repo, often with Claude Code. Everything goe
 4. **Commit small, clear steps.** First line says what changed, in plain words, under about 70 characters.
 5. **Open a pull request** with the template. Put `Closes #<issue>` in the description so the issue closes on merge. If the issue's "Done when" needs a real-world check after merging (a Stripe test-card run, a live email), write `Part of #<issue>` instead, in the description and in commit messages, because GitHub also closes issues named with "Closes" in commit messages.
 6. **Checks must pass.** Tests, typecheck, build, the production audit, the browser walkthrough and the payment rehearsal run automatically on every pull request.
-7. **The other person reviews.** Lauren reviews Justin's work and Justin reviews Lauren's. Nobody merges their own pull request without a review.
+7. **No review step.** Once every check passes, whoever opened the pull request merges it (Lauren's decision, Nov 23, #406).
 8. **Squash and merge**, then delete the branch.
 9. **Publishing is automatic.** Once the Deploy workflow is switched on, every merge to `main` that passes all checks is published to the academy's Cloudflare account, after an encrypted backup of the live database. Check the Deploy run, then note on the issue that it is live.
 
@@ -27,7 +27,7 @@ Business decisions are issues labeled `needs-decision`. Record the decision as a
 | Label | Meaning |
 |---|---|
 | `who: justin` | Only Justin can do or decide this: the academy's accounts (Cloudflare, Stripe, Resend) and business decisions |
-| `who: lauren` | Lauren does this: settings, accounts, email, review and merge |
+| `who: lauren` | Lauren does this: settings, accounts and email |
 | `who: claude` | Code work a Claude Code session can do |
 | `P0` | Blocks launch |
 | `P1` | High business or operational risk |
@@ -51,7 +51,7 @@ The plan, with dated updates, is in [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md). 
 
 - Start a session on this repository and name the issue: "Work on #18."
 - Claude Code reads [CLAUDE.md](CLAUDE.md) automatically. Those rules apply to people too.
-- Ask it to branch, run `pnpm test`, `pnpm typecheck` and `pnpm build`, and push. Review its pull request like anyone else's.
+- Ask it to branch, run `pnpm test`, `pnpm typecheck` and `pnpm build`, and push, then merge its pull request once the checks pass.
 - Each of us uses our own Claude and GitHub accounts. Never share logins.
 - We often have more than one Claude working at once. Issues a Claude session can pick up are labeled `who: claude`. Before starting, ask yours to check the open pull requests and the `in-progress` label, and to add that label to the issue it picks up. If two pull requests touch the same page, merge one, then have the other rebased before merging it.
 - Changes you make on the owner dashboard (programs, schedules, events) are saved straight to the live site and are never overwritten by code changes.
