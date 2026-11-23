@@ -117,7 +117,8 @@ assert.deepEqual(plain(pay.run('ahead([{coachEmail:"x",splitPct:null,lines:[{dat
 const shift = (id, status, amountCents, paidMinutes = 90) => ({id, revision: 1, status, date: '2026-10-19', session: {title: 'SWA Intermediate', start: '19:30', end: '21:00'}, dutyLabel: 'Head coach', duty: 'head', inTime: '19:25', outTime: '21:05', clockIn: 'x', workedMinutes: 100,
   paidMinutes, amountCents, rateCents: 4000, flags: [], history: [], source: 'clock', ownerSet: null, voidReason: null});
 const totals = (shifts, more = {}) => ({shifts: shifts.length, minutes: 0, amountCents: shifts.reduce((n, s) => n + s.amountCents, 0), drafts: 0, open: 0, submitted: 0, approved: 0, flagged: 0, breakdown: [], ...more});
-const month = (coaches, overall) => ({month: '2026-10', monthLabel: 'October 2026', today: '2026-11-18', previous: '2026-09', next: '2026-11', rates: [{label: 'Head coach', centsPerHour: 4000}], coach: null, coaches, choices: [],
+// A whole month, as the dashboard's link opens it (issue #399): its totals read the same; approving waits for a pay period.
+const month = (coaches, overall) => ({period: null, month: '2026-10', label: 'October 2026', from: '2026-10-01', to: '2026-10-31', today: '2026-11-18', previous: '2026-09', next: '2026-11', rates: [{label: 'Head coach', centsPerHour: 4000}], coach: null, coaches, choices: [],
   overall: {minutes: 0, practiceCents: 0, approvedCents: 0, lessonCents: 0, waiting: 0, notSent: 0, flagged: 0, ...overall}, timeOff: {pending: [], approved: []}});
 const coachRow = (name, state, shifts, lessons, more = {}) => ({email: name.toLowerCase().replace(/\W+/g, '.') + '@example.test', name, active: true, programs: ['Intermediate'], shifts, totals: totals(shifts, more), state, timeOff: [], lessons});
 const view = month([

@@ -95,7 +95,7 @@ function steps(email: string, key: string, accounts: string[]): Step[] {
     // Practice plans stay for the program; only who last edited one changes.
     set('practice_plans', 'updated_by=?', [key], inList('updated_by'), [ids]),
     // The security log keeps every event; the coach's email and account in it are replaced. A target that names the
-    // coach is their email, alone or followed by a space and details (coach_month_approved).
+    // coach is their email, alone or followed by a space and details (coach_period_approved; coach_month_approved before #399).
     set('security_events', 'target=?||substr(target,?)', [key, email.length + 1], 'lower(target)=? OR lower(substr(target,1,?))=?', [email, email.length + 1, email + ' ']),
     set('security_events', 'actor=?', [key], `${inList('actor')} AND (action LIKE 'coach%' OR action LIKE 'practice_plan%' OR action='cash_received')`, [ids]),
     // Notices about the coach's time off (to them and to the coaches covering), and every notice to the coach.

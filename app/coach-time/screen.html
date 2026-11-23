@@ -66,15 +66,15 @@ main section{scroll-margin-top:76px}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <a class="swa-back" href="/coach">← Coach home</a>
 <h1>Your hours</h1>
-<p id="intro">Clock in at practice, check your month and send it to the academy once the month ends. Practices are paid for the scheduled practice time, by the role you coached.</p>
+<p id="intro">Clock in at practice, check your hours and send them to the academy at the end of each pay period: the 1st to the 15th, and the 16th to the end of the month. Practices are paid for the scheduled practice time, by the role you coached.</p>
 <div class="cols">
 <section class="card" id="clock" data-coach-clock data-link="off" aria-labelledby="clockTitle"><h2 id="clockTitle">Clock in</h2><p class="muted">Loading your clock…</p></section>
-<section class="card" id="monthCard" aria-labelledby="monthTitle"><div class="month-head"><h2 id="monthTitle">This month</h2><div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="month"></select></label><button type="button" class="month-step" id="next" aria-label="Next month">→</button></div></div>
+<section class="card" id="monthCard" aria-labelledby="monthTitle"><div class="month-head"><h2 id="monthTitle">This pay period</h2><div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous pay period">←</button><label class="month-pick"><span>Pay period</span><select id="period"></select></label><button type="button" class="month-step" id="next" aria-label="Next pay period">→</button></div></div>
 <p id="monthState" class="state" hidden></p>
 <div id="monthTotals" hidden><div class="tiles"><div class="tile">Paid time<b id="tMinutes">–</b></div><div class="tile">Amount<b id="tAmount">–</b></div><div class="tile">Shifts<b id="tShifts">–</b></div></div>
 <ul id="breakdown" class="breakdown"></ul><p id="timeOffNote" class="muted" hidden></p></div>
 <div id="shifts"><span class="skeleton row"></span><span class="skeleton row"></span><span class="skeleton row"></span></div>
-<div class="send" id="sendBox" hidden><button type="button" class="primary big" id="submit" disabled>Send this month</button><p id="submitHelp" class="muted"></p><p id="sendNote" class="form-note" role="status" aria-live="polite"></p></div>
+<div class="send" id="sendBox" hidden><button type="button" class="primary big" id="submit" disabled>Send this pay period</button><p id="submitHelp" class="muted"></p><p id="sendNote" class="form-note" role="status" aria-live="polite"></p></div>
 <details id="addBox"><summary>Forgot to clock in? Add a shift</summary><form id="addForm" class="stack"><p class="muted swa-secondary">For this month or last month, up to today. The academy sees that it was added by hand.</p>
 <div class="pair"><label>Date<input type="date" name="date" id="addDate" required></label><label>Role<select name="duty" id="addDuty" required><option value="">Choose</option><option value="head">Head coach</option><option value="assistant">Assistant coach</option></select></label></div>
 <label>Practice<select name="session" id="addSession"><option value="">Choose a date first</option></select></label>
@@ -90,7 +90,7 @@ main section{scroll-margin-top:76px}
 <p id="status" role="status" aria-live="polite"></p></main>
 <script src="/hours-text.js"></script>
 <script src="/coach-clock.js"></script>
-<script src="/month-picker.js"></script>
+<script src="/period-picker.js"></script>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1]%12||12)+':'+m[2]+' '+(+m[1]<12?'AM':'PM'):''};
@@ -104,18 +104,18 @@ const say=(text,kind)=>{if(typeof swaToast==='function')swaToast(text,{kind});el
 const NOTES=['sendNote','addNote','offNote','offFormNote'];
 const fail=(text,note)=>{((note&&$(note))||$('status')).textContent=text};
 const BADGE={open:'Clocked in',draft:'Not sent',submitted:'Sent',approved:'Approved'};
-// Where the month stands, in one sentence.
-function monthText(d){const t=d.totals;if(!t.shifts)return 'No shifts in '+d.monthLabel+' yet.';
- if(t.open)return 'You are clocked in. Clock out before you send the month.';
+// Where the pay period stands, in one sentence.
+function monthText(d){const t=d.totals;if(!t.shifts)return 'No shifts in '+d.label+' yet.';
+ if(t.open)return 'You are clocked in. Clock out before you send the pay period.';
  if(t.drafts)return t.drafts+' shift'+(t.drafts===1?'':'s')+' not sent yet.';
  if(t.submitted)return 'Sent to the academy. Waiting for approval.';
  return 'Approved by the academy.'}
 // Under the Send button: what it does, or why it is not open yet and when it opens.
-function submitHelp(d){const opens='You can send '+d.monthLabel+' from '+d.submitOpensText+', its last day.',early=!!d.today&&!!d.submitOpens&&d.today<d.submitOpens;
- if(d.canSubmit)return 'Sends every shift in '+d.monthLabel+' to the academy. After that, the academy makes any corrections.';
+function submitHelp(d){const opens='You can send '+d.label+' from '+d.submitOpensText+', its last day.',early=!!d.today&&!!d.submitOpens&&d.today<d.submitOpens;
+ if(d.canSubmit)return 'Sends every shift in '+d.label+' to the academy. After that, the academy makes any corrections.';
  if(d.totals.open)return 'Clock out first.'+(early?' '+opens:'');
  if(early)return opens;
- if(!d.totals.drafts)return d.totals.shifts?'Nothing new to send.':'No shifts to send for '+d.monthLabel+'.';
+ if(!d.totals.drafts)return d.totals.shifts?'Nothing new to send.':'No shifts to send for '+d.label+'.';
  return opens}
 const editable=s=>s.status==='draft'||s.status==='open';
 // One shift is one line: the day, what was coached, what it pays and its state. The clocked times, any flags and the
@@ -138,32 +138,33 @@ const noticeHtml=n=>`<div class="note-item"><p><b>${esc(n.subject)}</b><span cla
 const NOTICES_SHOWN=3;
 function noticesHtml(list,older){const first=list.slice(0,NOTICES_SHOWN),rest=list.slice(NOTICES_SHOWN);
  return first.map(noticeHtml).join('')+(rest.length?'<details class="older"><summary>Show '+rest.length+' earlier notice'+(rest.length===1?'':'s')+'</summary>'+rest.map(noticeHtml).join('')+'</details>':'')+(older?'<p class="muted">Showing your newest '+list.length+' notices. Older ones were emailed to you.</p>':'')}
-// A month with no shifts: one sentence that says what will show here, instead of three tiles of zeros.
-const noShiftsHtml=d=>'<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><p>No shifts in '+esc(d.monthLabel)+' yet. Clock in at practice and each shift shows here.</p></div>';
+// A pay period with no shifts: one sentence that says what will show here, instead of three tiles of zeros.
+const noShiftsHtml=d=>'<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><p>No shifts in '+esc(d.label)+' yet. Clock in at practice and each shift shows here.</p></div>';
 let current=null,data=null;
-// The month picker shared with /financials and /timesheets (public/month-picker.js, issue #232).
-const picker={select:$('month'),prev:$('prev'),next:$('next')};
-function render(d){data=d;current=d.month;
+// The pay-period picker shared with /timesheets (public/period-picker.js, issue #399). A whole month (an older
+// ?month= link) is shown with the picker on its first pay period, and is sent one period at a time.
+const picker={select:$('period'),prev:$('prev'),next:$('next')};
+function render(d){data=d;current=d.period||PeriodPicker.of(d.from);
  const any=!!d.totals.shifts;
- $('monthTitle').textContent=d.monthLabel;$('monthState').textContent=monthText(d);$('monthState').hidden=!any;$('monthTotals').hidden=!any;$('sendBox').hidden=!any;NOTES.forEach(id=>{$(id).textContent=''});MonthPicker.set(picker,d.month,{max:[d.month,String(d.today||'').slice(0,7)].sort().pop()});$('next').disabled=!d.next;
+ $('monthTitle').textContent=d.label;$('monthState').textContent=monthText(d);$('monthState').hidden=!any;$('monthTotals').hidden=!any;$('sendBox').hidden=!any;NOTES.forEach(id=>{$(id).textContent=''});PeriodPicker.set(picker,current,{max:[current,PeriodPicker.of(String(d.today||''))].sort().pop()});$('next').disabled=!d.next;
  $('rates').textContent='Rates: '+d.rates.map(r=>r.label+' '+money(r.centsPerHour)+' an hour').join(', ')+'. Only the scheduled practice time is paid.';
  $('tMinutes').textContent=hoursText(d.totals.minutes);$('tAmount').textContent=money(d.totals.amountCents);$('tShifts').textContent=d.totals.shifts;
  $('breakdown').innerHTML=d.totals.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)}</span><span>${esc(hoursText(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('');
- $('timeOffNote').hidden=!d.timeOff.length;$('timeOffNote').textContent=d.timeOff.length?'Approved time off this month: '+d.timeOff.map(t=>t.text).join('; ')+'.':'';
+ $('timeOffNote').hidden=!d.timeOff.length;$('timeOffNote').textContent=d.timeOff.length?'Approved time off in these dates: '+d.timeOff.map(t=>t.text).join('; ')+'.':'';
  $('shifts').innerHTML=d.shifts.length?'<h3 class="swa-label">Shifts</h3>'+d.shifts.map(shiftHtml).join(''):noShiftsHtml(d);
- $('submit').textContent='Send '+d.monthLabel;$('submit').disabled=!d.canSubmit;$('submitHelp').textContent=submitHelp(d);
+ $('submit').textContent='Send '+d.label;$('submit').disabled=!d.canSubmit;$('submitHelp').textContent=submitHelp(d);
  const date=$('addDate');if(date){date.max=d.today;date.min=d.handMonths[1]+'-01'}
  $('offList').innerHTML=d.timeOffRequests.map(offHtml).join('')||'<p class="empty">No time off requests yet.</p>';
  $('noticeBox').hidden=!d.notices.length;$('notices').innerHTML=noticesHtml(d.notices,d.olderNotices);
  document.querySelectorAll('[data-fix]').forEach(b=>b.onclick=()=>act({action:'fix',id:b.dataset.fix,revision:Number(b.dataset.rev),in:$('fixIn-'+b.dataset.fix).value,out:$('fixOut-'+b.dataset.fix).value,reason:$('fixWhy-'+b.dataset.fix).value},'Times saved.','fixNote-'+b.dataset.fix));
  document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{if(confirm('Remove this shift? It is deleted for good and is not paid.'))act({action:'remove',id:b.dataset.remove,revision:Number(b.dataset.rev)},'Shift removed.','removeNote-'+b.dataset.remove)});
  document.querySelectorAll('[data-withdraw]').forEach(b=>b.onclick=()=>act({action:'time-off-withdraw',id:b.dataset.withdraw,revision:Number(b.dataset.rev)},'Request withdrawn.','offNote'))}
-async function load(month){try{render(await call(null,month?'?month='+encodeURIComponent(month):''));$('status').textContent=''}catch(e){$('status').textContent=e.message;if(!data)$('shifts').innerHTML='<p class="muted">Your month could not be loaded. Refresh the page to try again.</p>'}}
-// Sends an action, reloads the month and says what happened; resolves to the message, or '' when it failed. What went
+async function load(period){try{render(await call(null,period?'?period='+encodeURIComponent(period):''));$('status').textContent=''}catch(e){$('status').textContent=e.message;if(!data)$('shifts').innerHTML='<p class="muted">Your hours could not be loaded. Refresh the page to try again.</p>'}}
+// Sends an action, reloads the pay period and says what happened; resolves to the message, or '' when it failed. What went
 // wrong is written under the button that was pressed (note), not at the foot of the page.
 async function act(body,done,note){try{const r=await call(body);await load(current);if(window.CoachClock)CoachClock.refresh();const text=typeof done==='function'?done(r):done;say(text,'ok');return text}catch(e){fail(e.message,note);return ''}}
-MonthPicker.wire(picker,load);
-$('submit').onclick=()=>act({action:'submit',month:current},r=>r.sent+' shift'+(r.sent===1?'':'s')+' sent to the academy.','sendNote');
+PeriodPicker.wire(picker,load);
+$('submit').onclick=()=>act({action:'submit',period:current},r=>r.sent+' shift'+(r.sent===1?'':'s')+' sent to the academy.','sendNote');
 // The practice list for a hand-added shift follows the date.
 async function addChoices(){const date=$('addDate').value,sel=$('addSession');if(!date){sel.innerHTML='<option value="">Choose a date first</option>';return}
  try{const d=await call(null,'?date='+encodeURIComponent(date));sel.innerHTML=d.choices.map(c=>`<option value="${esc(c.key)}">${esc(c.title)} · ${esc(clock(c.start))}–${esc(clock(c.end))}</option>`).join('')+'<option value="">No scheduled practice</option>'}catch(e){sel.innerHTML='<option value="">No scheduled practice</option>';fail(e.message,'addNote')}}
@@ -174,5 +175,7 @@ $('offForm').onsubmit=e=>{e.preventDefault();const v=formBody(e.target);act({act
 // "Time off" on coach home opens this page at the request form.
 if(typeof location!=='undefined'&&location.hash==='#timeOff')$('offBox').open=true;
 document.addEventListener('coachclock',()=>load(current));
-load();
+// ?period=YYYY-MM-1 opens that pay period; otherwise the current one.
+const asked=typeof location!=='undefined'?new URLSearchParams(location.search).get('period'):null;
+load(PeriodPicker.valid(asked)?asked:'');
 </script></body></html>

@@ -56,26 +56,26 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(s, /html body \.send button\.primary:disabled,html body \.send button\.primary:disabled:hover\{background:#EEF0F2;[^}]*color:#55585F;opacity:1/, 'a neutral grey Send button until it opens');
   const p = page('app/coach-time/screen.html', async () => json({}));
   const help = d => { p.ctx.d = d; return p.run('submitHelp(d)'); };
-  const nov = (o, totals) => ({monthLabel: 'November 2026', submitOpens: '2026-11-30', submitOpensText: 'Nov 30, 2026', today: '2026-11-07', canSubmit: false, ...o, totals: {drafts: 0, open: 0, shifts: 0, submitted: 0, ...totals}});
-  assert.equal(help(nov({}, {})), 'You can send November 2026 from Nov 30, 2026, its last day.', 'no shifts yet: says when it opens');
-  assert.equal(help(nov({}, {drafts: 3, shifts: 4, open: 1})), 'Clock out first. You can send November 2026 from Nov 30, 2026, its last day.');
-  assert.equal(help(nov({}, {drafts: 3, shifts: 3})), 'You can send November 2026 from Nov 30, 2026, its last day.');
+  const nov = (o, totals) => ({label: 'Nov 16–30, 2026', submitOpens: '2026-11-30', submitOpensText: 'Nov 30, 2026', today: '2026-11-07', canSubmit: false, ...o, totals: {drafts: 0, open: 0, shifts: 0, submitted: 0, ...totals}});
+  assert.equal(help(nov({}, {})), 'You can send Nov 16–30, 2026 from Nov 30, 2026, its last day.', 'no shifts yet: says when it opens');
+  assert.equal(help(nov({}, {drafts: 3, shifts: 4, open: 1})), 'Clock out first. You can send Nov 16–30, 2026 from Nov 30, 2026, its last day.');
+  assert.equal(help(nov({}, {drafts: 3, shifts: 3})), 'You can send Nov 16–30, 2026 from Nov 30, 2026, its last day.');
   assert.equal(help(nov({today: '2026-12-01'}, {drafts: 1, shifts: 1, open: 1})), 'Clock out first.');
   assert.equal(help(nov({today: '2026-12-01'}, {shifts: 2, submitted: 2})), 'Nothing new to send.');
-  assert.equal(help(nov({today: '2026-12-01'}, {})), 'No shifts to send for November 2026.');
-  assert.match(help(nov({today: '2026-11-30', canSubmit: true}, {drafts: 2, shifts: 2})), /^Sends every shift in November 2026/);
-  // The month renders in hours and minutes.
-  p.ctx.m = {month: '2026-11', monthLabel: 'November 2026', today: '2026-11-07', submitOpens: '2026-11-30', submitOpensText: 'Nov 30, 2026', canSubmit: false, next: null, handMonths: ['2026-11', '2026-10'],
+  assert.equal(help(nov({today: '2026-12-01'}, {})), 'No shifts to send for Nov 16–30, 2026.');
+  assert.match(help(nov({today: '2026-11-30', canSubmit: true}, {drafts: 2, shifts: 2})), /^Sends every shift in Nov 16–30, 2026/);
+  // The pay period renders in hours and minutes.
+  p.ctx.m = {period: '2026-11-2', month: '2026-11', label: 'Nov 16–30, 2026', from: '2026-11-16', to: '2026-11-30', today: '2026-11-17', submitOpens: '2026-11-30', submitOpensText: 'Nov 30, 2026', canSubmit: false, next: null, handMonths: ['2026-11', '2026-10'],
     rates: [{label: 'Head coach', centsPerHour: 4000}], timeOff: [], timeOffRequests: [], notices: [],
     totals: {minutes: 224, amountCents: 14933, shifts: 2, drafts: 2, open: 0, submitted: 0, breakdown: [{label: 'SWA Intermediate', duty: 'Head coach', minutes: 224, amountCents: 14933}]},
     shifts: [{id: 's1', revision: 1, status: 'draft', date: '2026-11-02', session: null, dutyLabel: 'Head coach', inTime: '18:00', outTime: '21:44', paidMinutes: 224, amountCents: 14933, flags: ['Clocked in 3 h 44 min after SWA Intermediate started.']}]};
   p.run('render(m)');
   assert.equal(p.el('tMinutes').textContent, '3 h 44 min'); assert.match(p.el('breakdown').innerHTML, /3 h 44 min · \$149\.33/);
   assert.match(p.el('shifts').innerHTML, /Paid 3 h 44 min · \$149\.33/); assert.doesNotMatch(p.el('shifts').innerHTML + p.el('breakdown').innerHTML, /\b224 min/);
-  // The button names the month; the line under it says who it goes to (a long label wrapped to two lines of caps on a phone).
-  assert.equal(p.el('submit').disabled, true); assert.equal(p.el('submit').textContent, 'Send November 2026');
+  // The button names the pay period; the line under it says who it goes to (a long label wrapped to two lines of caps on a phone).
+  assert.equal(p.el('submit').disabled, true); assert.equal(p.el('submit').textContent, 'Send Nov 16–30, 2026');
   assert.match(s, /html body \.send button\.primary:disabled[^{]*\{[^}]*text-transform:none\}/, 'not open yet reads in plain words, not caps');
-  assert.equal(p.el('submitHelp').textContent, 'You can send November 2026 from Nov 30, 2026, its last day.');
+  assert.equal(p.el('submitHelp').textContent, 'You can send Nov 16–30, 2026 from Nov 30, 2026, its last day.');
 }
 
 // ---------- 3. /timesheets: hours and minutes, the download label ----------

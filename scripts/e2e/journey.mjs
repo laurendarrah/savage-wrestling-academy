@@ -1021,20 +1021,21 @@ await step('a coach clocks in and out of today\'s practice from coach home on a 
   expect(over2 <= 1, `/coach-time scrolls sideways by ${over2}px on a phone`);
   await shot(phone, 'coach-hours'); await phone.context().close();
 });
-// The last day of last month, in New York time: always on or after its last day, so it can be sent.
+// The last day of last month, in New York time: always on or after the last day of its pay period (the 16th to the
+// month's end, issue #399), so it can be sent.
 const lastMonthEnd = new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, 0)).toISOString().slice(0, 10);
-await step('the coach adds a missed shift for last month and sends it; the owner corrects, approves and downloads the hours', async () => {
-  const month = lastMonthEnd.slice(0, 7);
+await step('the coach adds a missed shift for last month and sends its pay period; the owner corrects, approves and downloads the hours', async () => {
+  const period = lastMonthEnd.slice(0, 7) + '-2';
   await coach.goto(BASE + '/coach-time'); await coach.waitForSelector('#addBox');
   await coach.click('#addBox summary'); await coach.fill('#addDate', lastMonthEnd);
   await coach.waitForFunction(() => !/Choose a date first/.test(document.querySelector('#addSession').textContent));
   await coach.selectOption('#addDuty', 'head'); await coach.fill('#addForm [name=in]', '18:00'); await coach.fill('#addForm [name=out]', '19:30');
   await coach.fill('#addForm [name=reason]', 'Phone died at practice');
   await coach.click('#addForm button[type=submit]'); await toast(coach, /Shift added/);
-  await coach.click('#prev'); await at(coach, '#shifts', /Added by hand, not clocked: Phone died at practice/);
+  await coach.goto(BASE + '/coach-time?period=' + period); await at(coach, '#shifts', /Added by hand, not clocked: Phone died at practice/);
   await coach.click('#submit'); await toast(coach, /1 shift sent to the academy/);
   await at(coach, '#monthState', /Sent to the academy/);
-  await owner.goto(BASE + '/timesheets?month=' + month); await at(owner, '#coaches', /Coach Dana[\s\S]*Sent, waiting for you/);
+  await owner.goto(BASE + '/timesheets?period=' + period); await at(owner, '#coaches', /Coach Dana[\s\S]*Sent, waiting for you/);
   const dana = owner.locator('section.coach', {hasText: 'Coach Dana'});
   await dana.locator('summary', {hasText: 'Correct'}).click();
   await dana.locator('select[id^="h-"]').selectOption('1'); await dana.locator('select[id^="m-"]').selectOption('30');
@@ -1042,8 +1043,8 @@ await step('the coach adds a missed shift for last month and sends it; the owner
   await dana.locator('[data-correct]').click(); await at(owner, '#status', /Correction saved/);
   await owner.click('[data-approve="coach.dana@example.test"]'); await at(owner, '#status', /Approved 1 shift \(\$60\.00\)/);
   await at(owner, '#coaches', /Coach Dana[\s\S]*Approved/);
-  const csv = await owner.evaluate(async m => (await fetch('/api/timesheets?format=csv&month=' + m)).text(), month);
-  expect(/Coach Dana,coach\.dana@example\.test,[\d-]+,Practice,[\d-]+,[^,]*,Head coach,1\.50,40\.00 per hour,60\.00,Confirmed with the coach/.test(csv), 'the file has the approved shift: ' + csv.slice(0, 400));
+  const csv = await owner.evaluate(async p => (await fetch('/api/timesheets?format=csv&period=' + p)).text(), period);
+  expect(/Coach Dana,coach\.dana@example\.test,[\d-]+ to [\d-]+,Practice,[\d-]+,[^,]*,Head coach,1\.50,40\.00 per hour,60\.00,Confirmed with the coach/.test(csv), 'the file has the approved shift: ' + csv.slice(0, 400));
   expect(!/wage|invoice|overtime|withhold/i.test(csv), 'hours and amounts only');
   await shot(owner, 'owner-timesheets');
 });

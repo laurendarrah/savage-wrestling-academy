@@ -1,5 +1,5 @@
 // Issue #193: coach timesheets. Pay math in integer cents (#197 Q1 rates, Q4 scheduled practice time only), the
-// month-end submit rule (Q5, academy time), flags, coach corrections, removing a shift (it is deleted, issue #375), the owner's audited corrections and
+// pay-period submit rule (Q5; half-month periods since #369, issue #399; academy time), flags, coach corrections, removing a shift (it is deleted, issue #375), the owner's audited corrections and
 // approval, the month's file (hours and lesson shares, neutral wording for Q6), owner-only access, and the page scripts.
 // Runs the real routes and libraries against a database built from every migration (tests/accounts.mjs).
 import assert from 'node:assert/strict';
@@ -27,9 +27,19 @@ for (const [k, email] of [['dana', 'dana.coach@example.test'], ['lee', 'lee.coac
   assert.equal(T.academyInstant('2026-11-02', '18:00'), Date.parse('2026-11-02T23:00:00Z'));
   assert.equal(T.academyInstant('2027-03-14', '12:00'), Date.parse('2027-03-14T16:00:00Z'), 'the day clocks go forward');
   assert.equal(T.academyClock('2026-11-03T00:40:00Z'), '19:40');
-  // Q5: a month can be sent on or after its last day.
   assert.equal(T.lastDayOf('2028-02'), '2028-02-29'); assert.equal(T.lastDayOf('2026-11'), '2026-11-30');
-  assert.equal(T.canSubmitMonth('2026-11', '2026-11-29'), false); assert.equal(T.canSubmitMonth('2026-11', '2026-11-30'), true); assert.equal(T.canSubmitMonth('2026-11', '2026-12-04'), true);
+  // Issue #399: pay periods are the 1st-15th and the 16th to the month's end, and are sent on or after their last day.
+  deq(['2026-11-01', '2026-11-15', '2026-11-16', '2026-11-30', '2026-12-31', '2028-02-29'].map(T.periodOf), ['2026-11-1', '2026-11-1', '2026-11-2', '2026-11-2', '2026-12-2', '2028-02-2']);
+  deq(['2026-11-1', '2026-11-2', '2026-12-2', '2027-02-2', '2028-02-2', '2026-01-2'].map(p => [T.periodStart(p), T.periodEnd(p)]),
+    [['2026-11-01', '2026-11-15'], ['2026-11-16', '2026-11-30'], ['2026-12-16', '2026-12-31'], ['2027-02-16', '2027-02-28'], ['2028-02-16', '2028-02-29'], ['2026-01-16', '2026-01-31']]);
+  deq([T.addPeriods('2026-11-1', 1), T.addPeriods('2026-11-2', 1), T.addPeriods('2026-12-2', 1), T.addPeriods('2027-01-1', -1), T.addPeriods('2026-11-1', -24)], ['2026-11-2', '2026-12-1', '2027-01-1', '2026-12-2', '2025-11-1']);
+  deq(['2026-11-1', '2026-11-2', '2027-02-2', '2028-02-2'].map(T.periodLabel), ['Nov 1–15, 2026', 'Nov 16–30, 2026', 'Feb 16–28, 2027', 'Feb 16–29, 2028']);
+  deq([T.validPeriod('2026-11-1'), T.validPeriod('2026-11-3'), T.validPeriod('2026-13-1'), T.validPeriod('2026-11'), T.validPeriod(null)], [true, false, false, false, false]);
+  deq([T.canSubmitPeriod('2026-11-1', '2026-11-14'), T.canSubmitPeriod('2026-11-1', '2026-11-15'), T.canSubmitPeriod('2026-11-2', '2026-11-29'), T.canSubmitPeriod('2026-11-2', '2026-11-30'), T.canSubmitPeriod('2026-11-2', '2026-12-04')], [false, true, false, true, true]);
+  // What a page asks to see: a period, a whole month (the dashboard), or else the current period.
+  deq(T.hoursRange('2026-11-2', '2026-12-04'), {period: '2026-11-2', month: '2026-11', from: '2026-11-16', to: '2026-11-30', label: 'Nov 16–30, 2026'});
+  deq(T.hoursRange('2026-11', '2026-12-04'), {period: null, month: '2026-11', from: '2026-11-01', to: '2026-11-30', label: 'November 2026'});
+  deq(T.hoursRange('nonsense', '2026-12-04'), {period: '2026-12-1', month: '2026-12', from: '2026-12-01', to: '2026-12-15', label: 'Dec 1–15, 2026'});
   assert.equal(T.handDateAllowed('2026-10-01', '2026-11-07'), true); assert.equal(T.handDateAllowed('2026-09-30', '2026-11-07'), false); assert.equal(T.handDateAllowed('2026-11-08', '2026-11-07'), false);
   // Q1: one place for the rates.
   deq({...T.PRACTICE_RATES}, {head: 4000, assistant: 3000});
@@ -154,11 +164,11 @@ let ids = {};
   {
     const key = 'practice:Intermediate:2026-11-05:18:00', when = at('2026-11-07T15:00:00Z');
     const full = ok(await S.addShift(dana, 'dana-uuid', {date: '2026-11-05', session: key, duty: 'head', in: '17:45', out: '19:40', reason: 'Forgot to clock in'}, when)).id;
-    let mm = await S.coachMonth(dana, '2026-11', when), v = mm.shifts.find(x => x.id === full);
+    let mm = await S.coachPeriod(dana, '2026-11', when), v = mm.shifts.find(x => x.id === full);
     deq([v.paidMinutes, v.amountCents, v.status, v.session.title, v.flags[0]], [90, 6000, 'draft', 'SWA Intermediate', 'Added by hand, not clocked: Forgot to clock in']);
     ok(await S.removeShift(dana, 'dana-uuid', {id: full, revision: v.revision}));
     const part = ok(await S.addShift(dana, 'dana-uuid', {date: '2026-11-05', session: key, duty: 'assistant', in: '18:30', out: '19:30', reason: 'Covered the second half'}, when)).id;
-    mm = await S.coachMonth(dana, '2026-11', when); v = mm.shifts.find(x => x.id === part);
+    mm = await S.coachPeriod(dana, '2026-11', when); v = mm.shifts.find(x => x.id === part);
     deq([v.paidMinutes, v.amountCents], [60, 3000], 'an hour as assistant is $30.00');
     ok(await S.removeShift(dana, 'dana-uuid', {id: part, revision: v.revision}));
     assert.equal(row("SELECT count(*) AS n FROM coach_time_entries WHERE work_date='2026-11-05'").n, 0, 'both test shifts are gone');
@@ -166,7 +176,7 @@ let ids = {};
   ids.dup = ok(await S.addShift(dana, 'dana-uuid', {...hand, in: '14:00', out: '15:00', reason: 'Entered twice by mistake'}, at('2026-11-07T15:00:00Z'))).id;
 
   // The coach fixes their own times, with a reason; the punches stay.
-  let m = await S.coachMonth(dana, '2026-11', at('2026-11-20T15:00:00Z'));
+  let m = await S.coachPeriod(dana, '2026-11', at('2026-11-20T15:00:00Z'));
   const mon = m.shifts.find(s => s.id === ids.mon);
   assert.equal(mon.paidMinutes, 90); assert.equal(mon.amountCents, 6000);
   assert.equal((await S.fixTimes(dana, 'dana-uuid', {id: ids.mon, revision: mon.revision, in: '18:00', out: '19:00', reason: ''}, at('2026-11-20T15:00:00Z'))).status, 400, 'reason required');
@@ -176,7 +186,7 @@ let ids = {};
   const fixed = row('SELECT clock_in,clock_out,fixed_in,fixed_out,history FROM coach_time_entries WHERE id=?', ids.mon);
   assert.equal(fixed.clock_in, '2026-11-02T22:50:00.000Z', 'the original punch is kept'); assert.equal(fixed.fixed_out, '2026-11-03T00:00:00.000Z');
   assert.match(fixed.history, /"changed times","from":"17:50–19:40","to":"18:00–19:00","note":"Left at seven"/);
-  m = await S.coachMonth(dana, '2026-11', at('2026-11-20T15:00:00Z'));
+  m = await S.coachPeriod(dana, '2026-11', at('2026-11-20T15:00:00Z'));
   const view = id => m.shifts.find(s => s.id === id);
   assert.equal(view(ids.mon).paidMinutes, 60); assert.equal(view(ids.mon).amountCents, 4000);
   assert.equal(view(ids.tue).paidMinutes, 90); assert.equal(view(ids.tue).amountCents, 4500, 'assistant rate');
@@ -186,18 +196,28 @@ let ids = {};
   assert.equal(m.totals.amountCents, 4000 + 4500 + 4000); assert.equal(m.canSubmit, false, 'not before the last day');
   assert.ok(m.totals.breakdown.some(b => b.label === 'SWA Intermediate' && b.duty === 'Assistant coach' && b.minutes === 90));
 
-  // Q5: send the whole month on or after its last day, in academy time.
-  assert.equal((await S.submitMonth(dana, 'dana-uuid', {month: '2026-11'}, at('2026-11-29T15:00:00Z'))).status, 409);
-  const early = await S.submitMonth(dana, 'dana-uuid', {month: '2026-11'}, at('2026-11-30T04:30:00Z'));
+  // Q5 and #399: each pay period is sent on or after its last day, in academy time.
+  assert.equal((await S.submitPeriod(dana, 'dana-uuid', {month: '2026-11'}, at('2026-12-01T15:00:00Z'))).status, 400, 'a whole month is no longer sent');
+  assert.equal((await S.submitPeriod(dana, 'dana-uuid', {period: '2026-12-1'}, at('2026-11-30T15:00:00Z'))).status, 400, 'not a period still to come');
+  const firstEarly = await S.submitPeriod(dana, 'dana-uuid', {period: '2026-11-1'}, at('2026-11-15T04:30:00Z'));
+  assert.equal(firstEarly.status, 409, '11:30 PM on Nov 14 in New York is too early'); assert.match(firstEarly.error, /You can send Nov 1–15, 2026 from Nov 15, 2026, its last day/);
+  m = await S.coachPeriod(dana, '2026-11-1', at('2026-11-15T15:00:00Z'));
+  deq([m.period, m.label, m.from, m.to, m.canSubmit, m.previous, m.next], ['2026-11-1', 'Nov 1–15, 2026', '2026-11-01', '2026-11-15', true, '2026-10-2', null], 'a coach never steps past the current pay period');
+  assert.equal(m.shifts.length, 5, 'only the first half of the month');
+  assert.equal((await S.submitPeriod(dana, 'dana-uuid', {period: '2026-11-2'}, at('2026-11-29T15:00:00Z'))).status, 409);
+  const early = await S.submitPeriod(dana, 'dana-uuid', {period: '2026-11-2'}, at('2026-11-30T04:30:00Z'));
   assert.equal(early.status, 409, '11:30 PM on Nov 29 in New York is still too early'); assert.match(early.error, /from Nov 30, 2026/);
-  // An open shift blocks sending.
+  // An open shift blocks sending its period.
   ids.open = ok(await S.clockIn(dana, 'dana-uuid', {duty: 'head', session: 'practice:Intermediate:2026-11-30:18:00'}, at('2026-11-30T22:55:00Z'))).id;
-  assert.match((await S.submitMonth(dana, 'dana-uuid', {month: '2026-11'}, at('2026-11-30T23:00:00Z'))).error, /Clock out first/);
+  assert.match((await S.submitPeriod(dana, 'dana-uuid', {period: '2026-11-2'}, at('2026-11-30T23:00:00Z'))).error, /Clock out first/);
   ok(await S.clockOut(dana, 'dana-uuid', {id: ids.open}, at('2026-12-01T00:30:00Z')));
-  const sent = ok(await S.submitMonth(dana, 'dana-uuid', {month: '2026-11'}, at('2026-12-01T00:31:00Z')));
-  assert.equal(sent.sent, 6, 'the removed test punch is not sent');
-  assert.equal((await S.submitMonth(dana, 'dana-uuid', {month: '2026-11'}, at('2026-12-01T00:32:00Z'))).status, 409, 'nothing new to send');
-  m = await S.coachMonth(dana, '2026-11', at('2026-12-01T12:00:00Z'));
+  const sentFirst = ok(await S.submitPeriod(dana, 'dana-uuid', {period: '2026-11-1'}, at('2026-12-01T00:31:00Z')));
+  assert.equal(sentFirst.sent, 5, 'the removed test punch is not sent');
+  const sentSecond = ok(await S.submitPeriod(dana, 'dana-uuid', {period: '2026-11-2'}, at('2026-12-01T00:31:00Z')));
+  assert.equal(sentSecond.sent, 1, 'each period sends only its own shifts');
+  assert.equal((await S.submitPeriod(dana, 'dana-uuid', {period: '2026-11-1'}, at('2026-12-01T00:32:00Z'))).status, 409, 'nothing new to send');
+  assert.equal(row("SELECT count(*) AS n FROM security_events WHERE action='coach_period_submitted'").n, 2);
+  m = await S.coachPeriod(dana, '2026-11', at('2026-12-01T12:00:00Z'));
   assert.equal(m.state, 'submitted');
   assert.match((await S.fixTimes(dana, 'dana-uuid', {id: ids.mon, revision: view(ids.mon).revision + 1, in: '18:00', out: '19:30', reason: 'x y z'}, at('2026-12-01T12:00:00Z'))).error, /already sent/);
 }
@@ -256,7 +276,7 @@ let ids = {};
   // leaves one line in the security log.
   {
     sqlite.prepare("INSERT INTO coach_time_entries(id,user_id,coach_email,coach_name,work_date,session_key,session_title,session_start,session_end,duty,source,clock_in,clock_out,voided_at,voided_by,void_reason,history,created_at) VALUES ('old-removed-1','dana-uuid','dana.coach@example.test','Coach Dana','2026-11-09','practice:Intermediate:2026-11-09:18:00','SWA Intermediate','18:00','19:30','head','clock','2026-11-09T23:00:00.000Z','2026-11-10T00:30:00.000Z','2026-11-10T01:00:00.000Z','dana.coach@example.test','Removed by the coach','[]','2026-11-09T23:00:00.000Z')").run();
-    const mine = await S.coachMonth(dana, '2026-11', at('2026-11-20T15:00:00Z')), theirs = await get(owner, '/api/timesheets?month=2026-11&coach=dana.coach@example.test', 'owner');
+    const mine = await S.coachPeriod(dana, '2026-11', at('2026-11-20T15:00:00Z')), theirs = await get(owner, '/api/timesheets?month=2026-11&coach=dana.coach@example.test', 'owner');
     assert.ok(mine.shifts.every(x => x.id !== 'old-removed-1') && theirs.body.coaches[0].shifts.every(x => x.id !== 'old-removed-1'), 'never shown to the coach or the owner');
     assert.ok([...mine.shifts, ...theirs.body.coaches[0].shifts].every(x => x.status !== 'voided'));
     assert.equal((await S.ownerRemove('owner-uuid', {id: 'old-removed-1', revision: 1, reason: 'Gone already'})).status, 409);
@@ -268,39 +288,63 @@ let ids = {};
   }
   // Approve exactly what was reviewed.
   r = await get(owner, '/api/timesheets?month=2026-11&coach=dana.coach@example.test', 'owner'); c = r.body.coaches[0];
-  const sentShifts = c.shifts.filter(x => x.status === 'submitted').map(x => ({id: x.id, revision: x.revision}));
+  const sentShifts = c.shifts.filter(x => x.status === 'submitted').map(x => ({id: x.id, revision: x.revision, date: x.date}));
   assert.equal(sentShifts.length, 5);
-  assert.equal((await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, month: '2026-11', shifts: sentShifts.slice(1)}, 'owner')).status, 409, 'every sent shift, or none');
-  assert.equal((await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, month: '2026-11', shifts: sentShifts.map(x => ({...x, revision: x.revision + 1}))}, 'owner')).status, 409, 'stale');
-  r = await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, month: '2026-11', shifts: sentShifts}, 'owner');
-  assert.equal(r.status, 200); assert.equal(r.body.approved, 5);
-  // 60 min head (4000) + 90 min assistant (4500) + 60 min head FNL (4000) + 105 min assistant (5250) + Nov 30 90 min head (6000).
-  assert.equal(r.body.cents, 4000 + 4500 + 4000 + 5250 + 6000);
+  const firstHalf = sentShifts.filter(x => x.date <= '2026-11-15').map(({id, revision}) => ({id, revision})), secondHalf = sentShifts.filter(x => x.date > '2026-11-15').map(({id, revision}) => ({id, revision}));
+  deq([firstHalf.length, secondHalf.length], [4, 1]);
+  assert.equal((await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, month: '2026-11', shifts: sentShifts}, 'owner')).status, 400, 'approval is per pay period');
+  assert.equal((await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, period: '2026-11-1', shifts: [...firstHalf, ...secondHalf]}, 'owner')).status, 409, 'only that period’s shifts');
+  assert.equal((await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, period: '2026-11-1', shifts: firstHalf.slice(1)}, 'owner')).status, 409, 'every sent shift, or none');
+  assert.equal((await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, period: '2026-11-1', shifts: firstHalf.map(x => ({...x, revision: x.revision + 1}))}, 'owner')).status, 409, 'stale');
+  r = await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, period: '2026-11-1', shifts: firstHalf}, 'owner');
+  assert.equal(r.status, 200); assert.equal(r.body.approved, 4);
+  // 60 min head (4000) + 90 min assistant (4500) + 60 min head FNL (4000) + 105 min assistant (5250).
+  assert.equal(r.body.cents, 4000 + 4500 + 4000 + 5250);
+  // The second half is still waiting, and is approved on its own: Nov 30, 90 min head (6000).
+  assert.equal(row("SELECT count(*) AS n FROM coach_time_entries WHERE work_date>'2026-11-15' AND approved_at IS NOT NULL").n, 0);
+  r = await post(owner, '/api/timesheets', {action: 'approve', coach: c.email, period: '2026-11-2', shifts: secondHalf}, 'owner');
+  deq([r.status, r.body.approved, r.body.cents], [200, 1, 6000]);
+  deq(sqlite.prepare("SELECT target FROM security_events WHERE action='coach_period_approved' ORDER BY rowid").all().map(e => e.target), ['dana.coach@example.test 2026-11-1 4 17750', 'dana.coach@example.test 2026-11-2 1 6000']);
   const frozen = sqlite.prepare("SELECT approved_minutes,approved_duty,approved_rate_cents,approved_cents FROM coach_time_entries WHERE approved_at IS NOT NULL ORDER BY work_date,clock_in").all();
   assert.ok(frozen.every(f => Number.isInteger(f.approved_cents) && Number.isInteger(f.approved_rate_cents)), 'integer cents');
   deq(frozen.map(f => f.approved_cents), [4000, 4500, 5250, 4000, 6000]);
   assert.equal((await post(owner, '/api/timesheets', {action: 'correct', id: ids.mon, revision: 99, hours: 1, minutes: 0, duty: 'head', reason: 'x y z'}, 'owner')).status, 409);
   const approvedMon = row('SELECT revision FROM coach_time_entries WHERE id=?', ids.mon).revision;
-  assert.match((await post(owner, '/api/timesheets', {action: 'correct', id: ids.mon, revision: approvedMon, hours: 1, minutes: 0, duty: 'head', reason: 'x y z'}, 'owner')).body.error, /Undo the month/);
-  assert.match((await post(owner, '/api/timesheets', {action: 'remove', id: ids.mon, revision: approvedMon, reason: 'x y z'}, 'owner')).body.error, /Undo the month/);
-  // After approval the coach cannot add to that month by hand.
+  assert.match((await post(owner, '/api/timesheets', {action: 'correct', id: ids.mon, revision: approvedMon, hours: 1, minutes: 0, duty: 'head', reason: 'x y z'}, 'owner')).body.error, /Undo the pay period/);
+  assert.match((await post(owner, '/api/timesheets', {action: 'remove', id: ids.mon, revision: approvedMon, reason: 'x y z'}, 'owner')).body.error, /Undo the pay period/);
+  // After approval the coach cannot add to that pay period by hand.
   assert.equal((await S.addShift(dana, 'dana-uuid', {date: '2026-11-25', session: null, duty: 'head', in: '10:00', out: '11:00', reason: 'Forgot'}, at('2026-12-02T15:00:00Z'))).status, 409);
 
-  // The month's file: approved practice lines at the role's rate, the lesson share, a total. Neutral wording (Q6).
+  // The whole month's file (still offered for the month): approved practice lines at the role's rate, the lesson share,
+  // a total. Neutral wording (Q6).
   const csv = await get(owner, '/api/timesheets?format=csv&month=2026-11', 'owner');
   assert.equal(csv.status, 200); assert.match(csv.headers.get('content-type'), /text\/csv/); assert.match(csv.headers.get('content-disposition'), /savage-coach-hours-2026-11\.csv/);
   const lines = csv.body.replace(/^﻿/, '').trim().split('\r\n');
-  assert.equal(lines[0], 'Coach,Coach email,Month,Line,Date,Program or lesson,Role,Hours,Rate,Amount,Note');
+  assert.equal(lines[0], 'Coach,Coach email,Pay period,Line,Date,Program or lesson,Role,Hours,Rate,Amount,Note');
   assert.equal(lines.filter(l => l.includes(',Practice,')).length, 5);
-  assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11,Practice,2026-11-04,No scheduled practice,Assistant coach,1.75,30.00 per hour,52.50,"Camp setup, agreed"'));
-  assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11,Private lessons,,"1 lesson, 100.00 kept from families",,,65% share,65.00,From the coach pay report'));
-  assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11,Total,,,,6.75,,302.50,'), 'practice 237.50 plus lessons 65.00');
+  assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11-01 to 2026-11-30,Practice,2026-11-04,No scheduled practice,Assistant coach,1.75,30.00 per hour,52.50,"Camp setup, agreed"'));
+  assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11-01 to 2026-11-30,Private lessons,,"1 lesson, 100.00 kept from families",,,65% share,65.00,From the coach pay report'));
+  assert.ok(lines.includes('Coach Dana,dana.coach@example.test,2026-11-01 to 2026-11-30,Total,,,,6.75,,302.50,'), 'practice 237.50 plus lessons 65.00');
+  // Each pay period's file lists only that period's approved hours, and the lesson share for its dates (the lesson on Nov 12).
+  const half = async p => (await get(owner, '/api/timesheets?format=csv&period=' + p, 'owner'));
+  const first = await half('2026-11-1'), firstLines = first.body.replace(/^﻿/, '').trim().split('\r\n');
+  assert.match(first.headers.get('content-disposition'), /savage-coach-hours-2026-11-1\.csv/);
+  deq(firstLines.filter(l => l.includes(',Practice,')).map(l => l.split(',')[4]), ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-06']);
+  assert.ok(firstLines.includes('Coach Dana,dana.coach@example.test,2026-11-01 to 2026-11-15,Total,,,,5.25,,242.50,'), 'practice 177.50 plus lessons 65.00');
+  const secondLines = (await half('2026-11-2')).body.replace(/^﻿/, '').trim().split('\r\n');
+  deq(secondLines.filter(l => l.includes(',Practice,')).map(l => l.split(',')[4]), ['2026-11-30']);
+  assert.ok(secondLines.includes('Coach Dana,dana.coach@example.test,2026-11-16 to 2026-11-30,Total,,,,1.50,,60.00,'));
+  assert.equal((await half('2026-11-3')).status, 400);
   assert.doesNotMatch(csv.body, /wage|salary|invoice|overtime|withhold|gross|payroll tax|employee|contractor/i, 'no employment wording');
 
-  // Undo approval needs a reason, and puts the month back for review.
-  assert.equal((await post(owner, '/api/timesheets', {action: 'unapprove', coach: c.email, month: '2026-11', reason: ''}, 'owner')).status, 400);
-  r = await post(owner, '/api/timesheets', {action: 'unapprove', coach: c.email, month: '2026-11', reason: 'Wrong role on the 30th'}, 'owner');
-  assert.equal(r.status, 200); assert.equal(r.body.reopened, 5);
+  // Undo approval needs a reason, and puts that pay period back for review.
+  assert.equal((await post(owner, '/api/timesheets', {action: 'unapprove', coach: c.email, period: '2026-11-2', reason: ''}, 'owner')).status, 400);
+  assert.equal((await post(owner, '/api/timesheets', {action: 'unapprove', coach: c.email, month: '2026-11', reason: 'Wrong role on the 30th'}, 'owner')).status, 400, 'per pay period');
+  r = await post(owner, '/api/timesheets', {action: 'unapprove', coach: c.email, period: '2026-11-2', reason: 'Wrong role on the 30th'}, 'owner');
+  deq([r.status, r.body.reopened], [200, 1]);
+  assert.equal(row("SELECT count(*) AS n FROM coach_time_entries WHERE approved_at IS NOT NULL").n, 4, 'the first half stays approved');
+  r = await post(owner, '/api/timesheets', {action: 'unapprove', coach: c.email, period: '2026-11-1', reason: 'Recheck the first half'}, 'owner');
+  deq([r.status, r.body.reopened], [200, 4]);
   assert.equal(row("SELECT count(*) AS n FROM coach_time_entries WHERE approved_at IS NOT NULL").n, 0);
   const again = await get(owner, '/api/timesheets?format=csv&month=2026-11', 'owner');
   assert.match(again.body, /Total,,,,0\.00,,65\.00,5 practice shifts are not approved yet and not included/);
@@ -343,22 +387,25 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   deq(C.action('out', {dataset: {id: 's1'}}, null).body, {action: 'clock-out', id: 's1'});
 }
 {
-  // The coach's hours page renders the month from the real reply shape.
-  const reply = await S.coachMonth(dana, '2026-11', at('2026-12-01T12:00:00Z'));
+  // The coach's hours page renders a pay period from the real reply shape.
+  const reply = await S.coachPeriod(dana, '2026-11-1', at('2026-12-01T12:00:00Z'));
   const data = {...reply, name: 'Coach Dana', owner: false, timeOffRequests: [{id: 'o1', revision: 1, text: 'Dec 10, 2026 to Dec 12, 2026', status: 'pending', reason: 'Wedding <3', decisionNote: null}], notices: [{subject: 'Coach Lee is away', body: 'b', at: '2026-11-03T12:00:00Z'}]};
   const {el, ctx} = page('app/coach-time/screen.html', async () => okJson(data));
   await settle(); await settle();
-  assert.equal(el('monthTitle').textContent, 'November 2026'); assert.equal(el('monthState').textContent, 'Sent to the academy. Waiting for approval.');
+  assert.equal(el('monthTitle').textContent, 'Nov 1–15, 2026'); assert.equal(el('monthState').textContent, 'Sent to the academy. Waiting for approval.');
+  assert.equal(el('period').value, '2026-11-1'); assert.match(el('period').innerHTML, /<option value="2026-11-1" selected>Nov 1–15, 2026<\/option><option value="2026-11-2">Nov 16–30, 2026<\/option><option value="2026-12-1">Dec 1–15, 2026<\/option>$/, 'the picker runs to the current pay period');
+  assert.equal(el('submit').textContent, 'Send Nov 1–15, 2026');
   assert.match(el('rates').textContent, /Head coach \$40\.00 an hour, Assistant coach \$30\.00 an hour/);
   assert.equal(el('submit').disabled, true); assert.equal(el('submitHelp').textContent, 'Nothing new to send.');
   assert.match(el('shifts').innerHTML, /Added by hand, not clocked/); assert.match(el('shifts').innerHTML, /Paid 1 h 45 min · \$52\.50 \(set by the academy: Camp setup, agreed\)/);
   assert.doesNotMatch(el('shifts').innerHTML, /data-fix=/, 'sent shifts cannot be changed by the coach');
   assert.match(el('offList').innerHTML, /Wedding &lt;3/); assert.match(el('offList').innerHTML, /data-withdraw="o1"/); assert.match(el('notices').innerHTML, /Coach Lee is away/);
-  // Before the last day, the button explains when the month can be sent.
-  ctx.d = {monthLabel: 'December 2026', canSubmit: false, submitOpensText: 'Dec 31, 2026', totals: {drafts: 2, open: 0, shifts: 2, submitted: 0}};
-  assert.equal(vm.runInContext('submitHelp(d)', ctx), 'You can send December 2026 from Dec 31, 2026, its last day.');
+  // Before the last day, the button explains when the pay period can be sent.
+  ctx.d = {label: 'Dec 1–15, 2026', canSubmit: false, submitOpensText: 'Dec 15, 2026', totals: {drafts: 2, open: 0, shifts: 2, submitted: 0}};
+  assert.equal(vm.runInContext('submitHelp(d)', ctx), 'You can send Dec 1–15, 2026 from Dec 15, 2026, its last day.');
   assert.equal(vm.runInContext('monthText(d)', ctx), '2 shifts not sent yet.');
-  ctx.d.canSubmit = true; assert.match(vm.runInContext('submitHelp(d)', ctx), /^Sends every shift in December 2026/);
+  ctx.d.canSubmit = true; assert.match(vm.runInContext('submitHelp(d)', ctx), /^Sends every shift in Dec 1–15, 2026/);
+  ctx.d.totals = {drafts: 0, open: 1, shifts: 1, submitted: 0}; assert.equal(vm.runInContext('monthText(d)', ctx), 'You are clocked in. Clock out before you send the pay period.');
   ctx.s = {id: 'a"b', revision: 2, status: 'draft', date: '2026-12-01', session: null, dutyLabel: 'Head coach', inTime: '10:00', outTime: '11:00', paidMinutes: 0, amountCents: 0, flags: ['<b>x</b>']};
   const sh = vm.runInContext('shiftHtml(s)', ctx);
   // Issue #375: removing deletes, and the page has nothing for a shift marked removed.
@@ -373,18 +420,24 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
 }
 {
   // The owner's page: approve sends exactly the sent shifts with their revisions; cover lists practices and lessons.
-  const r = await get(owner, '/api/timesheets?month=2026-11', 'owner');
+  // A whole month (the dashboard's link) lists every shift but offers no approval: that is per pay period (#399).
+  const whole = await get(owner, '/api/timesheets?month=2026-11', 'owner');
+  { const {el} = page('app/timesheets/screen.html', async () => okJson(whole.body)); await settle(); await settle();
+    assert.doesNotMatch(el('coaches').innerHTML, /data-approve=/); assert.match(el('status').textContent, /^November 2026 \(whole month: choose a pay period to approve\)/);
+    assert.equal(el('csv').href, '/api/timesheets?format=csv&month=2026-11'); assert.equal(el('period').value, '2026-11-1'); }
+  const r = await get(owner, '/api/timesheets?period=2026-11-1', 'owner');
   const {el, ctx} = page('app/timesheets/screen.html', async () => okJson(r.body));
   await settle(); await settle();
-  assert.equal(el('month').value, '2026-11'); assert.match(el('month').innerHTML, /<option value="2026-11" selected>November 2026<\/option>/); // the shared month picker (issue #232) assert.equal(el('csv').href, '/api/timesheets?format=csv&month=2026-11');
-  assert.match(el('coaches').innerHTML, /data-approve="dana\.coach@example\.test">Approve Coach Dana’s November 2026 \(\$237\.50\)/);
+  assert.equal(el('period').value, '2026-11-1'); assert.match(el('period').innerHTML, /<option value="2026-11-1" selected>Nov 1–15, 2026<\/option>/); // the pay-period picker (issue #399)
+  assert.equal(el('csv').href, '/api/timesheets?format=csv&period=2026-11-1');
+  assert.match(el('coaches').innerHTML, /data-approve="dana\.coach@example\.test">Approve Coach Dana’s Nov 1–15, 2026 \(\$177\.50\)/);
   assert.match(el('coaches').innerHTML, /Private lessons: 1, share \$65\.00 at 65%/);
   assert.match(el('coaches').innerHTML, /data-correct=/); assert.doesNotMatch(el('coaches').innerHTML, /Entered twice|Void|voided/, 'a removed shift is not on the page');
   assert.match(el('coaches').innerHTML, /<summary>Correct · Remove(?: · History)?<\/summary>[\s\S]*?<h4>Remove this shift<\/h4><p class="muted">The shift is deleted and is not paid\. The coach is emailed which shift you removed and your reason\.<\/p>[\s\S]*?Reason \(the coach sees this\)[\s\S]*?data-remove="[0-9a-f-]{36}" data-rev="\d+">Remove shift<\/button>/);
   deq([ctx.removedText({coachTold: 'emailed', coachName: 'Coach Dana'}), ctx.removedText({coachTold: 'not-emailed', coachName: 'Coach Dana'}), ctx.removedText({coachTold: 'self'})], ['Shift removed. Coach Dana was emailed.', 'Shift removed. The email to Coach Dana could not be sent, so tell them yourself.', 'Shift removed.']);
   ctx.c = r.body.coaches[0];
-  const body = vm.runInContext('approveBody(c,"2026-11")', ctx);
-  assert.equal(body.action, 'approve'); assert.equal(body.shifts.length, 5); assert.ok(body.shifts.every(x => typeof x.revision === 'number'));
+  const body = vm.runInContext('approveBody(c,"2026-11-1")', ctx);
+  deq([body.action, body.period], ['approve', '2026-11-1']); assert.equal(body.shifts.length, 4); assert.ok(body.shifts.every(x => typeof x.revision === 'number'));
   ctx.cv = {practices: [{date: '2026-12-10', time: '6:00 PM–7:30 PM', title: 'SWA Intermediate'}], lessons: [{date: '2026-12-11', time: '4:00 PM–5:00 PM', booked: 1}, {date: '2026-12-12', time: '4:00 PM–5:00 PM', booked: 0}]};
   const cover = vm.runInContext('coverHtml(cv)', ctx);
   assert.match(cover, /Thu, Dec 10 · 6:00 PM–7:30 PM · SWA Intermediate practice/); assert.match(cover, /private lesson · 1 wrestler booked/); assert.match(cover, /\(open time\)/);
@@ -392,4 +445,4 @@ const okJson = body => ({ok: true, status: 200, json: async () => body});
   ctx.s = {...ctx.c.shifts[0], status: 'approved'};
   assert.doesNotMatch(vm.runInContext('shiftHtml(s)', ctx), /data-correct|data-remove/, 'approved shifts are changed only after undoing approval');
 }
-console.log('Coach timesheet tests passed: academy time across daylight saving, $40/$30 rates in one place, pay for scheduled practice time only in whole cents, flags (early, late, long, back to back, by hand, changed, open, time off), month sent only on or after its last day in New York time, coach fixes and removals with reasons, owner corrections audited before and after, removed shifts deleted (the coach emailed when the academy removes one), approval of exactly the reviewed shifts with amounts frozen, undo with a reason, the month file with lesson shares and neutral wording, owner-only access, and the clock card and page scripts.');
+console.log('Coach timesheet tests passed: academy time across daylight saving, $40/$30 rates in one place, pay for scheduled practice time only in whole cents, flags (early, late, long, back to back, by hand, changed, open, time off), each half-month pay period sent only on or after its last day in New York time, coach fixes and removals with reasons, owner corrections audited before and after, removed shifts deleted (the coach emailed when the academy removes one), approval of exactly the reviewed shifts with amounts frozen, undo with a reason, the month file with lesson shares and neutral wording, owner-only access, and the clock card and page scripts.');

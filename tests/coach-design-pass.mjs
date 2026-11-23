@@ -66,13 +66,13 @@ function page(file, fetch, {hash = '', extra = {}} = {}) {
 // ---------- 2. Your hours ----------
 {
   const s = read('app/coach-time/screen.html');
-  const month = (o = {}) => ({month: '2026-11', monthLabel: 'November 2026', today: '2026-11-07', submitOpens: '2026-11-30', submitOpensText: 'Nov 30, 2026', canSubmit: false, next: null, handMonths: ['2026-11', '2026-10'],
+  const month = (o = {}) => ({period: '2026-11-1', month: '2026-11', label: 'Nov 1–15, 2026', from: '2026-11-01', to: '2026-11-15', today: '2026-11-07', submitOpens: '2026-11-15', submitOpensText: 'Nov 15, 2026', canSubmit: false, next: null, handMonths: ['2026-11', '2026-10'],
     rates: [{label: 'Head coach', centsPerHour: 4000}], timeOff: [], timeOffRequests: [], notices: [], totals: {minutes: 0, amountCents: 0, shifts: 0, drafts: 0, open: 0, submitted: 0, breakdown: []}, shifts: [], ...o});
   const notice = n => ({subject: 'Notice ' + n, body: 'Body ' + n, at: '2026-11-0' + n + 'T15:00:00Z'});
   const p = page('app/coach-time/screen.html', async () => json({}));
   // A month with no shifts: one sentence, and no tiles of zeros, no state line saying it again, nothing to send.
   p.ctx.m = month(); p.run('render(m)');
-  assert.match(p.el('shifts').innerHTML, /^<div class="empty"><svg[^>]*>[\s\S]*?<\/svg><p>No shifts in November 2026 yet\. Clock in at practice and each shift shows here\.<\/p><\/div>$/);
+  assert.match(p.el('shifts').innerHTML, /^<div class="empty"><svg[^>]*>[\s\S]*?<\/svg><p>No shifts in Nov 1–15, 2026 yet\. Clock in at practice and each shift shows here\.<\/p><\/div>$/);
   assert.equal(p.el('monthTotals').hidden, true); assert.equal(p.el('monthState').hidden, true); assert.equal(p.el('sendBox').hidden, true);
   assert.equal(p.el('noticeBox').hidden, true, 'no notices: no Notices card'); assert.equal(p.el('notices').innerHTML, '');
   assert.equal(p.el('offList').innerHTML, '<p class="empty">No time off requests yet.</p>');
@@ -104,7 +104,7 @@ function page(file, fetch, {hash = '', extra = {}} = {}) {
   for (const [form, note] of [['addForm', 'addNote'], ['offForm', 'offFormNote']]) assert.match(s, new RegExp(`<form id="${form}"[\\s\\S]*?<button type="submit">[^<]+</button><p id="${note}" class="form-note" role="status" aria-live="polite"></p></form>`), form);
   // A month that cannot be loaded says so in place of the skeleton rows.
   const down = page('app/coach-time/screen.html', async () => json({error: 'Sign in again.'}, false)); await settle();
-  assert.equal(down.el('shifts').innerHTML, '<p class="muted">Your month could not be loaded. Refresh the page to try again.</p>'); assert.equal(down.el('status').textContent, 'Sign in again.');
+  assert.equal(down.el('shifts').innerHTML, '<p class="muted">Your hours could not be loaded. Refresh the page to try again.</p>'); assert.equal(down.el('status').textContent, 'Sign in again.');
   // Time off: the requests first, the form behind its button; "Time off" on coach home opens the page at the form.
   assert.match(s, /<section class="card" id="timeOff" aria-labelledby="offTitle"><h2 id="offTitle">Time off<\/h2>\n<div id="offList"><\/div><p id="offNote" class="form-note" role="status" aria-live="polite"><\/p>\n<details class="ask" id="offBox"><summary>Ask for time off<\/summary><form id="offForm" class="stack">/);
   assert.equal(p.el('offBox').open, false);

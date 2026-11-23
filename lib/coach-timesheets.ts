@@ -1,9 +1,11 @@
-// Coach timesheets (issue #193): clocking in and out, the coach's own month, the owner's review and the month's file.
+// Coach timesheets (issue #193): clocking in and out, the coach's own pay period, the owner's review and the period's
+// file. Pay periods (issue #399, decided on #369) are half a month: the 1st-15th and the 16th to the month's end. A coach
+// sends a period once it ends and the owner approves each period. Views also accept a whole month (the dashboard's counts).
 // The rules (rates, paid time, flags) are in lib/coach-time.ts. Every change bumps the shift's revision, so a stale page
 // cannot overwrite a newer change, and is written to the shift's history and the security log.
 //
 // A removed shift is deleted (issue #375): it is gone from Your hours and from Coach hours, and the security log keeps
-// one line saying who removed which shift and why. A coach removes their own shift until they send the month. The owner
+// one line saying who removed which shift and why. A coach removes their own shift until they send its pay period. The owner
 // removes any shift that is not approved, with a reason, and the coach is emailed which shift and why, so their hours
 // never change without them knowing. Rows marked removed before this change are deleted by a migration; one that came
 // back (an older backup restored) is never read.
@@ -14,8 +16,9 @@ import {sendEmailsDetailed, type EmailResult, type Outgoing} from './email';
 import {academyState, sessionsOn} from './roster';
 import {coachPayReport} from './coach-pay';
 import {
-  ENTRY_COLUMNS, PRACTICE_RATES, DUTY_LABEL, academyClock, academyInstant, addMonths, amountCents, canSubmitMonth, dutyOf, handDateAllowed, hoursText,
-  isDuty, lastDayOf, monthLabel, monthOf, monthState, payrollCsv, scheduledMinutes, shiftView, totals, validClock, validDay, validMonth, workedRange,
+  ENTRY_COLUMNS, PRACTICE_RATES, DUTY_LABEL, academyClock, academyInstant, addMonths, addPeriods, amountCents, canSubmitPeriod, dutyOf, handDateAllowed,
+  hoursRange, hoursText, isDuty, monthOf, monthState, payrollCsv, periodEnd, periodLabel, periodOf, periodStart, scheduledMinutes, shiftView, totals,
+  validClock, validDay, validMonth, validPeriod, workedRange, type HoursRange,
   type Entry, type Session, type TimeOff, type ShiftView
 } from './coach-time';
 
@@ -62,9 +65,17 @@ async function approvedTimeOff(email: string | null, from: string, to: string) {
 }
 const timeOffView = (t: TimeOff & {id: string}) => ({id: t.id, start: t.start_date, end: t.end_date, text: t.start_date === t.end_date ? fullDate(t.start_date) : `${fullDate(t.start_date)} to ${fullDate(t.end_date)}`});
 
-// The coach's month, their open shift, what they can clock in for today, and their team notices.
-export async function coachMonth(coach: Coach, monthInput: unknown, now = new Date()) {
-  const today = academyDay(now), month = validMonth(monthInput) ? monthInput : monthOf(today), from = month + '-01', to = lastDayOf(month);
+// Where the arrows lead from what is shown: the pay period (or month) before and after. Coaches never go past the
+// current pay period; the owner can.
+function steps(r: HoursRange, today: string, limitToToday: boolean) {
+  const previous = r.period ? addPeriods(r.period, -1) : addMonths(r.month, -1), next = r.period ? addPeriods(r.period, 1) : addMonths(r.month, 1);
+  const current = r.period ? periodOf(today) : monthOf(today);
+  return {previous, next: limitToToday && next > current ? null : next};
+}
+
+// The coach's pay period, their open shift, what they can clock in for today, and their team notices.
+export async function coachPeriod(coach: Coach, input: unknown, now = new Date()) {
+  const today = academyDay(now), r = hoursRange(input, today), {from, to} = r;
   const state = await academyState();
   const rows = await entries('coach_email=? AND work_date BETWEEN ? AND ?', coach.email, from, to);
   const off = await approvedTimeOff(coach.email, from, to);
@@ -75,9 +86,9 @@ export async function coachMonth(coach: Coach, monthInput: unknown, now = new Da
   const choices = choicesOn(state, today, coach.programs);
   const t = totals(views);
   return {
-    month, monthLabel: monthLabel(month), today, previous: addMonths(month, -1), next: month < monthOf(today) ? addMonths(month, 1) : null,
-    rates: rateList(), shifts: views, totals: t, state: monthState(t), canSubmit: canSubmitMonth(month, today) && t.drafts > 0 && !t.open,
-    submitOpens: lastDayOf(month), submitOpensText: fullDate(lastDayOf(month)), timeOff: off.map(timeOffView),
+    period: r.period, month: r.month, label: r.label, from, to, today, ...steps(r, today, true),
+    rates: rateList(), shifts: views, totals: t, state: monthState(t), canSubmit: !!r.period && canSubmitPeriod(r.period, today) && t.drafts > 0 && !t.open,
+    submitOpens: to, submitOpensText: fullDate(to), timeOff: off.map(timeOffView),
     open: open ? shiftView(open, {sessions: sessionsFor(state, [open.work_date])}) : null,
     choices: choices.map(s => ({key: s.key, title: s.title, start: s.start, end: s.end})), suggested: suggestedChoice(choices, now.getTime()),
     lastDuty: isDuty(last?.duty) ? last!.duty : null, handMonths: [monthOf(today), addMonths(monthOf(today), -1)]
@@ -125,7 +136,7 @@ export async function clockOut(coach: Coach, userId: string, input: any, now = n
   return ok();
 }
 
-// A coach may change their own shift until they send the month: clock times on the same day, with a reason.
+// A coach may change their own shift until they send its pay period: clock times on the same day, with a reason.
 function editable(e: Entry | null, revision: unknown): string | null {
   if (!e) return 'That shift is not yours or no longer exists.';
   if (e.voided_at) return 'That shift was removed.';
@@ -168,9 +179,9 @@ export async function addShift(coach: Coach, userId: string, input: any, now = n
   if (!isDuty(input.duty)) return fail(400, 'Choose Head coach or Assistant coach.');
   const reason = note(input.reason);
   if (reason.length < 3 || reason.length > 300) return fail(400, 'Say briefly why this shift was not clocked (up to 300 characters).');
-  const month = monthOf(date);
-  const done = await db().prepare('SELECT 1 FROM coach_time_entries WHERE coach_email=? AND work_date BETWEEN ? AND ? AND approved_at IS NOT NULL LIMIT 1').bind(coach.email, month + '-01', lastDayOf(month)).first();
-  if (done) return fail(409, `The academy already approved ${monthLabel(month)}. Ask the academy to add this shift.`);
+  const period = periodOf(date);
+  const done = await db().prepare('SELECT 1 FROM coach_time_entries WHERE coach_email=? AND work_date BETWEEN ? AND ? AND approved_at IS NOT NULL LIMIT 1').bind(coach.email, periodStart(period), periodEnd(period)).first();
+  if (done) return fail(409, `The academy already approved ${periodLabel(period)}. Ask the academy to add this shift.`);
   let session: Session | null = null;
   if (input.session) {
     session = choicesOn(await academyState(), date, coach.programs).find(s => s.key === input.session) ?? null;
@@ -195,7 +206,7 @@ export function shiftWords(e: Entry) {
   const times = w.end === null ? `${clockTime(academyClock(w.start))}, no clock-out` : clockRange(academyClock(w.start), academyClock(w.end));
   return `${dayDate(e.work_date)} · ${practice} · ${DUTY_LABEL[dutyOf(e)]} · ${e.source === 'hand' ? 'added by hand' : 'clocked'} ${times}`;
 }
-// The coach removes their own shift (a test punch, a double clock-in) until they send the month. It is deleted.
+// The coach removes their own shift (a test punch, a double clock-in) until they send its pay period. It is deleted.
 export async function removeShift(coach: Coach, userId: string, input: any) {
   const e = await ownShift(coach, input?.id), problem = editable(e, input?.revision);
   if (problem) return fail(409, problem);
@@ -207,36 +218,36 @@ export async function removeShift(coach: Coach, userId: string, input: any) {
   await audit(userId, 'coach_shift_removed', `${coach.email} · ${shiftWords(e!)}${reason ? ' · ' + reason : ''}`).run();
   return ok();
 }
-// Q5: the whole month, on or after its last day.
-export async function submitMonth(coach: Coach, userId: string, input: any, now = new Date()) {
-  const month = input?.month, today = academyDay(now);
-  if (!validMonth(month) || month > monthOf(today)) return fail(400, 'Choose a month.');
-  if (!canSubmitMonth(month, today)) return fail(409, `You can send ${monthLabel(month)} from ${fullDate(lastDayOf(month))}, its last day.`);
-  const from = month + '-01', to = lastDayOf(month);
+// Q5 and #369: the whole pay period, on or after its last day.
+export async function submitPeriod(coach: Coach, userId: string, input: any, now = new Date()) {
+  const period = input?.period, today = academyDay(now);
+  if (!validPeriod(period) || period > periodOf(today)) return fail(400, 'Choose a pay period.');
+  const from = periodStart(period), to = periodEnd(period), label = periodLabel(period);
+  if (!canSubmitPeriod(period, today)) return fail(409, `You can send ${label} from ${fullDate(to)}, its last day.`);
   if (await db().prepare('SELECT 1 FROM coach_time_entries WHERE coach_email=? AND work_date BETWEEN ? AND ? AND clock_out IS NULL AND voided_at IS NULL').bind(coach.email, from, to).first())
-    return fail(409, 'Clock out first. A shift in this month is still open.');
+    return fail(409, 'Clock out first. A shift in this pay period is still open.');
   const at = now.toISOString();
   const r = await db().prepare(`UPDATE coach_time_entries SET submitted_at=?,revision=revision+1,history=json_insert(history,'$[#]',json(?))
     WHERE coach_email=? AND work_date BETWEEN ? AND ? AND clock_out IS NOT NULL AND submitted_at IS NULL AND approved_at IS NULL AND voided_at IS NULL RETURNING id`)
     .bind(at, step('coach', 'sent to the academy'), coach.email, from, to).all();
-  if (!r.results.length) return fail(409, `There is nothing new to send for ${monthLabel(month)}.`);
-  await audit(userId, 'coach_month_submitted', `${month} ${r.results.length}`).run();
+  if (!r.results.length) return fail(409, `There is nothing new to send for ${label}.`);
+  await audit(userId, 'coach_period_submitted', `${period} ${r.results.length}`).run();
   return ok({sent: r.results.length});
 }
 
 // ---------- Owner ----------
-export async function ownerMonth(monthInput: unknown, coachInput: unknown, now = new Date()) {
-  const today = academyDay(now), month = validMonth(monthInput) ? monthInput : monthOf(today), from = month + '-01', to = lastDayOf(month);
+export async function ownerPeriod(input: unknown, coachInput: unknown, now = new Date()) {
+  const today = academyDay(now), r = hoursRange(input, today), {from, to} = r;
   const filter = typeof coachInput === 'string' && coachInput ? coachInput.toLowerCase() : null;
   const state = await academyState();
   const rows = await entries(filter ? 'work_date BETWEEN ? AND ? AND coach_email=?' : 'work_date BETWEEN ? AND ?', from, to, ...(filter ? [filter] : []));
-  if (rows.length > 3000) return fail(409, 'This month has too many shifts to show at once. Choose one coach.');
+  if (rows.length > 3000) return fail(409, 'These dates have too many shifts to show at once. Choose one coach.');
   const off = await approvedTimeOff(filter, from, to);
   const sessions = sessionsFor(state, rows.map(r => r.work_date));
   const pay = await coachPayReport(from, to);
   const lessons = new Map('error' in pay ? [] : pay.coaches.map(c => [c.coachEmail, c]));
   const staff = (await db().prepare('SELECT email,name,programs,active FROM staff_access ORDER BY name').all<{email: string; name: string; programs: string; active: number}>()).results;
-  // Every coach with shifts, lessons or approved time off this month (time off stays on their history, #197 Q7 A).
+  // Every coach with shifts, lessons or approved time off in these dates (time off stays on their history, #197 Q7 A).
   const emails = new Set([...rows.map(r => r.coach_email), ...off.map(o => o.coach_email), ...(filter ? [] : [...lessons.keys()].filter(Boolean))]);
   if (filter) emails.add(filter);
   const coaches = [...emails].map(email => {
@@ -248,7 +259,7 @@ export async function ownerMonth(monthInput: unknown, coachInput: unknown, now =
   }).sort((a, b) => a.name.localeCompare(b.name));
   const sum = (f: (c: typeof coaches[number]) => number) => coaches.reduce((n, c) => n + f(c), 0);
   return ok({
-    month, monthLabel: monthLabel(month), today, previous: addMonths(month, -1), next: addMonths(month, 1), rates: rateList(), coach: filter,
+    period: r.period, month: r.month, label: r.label, from, to, today, ...steps(r, today, false), rates: rateList(), coach: filter,
     coaches, choices: staff.map(s => ({email: s.email, name: s.name, active: s.active === 1})),
     overall: {minutes: sum(c => c.totals.minutes), practiceCents: sum(c => c.totals.amountCents), approvedCents: sum(c => c.shifts.filter(v => v.status === 'approved').reduce((n, v) => n + v.amountCents, 0)),
       lessonCents: sum(c => c.lessons?.owedCents ?? 0), waiting: sum(c => c.totals.submitted), notSent: sum(c => c.totals.drafts + c.totals.open), flagged: sum(c => c.totals.flagged)}
@@ -262,7 +273,7 @@ async function shift(id: unknown) {
 export async function ownerCorrect(ownerId: string, input: any) {
   const e = await shift(input?.id);
   if (!e || e.revision !== input?.revision) return fail(409, 'This shift changed since you opened the page. Refresh and try again.');
-  if (e.approved_at) return fail(409, 'Undo the month’s approval before correcting a shift.');
+  if (e.approved_at) return fail(409, 'Undo the pay period’s approval before correcting a shift.');
   if (!e.clock_out) return fail(409, 'The coach is still clocked in on that shift. Void it, or wait for the coach to clock out or fix it.');
   const hours = input.hours, minutes = input.minutes;
   if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 24 || minutes < 0 || minutes > 59 || hours * 60 + minutes > 1440) return fail(400, 'Enter the paid time in hours (0 to 24) and minutes (0 to 59).');
@@ -289,7 +300,7 @@ export function removedShiftEmail(e: Entry, reason: string): Outgoing {
 export async function ownerRemove(ownerId: string, input: any, send: (list: Outgoing[]) => Promise<EmailResult[]> = sendEmailsDetailed) {
   const e = await shift(input?.id);
   if (!e || e.revision !== input?.revision) return fail(409, 'This shift changed since you opened the page. Refresh and try again.');
-  if (e.approved_at) return fail(409, 'Undo the month’s approval before removing a shift.');
+  if (e.approved_at) return fail(409, 'Undo the pay period’s approval before removing a shift.');
   const reason = note(input.reason);
   if (reason.length < 3 || reason.length > 300) return fail(400, 'Add a reason for removing the shift (up to 300 characters).');
   const r = await db().prepare('DELETE FROM coach_time_entries WHERE id=? AND revision=? AND approved_at IS NULL AND voided_at IS NULL RETURNING id').bind(e.id, e.revision).first();
@@ -300,19 +311,19 @@ export async function ownerRemove(ownerId: string, input: any, send: (list: Outg
   try { const [result] = await send([removedShiftEmail(e, reason)]); told = result?.status === 'sent'; } catch { told = false; }
   return ok({coachTold: told ? 'emailed' : 'not-emailed', coachName: e.coach_name});
 }
-// Approve a coach's sent month: exactly the shifts the owner reviewed (ids and revisions), and only when nothing else in
-// the month is still open or unsent. The minutes, role, rate and amount are copied onto each shift.
-export async function approveMonth(ownerId: string, input: any) {
-  const month = input?.month, email = typeof input?.coach === 'string' ? input.coach.toLowerCase() : '';
+// Approve a coach's sent pay period: exactly the shifts the owner reviewed (ids and revisions), and only when nothing
+// else in the period is still open or unsent. The minutes, role, rate and amount are copied onto each shift.
+export async function approvePeriod(ownerId: string, input: any) {
+  const period = input?.period, email = typeof input?.coach === 'string' ? input.coach.toLowerCase() : '';
   const list = input?.shifts;
-  if (!validMonth(month) || !email || !Array.isArray(list) || !list.length || list.length > 500 || !list.every((s: any) => validId(s?.id) && validRevision(s?.revision))
-    || new Set(list.map((s: any) => s.id)).size !== list.length) return fail(400, 'Choose the coach’s month to approve.');
-  const from = month + '-01', to = lastDayOf(month);
+  if (!validPeriod(period) || !email || !Array.isArray(list) || !list.length || list.length > 500 || !list.every((s: any) => validId(s?.id) && validRevision(s?.revision))
+    || new Set(list.map((s: any) => s.id)).size !== list.length) return fail(400, 'Choose the coach’s pay period to approve.');
+  const from = periodStart(period), to = periodEnd(period), label = periodLabel(period);
   const rows = await entries('coach_email=? AND work_date BETWEEN ? AND ? AND voided_at IS NULL AND approved_at IS NULL', email, from, to);
   const unsent = rows.filter(r => !r.clock_out || !r.submitted_at).length;
-  if (unsent) return fail(409, `This coach has ${unsent} shift${unsent === 1 ? '' : 's'} in ${monthLabel(month)} not sent yet. Approve once the whole month is sent.`);
+  if (unsent) return fail(409, `This coach has ${unsent} shift${unsent === 1 ? '' : 's'} in ${label} not sent yet. Approve once the whole pay period is sent.`);
   const seen = new Map(list.map((s: any) => [s.id, s.revision]));
-  if (rows.length !== list.length || rows.some(r => seen.get(r.id) !== r.revision)) return fail(409, 'The month changed since you opened the page. Refresh and review it again.');
+  if (rows.length !== list.length || rows.some(r => seen.get(r.id) !== r.revision)) return fail(409, 'The pay period changed since you opened the page. Refresh and review it again.');
   const at = new Date().toISOString();
   const values = rows.map(r => { const minutes = r.owner_minutes ?? scheduledMinutes(r), duty = dutyOf(r), rate = PRACTICE_RATES[duty];
     return {id: r.id, revision: r.revision, minutes, duty, rate, cents: amountCents(minutes, rate)}; });
@@ -326,29 +337,30 @@ export async function approveMonth(ownerId: string, input: any) {
       AND (SELECT count(*) FROM coach_time_entries WHERE coach_email=? AND work_date BETWEEN ? AND ? AND approved_at IS NULL AND voided_at IS NULL)=?
     RETURNING id`)
     .bind(at, ownerId, data, data, data, data, step('owner', 'approved'), data, data, email, from, to, values.length, email, from, to, values.length).all();
-  if (r.results.length !== values.length) return fail(409, 'The month changed since you opened the page. Refresh and review it again.');
+  if (r.results.length !== values.length) return fail(409, 'The pay period changed since you opened the page. Refresh and review it again.');
   const cents = values.reduce((n, v) => n + v.cents, 0);
-  await audit(ownerId, 'coach_month_approved', `${email} ${month} ${values.length} ${cents}`).run();
+  await audit(ownerId, 'coach_period_approved', `${email} ${period} ${values.length} ${cents}`).run();
   return ok({approved: values.length, cents});
 }
-export async function unapproveMonth(ownerId: string, input: any) {
-  const month = input?.month, email = typeof input?.coach === 'string' ? input.coach.toLowerCase() : '';
-  if (!validMonth(month) || !email) return fail(400, 'Choose the coach’s month.');
+export async function unapprovePeriod(ownerId: string, input: any) {
+  const period = input?.period, email = typeof input?.coach === 'string' ? input.coach.toLowerCase() : '';
+  if (!validPeriod(period) || !email) return fail(400, 'Choose the coach’s pay period.');
   const reason = note(input.reason);
   if (reason.length < 3 || reason.length > 300) return fail(400, 'Add a reason for undoing the approval (up to 300 characters).');
   const r = await db().prepare(`UPDATE coach_time_entries SET approved_at=NULL,approved_by=NULL,approved_minutes=NULL,approved_duty=NULL,approved_rate_cents=NULL,approved_cents=NULL,
       revision=revision+1,history=json_insert(history,'$[#]',json(?)) WHERE coach_email=? AND work_date BETWEEN ? AND ? AND approved_at IS NOT NULL RETURNING id`)
-    .bind(step('owner', 'approval undone', {note: reason}), email, month + '-01', lastDayOf(month)).all();
-  if (!r.results.length) return fail(409, 'Nothing in that month is approved.');
-  await audit(ownerId, 'coach_month_unapproved', `${email} ${month} ${r.results.length}`).run();
+    .bind(step('owner', 'approval undone', {note: reason}), email, periodStart(period), periodEnd(period)).all();
+  if (!r.results.length) return fail(409, 'Nothing in that pay period is approved.');
+  await audit(ownerId, 'coach_period_unapproved', `${email} ${period} ${r.results.length}`).run();
   return ok({reopened: r.results.length});
 }
-// The month's file: approved practice hours at the role's rate, plus each coach's private lesson share.
-export async function monthCsv(monthInput: unknown) {
-  if (!validMonth(monthInput)) return fail(400, 'Choose a month.');
-  const view = await ownerMonth(monthInput, null);
+// The pay period's file (or a whole month's): approved practice hours at the role's rate, plus each coach's private
+// lesson share for the same dates.
+export async function periodCsv(input: unknown) {
+  if (!validPeriod(input) && !validMonth(input)) return fail(400, 'Choose a pay period.');
+  const view = await ownerPeriod(input, null);
   if (view.status !== 200) return view;
   const coaches = (view.coaches as any[]).map(c => ({email: c.email, name: c.name, shifts: c.shifts as ShiftView[], lessons: c.lessons,
     notApproved: (c.shifts as ShiftView[]).filter(s => s.status !== 'approved' && s.status !== 'voided').length}));
-  return ok({csv: payrollCsv(monthInput, coaches), month: monthInput});
+  return ok({csv: payrollCsv(`${view.from} to ${view.to}`, coaches), period: input});
 }

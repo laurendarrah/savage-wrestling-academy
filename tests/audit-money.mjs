@@ -65,7 +65,7 @@ assert.equal(csv[1], `Coach Dana,dana@example.test,${ny(3)},16:00,Jo One,One-on-
 // The same through the owner's report route and the payroll file.
 let res = await coachPayApi.GET(new Request(`https://swa.test/api/coach-pay?from=${ny(0)}&to=${ny(10)}`));
 assert.equal((await res.json()).coaches[0].owedCents, 3250);
-let payroll = await timesheets.monthCsv(ny(3).slice(0, 7));
+let payroll = await timesheets.periodCsv(ny(3).slice(0, 7));
 assert.equal(payroll.status, 200);
 assert.match(payroll.csv, /Private lessons,,"1 lesson, 50\.00 kept from families \(30\.00 refunded\)",,,65% share,32\.50,From the coach pay report/, 'the payroll file pays the share of what was kept');
 // A second refund takes the total to $50 back: the coach's share follows Stripe's running total, in any order.

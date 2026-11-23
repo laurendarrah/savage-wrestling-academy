@@ -27,7 +27,7 @@ window.CoachClock = (() => {
   // The card for one state of the clock. Pure: it only builds HTML from the /api/coach-time reply.
   function html(d, role, opts = {}) {
     const title = `<h2 id="${esc(opts.titleId || 'clockTitle')}">${d && d.open ? 'On the clock' : 'Clock in'}</h2>`;
-    const foot = (opts.link === false ? '' : '<a href="/coach-time">Your hours and time off →</a>') + (d && d.totals ? `${opts.link === false ? '' : ' · '}${esc(d.monthLabel)}: ${d.totals.shifts} shift${d.totals.shifts === 1 ? '' : 's'}, ${span(d.totals.minutes)} paid so far` : '');
+    const foot = (opts.link === false ? '' : '<a href="/coach-time">Your hours and time off →</a>') + (d && d.totals ? `${opts.link === false ? '' : ' · '}${esc(d.label || d.monthLabel)}: ${d.totals.shifts} shift${d.totals.shifts === 1 ? '' : 's'}, ${span(d.totals.minutes)} paid so far` : '');
     if (!d) return title + '<p class="muted">Loading your clock…</p>';
     if (d.open) {
       const o = d.open, since = Date.parse(o.clockIn), now = opts.now ?? Date.now();

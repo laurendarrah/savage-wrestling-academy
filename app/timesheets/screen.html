@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach hours | Savage Wrestling Academy</title><style>
 *{box-sizing:border-box}body{margin:0}main{max-width:1000px;margin:auto;padding:20px 16px 60px}
 h1{line-height:1.15;margin:12px 0 4px}h2{margin:0 0 6px;font-size:var(--swa-t-20)}h3{margin:0;font-size:var(--swa-t-17)}section{margin:0 0 var(--swa-s-24)}
-/* A coach's month is a card (the shared card look, for sections the page draws inside #coaches) */
+/* A coach's pay period is a card (the shared card look, for sections the page draws inside #coaches) */
 #coaches>section{background:var(--swa-surface);border:1px solid var(--swa-hair);border-radius:var(--swa-r-card);box-shadow:var(--swa-shadow);padding:var(--swa-s-16)}@media(min-width:900px){#coaches>section{padding:var(--swa-s-24)}}
 
 .muted{color:var(--swa-muted)}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}label{display:flex;flex-direction:column;font-weight:bold;font-size:var(--swa-t-15);gap:4px}
@@ -27,18 +27,18 @@ details{margin-top:8px}summary{cursor:pointer;min-height:44px;display:flex;align
 #status{font-weight:bold;min-height:1.5em}[hidden]{display:none!important}@media print{.row,a,button,details{display:none}section{border:0}}
 .pay-total{margin:var(--swa-s-8) 0;font-size:var(--swa-t-17)}.pay-total .muted{font-size:var(--swa-t-15)}.tile small{display:block;margin-top:6px;font-size:var(--swa-t-13);letter-spacing:0;text-transform:none;font-weight:500}</style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <h1>Coach hours</h1>
-<p>Review each coach’s month after they send it, fix anything with a reason, approve it, and download the month’s hours with lesson shares. Practices are paid for the scheduled practice time only, at the rate for the role the coach worked.</p>
-<section><div class="row"><div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="month"></select></label><button type="button" class="month-step" id="next" aria-label="Next month">→</button></div>
+<p>Coaches are paid twice a month: the 1st to the 15th, and the 16th to the end of the month. Review each coach’s pay period after they send it, fix anything with a reason, approve it, and download the period’s hours with lesson shares. Practices are paid for the scheduled practice time only, at the rate for the role the coach worked.</p>
+<section><div class="row"><div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous pay period">←</button><label class="month-pick"><span>Pay period</span><select id="period"></select></label><button type="button" class="month-step" id="next" aria-label="Next pay period">→</button></div>
 <label>Coach<select id="coach"><option value="">All coaches</option></select></label>
 <a class="button" id="csv" href="#">Download spreadsheet</a></div>
 <p class="muted" id="rates"></p>
 <p class="swa-caption">Coaches are paid as independent contractors, so the file lists hours and amounts owed, with no overtime or tax withholding. Ask your accountant about year-end tax forms for each coach. Practice lines are approved shifts only; private lesson shares come from the <a href="/coach-pay">coach pay report</a>.</p></section>
 <p id="status" role="status" aria-live="polite">Loading…</p>
-<div class="tiles" id="tiles"><div class="tile"><span class="muted">Paid practice time</span><b id="tMinutes">–</b></div><div class="tile"><span class="muted">Practice amount</span><b id="tPractice">–</b></div><div class="tile"><span class="muted">Lesson shares</span><b id="tLessons">–</b></div><div class="tile"><span class="muted">Waiting for you</span><b id="tWaiting">–</b></div><div class="tile"><span class="muted">Total for the month</span><b id="tTotal">–</b><small id="tTotalNote" class="muted"></small></div></div>
+<div class="tiles" id="tiles"><div class="tile"><span class="muted">Paid practice time</span><b id="tMinutes">–</b></div><div class="tile"><span class="muted">Practice amount</span><b id="tPractice">–</b></div><div class="tile"><span class="muted">Lesson shares</span><b id="tLessons">–</b></div><div class="tile"><span class="muted">Waiting for you</span><b id="tWaiting">–</b></div><div class="tile"><span class="muted">Total for the pay period</span><b id="tTotal">–</b><small id="tTotalNote" class="muted"></small></div></div>
 <section id="offBox" aria-labelledby="offTitle"><h2 id="offTitle">Time off</h2><p class="muted">When you approve, the other coaches in the same programs get a notice (without the reason), and the coach’s practices and lessons in those dates are listed here for cover. Nothing is canceled.</p><div id="offPending"></div><h3 id="coverTitle">Needs cover</h3><div id="offApproved"></div></section>
 <div id="coaches"></div></main>
 <script src="/hours-text.js"></script>
-<script src="/month-picker.js"></script>
+<script src="/period-picker.js"></script>
 <script>
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||'');return m?(+m[1]%12||12)+':'+m[2]+' '+(+m[1]<12?'AM':'PM'):''};
@@ -64,50 +64,52 @@ function shiftHtml(s){
  return `<article class="shift ${esc(s.status)}"><div><p class="line"><b>${esc(dayText(s.date))}</b><span class="what">${what}</span></p><p class="muted">${worked} · ${paid}</p>${s.flags&&s.flags.length?'<ul class="flags">'+s.flags.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>':''}</div><span class="badge state ${esc(s.status)}">${BADGE[s.status]||esc(s.status)}</span>${menu}</article>`}
 // What the owner is told after removing a shift: whether the coach was emailed (issue #375).
 function removedText(r){return r.coachTold==='emailed'?'Shift removed. '+r.coachName+' was emailed.':r.coachTold==='not-emailed'?'Shift removed. The email to '+r.coachName+' could not be sent, so tell them yourself.':'Shift removed.'}
-function coachHtml(c,month,label){
+function coachHtml(c,period,label){
  const t=c.totals,approvedCents=c.shifts.filter(s=>s.status==='approved').reduce((n,s)=>n+s.amountCents,0);
  const lessons=c.lessons?` · Private lessons: ${c.lessons.lessons}, share ${money(c.lessons.owedCents)}${c.lessons.splitPct===null?' (no share set)':' at '+c.lessons.splitPct+'%'}`:'';
  // One figure to pay from (issue #367): practice pay plus the lesson share, as on the spreadsheet's Total line. Final
- // once the month's shifts are approved (or there are none); before that it is the amount so far.
+ // once the period's shifts are approved (or there are none); before that it is the amount so far.
  const share=c.lessons&&c.lessons.owedCents!==null?c.lessons.owedCents:0,final=c.state==='approved'||!t.shifts,practice=final?approvedCents:t.amountCents;
  const parts=[t.shifts?money(practice)+' practice'+(final?'':' (not approved yet)'):'',c.lessons?(c.lessons.owedCents===null?'lesson share not set':money(share)+' lesson share'):''].filter(Boolean).join(' + ');
  const total=`<p class="pay-total"><b>${final?'Total to pay for '+esc(label):'Total so far'}: ${esc(money(practice+share))}</b>${parts?' <span class="muted">'+esc(parts)+'</span>':''}</p>`;
- const approve=c.state==='submitted'?`<button type="button" data-approve="${esc(c.email)}">Approve ${esc(c.name)}’s ${esc(label)} (${esc(money(t.amountCents))})</button>`:'';
- const undo=t.approved?`<details><summary>Undo the approval</summary><div class="form"><label class="wide">Reason<input id="u-${esc(c.email)}" maxlength="300"></label></div><div class="actions"><button type="button" data-unapprove="${esc(c.email)}">Undo approval</button></div></details>`:'';
- const waiting=c.state==='not-submitted'?`<p class="warn">${esc(c.name)} has ${t.drafts+t.open} shift${t.drafts+t.open===1?'':'s'} not sent yet${t.open?', one still clocked in':''}. You can approve once the whole month is sent.</p>`:'';
+ const approve=c.state==='submitted'&&period?`<button type="button" data-approve="${esc(c.email)}">Approve ${esc(c.name)}’s ${esc(label)} (${esc(money(t.amountCents))})</button>`:'';
+ const undo=t.approved&&period?`<details><summary>Undo the approval</summary><div class="form"><label class="wide">Reason<input id="u-${esc(c.email)}" maxlength="300"></label></div><div class="actions"><button type="button" data-unapprove="${esc(c.email)}">Undo approval</button></div></details>`:'';
+ const waiting=c.state==='not-submitted'?`<p class="warn">${esc(c.name)} has ${t.drafts+t.open} shift${t.drafts+t.open===1?'':'s'} not sent yet${t.open?', one still clocked in':''}. You can approve once the whole pay period is sent.</p>`:'';
  return `<section class="coach"><div class="head"><h2>${esc(c.name)}${c.active?'':' (removed)'}</h2><span class="badge ${esc(c.state)}">${STATE[c.state]||esc(c.state)}</span></div>
  <p class="muted">${c.programs.map(p=>PROGRAMS[p]||p).map(esc).join(', ')||'No programs'} · ${t.shifts} shift${t.shifts===1?'':'s'} · ${esc(hoursText(t.minutes))} paid · ${esc(money(t.amountCents))}${t.approved?' ('+esc(money(approvedCents))+' approved)':''}${esc(lessons)}${t.flagged?' · '+t.flagged+' flagged':''}</p>
  ${total}${c.timeOff.length?'<p>Approved time off: '+c.timeOff.map(o=>esc(o.text)).join('; ')+'</p>':''}${waiting}
  ${t.breakdown.length?'<ul class="breakdown">'+t.breakdown.map(b=>`<li><span>${esc(b.label)} · ${esc(b.duty)} · ${b.shifts} shift${b.shifts===1?'':'s'}</span><span>${esc(hoursText(b.minutes))} · ${esc(money(b.amountCents))}</span></li>`).join('')+'</ul>':''}
- ${c.shifts.map(shiftHtml).join('')||'<p class="muted">No practice shifts this month.</p>'}<div class="actions">${approve}</div>${undo}</section>`}
+ ${c.shifts.map(shiftHtml).join('')||'<p class="muted">No practice shifts in these dates.</p>'}<div class="actions">${approve}</div>${undo}</section>`}
 function coverHtml(cover){if(!cover)return '';const p=cover.practices||[],l=cover.lessons||[];if(!p.length&&!l.length)return '<p class="muted">No practices or lessons in these dates.</p>';
  return '<ul class="cover">'+p.map(x=>`<li>${esc(dayText(x.date))} · ${esc(x.time)} · ${esc(x.title)} practice</li>`).join('')+l.map(x=>`<li>${esc(dayText(x.date))} · ${esc(x.time)} · private lesson${x.booked?' · '+x.booked+' wrestler'+(x.booked===1?'':'s')+' booked':' (open time)'}</li>`).join('')+'</ul>'}
 function offHtml(r,pending){return `<div class="off"><p><b>${esc(r.coachName)}</b> · ${esc(r.text)}</p><p class="muted">Reason: ${esc(r.reason)}</p>${pending?'<p>Would need cover:</p>':''}${coverHtml(r.cover)}${pending?`<div class="form"><label class="wide">Note to the coach (optional)<input id="n-${esc(r.id)}" maxlength="300"></label></div><div class="actions"><button type="button" class="primary" data-off="${esc(r.id)}" data-rev="${r.revision}" data-decision="approve">Approve</button><button type="button" data-off="${esc(r.id)}" data-rev="${r.revision}" data-decision="decline">Decline</button></div>`:''}</div>`}
-let data=null,month='';
-// The month picker shared with /financials and /coach-time (public/month-picker.js, issue #232).
-const picker={select:$('month'),prev:$('prev'),next:$('next')};
-function render(d){data=d;month=d.month;
- MonthPicker.set(picker,d.month,{max:[d.month,String(d.today||'').slice(0,7)].sort().pop()});$('csv').href='/api/timesheets?format=csv&month='+encodeURIComponent(d.month);
+let data=null,period='';
+// The pay-period picker shared with /coach-time (public/period-picker.js, issue #399). A whole month (the dashboard's
+// counts, or an older ?month= link) shows every shift in it; approving is per pay period, so the buttons wait for one.
+const picker={select:$('period'),prev:$('prev'),next:$('next')};
+function render(d){data=d;period=d.period||PeriodPicker.of(d.from);
+ PeriodPicker.set(picker,period,{max:[period,PeriodPicker.of(String(d.today||''))].sort().pop()});$('csv').href='/api/timesheets?format=csv&'+(d.period?'period='+encodeURIComponent(d.period):'month='+encodeURIComponent(d.month));
  $('rates').textContent='Rates: '+d.rates.map(r=>r.label+' '+money(r.centsPerHour)+' an hour').join(', ')+'.';
  const sel=$('coach'),keep=d.coach||'';sel.innerHTML='<option value="">All coaches</option>'+d.choices.map(c=>`<option value="${esc(c.email)}">${esc(c.name)}${c.active?'':' (removed)'}</option>`).join('');sel.value=keep;
- // Issue #341: a month with no coach hours or lessons is one sentence, not four tiles of 0.
+ // Issue #341: a pay period with no coach hours or lessons is one sentence, not four tiles of 0.
  $('tiles').hidden=!d.coaches.length;
  $('tMinutes').textContent=hoursText(d.overall.minutes);$('tPractice').textContent=money(d.overall.practiceCents);$('tLessons').textContent=money(d.overall.lessonCents);$('tWaiting').textContent=d.overall.waiting+' shift'+(d.overall.waiting===1?'':'s');
- // Practice plus lesson shares for every coach. It is final once every shift in the month is approved.
+ // Practice plus lesson shares for every coach. It is final once every shift in the pay period is approved.
  const open=d.overall.practiceCents-d.overall.approvedCents;$('tTotal').textContent=money(d.overall.practiceCents+d.overall.lessonCents);$('tTotalNote').textContent=open>0?money(open)+' of practice pay is not approved yet':'Practice and lesson shares';
  $('offPending').innerHTML=d.timeOff.pending.length?d.timeOff.pending.map(r=>offHtml(r,true)).join(''):'<p class="muted">No time off requests waiting.</p>';
  $('offApproved').innerHTML=d.timeOff.approved.length?d.timeOff.approved.map(r=>offHtml(r,false)).join(''):'<p class="muted">No coach is away now or soon.</p>';
- $('coaches').innerHTML=d.coaches.map(c=>coachHtml(c,d.month,d.monthLabel)).join('')||'<section><p class="muted">No coach hours or lessons in this month.</p></section>';
- $('status').textContent=d.monthLabel+(d.overall.notSent?' · '+d.overall.notSent+' shift'+(d.overall.notSent===1?'':'s')+' not sent by coaches yet':'');
+ $('coaches').innerHTML=d.coaches.map(c=>coachHtml(c,d.period,d.label)).join('')||'<section><p class="muted">No coach hours or lessons in these dates.</p></section>';
+ $('status').textContent=d.label+(d.period?'':' (whole month: choose a pay period to approve)')+(d.overall.notSent?' · '+d.overall.notSent+' shift'+(d.overall.notSent===1?'':'s')+' not sent by coaches yet':'');
  document.querySelectorAll('[data-correct]').forEach(b=>b.onclick=()=>{const id=b.dataset.correct;act({action:'correct',id,revision:Number(b.dataset.rev),hours:Number($('h-'+id).value),minutes:Number($('m-'+id).value),duty:$('d-'+id).value,reason:$('r-'+id).value},'Correction saved.')});
  document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{if(!confirm('Remove this shift? It is deleted for good and the coach is emailed your reason.'))return;act({action:'remove',id:b.dataset.remove,revision:Number(b.dataset.rev),reason:$('v-'+b.dataset.remove).value},removedText)});
- document.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{const c=d.coaches.find(x=>x.email===b.dataset.approve);act(approveBody(c,d.month),r=>'Approved '+r.approved+' shift'+(r.approved===1?'':'s')+' ('+money(r.cents)+').')});
- document.querySelectorAll('[data-unapprove]').forEach(b=>b.onclick=()=>act({action:'unapprove',coach:b.dataset.unapprove,month:d.month,reason:$('u-'+b.dataset.unapprove).value},'Approval undone.'));
+ document.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{const c=d.coaches.find(x=>x.email===b.dataset.approve);act(approveBody(c,d.period),r=>'Approved '+r.approved+' shift'+(r.approved===1?'':'s')+' ('+money(r.cents)+').')});
+ document.querySelectorAll('[data-unapprove]').forEach(b=>b.onclick=()=>act({action:'unapprove',coach:b.dataset.unapprove,period:d.period,reason:$('u-'+b.dataset.unapprove).value},'Approval undone.'));
  document.querySelectorAll('[data-off]').forEach(b=>b.onclick=()=>act({action:'time-off',id:b.dataset.off,revision:Number(b.dataset.rev),decision:b.dataset.decision,note:$('n-'+b.dataset.off).value},r=>b.dataset.decision==='approve'?'Time off approved. '+r.told+' coach'+(r.told===1?' was':'es were')+' told.':'Time off declined.'))}
 // Approve exactly what is on screen: every sent shift with the revision the owner reviewed.
-const approveBody=(c,m)=>({action:'approve',coach:c.email,month:m,shifts:c.shifts.filter(s=>s.status==='submitted').map(s=>({id:s.id,revision:s.revision}))});
-async function load(m){const q=new URLSearchParams();if(m)q.set('month',m);if($('coach').value)q.set('coach',$('coach').value);try{render(await call(null,'?'+q))}catch(e){$('status').textContent=e.message}}
-async function act(body,done){try{const r=await call(body);await load(month);$('status').textContent=typeof done==='function'?done(r):done}catch(e){$('status').textContent=e.message}}
-MonthPicker.wire(picker,load);$('coach').onchange=()=>load(month);
-load(new URLSearchParams(location.search).get('month')||'');
+const approveBody=(c,p)=>({action:'approve',coach:c.email,period:p,shifts:c.shifts.filter(s=>s.status==='submitted').map(s=>({id:s.id,revision:s.revision}))});
+async function load(p){const q=new URLSearchParams();if(PeriodPicker.valid(p))q.set('period',p);else if(/^\d{4}-\d{2}$/.test(p||''))q.set('month',p);if($('coach').value)q.set('coach',$('coach').value);try{render(await call(null,'?'+q))}catch(e){$('status').textContent=e.message}}
+async function act(body,done){try{const r=await call(body);await load(data&&!data.period?data.month:period);$('status').textContent=typeof done==='function'?done(r):done}catch(e){$('status').textContent=e.message}}
+PeriodPicker.wire(picker,load);$('coach').onchange=()=>load(data&&!data.period?data.month:period);
+// ?period=YYYY-MM-1 opens that pay period, ?month=YYYY-MM a whole month; otherwise the current pay period.
+{const q=new URLSearchParams(location.search);load(q.get('period')||q.get('month')||'')}
 </script></body></html>

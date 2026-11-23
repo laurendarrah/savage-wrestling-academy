@@ -110,7 +110,7 @@ assert.equal((await ask({start: ny(70), end: ny(71), reason: 'Trip again'}, 'sam
   // Clocking in is never blocked by time off; the owner sees it.
   const c = await S.clockIn(dana, 'dana-uuid', {duty: 'head', session: `practice:Intermediate:${day}:18:00`}, inAt);
   assert.equal(c.status, 200);
-  const m = await S.coachMonth(dana, day.slice(0, 7), inAt);
+  const m = await S.coachPeriod(dana, day.slice(0, 7), inAt);
   assert.ok(m.open.flags !== undefined);
   r = await get(owner, '/api/timesheets?month=' + day.slice(0, 7) + '&coach=' + encodeURIComponent(people.dana), 'owner');
   assert.ok(r.body.coaches[0].shifts[0].flags.includes('This day is in the coach’s approved time off.'));
