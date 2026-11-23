@@ -142,7 +142,7 @@ const familyTotals = () => sqlite.prepare("SELECT user_id,status,sum(amount_cent
 const ledger = async () => ({...books.totals(await books.ledgerLines('2023-09-01', '2023-09-30'))});
 const payroll = async () => { const r = await pay.coachPayReport('2023-09-01', '2023-09-30'); return JSON.parse(JSON.stringify({totals: r.totals, coaches: r.coaches.map(c => [c.lessons, c.grossCents, c.splitPct, c.owedCents]).sort()})); };
 // The month's pay in the hours file. (Its to-do counts drop: a shift never approved is deleted, not paid.)
-const hoursFile = async () => { const o = (await hours.ownerMonth('2023-09', null)).overall; return {minutes: o.minutes, practiceCents: o.practiceCents, approvedCents: o.approvedCents, lessonCents: o.lessonCents}; };
+const hoursFile = async () => { const o = (await hours.ownerPeriod('2023-09', null)).overall; return {minutes: o.minutes, practiceCents: o.practiceCents, approvedCents: o.approvedCents, lessonCents: o.lessonCents}; };
 const baseline = {families: familyTotals(), ledger: await ledger(), payroll: await payroll(), hours: await hoursFile()};
 assert.equal(baseline.payroll.totals.grossCents, 12000); assert.equal(baseline.payroll.totals.owedCents, 4200 + 3600, 'each coach at their own share');
 assert.equal(baseline.hours.approvedCents, 12000, 'two approved shifts in the hours file');

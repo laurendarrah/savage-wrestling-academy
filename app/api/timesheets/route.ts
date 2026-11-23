@@ -1,7 +1,8 @@
-// Owner review of coach hours and time off (issue #193), owner only. The month by coach with flags, corrections with
-// a reason, removing a shift (the coach is emailed), approval, the month's file (hours and amounts, with lesson shares), and time-off decisions.
+// Owner review of coach hours and time off (issue #193), owner only. A pay period (#399) by coach with flags, corrections
+// with a reason, removing a shift (the coach is emailed), approval, the period's file (hours and amounts, with lesson
+// shares), and time-off decisions. ?period=YYYY-MM-1 or -2; ?month=YYYY-MM shows a whole month (the dashboard's counts).
 import {ownerIdentity, sameOrigin, accountReply} from '../../../lib/account-auth';
-import {ownerMonth, ownerCorrect, ownerRemove, approveMonth, unapproveMonth, monthCsv} from '../../../lib/coach-timesheets';
+import {ownerPeriod, ownerCorrect, ownerRemove, approvePeriod, unapprovePeriod, periodCsv} from '../../../lib/coach-timesheets';
 import {ownerTimeOff, decideTimeOff} from '../../../lib/coach-time-off';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
@@ -11,13 +12,13 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
   if (!auth.owner) return reply({error: 'Owner sign-in required.'}, 403);
   const q = new URL(request.url).searchParams;
   if (q.get('format') === 'csv') {
-    const r = await monthCsv(q.get('month'));
+    const r = await periodCsv(q.get('period') ?? q.get('month'));
     if (r.status !== 200) return reply({error: r.error}, r.status);
     auth.headers.set('Content-Type', 'text/csv; charset=utf-8');
-    auth.headers.set('Content-Disposition', `attachment; filename="savage-coach-hours-${r.month}.csv"`);
+    auth.headers.set('Content-Disposition', `attachment; filename="savage-coach-hours-${r.period}.csv"`);
     return new Response('﻿' + (r.csv as string), {headers: auth.headers});
   }
-  const r = await ownerMonth(q.get('month'), q.get('coach'));
+  const r = await ownerPeriod(q.get('period') ?? q.get('month'), q.get('coach'));
   if (r.status !== 200) return reply({error: r.error}, r.status);
   return reply({...r, status: undefined, timeOff: await ownerTimeOff()});
 }
@@ -33,8 +34,8 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
   try { input = JSON.parse(raw); } catch { return reply({error: 'Invalid request.'}, 400); }
   const ownerId = auth.user!.id;
   const actions: Record<string, () => Promise<{status: number; error?: string}>> = {
-    correct: () => ownerCorrect(ownerId, input), remove: () => ownerRemove(ownerId, input), approve: () => approveMonth(ownerId, input),
-    unapprove: () => unapproveMonth(ownerId, input), 'time-off': () => decideTimeOff(ownerId, input)
+    correct: () => ownerCorrect(ownerId, input), remove: () => ownerRemove(ownerId, input), approve: () => approvePeriod(ownerId, input),
+    unapprove: () => unapprovePeriod(ownerId, input), 'time-off': () => decideTimeOff(ownerId, input)
   };
   const run = typeof input?.action === 'string' && Object.hasOwn(actions, input.action) ? actions[input.action] : null;
   if (!run) return reply({error: 'Unknown action.'}, 400);

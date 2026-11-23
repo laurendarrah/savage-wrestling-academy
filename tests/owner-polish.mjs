@@ -181,16 +181,41 @@ const went = []; M.wire(picker, m => went.push(m));
 picker.select.value = '2026-03'; picker.prev.onclick(); picker.next.onclick(); picker.select.onchange();
 assert.deepEqual(went, ['2026-02', '2026-04', '2026-03']);
 picker.select.value = ''; picker.prev.onclick(); assert.equal(went.length, 3, 'nothing to move from');
-for (const [f, prev, next] of [['app/financials/screen.html', 'prevMonth', 'nextMonth'], ['app/timesheets/screen.html', 'prev', 'next'], ['app/coach-time/screen.html', 'prev', 'next']]) {
+for (const [f, prev, next] of [['app/financials/screen.html', 'prevMonth', 'nextMonth']]) {
   const html = read(f);
   assert.ok(html.includes(`<div class="month-picker"><button type="button" class="month-step" id="${prev}" aria-label="Previous month">←</button><label class="month-pick"><span>Month</span><select id="month"></select></label><button type="button" class="month-step" id="${next}" aria-label="Next month">→</button></div>`), f + ' uses the shared markup');
   assert.match(html, /<script src="\/month-picker\.js"><\/script>\n?<script>/, f + ' loads the picker before its own script');
   assert.match(html, /MonthPicker\.set\(picker,d\.month,\{/); assert.match(html, /MonthPicker\.wire\(picker,load\);/);
   assert.doesNotMatch(html, /function namedMonthOptions|month-nav/, f + ' has no month picker of its own');
 }
+// The coach hours pages pick a pay period instead (issue #399): the 1st-15th or the 16th to the month's end, with the
+// month picker's look and markup.
+{
+  const ctx = {}; new Function('globalThis', read('public/period-picker.js'))(ctx);
+  const P = ctx.PeriodPicker;
+  assert.deepEqual([P.shift('2026-11-1', 1), P.shift('2026-11-2', 1), P.shift('2026-01-1', -1), P.shift('2026-12-2', 1)], ['2026-11-2', '2026-12-1', '2025-12-2', '2027-01-1']);
+  assert.deepEqual(['2026-11-1', '2026-11-2', '2027-02-2', '2028-02-2', '2026-12-2'].map(P.label), ['Nov 1–15, 2026', 'Nov 16–30, 2026', 'Feb 16–28, 2027', 'Feb 16–29, 2028', 'Dec 16–31, 2026']);
+  assert.deepEqual(['2026-11-15', '2026-11-16', '2026-11-30'].map(P.of), ['2026-11-1', '2026-11-2', '2026-11-2']);
+  const options = P.options('2026-11-2', '2020-01-1', '2026-11-2');
+  assert.equal((options.match(/<option/g) || []).length, 13, 'six months back, nothing after the last period allowed');
+  assert.match(options, /<option value="2026-11-1">Nov 1–15, 2026<\/option><option value="2026-11-2" selected>Nov 16–30, 2026<\/option>$/);
+  assert.equal(P.options('2026-11-3'), '', 'not a pay period');
+  const picker = {select: node(), prev: node(), next: node()};
+  P.set(picker, '2026-11-2', {max: '2026-11-2'}); assert.equal(picker.next.disabled, true); assert.equal(picker.prev.disabled, false);
+  const went = []; P.wire(picker, p => went.push(p));
+  picker.select.value = '2026-11-1'; picker.prev.onclick(); picker.next.onclick(); picker.select.onchange();
+  assert.deepEqual(went, ['2026-10-2', '2026-11-2', '2026-11-1']);
+  for (const f of ['app/timesheets/screen.html', 'app/coach-time/screen.html']) {
+    const html = read(f);
+    assert.ok(html.includes('<div class="month-picker"><button type="button" class="month-step" id="prev" aria-label="Previous pay period">←</button><label class="month-pick"><span>Pay period</span><select id="period"></select></label><button type="button" class="month-step" id="next" aria-label="Next pay period">→</button></div>'), f + ' uses the shared markup');
+    assert.match(html, /<script src="\/period-picker\.js"><\/script>\n?<script>/, f + ' loads the picker before its own script');
+    assert.match(html, /PeriodPicker\.set\(picker,/); assert.match(html, /PeriodPicker\.wire\(picker,load\);/);
+    assert.doesNotMatch(html, /MonthPicker|month-picker\.js/, f + ' has no month picker');
+  }
+}
 
 // ---------- The walkthrough's phone check for /financials measures against the 390px screen ----------
 const journey = read('scripts/e2e/journey.mjs');
 assert.match(journey, /const phone = await as\('owner', \{width: 390, height: 844\}\);\n  await phone\.goto\(BASE \+ '\/financials'\);[\s\S]{0,300}document\.documentElement\.scrollWidth - 390\)/);
 
-console.log('Owner polish tests passed: dashboard fonts, tokens, Account menu and phone header; calendar cards; no back link inside the owner shell; download and plain wording; warning tokens; labelled controls and phone tables; site health without an empty table; one month picker; the /financials phone check.');
+console.log('Owner polish tests passed: dashboard fonts, tokens, Account menu and phone header; calendar cards; no back link inside the owner shell; download and plain wording; warning tokens; labelled controls and phone tables; site health without an empty table; one month picker and one pay-period picker; the /financials phone check.');

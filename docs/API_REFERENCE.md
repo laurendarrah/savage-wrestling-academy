@@ -49,7 +49,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 |---|---|---|
 | `/api/coach` | GET, POST | Coach home: assigned programs, today, own lesson openings |
 | `/api/coach-profile` | GET, POST | A coach's own profile (the owner can edit any coach's) |
-| `/api/coach-time` | GET, POST | Clock in and out, correct and send the month, ask for time off |
+| `/api/coach-time` | GET, POST | Clock in and out, correct and send a pay period (`?period=YYYY-MM-1` or `-2`, #399), ask for time off |
 | `/api/contract` | GET, POST | Read and sign the coach contract in force |
 | `/api/practice-plans` | GET, POST | Owner writes and publishes practice plans; coaches read published plans and their month calendar |
 | `/api/roster` | GET, POST | Roster and check-in (owner: any date; coach: today, own programs and every extra practice), and **Cash received** |
@@ -76,7 +76,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/coach-pay` | GET | Coach pay from lessons for a period, JSON or CSV |
 | `/api/lesson-calendar` | GET, POST | Every coach's lesson times in a month; make a time Public or Private; the link to send parents (#390) |
 | `/api/coach-payments` | GET, POST | Each coach's balance (earned, paid, still owed) and the payments made to coaches; record a payment or delete one entered by mistake (#370) |
-| `/api/timesheets` | GET, POST | Review, correct, remove (the shift is deleted and the coach is emailed) and approve coach hours; decide time off; the month's file |
+| `/api/timesheets` | GET, POST | Review, correct, remove (the shift is deleted and the coach is emailed) and approve coach hours per pay period (`?period=YYYY-MM-1` or `-2`; `?month=` shows a whole month); decide time off; a pay period's or month's file |
 | `/api/financials` | GET, POST | Income and expenses by month and year, CSV, and the owner's own entries |
 | `/api/practice-curricula` | GET, POST | Curriculum groups and their ordered lessons |
 | `/api/website` | GET, POST | Edit, preview and publish the public welcome and team pages |

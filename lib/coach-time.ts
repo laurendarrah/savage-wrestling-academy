@@ -3,7 +3,8 @@
 //   Q1  practices pay a flat rate per hour by the role the coach worked: head coach $40, assistant $30.
 //   Q4  pay covers only the scheduled practice time. No prep or cleanup allowance. Punches far outside the practice are
 //       flagged for the owner, never paid automatically.
-//   Q5  coaches are paid monthly and submit the whole month on or after its last day (academy time).
+//   Q5  coaches send their hours on or after the last day of the pay period (academy time). Since #369 (issue #399) a
+//       pay period is half a month, the 1st-15th or the 16th to the month's end; before, it was the whole month.
 //   Q6  coaches are independent contractors (decided Nov 14, 2026, #331), so nothing here works out overtime or
 //       withholding: the file is a statement of hours and amounts owed.
 // Lesson pay stays on /coach-pay (lib/coach-pay.ts), from what families paid; the CSV adds each coach's lesson share.
@@ -65,8 +66,36 @@ export function addMonths(month: string, n: number) {
   const [y, m] = month.split('-').map(Number), d = new Date(Date.UTC(y, m - 1 + n, 1));
   return d.toISOString().slice(0, 7);
 }
-// Q5: a month can be submitted on or after its last day, in academy time.
-export const canSubmitMonth = (month: string, today: string) => today >= lastDayOf(month);
+// ---------- Pay periods (issue #399; Justin's decision on #369) ----------
+// Coaches are paid twice a month. A pay period is the 1st to the 15th ('YYYY-MM-1') or the 16th to the month's last day
+// ('YYYY-MM-2'), in academy time. A coach sends a period's shifts on or after its last day and the owner approves each
+// period. This replaced the whole-month timesheet of #197 Q5: a shift's period comes from its date, so shifts sent or
+// approved before the change need nothing moved.
+export const validPeriod = (p: unknown): p is string => typeof p === 'string' && /^\d{4}-(0[1-9]|1[0-2])-[12]$/.test(p) && validMonth(p.slice(0, 7));
+export const periodOf = (ymd: string) => `${monthOf(ymd)}-${Number(ymd.slice(8, 10)) <= 15 ? 1 : 2}`;
+export const periodStart = (p: string) => p.slice(0, 7) + (p.endsWith('-1') ? '-01' : '-16');
+export const periodEnd = (p: string) => p.endsWith('-1') ? p.slice(0, 7) + '-15' : lastDayOf(p.slice(0, 7));
+export function addPeriods(p: string, n: number) {
+  const index = (Number(p.slice(0, 4)) * 12 + Number(p.slice(5, 7)) - 1) * 2 + (p.endsWith('-2') ? 1 : 0) + n;
+  const monthIndex = Math.floor(index / 2), y = Math.floor(monthIndex / 12), m = monthIndex % 12 + 1;
+  return `${y}-${String(m).padStart(2, '0')}-${index % 2 + 1}`;
+}
+// "Nov 1–15, 2026", "Nov 16–30, 2026".
+export function periodLabel(p: string) {
+  const start = periodStart(p), end = periodEnd(p);
+  const month = new Date(start + 'T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', month: 'short'});
+  return `${month} ${Number(start.slice(8))}–${Number(end.slice(8))}, ${start.slice(0, 4)}`;
+}
+// A pay period can be sent on or after its last day, in academy time.
+export const canSubmitPeriod = (p: string, today: string) => today >= periodEnd(p);
+// What a page or the dashboard asks to see: a pay period, or (the dashboard's monthly counts and older links) a whole
+// month. Anything else is the current pay period.
+export type HoursRange = {period: string | null; month: string; from: string; to: string; label: string};
+export function hoursRange(input: unknown, today: string): HoursRange {
+  if (validMonth(input)) return {period: null, month: input, from: input + '-01', to: lastDayOf(input), label: monthLabel(input)};
+  const p = validPeriod(input) ? input : periodOf(today);
+  return {period: p, month: p.slice(0, 7), from: periodStart(p), to: periodEnd(p), label: periodLabel(p)};
+}
 // Shifts can be added by hand for the current month and the one before (a coach who forgot to clock in), up to today.
 export const handDateAllowed = (date: string, today: string) => validDay(date) && date <= today && monthOf(date) >= addMonths(monthOf(today), -1);
 export const monthLabel = (month: string) => new Date(month + '-15T12:00:00Z').toLocaleDateString('en-US', {timeZone: 'UTC', month: 'long', year: 'numeric'});
@@ -180,7 +209,7 @@ export function totals(views: ShiftView[]) {
     breakdown: [...groups.values()].sort((a, b) => a.label.localeCompare(b.label) || a.duty.localeCompare(b.duty))
   };
 }
-// Where a coach's month stands.
+// Where a coach's pay period (or month) stands.
 export function monthState(t: ReturnType<typeof totals>) {
   if (!t.shifts) return 'empty';
   if (t.open || t.drafts) return 'not-submitted';
@@ -188,29 +217,30 @@ export function monthState(t: ReturnType<typeof totals>) {
   return 'approved';
 }
 
-// ---------- The month's file ----------
+// ---------- The pay period's file ----------
 // One line per approved practice shift, one line per coach for their private lesson share (from lib/coach-pay.ts), and
 // a total per coach. Hours and amounts owed only: no overtime, no withholding (coaches are contractors, #331).
 const csvCell = (v: unknown) => { const s = String(v ?? ''); const lead = /^[\s﻿]*[=+\-@]|^[\t\r]/.test(s); return /[",\n\r]/.test(s) || lead ? '"' + (lead ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
 const dollars = (c: number) => (c / 100).toFixed(2);
 export type PayrollCoach = {email: string; name: string; shifts: ShiftView[]; notApproved: number; lessons: {lessons: number; grossCents: number; refundedCents?: number; splitPct: number | null; owedCents: number | null} | null};
-export function payrollCsv(month: string, coaches: PayrollCoach[]) {
-  const head = ['Coach', 'Coach email', 'Month', 'Line', 'Date', 'Program or lesson', 'Role', 'Hours', 'Rate', 'Amount', 'Note'];
+// period is how the file names the dates it covers: "2026-11-16 to 2026-11-30".
+export function payrollCsv(period: string, coaches: PayrollCoach[]) {
+  const head = ['Coach', 'Coach email', 'Pay period', 'Line', 'Date', 'Program or lesson', 'Role', 'Hours', 'Rate', 'Amount', 'Note'];
   const lines: unknown[][] = [];
   for (const c of [...coaches].sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email))) {
     let total = 0;
     for (const s of c.shifts.filter(v => v.status === 'approved').sort((a, b) => a.date.localeCompare(b.date) || a.clockIn.localeCompare(b.clockIn))) {
       total += s.amountCents;
-      lines.push([c.name, c.email, month, 'Practice', s.date, s.session?.title ?? 'No scheduled practice', s.dutyLabel, (s.paidMinutes / 60).toFixed(2), dollars(s.rateCents) + ' per hour', dollars(s.amountCents), s.ownerSet?.note ?? '']);
+      lines.push([c.name, c.email, period, 'Practice', s.date, s.session?.title ?? 'No scheduled practice', s.dutyLabel, (s.paidMinutes / 60).toFixed(2), dollars(s.rateCents) + ' per hour', dollars(s.amountCents), s.ownerSet?.note ?? '']);
     }
     if (c.lessons && c.lessons.lessons) {
       const owed = c.lessons.owedCents;
       if (owed !== null) total += owed;
       // grossCents is what the academy kept after any card refunds (issue #272, lib/coach-pay.ts); the refunded part is named.
-      lines.push([c.name, c.email, month, 'Private lessons', '', `${c.lessons.lessons} lesson${c.lessons.lessons === 1 ? '' : 's'}, ${dollars(c.lessons.grossCents)} kept from families${c.lessons.refundedCents ? ` (${dollars(c.lessons.refundedCents)} refunded)` : ''}`, '', '',
+      lines.push([c.name, c.email, period, 'Private lessons', '', `${c.lessons.lessons} lesson${c.lessons.lessons === 1 ? '' : 's'}, ${dollars(c.lessons.grossCents)} kept from families${c.lessons.refundedCents ? ` (${dollars(c.lessons.refundedCents)} refunded)` : ''}`, '', '',
         c.lessons.splitPct === null ? '' : c.lessons.splitPct + '% share', owed === null ? '' : dollars(owed), owed === null ? 'No lesson share set on lesson settings' : 'From the coach pay report']);
     }
-    lines.push([c.name, c.email, month, 'Total', '', '', '', (c.shifts.filter(v => v.status === 'approved').reduce((n, v) => n + v.paidMinutes, 0) / 60).toFixed(2), '', dollars(total),
+    lines.push([c.name, c.email, period, 'Total', '', '', '', (c.shifts.filter(v => v.status === 'approved').reduce((n, v) => n + v.paidMinutes, 0) / 60).toFixed(2), '', dollars(total),
       c.notApproved ? `${c.notApproved} practice shift${c.notApproved === 1 ? ' is' : 's are'} not approved yet and not included` : '']);
   }
   return [head, ...lines].map(l => l.map(csvCell).join(',')).join('\r\n') + '\r\n';

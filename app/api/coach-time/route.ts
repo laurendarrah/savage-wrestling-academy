@@ -1,8 +1,8 @@
-// A coach's own hours and time off (issue #193): clock in and out, see and correct the month, send it, ask for time off.
+// A coach's own hours and time off (issue #193): clock in and out, see and correct a pay period (#399), send it, ask for time off.
 // Coaches, and the owner once they have added themselves as a coach, as on coach home.
 import {verifiedAccount, sameOrigin, accountReply} from '../../../lib/account-auth';
 import {coachAccess} from '../../../lib/access-control';
-import {coachMonth, choicesFor, clockIn, clockOut, fixTimes, addShift, removeShift, submitMonth} from '../../../lib/coach-timesheets';
+import {coachPeriod, choicesFor, clockIn, clockOut, fixTimes, addShift, removeShift, submitPeriod} from '../../../lib/coach-timesheets';
 import {myTimeOff, coachNotices, requestTimeOff, withdrawTimeOff} from '../../../lib/coach-time-off';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
@@ -14,8 +14,9 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
   if (!staff) return reply({error: 'Coach access required.'}, 403);
   const q = new URL(request.url).searchParams;
   if (q.has('date')) { const r = await choicesFor(staff, q.get('date')); return r.status === 200 ? reply(r) : reply({error: r.error}, r.status); }
-  const month = await coachMonth(staff, q.get('month'));
-  return reply({...month, name: staff.name, owner: staff.owner, timeOffRequests: await myTimeOff(staff.email), ...(await coachNotices(staff.email))});
+  // ?period=YYYY-MM-1 or -2; ?month=YYYY-MM still opens that whole month (older links).
+  const hours = await coachPeriod(staff, q.get('period') ?? q.get('month'));
+  return reply({...hours, name: staff.name, owner: staff.owner, timeOffRequests: await myTimeOff(staff.email), ...(await coachNotices(staff.email))});
 }
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
@@ -30,7 +31,7 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
   const userId = auth.user!.id;
   const actions: Record<string, () => Promise<{status: number; error?: string}>> = {
     'clock-in': () => clockIn(staff, userId, input), 'clock-out': () => clockOut(staff, userId, input), fix: () => fixTimes(staff, userId, input),
-    add: () => addShift(staff, userId, input), remove: () => removeShift(staff, userId, input), submit: () => submitMonth(staff, userId, input),
+    add: () => addShift(staff, userId, input), remove: () => removeShift(staff, userId, input), submit: () => submitPeriod(staff, userId, input),
     'time-off': () => requestTimeOff(staff, userId, input), 'time-off-withdraw': () => withdrawTimeOff(staff, userId, input)
   };
   const run = typeof input?.action === 'string' && Object.hasOwn(actions, input.action) ? actions[input.action] : null;
