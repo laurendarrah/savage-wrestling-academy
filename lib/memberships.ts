@@ -11,6 +11,7 @@
 import {env} from 'cloudflare:workers';
 import {storedStripeKeyFor, stripeClientFor} from './stripe-test';
 import {noticeMembershipCanceled, quietly} from './notify';
+import {programName} from './program-names';
 
 type Result = {status: number; error?: string; endsOn?: string; wrestler?: string};
 type Row = {id: string; user_id: string; wrestler_name: string; livemode: number; stripe_subscription_id: string; sub_status: string; paid_through: string; cancel_at: string | null; payments_total: number | null};
@@ -46,4 +47,28 @@ export async function cancelMembership(orderId: unknown, by: {userId: string; ro
   ]);
   await quietly(() => noticeMembershipCanceled(m.id, by.role, m.paid_through));
   return {status: 200, endsOn: m.paid_through, wrestler: m.wrestler_name};
+}
+
+// ---------- The owner's Memberships page (issue #413) ----------
+// Every monthly membership that is still running: active, past due (a card payment failed and Stripe is retrying),
+// paused (Stripe gave up), or canceled but not ended yet (it runs to the paid-through day). Ended ones are left out; their
+// orders stay on Payments. Justin decided on Nov 24 that the owner cancels from here and that there is no freeze.
+export type MembershipState = 'active' | 'ending' | 'past_due' | 'paused';
+export type OwnerMembership = {orderId: string; wrestler: string; parent: string; email: string; program: string | null; amountCents: number;
+  startedOn: string; paidThrough: string; endsOn: string | null; state: MembershipState; canCancel: boolean; plan: 'monthly' | 'twelve-month'; livemode: boolean};
+export async function ownerMemberships(): Promise<{memberships: OwnerMembership[]}> {
+  const rows = (await env.DB!.prepare(`SELECT o.id,o.wrestler_name,o.email,o.program,o.amount_cents,o.livemode,s.status,s.term_start,s.paid_through,s.cancel_at,s.payments_total,
+      json_extract(f.payload,'$.parentName') AS parent
+    FROM subscriptions s JOIN orders o ON o.id=s.order_id LEFT JOIN family_accounts f ON f.user_id=o.user_id
+    WHERE s.status IN ('active','past_due','paused') AND o.status='paid' ORDER BY o.wrestler_name COLLATE NOCASE, o.id LIMIT 2000`).all<any>()).results;
+  return {memberships: rows.map(r => {
+    // A month-to-month membership with cancel_at set has been canceled and runs to that day. On the earlier 12-month plan
+    // cancel_at holds its planned end, so it is still active and can be canceled.
+    // A canceled one reads as canceled even while its last payment is still failing, since cancelMembership refuses it again.
+    const twelve = r.payments_total !== null, ending = !twelve && !!r.cancel_at && (r.status === 'active' || r.status === 'past_due');
+    const state: MembershipState = r.status === 'paused' ? 'paused' : ending ? 'ending' : r.status === 'past_due' ? 'past_due' : 'active';
+    return {orderId: r.id, wrestler: r.wrestler_name, parent: r.parent || '', email: r.email, program: r.program ? programName(r.program) : null, amountCents: r.amount_cents,
+      startedOn: r.term_start, paidThrough: r.paid_through, endsOn: r.cancel_at ?? null, state, canCancel: state === 'active' || state === 'past_due',
+      plan: twelve ? 'twelve-month' : 'monthly', livemode: r.livemode === 1};
+  })};
 }

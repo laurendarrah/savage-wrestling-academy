@@ -64,7 +64,7 @@ const count = (s, part) => s.split(part).length - 1;
 // documents, scholarships and transfers mark Approvals & scholarships, the coach pages mark Coaches & lessons, coach pay
 // marks Money, curricula and the plan editor mark Calendar & plans) and gets the item's switch under its title row.
 const ownerRoutes = {
-  '/': '/', '/roster': '/roster', '/payments': '/payments', '/messages': '/messages', '/cards': '/cards',
+  '/': '/', '/roster': '/roster', '/payments': '/payments', '/memberships': '/memberships', '/messages': '/messages', '/cards': '/cards',
   '/accounts': '/accounts', '/account-setup': '/accounts', '/approvals': '/approvals', '/scholarships': '/approvals', '/waivers': '/cards',
   '/consent-forms': '/cards', '/transfers': '/approvals', '/practice-plans?date=2026-11-09&program=Elementary': '/#practice-calendar',
   '/curricula': '/#practice-calendar', '/website': '/website', '/staff': '/staff', '/coach-openings?email=coach%40example.test': '/staff',

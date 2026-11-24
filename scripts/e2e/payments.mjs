@@ -252,6 +252,13 @@ await step('the Payment attempts list on /payments shows each checkout with what
   expect(r.status === 200 && r.body.outcome === 'rejected:unknown-order', 'refused ' + JSON.stringify(r.body));
   await owner.goto(BASE + '/security-log'); await waitText(owner, 'main', /Stripe message refused[\s\S]*It named an order the site does not have/);
 });
+// Issue #413: the owner's Memberships page lists the running membership with Cancel membership.
+await step('the owner sees the membership on /memberships, active, with Cancel membership', async () => {
+  await owner.goto(BASE + '/memberships'); await waitText(owner, '#rows', /Sam Example[\s\S]*Active/);
+  expect(await owner.locator('#rows [data-cancel]').count() === 1, 'one Cancel membership button');
+  await waitText(owner, '#counts', /^1 running · 1 active/);
+  if (SHOTS) await owner.screenshot({path: `${SHOTS}/pay-owner-memberships.png`, fullPage: true});
+});
 // Issue #314: the family cancels online from the membership, in two taps; Stripe stops at the end of the paid month.
 await step('the family cancels the membership on /family: confirm on the same page, the result under the button', async () => {
   const paidThrough = sql("SELECT paid_through FROM subscriptions")[0].paid_through;
@@ -267,6 +274,9 @@ await step('the family cancels the membership on /family: confirm on the same pa
   expect(sql(`SELECT term_end FROM orders WHERE id='${monthlyOrder}'`)[0].term_end === paidThrough, 'access stays to the paid-through day');
   expect(sql("SELECT kind FROM notifications WHERE kind='membership_canceled'").length === 1, 'the confirmation is sent');
   if (SHOTS) await family.screenshot({path: `${SHOTS}/pay-family-canceled.png`, fullPage: true});
+  // The owner's Memberships page (issue #413) shows it as canceled, with its last day and nothing left to cancel.
+  await owner.goto(BASE + '/memberships'); await waitText(owner, '#rows', /Sam Example[\s\S]*Canceled[\s\S]*Ends/);
+  expect(await owner.locator('#rows [data-cancel]').count() === 0, 'nothing left to cancel');
   // Stripe ends it on the billing day: canceled, not paused.
   const r = await webhook('customer.subscription.deleted', {id: 'sub_rehearsal_1', object: 'subscription', status: 'canceled', cancellation_details: {reason: 'cancellation_requested'}, livemode: false});
   expect(r.status === 200 && r.body.outcome === 'subscription-canceled', 'deleted ' + JSON.stringify(r.body));
