@@ -26,14 +26,14 @@ html body[data-swa-page="/coach-join"] main>footer,html body[data-swa-page="/coa
 <div id="otherBox" class="notice" hidden><p>You’re signed in as <b id="otherEmail"></b>, but this invitation is for <b id="otherFor"></b>.</p><button type="button" id="switchAccount">Sign out and use the invited email</button></div>
 <form id="signupForm" hidden><p>Create a password for your coach account. You’ll confirm your email next.</p>
 <label>Email<input id="signupEmail" type="email" readonly autocomplete="username"></label>
-<label>Password<input id="signupPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+<label>Password<input id="signupPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required autocapitalize="none" autocorrect="off" spellcheck="false"></label>
 <p class="muted">Use 12 to 128 characters. A long passphrase works well.</p>
-<label>Confirm password<input id="signupConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+<label>Confirm password<input id="signupConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required autocapitalize="none" autocorrect="off" spellcheck="false"></label>
 <button class="primary" id="signupButton">Create coach account</button>
 <p class="switch"><button type="button" id="toSignin">I already have an account: sign in</button></p></form>
 <form id="signinForm" hidden><p id="signinIntro">Sign in with the invited email. Coach access is added to your account.</p>
 <label>Email<input id="signinEmail" type="email" readonly autocomplete="username"></label>
-<label>Password<input id="signinPassword" type="password" maxlength="128" autocomplete="current-password" required></label>
+<label>Password<input id="signinPassword" type="password" maxlength="128" autocomplete="current-password" required autocapitalize="none" autocorrect="off" spellcheck="false"></label>
 <button class="primary" id="signinButton">Sign in and accept</button>
 <p class="switch"><button type="button" id="resendConfirm" hidden>Send the confirmation email again</button></p><p class="switch"><button type="button" id="toSignup">I need to create an account</button></p></form>
 <p id="signinBox" hidden><a class="button" href="/login">Sign in</a></p>
