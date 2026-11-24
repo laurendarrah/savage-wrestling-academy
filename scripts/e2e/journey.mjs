@@ -730,7 +730,7 @@ await step('a membership review offers "Tell the academy I want this"; the owner
 });
 
 // ---------- USA Wrestling card at check-in (#210) ----------
-await step('a wrestler whose card is not verified can\'t be checked in; the roster says why; an owner exception lets them in', async () => {
+await step('a wrestler whose card is not verified can\'t be checked in; the roster says why; a card exception and a signed waiver let them in', async () => {
   const rid = await wid(family2);
   // Riley's card is on file but not verified. Booking still works (with the waiver exception above); check-in does not.
   const practice = (await api(owner, '/api/roster')).body.sessions.find(s => s.key.startsWith('practice:Intermediate:'));
@@ -752,8 +752,22 @@ await step('a wrestler whose card is not verified can\'t be checked in; the rost
   // The owner's card exception covers check-in the same way it covers booking.
   const g = await api(owner, '/api/exceptions', {action: 'grant', userId: 'e2e-family-b', wrestlerId: rid, rule: 'usaw', endsOn: ny(7), reason: 'Card being checked with USA Wrestling'});
   expect(g.status === 200, 'exception ' + JSON.stringify(g.body));
+  // Issue #402: the waiver exception lets Riley book, but no exception lets a wrestler in at the door without a signed
+  // waiver. Riley is still held, for the waiver alone now.
   s = await api(owner, '/api/roster', {action: 'scan', date: today, code: pass});
-  expect(s.status === 200 && !s.body.scan.already, 'scan under the exception: ' + JSON.stringify(s.body).slice(0, 200));
+  expect(s.status === 409 && /Riley Two can.t be checked in: the waiver is not signed\. A parent signs in their family account\. No exception lets a wrestler in without it\./.test(s.body.error), 'scan held for the waiver: ' + JSON.stringify(s.body));
+  await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Riley Two[\s\S]*Waiver not signed[\s\S]*Owner exception: card[\s\S]*Owner waiver exception: booking only/);
+  // A parent signs the waiver; the scan then checks Riley in.
+  await family2.goto(BASE + '/waiver?wrestler=' + rid); await family2.waitForSelector('#signatureCanvas');
+  await family2.locator('#signatureCanvas').scrollIntoViewIfNeeded();
+  const box = await family2.locator('#signatureCanvas').boundingBox();
+  await family2.mouse.move(box.x + 30, box.y + 40); await family2.mouse.down();
+  for (let i = 0; i < 25; i++) await family2.mouse.move(box.x + 30 + i * 14, box.y + 40 + Math.sin(i / 3) * 20);
+  await family2.mouse.up();
+  await family2.check('#accepted'); await family2.check('#electronicConsent'); await family2.click('#sign');
+  await waitText(family2, '#status', /Signed for Riley Two/);
+  s = await api(owner, '/api/roster', {action: 'scan', date: today, code: pass});
+  expect(s.status === 200 && !s.body.scan.already, 'scan once signed, under the card exception: ' + JSON.stringify(s.body).slice(0, 200));
   await owner.goto(BASE + '/roster'); await waitText(owner, '#sessions', /Riley Two[\s\S]*Owner exception: card/);
 });
 
@@ -1383,7 +1397,8 @@ await step('owner moves through the owner shell with the sidebar: dashboard, Pay
 await step('backup export includes payments and signed waivers', async () => {
   const r = await api(owner, '/api/backups');
   const b = r.body?.backup;
-  expect(r.status === 200 && b?.version === 3 && b.records.orders.length >= 3 && b.records.waiver_signatures.length === 3 && b.records.wrestler_passes.length >= 1, 'backup export ' + r.status + ' ' + JSON.stringify(r.body).slice(0, 200));
+  // Signatures: Sam's waiver and consent form, Riley's waiver (signed to be checked in, #402) and the coach contract.
+  expect(r.status === 200 && b?.version === 3 && b.records.orders.length >= 3 && b.records.waiver_signatures.length === 4 && b.records.wrestler_passes.length >= 1, 'backup export ' + r.status + ' ' + JSON.stringify(r.body).slice(0, 200));
   // Restoring the same backup is accepted (real data passes validation) and changes nothing.
   const fp = (await api(owner, '/api/backups?mode=preview')).body.fingerprint;
   const back = await api(owner, '/api/backups', {action: 'restore', fingerprint: fp, backup: b});

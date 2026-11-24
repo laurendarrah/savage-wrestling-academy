@@ -16,7 +16,7 @@ const validDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-
 // The wrestlers on today's roster whose card stops their check-in (issue #271), as "family/wrestler" keys.
 async function blockedToday(today: string) {
   const keys = new Set<string>();
-  try { for (const s of await rosterFor(today, {role: 'owner'})) for (const e of s.entries) if (e.checkInBlocked) keys.add(`${e.userId}/${e.wrestlerId}`); } catch {}
+  try { for (const s of await rosterFor(today, {role: 'owner'})) for (const e of s.entries) if (e.cardBlock) keys.add(`${e.userId}/${e.wrestlerId}`); } catch {}
   return keys;
 }
 

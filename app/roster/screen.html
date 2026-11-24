@@ -186,7 +186,7 @@ html body[data-swa-page="/roster"] #swa-toast{bottom:calc(92px + env(safe-area-i
 </main>
 <div class="dock"><div class="dock__in"><button type="button" id="scanDock" class="primary big">Scan a pass</button></div></div>
 <script>
-const cardBad=e=>['missing','expired','invalid','recheck','current'].includes(e.card)||e.waiverSigned===false;
+const cardBad=e=>['missing','expired','invalid','recheck','current'].includes(e.card)||e.waiverSigned===false||e.consentSigned===false;
 const blockedNow=e=>!e.checkedInAt&&!!e.checkInBlocked;
 // Pay at the academy (issue #248). An unpaid booking can still be checked in; the amount due stays in view until Cash
 // received is tapped. Coaches record cash for their own programs' practices and every extra practice (issue #250); only
@@ -200,7 +200,7 @@ function cashButtons(e,at){const c=e.cash;if(!c)return '';if(c.status==='due')re
 const cashNote=e=>e.cash&&e.cash.status==='paid'&&e.cash.orderId&&data.role!=='owner'?'<span class="muted small">Only the owner can undo cash</span>':'';
 function dueLine(s){const list=s.entries.filter(owes);return list.length?list.length+' to pay at the academy ('+money(list.reduce((n,e)=>n+e.cash.cents,0))+' due)':''}
 // Under a session's header: what kind of session it is, who is on hold and what is owed in cash. Empty for a plain practice.
-function metaLine(s){const held=s.entries.filter(blockedNow).length;return [s.type==='live'?'Separate purchase':s.type==='event'?'Camp, clinic or event':'',held?held+' can’t be checked in until their USA Wrestling card is sorted out':'',dueLine(s)].filter(Boolean).map(esc).join(' · ')}
+function metaLine(s){const held=s.entries.filter(blockedNow).length;return [s.type==='live'?'Separate purchase':s.type==='event'?'Camp, clinic or event':'',held?held+' can’t be checked in until their USA Wrestling card or signed forms are sorted out':'',dueLine(s)].filter(Boolean).map(esc).join(' · ')}
 // USA Wrestling card on the session date (issue #68). Since #210 the server refuses check-in unless the card is verified
 // and current, or the owner allowed an exception; e.checkInBlocked carries its plain reason, shown behind "Why?".
 function cardBadge(e){const d=e.cardExpires?new Date(e.cardExpires+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}):'';
@@ -214,10 +214,13 @@ function safety(e){
 }
 // The red Allergy flag: only when the family wrote something that is not "none".
 const flagged=e=>!!e.allergies&&!noNotes(e.allergies);
-const waiverBadge=e=>(e.waiverSigned===false?'<span class="badge warn">Waiver not signed</span>':'')+((e.exceptions||[]).length?'<span class="badge">Owner exception: '+e.exceptions.map(x=>x==='usaw'?'card':'waiver').join(', ')+'</span>':'');
+// Unsigned forms block check-in with no exception (issue #402): the owner's waiver exception covers booking only, and the
+// badge says so.
+const waiverBadge=e=>(e.waiverSigned===false?'<span class="badge warn">Waiver not signed</span>':'')+(e.consentSigned===false?'<span class="badge warn">Consent form not signed</span>':'')
+ +((e.exceptions||[]).includes('usaw')?'<span class="badge">Owner exception: card</span>':'')+((e.exceptions||[]).includes('waiver')?'<span class="badge">Owner waiver exception: booking only</span>':'');
 // The owner's way out of a blocked check-in (issue #271): the cards page opened on this wrestler, on the list that fits
 // (waiting to be verified, or blocked). Coaches see the reason only; they cannot verify cards.
-const cardsLink=e=>data&&data.role==='owner'?' <a class="fix-link" href="/cards?show='+(['current','recheck'].includes(e.card)?'waiting':'problems')+'&q='+encodeURIComponent(e.name)+'">Open USA Wrestling cards →</a>':'';
+const cardsLink=e=>data&&data.role==='owner'?(e.cardBlock?' <a class="fix-link" href="/cards?show='+(['current','recheck'].includes(e.card)?'waiting':'problems')+'&q='+encodeURIComponent(e.name)+'">Open USA Wrestling cards →</a>':'')+((e.documentsMissing||[]).includes('waiver')?' <a class="fix-link" href="/waivers">Open Waivers →</a>':'')+((e.documentsMissing||[]).includes('parent_consent')?' <a class="fix-link" href="/consent-forms">Open Parent Consent Forms →</a>':''):'';
 
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=t=>{if(!t)return '';const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};

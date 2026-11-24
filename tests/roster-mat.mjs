@@ -120,7 +120,7 @@ const row = (p, name) => { const out = p.el('sessions').innerHTML, at = out.inde
   assert.match(casey, /^<div class="row card-problem hold"/); assert.match(casey, /<span class="badge warn">No USA Wrestling card<\/span>/);
   assert.match(casey, /<details class="why"><summary>Why\?<\/summary><p class="block-reason" id="why1-2">Casey Morgan can&#39;t be checked in: there is no USA Wrestling card on file\. Ask the family to update the card, or the owner to allow an exception\.<\/p><\/details>/);
   assert.match(casey, /<button class="blocked" type="button" disabled aria-describedby="why1-2">Hold<\/button>/); assert.doesNotMatch(casey, /data-checkin/);
-  assert.match(p.el('sessions').innerHTML, /<p class="muted meta">1 can’t be checked in until their USA Wrestling card is sorted out · 1 to pay at the academy \(\$40\.00 due\)<\/p>/);
+  assert.match(p.el('sessions').innerHTML, /<p class="muted meta">1 can’t be checked in until their USA Wrestling card or signed forms are sorted out · 1 to pay at the academy \(\$40\.00 due\)<\/p>/);
   p.ctx.s = {type: 'event', entries: []}; assert.equal(p.run('metaLine(s)'), 'Camp, clinic or event');
 }
 
