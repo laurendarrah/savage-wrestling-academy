@@ -103,6 +103,7 @@ Done when: test-card purchases of every one-time type create exactly one order e
 - A memberships table becomes the single record of who is paid, through what date, for which program.
 - The family page's "My memberships" and "Purchase history" show real records instead of examples.
 - Failed payment, cancellation and refund events update the membership status.
+- **Update Nov 24 (#413):** the owner has a **Memberships** page under Payments listing every running membership, with **Cancel membership** for a family. Justin decided there is no freeze.
 
 Done when: Stripe test clocks show 12 charges then a stop, a failed card marks the membership past due, and a refund is reflected on the family page.
 

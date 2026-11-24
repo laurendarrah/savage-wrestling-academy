@@ -294,6 +294,20 @@ assert.deepEqual(JSON.parse(JSON.stringify(stripe.cancels.at(-1))), {id: 'sub_3'
 assert.match(notices('membership_canceled').at(-1).body, /^The academy canceled Jo's/);
 assert.equal(notices('membership_canceled_owner').length, 1, 'the owner is not emailed about their own action');
 assert.ok(sqlite.prepare("SELECT 1 FROM security_events WHERE action='membership_canceled' AND actor='owner-id' AND target=?").get(restart.body.orderId + ' owner'));
+// --- Issue #413: the owner's Memberships page lists every running membership, each with what can be done ---
+{
+  const mem = JSON.parse(JSON.stringify((await (await paymentsApi.GET(new Request('https://a.test/api/payments?memberships=1'))).json()).memberships));
+  const of = id => mem.find(m => m.orderId === id);
+  assert.deepEqual([of(joOrder).state, of(joOrder).canCancel], ['paused', false], 'a paused membership charges nothing, so there is nothing to cancel');
+  const ended = of(restart.body.orderId);
+  assert.deepEqual([ended.state, ended.canCancel, ended.endsOn, ended.wrestler, ended.program, ended.amountCents, ended.plan],
+    ['ending', false, sub(restart.body.orderId).paid_through, 'Jo', 'SWA Intermediate', 20000, 'monthly'], 'canceled while past due: shown as canceled, with its last day');
+  assert.ok(mem.every(m => ['active', 'ending', 'past_due', 'paused'].includes(m.state)), 'only running memberships');
+  sqlite.prepare("UPDATE subscriptions SET status='canceled' WHERE order_id=?").run(joOrder);
+  const after = JSON.parse(JSON.stringify((await (await paymentsApi.GET(new Request('https://a.test/api/payments?memberships=1'))).json()).memberships));
+  assert.ok(!after.some(m => m.orderId === joOrder), 'an ended membership leaves the list');
+  sqlite.prepare("UPDATE subscriptions SET status='paused' WHERE order_id=?").run(joOrder);
+}
 const list = await (await paymentsApi.GET(new Request('https://a.test/api/payments'))).json();
 assert.deepEqual(JSON.parse(JSON.stringify(list.payments.find(p => p.id === restart.body.orderId).membership)), {status: 'past_due', cancelOn: sub(restart.body.orderId).paid_through});
 

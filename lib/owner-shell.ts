@@ -29,6 +29,7 @@ export const OWNER_ICONS: Record<string, string> = {
   '/scholarships': '<circle cx="12" cy="8" r="6"/><path d="M15.5 12.9L17 22l-5-3-5 3 1.5-9.1"/>',
   '/waivers': FILE + '<path d="M8 17c1.5-2 2.5-2 3.5 0s2 2 3.5 0"/>',
   '/consent-forms': FILE + '<path d="M9 15l2 2 4-4"/>',
+  '/memberships': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   '/transfers': '<path d="M17 3l4 4-4 4M21 7H9M7 21l-4-4 4-4M3 17h12"/>',
   '/#practice-calendar': '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   '/#schedules': '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',

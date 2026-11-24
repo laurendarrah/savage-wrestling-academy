@@ -40,6 +40,7 @@ export const OWNER_NAV: OwnerNavGroup[] = [
     {href: '/', label: 'Dashboard', section: 'Dashboard'},
     {href: '/roster', label: 'Roster & check-in', blurb: 'Who has paid for each session. Check wrestlers in at the door.'},
     {href: '/payments', label: 'Payments', blurb: 'Every payment, online and offline. Record cash or check.'},
+    {href: '/memberships', label: 'Memberships', blurb: 'Every running monthly membership. Cancel one for a family (#413).'},
     {href: '/messages', label: 'Messages', blurb: 'Announcements and private conversations with families.'},
   ]},
   {label: 'Families', items: [

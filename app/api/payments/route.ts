@@ -25,6 +25,8 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
   if (q.get('cash') === 'due') return reply(await unpaidCashBookings());
   // Issue #271: monthly memberships whose latest payment failed, and every online payment attempt with Stripe's last word.
   if (q.get('attention') === '1') return reply(await paymentAttention());
+  // Issue #413: every running monthly membership, for the owner's Memberships page. Canceling is the action below.
+  if (q.get('memberships') === '1') { const {ownerMemberships} = await import('../../../lib/memberships'); return reply(await ownerMemberships()); }
   if (q.get('attempts') === '1') return reply(await paymentAttempts({q: q.get('q'), days: q.get('days') === 'all' ? 36500 : 90}));
   const filters = {from: q.get('from') ?? undefined, to: q.get('to') ?? undefined, status: q.get('status') ?? undefined, kind: q.get('kind') ?? undefined, source: q.get('source') ?? undefined,
     collector: q.get('collector') ?? undefined};

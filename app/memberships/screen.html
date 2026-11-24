@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Memberships | Savage Wrestling Academy</title><style>
+/* Memberships (issue #413): every running monthly membership in one list, with Cancel. On the design system in
+   public/savage.css; this is the page's own layout. There is no freeze (Justin, Nov 24). */
+*{box-sizing:border-box}body{margin:0}main{max-width:1100px;margin:auto;padding:24px 16px 56px}
+main>section{margin:0 0 var(--swa-s-24)}[hidden]{display:none!important}
+.muted{color:var(--swa-muted)}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#status{margin:0 0 var(--swa-s-16);font-weight:600;font-size:var(--swa-t-15)}
+.filters{display:flex;flex-wrap:wrap;gap:var(--swa-s-12);align-items:end;margin:0 0 var(--swa-s-16)}
+.filters label{display:flex;flex-direction:column;gap:6px;min-width:200px;flex:1 1 200px}
+.counts{margin:0 0 var(--swa-s-12);font-size:var(--swa-t-15)}
+.table{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--swa-line);vertical-align:top}
+td small{display:block;color:var(--swa-muted)}td.money,th.money{text-align:right;white-space:nowrap}td.date{white-space:nowrap}
+.state{display:inline-block;padding:2px 10px;border-radius:999px;font-size:var(--swa-t-13);font-weight:700;background:#EEF0F2}
+.state.active{background:#E6F4EA;color:#1E6B34}.state.ending{background:#EEF0F2;color:#3A3D44}.state.past_due{background:var(--swa-warn-bg);color:var(--swa-warn-ink)}.state.paused{background:#FDECEC;color:#9B1C1C}
+.test{display:inline-block;margin-left:6px;font-size:var(--swa-t-13);font-weight:700;color:var(--swa-muted)}
+.result{display:block;margin-top:6px;font-size:var(--swa-t-13);font-weight:600}
+@media(max-width:640px){th:nth-child(4),td:nth-child(4){display:none}}
+</style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Memberships</h1>
+<p class="muted">Every monthly membership that is still running. Cancel one for a family here: nothing more is charged, the wrestler stays on the roster through the end of the month already paid for, and the family gets an email. Families can also cancel their own from their account.</p>
+<p id="status" role="status" aria-live="polite">Loading…</p>
+<section aria-label="Memberships"><div class="filters"><label>Show<select id="show"><option value="all">All running memberships</option><option value="active">Active</option><option value="past_due">Card payment failed</option><option value="paused">Paused after failed payments</option><option value="ending">Canceled, still running</option></select></label><label>Search<input id="q" type="search" placeholder="Wrestler, parent or email"></label></div>
+<p class="counts" id="counts"></p>
+<div class="table"><table><thead><tr><th scope="col">Wrestler</th><th scope="col">Program</th><th scope="col" class="money">Monthly</th><th scope="col">Started</th><th scope="col">Paid through</th><th scope="col">State</th><th scope="col"><span class="vh">Action</span></th></tr></thead><tbody id="rows"></tbody></table></div>
+<p class="muted" id="empty" hidden>No memberships match.</p>
+<p class="muted">Payments for each membership are on <a href="/payments">Payments</a>.</p></section></main>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=c=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((c||0)/100);
+const longDate=d=>d?new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}):'';
+const STATE={active:'Active',ending:'Canceled',past_due:'Card payment failed',paused:'Paused'};
+// What the state means, in a short line under it.
+function stateNote(m){if(m.state==='ending')return 'Ends '+longDate(m.endsOn||m.paidThrough);if(m.state==='past_due')return 'Stripe is retrying the card';if(m.state==='paused')return 'The family restarts it from their account';if(m.plan==='twelve-month'&&m.endsOn)return '12-month plan, ends '+longDate(m.endsOn);return ''}
+let list=[],results={};
+async function call(url,body){const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error((d.error||'Something went wrong. Please try again.')+(d.requestId?' (reference '+String(d.requestId).slice(0,8)+')':''));return d}
+function shown(){const show=$('show').value,q=$('q').value.trim().toLowerCase();
+ return list.filter(m=>(show==='all'||m.state===show)&&(!q||[m.wrestler,m.parent,m.email].some(v=>String(v||'').toLowerCase().includes(q))))}
+function rowHtml(m){const note=stateNote(m),res=results[m.orderId];
+ const action=m.canCancel?'<button type="button" data-cancel="'+esc(m.orderId)+'">Cancel membership</button>':'';
+ return '<tr><td><strong>'+esc(m.wrestler)+'</strong>'+(m.livemode?'':'<span class="test">Test</span>')+'<small>'+esc([m.parent,m.email].filter(Boolean).join(' · '))+'</small></td><td>'+esc(m.program||'')+'</td><td class="money">'+esc(money(m.amountCents))+'</td><td class="date">'+esc(longDate(m.startedOn))+'</td><td class="date">'+esc(longDate(m.paidThrough))+'</td>'
+  +'<td><span class="state '+esc(m.state)+'">'+esc(STATE[m.state]||m.state)+'</span>'+(note?'<small>'+esc(note)+'</small>':'')+'</td><td>'+action+(res?'<span class="result" role="status">'+esc(res)+'</span>':'')+'</td></tr>'}
+function render(){const rows=shown();$('rows').innerHTML=rows.map(rowHtml).join('');$('empty').hidden=!!rows.length;
+ const n=s=>list.filter(m=>m.state===s).length;
+ $('counts').textContent=list.length?list.length+' running · '+n('active')+' active · '+n('past_due')+' card failed · '+n('paused')+' paused · '+n('ending')+' canceled, still running':'';
+ document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>cancel(b.dataset.cancel))}
+async function load(){try{list=(await call('/api/payments?memberships=1')).memberships;$('status').textContent=list.length?'':'No running memberships yet.';render()}catch(e){$('status').textContent=e.message}}
+// The same confirmation and the same cancel as on Payments (lib/memberships.ts cancelMembership).
+async function cancel(id){const m=list.find(x=>x.orderId===id);if(!m)return;
+ if(!confirm('Cancel '+m.wrestler+'’s membership for the family? No more charges. '+m.wrestler+' stays on the roster through the end of the paid month, and the family gets an email.'))return;
+ try{const d=await call('/api/payments',{action:'membership-cancel',orderId:id});results[id]='Canceled. '+m.wrestler+' can practice through '+longDate(d.endsOn)+'.';await load()}catch(e){results[id]=e.message;render()}}
+$('show').onchange=render;$('q').oninput=render;
+load();
+</script></body></html>
