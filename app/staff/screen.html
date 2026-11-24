@@ -18,11 +18,11 @@ details.change{margin-top:12px}details.change summary{cursor:pointer;min-height:
 .removed{background:#f7f8fa}
 /* The owner's own row in the list (issue #283) */
 .list article.you{border-left:3px solid #c4222c}.list article.you .swa-label{margin:0 0 10px;font-size:var(--swa-t-13)}.list article.you .bio{margin-top:8px}.invite-row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}.invite-row p{margin:0}
-.state{display:inline-block;padding:1px 8px;border-radius:999px;font-size:var(--swa-t-13);font-weight:700;background:#e6f2ea;color:#1f6f3a}.state.expired{background:#fff4e5;color:#7a4b00}
+.state{display:inline-block;padding:1px 8px;border-radius:999px;font-size:var(--swa-t-13);font-weight:700;background:#e6f2ea;color:#1f6f3a}.state.expired{background:#fff4e5;color:#7a4b00}.w9{margin:10px 0 0;display:grid;gap:6px}.w9 p{margin:0}.w9 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}.w9 label{min-width:0}
 </style><link rel="stylesheet" href="/responsive.css"></head><body><main>
 <h1>Coaches</h1>
 <p>Invite coaches, choose their programs, manage their lesson openings and keep their profiles up to date. Each coach signs in with their own email and password. Coaches see only their own lessons, today’s roster for their programs and the practice plans you share. Add yourself as a coach to post lesson openings and take on programs from Coach view; you keep your owner account.</p>
-<section aria-labelledby="staffTitle"><h2 id="staffTitle">Your coaches</h2><div id="staff" class="list"><article id="self" class="you" aria-labelledby="selfTitle"><h3 id="selfTitle" class="swa-label">You as a coach</h3><div id="selfBody"><p class="muted">Loading…</p></div></article><p class="muted" id="staffLoading">Loading…</p></div></section>
+<section aria-labelledby="staffTitle"><h2 id="staffTitle">Your coaches</h2><p id="w9Note" class="warn" hidden></p><div id="staff" class="list"><article id="self" class="you" aria-labelledby="selfTitle"><h3 id="selfTitle" class="swa-label">You as a coach</h3><div id="selfBody"><p class="muted">Loading…</p></div></article><p class="muted" id="staffLoading">Loading…</p></div></section>
 <section aria-labelledby="inviteTitle"><h2 id="inviteTitle">Invite a coach</h2><p class="muted">The coach gets a link to create their account. It works once, only for this email, and for <span id="inviteDays">7</span> days. You can always copy the link and send it yourself.</p>
 <form id="inviteForm"><div class="pair"><label>Coach’s name<input name="name" maxlength="100" required autocomplete="off"></label><label>Coach’s email<input name="email" type="email" maxlength="254" required autocomplete="off"></label></div>
 <fieldset><legend>Programs they coach</legend><div class="checks" id="invitePrograms"></div></fieldset>
@@ -38,6 +38,8 @@ const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,
 const PROGRAMS=[['Elementary','SWA Development'],['Intermediate','SWA Intermediate'],['Advanced','SWA Advanced']];
 const programName=id=>(PROGRAMS.find(p=>p[0]===id)||[id,id])[1];
 const longDate=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'long',day:'numeric',year:'numeric'});
+// The academy's today (New York), for the W-9 date (issue #400).
+const todayKey=()=>new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
 const shortDate=iso=>new Date(iso).toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric'});
 const initials=n=>String(n||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('')||'?';
 const checks=(name,chosen=[])=>PROGRAMS.map(([v,n])=>`<label><input type="checkbox" name="${name}" value="${v}"${chosen.includes(v)?' checked':''}> ${n}</label>`).join('');
@@ -46,10 +48,15 @@ const say=t=>{$('status').textContent=t};
 let state=null;
 async function call(body){const r=await fetch('/api/staff',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error((data.error||'Request failed.')+(data.requestId?' (reference '+String(data.requestId).slice(0,8)+')':''));return data}
 function profileBits(s){return `${s.bio?`<p class="bio">${esc(s.bio)}</p>`:'<p class="bio muted">No profile yet. The coach can add a bio from coach home, or you can.</p>'}${s.specialties.length?`<ul class="chips">${s.specialties.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}`}
+// W-9 on file (issue #400): received and the day, set by the owner. The form itself stays with the owner or the
+// accountant; no tax ID is asked for or stored.
+function w9Html(s,today){
+ if(s.w9)return `<div class="w9"><p><span class="state">W-9 on file</span> <span class="muted">Received ${esc(longDate(s.w9.receivedOn))}</span></p><details class="change"><summary>Change the W-9 date</summary><div class="row"><label>Day it came in<input type="date" data-w9-date value="${esc(s.w9.receivedOn)}" max="${esc(today)}"></label><button type="button" data-w9-save>Save date</button><button type="button" class="quiet" data-w9-clear>Take off W-9 received</button></div></details></div>`;
+ return `<div class="w9"><p><span class="state expired">No W-9 yet</span> <span class="muted">Mark it when you have this coach’s W-9. Keep the form with your records or your accountant; it isn’t uploaded here.</span></p><div class="row"><label>Day it came in<input type="date" data-w9-date value="${esc(today)}" max="${esc(today)}"></label><button type="button" data-w9-save>Mark W-9 received</button></div></div>`}
 function coachCard(s){
  const upcoming=s.upcomingLessons?`<p class="warn">${s.upcomingLessons} booked lesson${s.upcomingLessons===1?'':'s'} still to come.</p>`:'';
  return `<article data-coach="${esc(s.email)}"><div class="coach-head"><div class="avatar" aria-hidden="true">${esc(initials(s.displayName))}</div><div class="grow"><h3>${esc(s.displayName)}</h3>
- <p class="muted">${esc(s.email)}${s.phone?' · <a href="tel:'+esc(s.phone)+'">'+esc(s.phone)+'</a>':''}</p><p>${esc(s.programs.map(programName).join(', ')||'No programs yet')}</p></div></div>${profileBits(s)}${upcoming}
+ <p class="muted">${esc(s.email)}${s.phone?' · <a href="tel:'+esc(s.phone)+'">'+esc(s.phone)+'</a>':''}</p><p>${esc(s.programs.map(programName).join(', ')||'No programs yet')}</p></div></div>${profileBits(s)}${upcoming}${w9Html(s,todayKey())}
  <details class="change"><summary>Change name or programs</summary><label>Name on your lists<input data-name value="${esc(s.name)}" maxlength="100"></label><div class="checks">${checks('p-'+s.email,s.programs)}</div><button type="button" data-save>Save changes</button></details>
  <div class="actions"><a href="/coach-openings?email=${encodeURIComponent(s.email)}">Lesson openings →</a><a href="/coach-profile?email=${encodeURIComponent(s.email)}">Edit profile →</a><button type="button" data-remove>Remove access</button></div></article>`}
 function removedCard(s){return `<article class="removed" data-coach="${esc(s.email)}"><div class="coach-head"><div class="avatar" aria-hidden="true">${esc(initials(s.displayName))}</div><div class="grow"><h3>${esc(s.displayName)}</h3><p class="muted">${esc(s.email)} · removed ${esc(shortDate(s.updatedAt))}</p></div></div>
@@ -69,10 +76,13 @@ function selfHtml(me){
  return `<p>Do you coach too? Add yourself to post private lesson openings, take on programs and appear in the coach pay report.</p>
   <label>Name families see<input id="selfName" maxlength="100" value="${esc(me?.name||'')}" placeholder="Coach Justin"></label><fieldset><legend>Programs you coach</legend><div class="checks">${checks('self',me?.programs||[])}</div></fieldset>
   <button type="button" id="selfAdd">Add yourself as a coach</button>`}
+const w9Note=list=>(list.length===1?list[0].displayName+' has':list.length+' coaches have')+' no W-9 on file yet: '+(list.length===1?'':list.map(s=>s.displayName).join(', ')+'. ')+(list.length===1?'mark it below when you have it.':'Mark each one below when you have it.');
 async function act(body,done){try{await call(body);await load();say(done)}catch(e){say(e.message)}}
 function bind(){
  document.querySelectorAll('#staff [data-coach]').forEach(card=>{const email=card.dataset.coach;
   card.querySelector('[data-save]').onclick=()=>act({action:'grant',email,name:card.querySelector('[data-name]').value,programs:picked(card,'p-'+email)},'Coach saved.');
+  card.querySelector('[data-w9-save]').onclick=()=>act({action:'w9-received',email,receivedOn:card.querySelector('[data-w9-date]').value},'W-9 marked received.');
+  const clear=card.querySelector('[data-w9-clear]');if(clear)clear.onclick=()=>{if(!confirm('Take off W-9 received for '+email+'?'))return;act({action:'w9-clear',email},'W-9 mark taken off.')};
   card.querySelector('[data-remove]').onclick=()=>{if(!confirm('Remove coach access for '+email+'? They can no longer sign in as a coach. Their past lessons and pay records stay.'))return;act({action:'revoke',email},'Coach access removed.')}});
  document.querySelectorAll('#removed [data-coach]').forEach(card=>{const email=card.dataset.coach;
   card.querySelector('[data-restore]').onclick=()=>act({action:'restore',email},'Coach access restored.');
@@ -89,6 +99,8 @@ function bind(){
 function showLink(r){$('inviteLink').value=r.link;$('inviteNote').textContent=(r.emailStatus==='sent'?'Invite emailed to '+r.invite.email+'. ':r.emailStatus==='failed'?'The email could not be sent. ':'Email isn’t set up yet, so nothing was sent. ')+'Copy the link and send it to '+r.invite.name+'. It works until '+shortDate(r.invite.expiresAt)+'.';$('inviteResult').hidden=false;$('inviteResult').scrollIntoView({behavior:'smooth',block:'nearest'})}
 async function load(){try{state=await call();$('inviteDays').textContent=state.inviteDays;
  const active=state.staff.filter(s=>s.active),removed=state.staff.filter(s=>!s.active);
+ // Coaches without a W-9 on file (issue #400).
+ const noW9=active.filter(s=>!s.w9);$('w9Note').hidden=!noW9.length;$('w9Note').textContent=noW9.length?w9Note(noW9):'';
  // The owner's own row stays first; the coaches follow it (issue #283).
  const list=active.map(coachCard).join('')||'<p class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17a4 4 0 0 1 8 0"/></svg><span>No coaches yet. Invite your first coach below.</span></p>',box=$('staff'),you=$('self');
  if(you&&box.append){box.innerHTML='';box.append(you);box.insertAdjacentHTML('beforeend',list)}else box.innerHTML=list;

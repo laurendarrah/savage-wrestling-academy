@@ -10,6 +10,7 @@ import {emailConfigured} from '../../../lib/email';
 import {academyToday} from '../../../lib/public-schedule';
 import {HOLD_MINUTES} from '../../../lib/capacity';
 import {recordRemoval,removedCoaches,RETENTION_YEARS} from '../../../lib/coach-retention';
+import {w9s,markW9,clearW9} from '../../../lib/coach-w9';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 type Staff={email:string;name:string;programs:string;active:number;updated_at:string;display_name:string|null;bio:string|null;specialties:string|null;phone:string|null};
@@ -24,9 +25,9 @@ async function upcomingBooked(){
 export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in required.'},403,auth.headers);
  const rows=(await env.DB!.prepare('SELECT s.email,s.name,s.programs,s.active,s.updated_at,p.display_name,p.bio,p.specialties,p.phone FROM staff_access s LEFT JOIN coach_profiles p ON p.email=s.email ORDER BY COALESCE(p.display_name,s.name)').all<Staff>()).results;
- const upcoming=await upcomingBooked();
+ const upcoming=await upcomingBooked(),w9=await w9s();
  const view=(s:Staff)=>({email:s.email,name:s.name,displayName:s.display_name||s.name,programs:JSON.parse(s.programs),active:s.active===1,updatedAt:s.updated_at,
-  phone:s.phone??'',bio:s.bio??'',specialties:s.specialties?JSON.parse(s.specialties):[],profileSaved:s.display_name!==null,upcomingLessons:upcoming.get(s.email)??0});
+  phone:s.phone??'',bio:s.bio??'',specialties:s.specialties?JSON.parse(s.specialties):[],profileSaved:s.display_name!==null,upcomingLessons:upcoming.get(s.email)??0,w9:w9.get(s.email.toLowerCase())??null});
  const own=rows.find(s=>s.email===OWNER_EMAIL);
  // Open invites, and ones that ended in the last 30 days so the owner can send a new link.
  const recent=new Date(Date.now()-30*86400000).toISOString();
@@ -62,6 +63,9 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  }
  const email=typeof input?.email==='string'?input.email.trim().toLowerCase():'';
  if(!validEmail(email)||email===OWNER_EMAIL)return reply({error:'Enter a coach email different from your owner email.'},400);
+ // W-9 on file (issue #400): received and the day, or taken off. Never a tax ID or the form itself (lib/coach-w9.ts).
+ if(input.action==='w9-received')return done(await markW9(actor,email,input.receivedOn));
+ if(input.action==='w9-clear')return done(await clearW9(actor,email));
  if(input.action==='revoke'){
   await env.DB!.prepare('UPDATE staff_access SET active=0,updated_at=? WHERE email=?').bind(now,email).run();
   await env.DB!.prepare('UPDATE coach_invites SET revoked_at=? WHERE email=? AND used_at IS NULL AND revoked_at IS NULL').bind(now,email).run();

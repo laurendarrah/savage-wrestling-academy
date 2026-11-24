@@ -16,6 +16,7 @@ import {env} from 'cloudflare:workers';
 import {academyDay} from './datetime';
 import {coachPayReport} from './coach-pay';
 import {ENTRY_COLUMNS, shiftAmount, type Entry} from './coach-time';
+import {w9s, type W9} from './coach-w9';
 
 export const PAY_METHODS = {check: 'Check', cash: 'Cash', bank: 'Bank transfer', zelle: 'Zelle', venmo: 'Venmo', other: 'Other'} as const;
 export type PayMethod = keyof typeof PAY_METHODS;
@@ -49,6 +50,32 @@ const view = (r: Row): CoachPaymentView => ({id: r.id, coachEmail: r.coach_email
 // One payment in words, for the security log: "coach email · $120.00 · 2026-11-19 · Check · for 2026-11-01 to 2026-11-15".
 const words = (r: Pick<Row, 'coach_email' | 'amount_cents' | 'paid_on' | 'method' | 'period_from' | 'period_to'>) =>
   `${r.coach_email} · ${money(r.amount_cents)} · ${r.paid_on} · ${PAY_METHODS[r.method as PayMethod] ?? 'Other'}${r.period_from && r.period_to ? ` · for ${r.period_from} to ${r.period_to}` : ''}`;
+
+// What each coach was paid in a calendar year, for the 1099s (issue #400), from the payments recorded here, with each
+// coach's W-9 status. A year from 2020 to the current one; anything else is the current year.
+export type YearTotal = {email: string; name: string; paidCents: number; payments: number; w9: W9 | null};
+export async function yearTotals(yearInput: unknown, today = academyDay(new Date())) {
+  const thisYear = Number(today.slice(0, 4)), asked = Number(yearInput);
+  const year = Number.isInteger(asked) && asked >= 2020 && asked <= thisYear ? asked : thisYear;
+  const [rows, years, staff] = await db().batch([
+    db().prepare('SELECT lower(coach_email) AS email,max(coach_name) AS name,sum(amount_cents) AS cents,count(*) AS n FROM coach_payments WHERE paid_on>=? AND paid_on<=? GROUP BY lower(coach_email)').bind(year + '-01-01', year + '-12-31'),
+    db().prepare("SELECT DISTINCT substr(paid_on,1,4) AS y FROM coach_payments WHERE paid_on>='2020-01-01'"),
+    db().prepare('SELECT lower(email) AS email,name FROM staff_access'),
+  ]);
+  const names = new Map((staff.results as any[]).map(s => [s.email, s.name])), w9 = await w9s();
+  const coaches: YearTotal[] = (rows.results as any[]).map(r => ({email: r.email, name: names.get(r.email) ?? r.name, paidCents: Number(r.cents) || 0, payments: Number(r.n) || 0, w9: w9.get(r.email) ?? null}))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.email.localeCompare(b.email));
+  const list = [...new Set([thisYear, ...(years.results as any[]).map(r => Number(r.y)).filter(y => y >= 2020 && y <= thisYear)])].sort((a, b) => b - a);
+  return {year, years: list, coaches, totalCents: coaches.reduce((n, c) => n + c.paidCents, 0), noW9: coaches.filter(c => !c.w9).length};
+}
+// The year's totals as a spreadsheet for the accountant: one line per coach. No tax IDs: the site has none.
+const csvCell = (v: unknown) => { const s = String(v ?? ''); const lead = /^[\s\ufeff]*[=+\-@]|^[\t\r]/.test(s); return /[",\n\r]/.test(s) || lead ? '"' + (lead ? "'" : '') + s.replace(/"/g, '""') + '"' : s; };
+export function yearCsv(t: Awaited<ReturnType<typeof yearTotals>>) {
+  const lines = [['Coach', 'Coach email', 'Year', 'Paid in the year', 'Payments', 'W-9 received'],
+    ...t.coaches.map(c => [c.name, c.email, t.year, (c.paidCents / 100).toFixed(2), c.payments, c.w9 ? c.w9.receivedOn : 'Not on file']),
+    ['Total', '', t.year, (t.totalCents / 100).toFixed(2), t.coaches.reduce((n, c) => n + c.payments, 0), '']];
+  return lines.map(l => l.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
 
 // Every coach's balance, the payments recorded (newest first, the latest 200) and the totals the dashboard shows.
 export async function payroll(today = academyDay(new Date())) {

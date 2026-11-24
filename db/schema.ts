@@ -188,6 +188,11 @@ export const coachPayments=sqliteTable("coach_payments",{
  createdAt:text("created_at").notNull(),createdBy:text("created_by").notNull()
 },t=>[index("coach_payments_coach").on(t.coachEmail,t.paidOn),index("coach_payments_paid").on(t.paidOn),
  check("coach_payment_amount",sql`${t.amountCents} BETWEEN 1 AND 100000000`),check("coach_payment_method",sql`${t.method} IN ('check','cash','bank','zelle','venmo','other')`)]);
+// A coach's W-9 is on file with the academy (issue #400; Justin's decision on #246, Nov 23). Only that it was received
+// and when: the W-9 itself stays with the owner or the accountant, and no tax ID or Social Security number is stored.
+export const coachW9=sqliteTable("coach_w9",{
+ email:text("email").primaryKey(),receivedOn:text("received_on").notNull(),recordedAt:text("recorded_at").notNull(),recordedBy:text("recorded_by").notNull()
+},t=>[check("coach_w9_date",sql`${t.receivedOn} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`)]);
 
 
 // Owner review of a wrestler's USA Wrestling card (issue #68). Applies only while the number and expiration on

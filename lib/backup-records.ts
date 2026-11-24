@@ -79,16 +79,19 @@ export const RECORD_TABLES:Record<string,Col[]>={
  // Payments the academy made to coaches (issue #370). Added after version 3 first shipped (V3_LATER). Restoring never
  // changes a payment already recorded.
  coach_payments:[['id','text'],['coach_email','text'],['coach_name','text'],['paid_on','text'],['amount_cents','int'],['method','text'],['period_from','text',true],['period_to','text',true],['note','text'],['created_at','text'],['created_by','text']],
+ // Each coach's W-9 on file, by email (issue #400): only the day it came in, never a tax ID. Added after version 3 first
+ // shipped (V3_LATER). Restoring never changes a W-9 already marked.
+ coach_w9:[['email','text'],['received_on','text'],['recorded_at','text'],['recorded_by','text']]
 };
 // Tables whose primary key is not a single id column.
-export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],signature_reissues:['signature_id'],signature_carryovers:['signature_id'],stripe_fees:['payment_intent'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
+export const RECORD_KEYS:Record<string,string[]>={coach_profiles:['email'],coach_w9:['email'],signature_reissues:['signature_id'],signature_carryovers:['signature_id'],stripe_fees:['payment_intent'],subscriptions:['order_id'],usaw_reviews:['user_id','wrestler_id'],announcement_recipients:['announcement_id','user_id']};
 const keysOf=(t:string)=>RECORD_KEYS[t]??['id'];
 // JSON columns must parse to the expected shape, so a damaged or tampered file cannot store data that crashes a page.
 const JSON_COLUMNS:Record<string,[string,'array'|'object'][]>={coach_profiles:[['specialties','array']],orders:[['dates','array'],['pricing','object'],['terms_accepted','object']],cash_bookings:[['pricing','object']],waitlist_entries:[['dates','array']],academy_settings:[['payload','object']],waiver_signatures:[['signature_record','object']],announcements:[['audience','object']],coach_time_entries:[['history','array']],coach_time_off:[['programs','array']]};
 const jsonShape=(v:unknown,shape:'array'|'object')=>{try{const x=JSON.parse(String(v));return shape==='array'?Array.isArray(x):!!x&&typeof x==='object'&&!Array.isArray(x)}catch{return false}};
 // Tables added to version 3 after it first shipped. A version 3 file made before one was added has no section for it
 // and still restores; a file that has the section is checked like any other.
-const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues','cash_bookings','payment_disputes','signature_carryovers','installment_payments','coach_payments'];
+const V3_LATER=['coach_profiles','financial_entries','coach_time_entries','coach_time_off','removed_coaches','payment_refunds','stripe_fees','signature_reissues','cash_bookings','payment_disputes','signature_carryovers','installment_payments','coach_payments','coach_w9'];
 // Columns added to a version 3 table after it first shipped, with the value an older file's rows mean. A row may leave
 // them out and is restored with that value; a row that has one is checked like any other column. Issue #195: every
 // signed-document version in an older file is a waiver. Issue #239: every signature in an older file is a first signing.

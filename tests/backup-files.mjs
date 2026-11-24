@@ -70,6 +70,8 @@ source.sqlite.prepare("INSERT INTO signature_carryovers(signature_id,user_id,wre
 source.sqlite.prepare("INSERT INTO installment_payments(id,order_id,invoice_id,payment_number,amount_cents,expected_cents,livemode,received_at) VALUES ('evt_inv_2','ord-1','in_2',2,18000,20000,0,'2026-11-08T12:00:00.000Z')").run();
 // Issue #370: a payment the academy made to a coach.
 source.sqlite.prepare("INSERT INTO coach_payments(id,coach_email,coach_name,paid_on,amount_cents,method,period_from,period_to,note,created_at,created_by) VALUES ('pay-1','riley.mat@example.test','Coach Riley','2026-11-15',12000,'check','2026-11-01','2026-11-15','Check 1042','2026-11-15T15:00:00.000Z','owner')").run();
+// Issue #400: a coach's W-9 on file (the day it came in only).
+source.sqlite.prepare("INSERT INTO coach_w9(email,received_on,recorded_at,recorded_by) VALUES ('riley.mat@example.test','2026-11-02','2026-11-02T15:00:00.000Z','owner')").run();
 // Issue #248: a walk-in booked to pay cash at the academy (the old file predates the table).
 source.sqlite.prepare(`INSERT INTO cash_bookings(id,user_id,email,wrestler_id,wrestler_name,kind,program,item_id,item_label,session_date,start_time,end_time,base_cents,discount_cents,amount_cents,pricing,dedupe_key,status,order_id,created_at,updated_at,canceled_at,canceled_by,cancel_reason)
   VALUES ('cash-1','parent-1','pat@example.test','w-1','Sam Example','live',NULL,'fnl','Friday Night Live on Fri, Nov 20','2026-11-20','17:00','18:00',2000,1000,1000,'{"member":true}','parent-1|w-1|live|fnl|2026-11-20','due',NULL,'2026-11-07T12:00:00.000Z','2026-11-07T12:00:00.000Z',NULL,NULL,NULL)`).run();
