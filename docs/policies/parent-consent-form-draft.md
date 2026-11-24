@@ -21,9 +21,11 @@ Written from what the platform does (checked against the code), so the attorney 
 - [Attorney: Section 4 says the form does not appoint staff as medical decision-makers. Should the academy also have a separate emergency medical treatment authorization?]
 - [Attorney: A parent signs for wrestlers 18 and older (decision Q16). Does a parent's consent for an adult wrestler need different wording, or should the adult also acknowledge it?]
 - [Attorney: Should the form state how long the signed copy is kept? See the data retention draft.]
+- [Attorney: Photos and video (proposed section 8 below, #403). Justin wants parents' permission for photos of their wrestler on the academy's Instagram and flyers (decided Nov 24 on #197, Q22). New York Civil Rights Law §§ 50–51 requires written consent, from a parent for a minor, to use a person's name or picture for advertising or trade. Is section 8 enough for that? Should it be a separate choice a parent can decline while still signing the rest of the form? Today the site records one signature for the whole form, so a separate yes/no would need a small change to the site. If section 8 is kept, section 6's "use of my child's image in publicity" must change; a proposed wording is below.]
 
 ## Decision still open
 
+- [Decision: May a wrestler's name appear with their photo on Instagram and flyers, first name only, or never? Section 8 below assumes no full name without further permission.]
 - [Decision: Can the booking requirement go live before the attorney has reviewed the form? Decision Q15 on #197 leaves this open. Until it is decided, do not publish the form.]
 
 ## Draft wording (from Justin's Sites version, unchanged)
@@ -54,6 +56,11 @@ Written from what the platform does (checked against the code), so the attorney 
 >
 > 7. WITHDRAWING PERMISSION
 > I may withdraw permission for future participation by notifying SWA in writing. I understand that withdrawal of participation permission does not by itself cancel a separate membership or resolve any payment obligations under a separate agreement.
+>
+> 8. PHOTOS AND VIDEO *(proposed, #403; not in Justin's Sites version; for attorney review)*
+> SWA may take photographs and video during practices, camps, clinics and events. I give permission for SWA to use photographs and video in which my child appears on the academy's social media accounts, such as Instagram, and in its printed materials, such as flyers, without payment to me or my child. SWA will not publish my child's full name with a photograph or video without my further permission. I may withdraw this permission for future use at any time by notifying SWA in writing. SWA will then stop using photographs or video of my child in new posts and materials, but cannot recall printed materials already handed out or remove copies shared by others.
+>
+> *If section 8 is kept, section 6's second sentence would read: "It does not authorize new purchases, recurring charges, transportation or off-site travel. Those matters require separate arrangements or consent."*
 >
 > PARENT / GUARDIAN ACKNOWLEDGMENT
 > I have read this consent, have had the opportunity to ask questions, and give the participation permission described above. My printed full name, drawn signature, and the actual signing date and time will be saved with this document.
