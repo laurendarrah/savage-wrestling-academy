@@ -1,5 +1,7 @@
-// Issue #212 (Justin's decision in #197, Q18): a coach removed permanently has all their records kept for 3 years from the
-// removal date, then deleted. Records a family or the books also depend on are kept without the coach (anonymized).
+// Issue #212 (Justin's decision in #197, Q18), changed by #401 (his decision on #246, Nov 23, 2026): a coach removed
+// permanently keeps their pay records and signed contract under their real name for good (the pay archive); their
+// other records are kept for 3 years from the removal date, then deleted, and records others depend on that are not pay
+// records lose the coach's name.
 // Runs the real staff and backup routes and lib/coach-retention.ts against a database built from every migration.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -29,6 +31,9 @@ function everywhere(text) {
       for (const [col, v] of Object.entries(row)) if (typeof v === 'string' && v.toLowerCase().includes(text.toLowerCase())) hits.push(`${name}.${col}`);
   return hits;
 }
+// The pay archive (#401): the only tables that may still name a removed coach after the cleanup.
+const ARCHIVE = new Set(['removed_coaches', 'orders', 'coach_openings', 'coach_time_entries', 'coach_payments', 'coach_w9', 'waiver_signatures', 'signature_reissues', 'academy_settings']);
+const outsideArchive = text => everywhere(text).filter(h => !ARCHIVE.has(h.split('.')[0]));
 const dumpAll = () => Object.fromEntries(tables().map(name => [name, sqlite.prepare(`SELECT * FROM ${name} ORDER BY rowid`).all().map(r => ({...r}))]));
 
 // ---------- The rule: kept until 3 years after removal, cleaned the day after ----------
@@ -55,7 +60,7 @@ const dumpAll = () => Object.fromEntries(tables().map(name => [name, sqlite.prep
   assert.equal(tomb.email_hash, await retention.emailHash(email)); assert.equal(tomb.cleaned_at, null);
   const r = await get(staff, '/api/staff', 'owner');
   assert.equal(r.body.retentionYears, 3);
-  assert.deepEqual(r.body.removedForGood, [{email, name: 'Coach Kai', removedOn: today, keepUntil: retention.keepUntil(today)}]);
+  assert.deepEqual(r.body.removedForGood, [{email, name: 'Coach Kai', removedOn: today, keepUntil: retention.keepUntil(today), cleaned: false}]);
   assert.equal(retention.keepUntil(today), yearsBefore(today, -3));
   // Nothing is due for 3 years: the daily job changes nothing and logs nothing.
   const before = dumpAll();
@@ -73,11 +78,12 @@ const dumpAll = () => Object.fromEntries(tables().map(name => [name, sqlite.prep
   // The page (inline JavaScript is not typechecked).
   const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {id, value: '', hidden: false, innerHTML: '', textContent: '', dataset: {}, style: {}, querySelector: () => null, querySelectorAll: () => []}); return nodes.get(id); };
   const ctx = vm.createContext({document: {getElementById: el, querySelectorAll: () => [], querySelector: () => null}, confirm: () => true, Date, JSON, Promise, Error, Object, Array, Number, String, Set, Map,
-    fetch: async () => ({ok: true, status: 200, json: async () => ({staff: [], self: null, invites: [], inviteDays: 7, retentionYears: 3, removedForGood: [{email, name: 'Coach <Kai>', removedOn: '2026-11-07', keepUntil: '2029-11-07'}]})})});
+    fetch: async () => ({ok: true, status: 200, json: async () => ({staff: [], self: null, invites: [], inviteDays: 7, retentionYears: 3, removedForGood: [{email, name: 'Coach <Kai>', removedOn: '2026-11-07', keepUntil: '2029-11-07', cleaned: false}]})})});
   for (const [, code] of readFileSync('app/staff/screen.html', 'utf8').matchAll(/<script>([\s\S]*?)<\/script>/g)) vm.runInContext(code, ctx);
   await new Promise(r => setImmediate(r)); await new Promise(r => setImmediate(r));
   assert.equal(el('goneBox').hidden, false);
-  assert.match(el('gone').innerHTML, /Records kept until <b>November 7, 2029<\/b>, then deleted\./);
+  assert.match(el('gone').innerHTML, /Other records kept until <b>November 7, 2029<\/b>, then deleted\. Pay records and signed contract are kept for good\./);
+  assert.match(el('gone').innerHTML, /<summary>Pay records and contract<\/summary>/);
   assert.match(el('gone').innerHTML, /removed permanently November 7, 2026/);
   assert.match(el('gone').innerHTML, /Coach &lt;Kai&gt;/, 'names are escaped');
   assert.equal(el('retentionYears').textContent, 3);
@@ -108,6 +114,8 @@ function seedCoach(p, email, uid, name, lessonDay) {
     now, approved ? 'ok' : null, approved ? now : null, approved ? 'owner-uuid' : null, approved ? 90 : null, approved ? 'head' : null, approved ? 4000 : null, approved ? 6000 : null,
     voided ? now : null, voided ? 'owner-uuid' : null, voided ? 'Duplicate' : null, `[{"by":"coach","note":"${name}"}]`, now);
   shift(p + '-shift-ok', true, false); shift(p + '-shift-draft', false, false); shift(p + '-shift-void', false, true);
+  // Issue #400: their W-9 on file.
+  run("INSERT INTO coach_w9(email,received_on,recorded_at,recorded_by) VALUES (?,'2023-01-05',?,'owner-uuid')", email, now);
   // Issue #370: a payment the academy made to the coach.
   run("INSERT INTO coach_payments(id,coach_email,coach_name,paid_on,amount_cents,method,period_from,period_to,note,created_at,created_by) VALUES (?,?,?,'2023-09-30',12000,'check','2023-09-01','2023-09-30',?,?,'owner-uuid')", p + '-pay', email, name, 'Check for ' + name, now);
   run("INSERT INTO coach_time_off(id,user_id,coach_email,coach_name,start_date,end_date,reason,status,programs,requested_at,decided_at,decided_by,revision) VALUES (?,?,?,?,'2023-10-01','2023-10-03','Wedding','approved','[\"Intermediate\"]',?,?,'owner-uuid',2)", p + '-off', uid, email, name, now, now);
@@ -157,18 +165,18 @@ const beforeFile = JSON.parse(JSON.stringify(await backupLib.readBackup())); // 
 // A recovery snapshot from an earlier restore, made while Rae's lesson times were still hers.
 run('INSERT INTO recovery_snapshots(id,payload,created_at) VALUES (?,?,?)', 'snap-old', JSON.stringify(await backupLib.readCore()), now);
 const maxBefore = everywhere(NEW).sort();
+const archiveBefore = Object.fromEntries([['coach_openings', 'rae-booked'], ['orders', 'rae-ord-a'], ['orders', 'rae-ord-b'], ['coach_time_entries', 'rae-shift-ok'], ['coach_payments', 'rae-pay'], ['waiver_signatures', 'rae-contract']]
+  .map(([table, id]) => [id, {...one(`SELECT * FROM ${table} WHERE id=?`, id)}]));
 
 {
   const summary = await retention.cleanupRemovedCoaches();
   assert.equal(summary.due, 1, 'only Rae is past 3 years'); assert.equal(summary.finished, 1); assert.equal(summary.inProgress, 0);
   assert.ok(summary.deleted > 0 && summary.anonymized > 0);
 
-  // Coach-only records are deleted.
+  // Coach-only records that are not pay records are deleted.
   for (const [sql, what] of [
     ['SELECT count(*) FROM coach_profiles WHERE email=?', 'profile and phone'], ['SELECT count(*) FROM coach_invites WHERE email=?', 'old invites'],
-    ['SELECT count(*) FROM coach_time_off WHERE coach_email=?', 'time off'], ['SELECT count(*) FROM coach_time_entries WHERE coach_email=?', 'shifts'],
-    ['SELECT count(*) FROM waiver_signatures WHERE lower(email)=?', 'signed contract'], ['SELECT count(*) FROM notifications WHERE email=?', 'notices to the coach'],
-    ['SELECT count(*) FROM coach_openings WHERE coach_email=?', 'lesson times'], ['SELECT count(*) FROM coach_payments WHERE coach_email=?', 'payments under their email']]) assert.equal(count(sql, OLD), 0, what);
+    ['SELECT count(*) FROM coach_time_off WHERE coach_email=?', 'time off'], ['SELECT count(*) FROM notifications WHERE email=?', 'notices to the coach']]) assert.equal(count(sql, OLD), 0, what);
   assert.equal(count("SELECT count(*) FROM coach_openings WHERE id IN ('rae-open','rae-legacy')"), 0, 'times nobody booked are deleted, with or without the coach email');
   assert.equal(count("SELECT count(*) FROM coach_time_entries WHERE id IN ('rae-shift-draft','rae-shift-void')"), 0, 'shifts never approved, or voided, are deleted');
   assert.equal(count("SELECT count(*) FROM notifications WHERE id IN ('rae-n1','rae-n2')"), 0, 'notices about their time off are deleted, including to the coaches covering');
@@ -176,22 +184,16 @@ const maxBefore = everywhere(NEW).sort();
   assert.equal(count("SELECT count(*) FROM waiver_signatures WHERE id='rae-waiver'"), 1, 'family waivers stay');
   assert.equal(count("SELECT count(*) FROM waiver_versions WHERE id='contract-1'"), 1, 'the contract text stays for other coaches');
 
-  // Shared records are kept without the coach.
-  const booked = one("SELECT * FROM coach_openings WHERE id='rae-booked'");
-  assert.equal(booked.coach_email, KEY); assert.equal(booked.user_id, KEY, 'the booked lesson stays for the families who paid');
-  for (const id of ['rae-ord-a', 'rae-ord-b']) {
-    const o = one('SELECT * FROM orders WHERE id=?', id), p = JSON.parse(o.pricing);
-    assert.equal(o.item_label, 'One-on-one lesson with Former coach, 2023-09-14'); assert.equal(p.coachEmail, KEY); assert.equal(p.coachName, 'Former coach');
-    assert.equal(o.amount_cents, 6000); assert.equal(p.format, 'one-on-one', 'the rest of the price record is unchanged');
-  }
-  assert.equal(one("SELECT status FROM orders WHERE id='rae-ord-b'").status, 'refunded');
-  const shift = one("SELECT * FROM coach_time_entries WHERE id='rae-shift-ok'");
-  assert.deepEqual([shift.coach_email, shift.user_id, shift.coach_name, shift.coach_note, shift.owner_note, shift.history], [KEY, KEY, 'Former coach', null, null, '[]']);
-  assert.deepEqual([shift.approved_minutes, shift.approved_rate_cents, shift.approved_cents, shift.work_date], [90, 4000, 6000, '2023-09-12'], 'the approved pay record stays');
-  // Issue #370: what the academy paid stays in its books, without the coach's name, email or the note.
-  const paid = one("SELECT * FROM coach_payments WHERE id='rae-pay'");
-  assert.deepEqual([paid.coach_email, paid.coach_name, paid.note, paid.paid_on, paid.amount_cents, paid.method, paid.period_from, paid.period_to], [KEY, 'Former coach', '', '2023-09-30', 12000, 'check', '2023-09-01', '2023-09-30']);
-  assert.equal(count("SELECT count(*) FROM coach_payments WHERE coach_name<>'Former coach'"), count('SELECT count(*) FROM coach_payments') - 1, 'other coaches’ payments are untouched');
+  // The pay archive (#401) is kept exactly as it was, under the coach's real name: the booked lesson time and the
+  // families' lesson payments, the approved shift, the payment the academy made, and the signed contract.
+  for (const [table, id] of [['coach_openings', 'rae-booked'], ['orders', 'rae-ord-a'], ['orders', 'rae-ord-b'], ['coach_time_entries', 'rae-shift-ok'], ['coach_payments', 'rae-pay'], ['waiver_signatures', 'rae-contract']])
+    assert.deepEqual({...one(`SELECT * FROM ${table} WHERE id=?`, id)}, archiveBefore[id], `${table} ${id} unchanged`);
+  assert.equal(one("SELECT coach_email FROM coach_openings WHERE id='rae-booked'").coach_email, OLD);
+  assert.equal(JSON.parse(one("SELECT pricing FROM orders WHERE id='rae-ord-a'").pricing).coachName, 'Rae Quinn');
+  assert.deepEqual(Object.values(one("SELECT coach_email,coach_name,approved_cents FROM coach_time_entries WHERE id='rae-shift-ok'")), [OLD, 'Rae Quinn', 6000]);
+  assert.deepEqual(Object.values(one("SELECT coach_email,coach_name,note FROM coach_payments WHERE id='rae-pay'")), [OLD, 'Rae Quinn', 'Check for Rae Quinn']);
+  assert.equal(count("SELECT count(*) FROM coach_time_entries WHERE coach_email=?", OLD), 1, 'only the approved shift is left');
+  assert.equal(one('SELECT received_on FROM coach_w9 WHERE email=?', OLD).received_on, '2023-01-05', 'the W-9 status is kept');
   assert.equal(one("SELECT checked_in_by FROM attendance WHERE id='rae-att'").checked_in_by, KEY, 'the check-in stays; who checked in does not');
   assert.equal(one("SELECT checked_in_by FROM attendance WHERE id='owner-att'").checked_in_by, 'owner-uuid');
   assert.equal(one("SELECT updated_by FROM practice_plans WHERE id='rae-plan'").updated_by, KEY);
@@ -203,14 +205,15 @@ const maxBefore = everywhere(NEW).sort();
   assert.equal(one("SELECT target FROM security_events WHERE id='rae-ev5'").target, 'x' + OLD, 'another email that merely ends the same is untouched');
   run("DELETE FROM security_events WHERE id='rae-ev5'"); // so the "gone everywhere" checks below are exact
   const lessons = JSON.parse(one("SELECT payload FROM academy_settings WHERE id='lessons'").payload);
-  assert.deepEqual(lessons.splits, {[NEW]: 60, [KEY]: 70}, 'their pay share moves to the former-coach key');
+  assert.deepEqual(lessons.splits, {[OLD]: 70, [NEW]: 60}, 'their pay share stays beside the lesson payments that name them');
   assert.deepEqual(JSON.parse(one("SELECT payload FROM academy_settings WHERE id='website'").payload).coaches, [NEW], 'they leave the team page list');
 
-  // Gone from every table, by email and by name; the removed_coaches row keeps only the hash and dates.
-  assert.deepEqual(everywhere(OLD), []);
-  assert.deepEqual(everywhere('Rae Quinn'), []);
+  // Outside the pay archive the coach is gone from every table, by email and by name. The removed_coaches row keeps the
+  // email and name, as the archive's index.
+  assert.deepEqual(outsideArchive(OLD), []);
+  assert.deepEqual(outsideArchive('Rae Quinn'), []);
   const tomb = one("SELECT * FROM removed_coaches WHERE id='rae-tomb'");
-  assert.deepEqual([tomb.email, tomb.name, tomb.email_hash, tomb.removed_on], [null, null, await retention.emailHash(OLD), oldRemoved]); assert.ok(tomb.cleaned_at);
+  assert.deepEqual([tomb.email, tomb.name, tomb.email_hash, tomb.removed_on], [OLD, 'Rae Quinn', await retention.emailHash(OLD), oldRemoved]); assert.ok(tomb.cleaned_at);
 
   // Max (3 years minus a day) is untouched.
   assert.deepEqual(everywhere(NEW).sort(), maxBefore, 'records of a coach removed less than 3 years ago are kept');
@@ -218,7 +221,7 @@ const maxBefore = everywhere(NEW).sort();
   assert.equal(one("SELECT email FROM removed_coaches WHERE id='max-tomb'").email, NEW);
 
   await unchanged('after the cleanup');
-  assert.equal((await pay.coachPayReport('2023-09-01', '2023-09-30')).coaches.find(c => c.coachEmail === KEY).coach, 'Former coach');
+  assert.equal((await pay.coachPayReport('2023-09-01', '2023-09-30')).coaches.find(c => c.coachEmail === OLD).coach, 'Rae Quinn', 'lesson pay still names the coach');
 
   // One security log line, with counts only.
   const logged = sqlite.prepare("SELECT * FROM security_events WHERE action='coach_records_deleted'").all();
@@ -231,9 +234,22 @@ const maxBefore = everywhere(NEW).sort();
   const former = securityLog.describeSecurityEvent({actor: KEY, action: 'coach_access_revoked', target: KEY, created_at: now}, names);
   assert.equal(former.detail, 'A former coach'); assert.equal(former.who, 'A former coach');
 
-  // Coaches no longer lists Rae; Max still shows when his records go.
+  // Coaches lists both: Rae with her other records gone, Max with the day his go.
   const listed = (await get(staff, '/api/staff', 'owner')).body.removedForGood;
-  assert.ok(!listed.some(g => g.email === OLD)); assert.equal(listed.find(g => g.email === NEW).keepUntil, retention.keepUntil(newRemoved));
+  assert.deepEqual(listed.find(g => g.email === OLD), {email: OLD, name: 'Rae Quinn', removedOn: oldRemoved, keepUntil: retention.keepUntil(oldRemoved), cleaned: true});
+  assert.equal(listed.find(g => g.email === NEW).keepUntil, retention.keepUntil(newRemoved)); assert.equal(listed.find(g => g.email === NEW).cleaned, false);
+
+  // Rae's pay archive, for the owner only.
+  const a = await get(staff, '/api/staff?archive=' + encodeURIComponent(OLD.toUpperCase()), 'owner');
+  assert.equal(a.status, 200);
+  assert.deepEqual([a.body.name, a.body.email, a.body.w9], ['Rae Quinn', OLD, {receivedOn: '2023-01-05'}], 'the W-9 status is kept');
+  assert.deepEqual(a.body.practice, {shifts: 1, minutes: 90, cents: 6000, first: '2023-09-12', last: '2023-09-12'});
+  assert.deepEqual(a.body.lessons, {lessons: 1, grossCents: 6000, splitPct: 70, owedCents: 4200}, 'the lesson the family paid for, at her share; the refunded one is not counted');
+  assert.deepEqual([a.body.paid.payments, a.body.paid.cents, a.body.paid.list[0].note], [1, 12000, 'Check for Rae Quinn']);
+  assert.deepEqual(a.body.contracts.map(c => [c.id, c.title, c.signer]), [['rae-contract', 'Coach contract', 'Rae Quinn']]);
+  assert.deepEqual(a.body.years, [{year: '2023', practiceCents: 6000, lessonCents: 4200, paidCents: 12000}]);
+  for (const who of ['alice', null]) assert.equal((await get(staff, '/api/staff?archive=' + OLD, who)).status, 403);
+  assert.equal((await get(staff, '/api/staff?archive=not-an-email', 'owner')).status, 400);
 }
 
 // ---------- Running it again changes nothing ----------
@@ -243,7 +259,7 @@ const maxBefore = everywhere(NEW).sort();
   assert.deepEqual(dumpAll(), before, 'idempotent: same rows, no new log line');
   // The day after Max's date he is cleaned too.
   const max = await retention.cleanupRemovedCoaches({today: addDays(retention.keepUntil(newRemoved), 1)});
-  assert.equal(max.finished, 1); assert.deepEqual(everywhere(NEW), []); assert.deepEqual(everywhere('Max Ortiz'), []);
+  assert.equal(max.finished, 1); assert.deepEqual(outsideArchive(NEW), []); assert.deepEqual(outsideArchive('Max Ortiz'), []);
   await unchanged('after both coaches');
 }
 
@@ -256,21 +272,23 @@ const maxBefore = everywhere(NEW).sort();
   const r = await post(backups, '/api/backups', {action: 'restore', fingerprint: preview.body.fingerprint, backup: beforeFile}, 'owner');
   assert.equal(r.status, 200);
   assert.ok(r.body.restored.coach_time_entries > 0 && r.body.restored.coach_profiles > 0, 'the file did put deleted rows back');
-  // ...and the restore cleaned them again straight away, keeping the removed_coaches rows as they were.
-  assert.deepEqual(everywhere(OLD), []); assert.deepEqual(everywhere('Rae Quinn'), []);
-  assert.equal(one("SELECT email FROM removed_coaches WHERE id='rae-tomb'").email, null, 'restoring never puts a cleared email back');
+  // ...and the restore cleaned them again straight away, keeping the pay archive and the removed_coaches rows as they were.
+  assert.deepEqual(outsideArchive(OLD), []); assert.deepEqual(outsideArchive('Rae Quinn'), []);
+  assert.equal(count('SELECT count(*) FROM coach_profiles WHERE email=?', OLD), 0); assert.equal(count("SELECT count(*) FROM coach_time_entries WHERE id IN ('rae-shift-draft','rae-shift-void')"), 0);
+  for (const id of ['rae-booked', 'rae-shift-ok', 'rae-pay', 'rae-contract']) assert.ok(Object.values(archiveBefore).length && count(`SELECT count(*) FROM (SELECT id FROM coach_openings UNION ALL SELECT id FROM coach_time_entries UNION ALL SELECT id FROM coach_payments UNION ALL SELECT id FROM waiver_signatures) WHERE id=?`, id) === 1, id + ' kept');
+  assert.equal(one("SELECT email FROM removed_coaches WHERE id='rae-tomb'").email, OLD, 'the archive index stays');
   // Max (cleaned above on a simulated later date) is not due yet by today's real date, so his rows stay restored until
   // the first daily run after his date.
-  assert.ok(everywhere(NEW).length > 0);
+  assert.ok(outsideArchive(NEW).length > 0);
   await retention.cleanupRemovedCoaches({today: addDays(retention.keepUntil(newRemoved), 1)});
-  assert.deepEqual(everywhere(NEW), []); assert.deepEqual(everywhere('Max Ortiz'), []);
-  assert.equal(one("SELECT coach_email FROM coach_openings WHERE id='rae-booked'").coach_email, KEY);
+  assert.deepEqual(outsideArchive(NEW), []); assert.deepEqual(outsideArchive('Max Ortiz'), []);
+  assert.equal(one("SELECT coach_email FROM coach_openings WHERE id='rae-booked'").coach_email, OLD);
   await unchanged('after a restore');
   // A database rebuilt from the old file alone (the Deploy backup imported into a new database) has removed_coaches as
   // the file had it, so the next daily run cleans it. Simulated by putting Rae's rows back the way the file has them.
   run("UPDATE removed_coaches SET email=?,name='Rae Quinn',cleaned_at=NULL WHERE id='rae-tomb'", OLD);
   run('INSERT INTO coach_profiles(email,display_name,bio,specialties,phone,photo_key,updated_at,updated_by) VALUES (?,?,?,?,?,NULL,?,?)', OLD, 'Rae Quinn', '', '[]', '', now, 'owner-uuid');
-  assert.equal((await retention.cleanupRemovedCoaches()).finished, 1); assert.deepEqual(everywhere(OLD), []);
+  assert.equal((await retention.cleanupRemovedCoaches()).finished, 1); assert.deepEqual(outsideArchive(OLD), []);
 }
 
 // ---------- A coach who is back on Coaches is never cleaned ----------
@@ -295,10 +313,10 @@ const maxBefore = everywhere(NEW).sort();
   const r = await retention.cleanupRemovedCoaches();
   assert.equal(r.finished, 1, 'the earlier removal past 3 years is cleaned');
   const t = one('SELECT * FROM removed_coaches WHERE email_hash=?', await retention.emailHash(early));
-  assert.equal(t.removed_on, addDays(yearsBefore(today, 3), -2)); assert.ok(t.cleaned_at); assert.equal(t.email, null);
-  assert.deepEqual(everywhere(early), []);
+  assert.equal(t.removed_on, addDays(yearsBefore(today, 3), -2)); assert.ok(t.cleaned_at); assert.equal(t.email, early, 'the archive index keeps the email');
+  assert.deepEqual(outsideArchive(early), []);
   const listed = (await get(staff, '/api/staff', 'owner')).body.removedForGood.find(g => g.email === recent);
-  assert.deepEqual(listed, {email: recent, name: recent, removedOn: addDays(today, -30), keepUntil: retention.keepUntil(addDays(today, -30))}, 'and shows on Coaches with its date');
+  assert.deepEqual(listed, {email: recent, name: recent, removedOn: addDays(today, -30), keepUntil: retention.keepUntil(addDays(today, -30)), cleaned: false}, 'and shows on Coaches with its date');
   const again = dumpAll(); await retention.cleanupRemovedCoaches(); assert.deepEqual(dumpAll(), again, 'recorded once');
   run('DELETE FROM removed_coaches WHERE email=?', recent); run("DELETE FROM security_events WHERE id='recent-ev'");
 }
@@ -327,7 +345,29 @@ const maxBefore = everywhere(NEW).sort();
   const logs = sqlite.prepare("SELECT target FROM security_events WHERE action='coach_records_deleted'").all().map(r => r.target);
   assert.ok(logs.some(t => t.startsWith('finished:0 in-progress:1')), 'runs that stop early say there is more to do');
   assert.ok(logs.every(t => !t.includes('@')), 'no email in the log');
-  assert.deepEqual(everywhere(email), []);
+  assert.deepEqual(outsideArchive(email), []);
 }
 
-console.log('Passed: removal date recorded and shown as "Records kept until"; a coach removed 3 years and a day ago is cleaned and 3 years minus a day kept; coach-only records deleted; shared lessons, payments, approved hours, check-ins and the security log kept as "Former coach"; family payments, the books, lesson pay and approved hours unchanged; idempotent; restored backups cleaned again; returning coaches untouched; done in batches.');
+// ---------- The pay archive on Coaches (#401) ----------
+{
+  const nodes = new Map(), el = id => { if (!nodes.has(id)) nodes.set(id, {id, value: '', hidden: false, innerHTML: '', textContent: '', dataset: {}, style: {}, querySelector: () => null, querySelectorAll: () => []}); return nodes.get(id); };
+  const ctx = vm.createContext({document: {getElementById: el, querySelectorAll: () => [], querySelector: () => null}, confirm: () => true, Date, JSON, Promise, Error, Object, Array, Number, String, Set, Map, encodeURIComponent,
+    fetch: async () => ({ok: true, status: 200, json: async () => ({staff: [], self: null, invites: [], inviteDays: 7, retentionYears: 3, removedForGood: [{email: OLD, name: 'Rae <Quinn>', removedOn: '2023-01-02', keepUntil: '2026-01-02', cleaned: true}]})})});
+  for (const [, code] of readFileSync('app/staff/screen.html', 'utf8').matchAll(/<script>([\s\S]*?)<\/script>/g)) vm.runInContext(code, ctx);
+  await new Promise(r => setImmediate(r)); await new Promise(r => setImmediate(r));
+  assert.match(el('gone').innerHTML, /Other records deleted after <b>January 2, 2026<\/b>\. Pay records and signed contract kept\./);
+  assert.match(el('gone').innerHTML, /data-gone="rae\.coach@example\.test"/); assert.match(el('gone').innerHTML, /Rae &lt;Quinn&gt;/);
+  ctx.a = (await get(staff, '/api/staff?archive=' + OLD, 'owner')).body;
+  const html = vm.runInContext('archiveHtml(a)', ctx);
+  assert.match(html, /<dt>W-9<\/dt><dd>Received January 5, 2023<\/dd>/);
+  assert.match(html, /<dt>Approved practice pay<\/dt><dd>\$60\.00 for 1 shift \(1 h 30 min\), September 12, 2023 to September 12, 2023<\/dd>/);
+  assert.match(html, /<dt>Private lesson share<\/dt><dd>\$42\.00 for 1 lesson at 70%<\/dd>/);
+  assert.match(html, /<dt>Paid to the coach<\/dt><dd>\$120\.00 in 1 payment<\/dd>/);
+  assert.match(html, /<li><b>2023<\/b>: practice \$60\.00 · lessons \$42\.00 · paid \$120\.00<\/li>/);
+  assert.match(html, /Coach contract, signed by Rae Quinn [A-Z][a-z]+ \d+, \d{4} · <a href="\/waiver-copy\?id=rae-contract" target="_blank" rel="noopener">View copy<\/a>/);
+  ctx.b = {...ctx.a, w9: null, contracts: [], paid: {...ctx.a.paid, list: [{paidOn: '2023-09-30', amountCents: 100, note: '<b>x</b>', periodFrom: null, periodTo: null}]}};
+  const other = vm.runInContext('archiveHtml(b)', ctx);
+  assert.match(other, /<dt>W-9<\/dt><dd>Not on file<\/dd>/); assert.match(other, /No signed contract on file/); assert.match(other, /&lt;b&gt;x&lt;\/b&gt;/, 'notes are escaped');
+}
+
+console.log('Passed: removal date recorded and shown on Coaches; a coach removed 3 years and a day ago is cleaned and 3 years minus a day kept; their pay records and signed contract (approved shifts, lesson payments and booked times, payments to them, pay share) stay under their name for good and open as a pay archive on Coaches, owner only; profile, invites, time off, notices, unbooked times and shifts never approved are deleted; check-ins, practice plans and the security log lose their name; family payments, the books, lesson pay and approved hours unchanged; idempotent; restored backups cleaned again, the archive kept; returning coaches untouched; done in batches.');

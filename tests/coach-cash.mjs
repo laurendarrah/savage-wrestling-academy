@@ -225,24 +225,22 @@ r = await getJson(ordersApi, '/api/orders');
 assert.equal(r.body.orders.find(o => o.kind === 'live' && o.paid_in_cash === 0)?.status, 'paid', 'a Venmo payment is not "in cash"');
 as({kind: 'owner', id: 'owner-id'});
 
-// ---------- 3-year coach cleanup: the collector becomes "Former coach" ----------
+// ---------- 3-year coach cleanup: cash a removed coach collected stays under their name (#401) ----------
 {
   const retention = load('lib/coach-retention.ts');
   sqlite.prepare("DELETE FROM staff_access WHERE email='eli@example.test'").run();
+  const before = pricing(eliOrder);
   sqlite.prepare("INSERT INTO removed_coaches(id,email_hash,email,name,removed_on,cleaned_at) VALUES ('eli-gone',?,'eli@example.test','Eli Jones','2020-01-01',NULL)").run(await retention.emailHash('eli@example.test'));
   await retention.cleanupRemovedCoaches({today: '2030-01-01'});
   p = pricing(eliOrder);
-  assert.equal(p.collectedBy, 'Former coach'); assert.equal(p.recordedBy, 'former-coach-eli-gone'); assert.equal(p.collectedByEmail, 'former-coach-eli-gone');
+  assert.deepEqual(p, before, 'the price record, with who collected it, is unchanged');
+  assert.equal(p.collectedBy, 'Eli Jones'); assert.equal(p.collectedByEmail, 'eli@example.test');
   assert.equal(sqlite.prepare('SELECT amount_cents,status FROM orders WHERE id=?').get(eliOrder).amount_cents, 2000, 'the payment stays as paid');
-  assert.equal((await entryOf('live:fnl:', 'Jo One')).cash.collectedBy, 'Former coach', 'on the roster');
+  assert.equal((await entryOf('live:fnl:', 'Jo One')).cash.collectedBy, 'Eli Jones', 'on the roster');
   r = await getJson(payApi, `/api/payments?from=${today}&to=${today}`);
-  assert.equal(r.body.payments.find(x => x.id === eliOrder).collectedBy, 'Former coach');
-  assert.ok(r.body.collectors.some(c => c.key === 'former-coach-eli-gone' && c.name === 'Former coach'));
-  assert.ok(r.body.byCollector.some(c => c.name === 'Former coach' && c.cents === 2000));
-  assert.ok(!/eli@|Eli Jones|eli-id/.test(JSON.stringify(r.body)), 'nothing left that names the coach');
-  same((await getJson(payApi, '/api/payments?collector=former-coach-eli-gone')).body.payments.map(x => x.id), [eliOrder], 'still filterable');
-  assert.equal((await financials.ledgerLines(today, today)).find(l => l.id === 'payment:' + eliOrder).collectedBy, 'Former coach');
-  assert.equal((await getJson(payApi, '/api/payments?cash=due')).body.collected.find(b => b.orderId === eliOrder).collectedBy, 'Former coach');
+  assert.equal(r.body.payments.find(x => x.id === eliOrder).collectedBy, 'Eli Jones');
+  assert.ok(r.body.byCollector.some(c => c.name === 'Eli Jones' && c.cents === 2000));
+  assert.equal((await financials.ledgerLines(today, today)).find(l => l.id === 'payment:' + eliOrder).collectedBy, 'Eli Jones');
   // Dana is still on Coaches: untouched.
   assert.equal(pricing(danaFnl).collectedBy, 'Coach Dana');
 }
@@ -337,6 +335,6 @@ const day = '2026-11-13';
 // ---------- Help pages ----------
 const coachHelp = readFileSync('app/help/coach/screen.html', 'utf8'), ownerHelp = readFileSync('app/help/owner/screen.html', 'utf8');
 assert.match(coachHelp, /extra practice[\s\S]*Cash received[\s\S]*Received by[\s\S]*only the owner can undo/i);
-assert.match(ownerHelp, /Collected by[\s\S]*Today[\s\S]*Former coach/);
+assert.match(ownerHelp, /Collected by[\s\S]*Today[\s\S]*Cash a coach collected stays under their name, even after they are removed for good\./);
 
-console.log('Passed: coach cash (#250): any active coach sees today’s extra practices, checks them in and records their cash; a removed coach and another program’s regular practice are refused; undo is owner-only; Received by on the roster, Collected by on Payments (column, filter, per-person totals, spreadsheet), in Income and expenses and the owner’s collected history; the family sees Paid in cash at the academy only; names never an email; the coach cleanup shows Former coach.');
+console.log('Passed: coach cash (#250): any active coach sees today’s extra practices, checks them in and records their cash; a removed coach and another program’s regular practice are refused; undo is owner-only; Received by on the roster, Collected by on Payments (column, filter, per-person totals, spreadsheet), in Income and expenses and the owner’s collected history; the family sees Paid in cash at the academy only; names never an email; after the coach cleanup the cash a removed coach collected stays under their name (#401).');

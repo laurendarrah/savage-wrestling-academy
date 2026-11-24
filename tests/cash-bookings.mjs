@@ -299,18 +299,17 @@ assert.equal((await send(payApi, '/api/payments', {action: 'cash-received', book
   assert.ok(entries.some(x => x.title === 'Pay-at-the-academy booking canceled' && /Jo One · SWA Intermediate walk-in/.test(x.detail)));
 }
 
-// ---------- 3-year coach cleanup: the payment stays, the collector becomes "Former coach" ----------
+// ---------- 3-year coach cleanup: cash the coach collected is a pay record, kept under their name (#401) ----------
 {
   const retention = load('lib/coach-retention.ts');
+  const before = {...sqlite.prepare('SELECT status,amount_cents,pricing,terms_accepted FROM orders WHERE id=?').get(o1)};
   sqlite.prepare("INSERT INTO removed_coaches(id,email_hash,email,name,removed_on,cleaned_at) VALUES ('gone',?,'dana@example.test','Coach Dana','2020-01-01',NULL)").run(await retention.emailHash('dana@example.test'));
   await retention.cleanupRemovedCoaches({today: '2030-01-01'});
-  const kept = sqlite.prepare('SELECT status,amount_cents,pricing,terms_accepted FROM orders WHERE id=?').get(o1);
-  const p = JSON.parse(kept.pricing);
-  assert.equal(kept.amount_cents, 4000, 'the payment is kept as it was');
-  assert.equal(p.collectedBy, 'Former coach'); assert.equal(p.collectedByEmail, 'former-coach-gone'); assert.equal(p.recordedBy, 'former-coach-gone');
-  assert.equal(JSON.parse(kept.terms_accepted).recordedBy, 'former-coach-gone');
+  const kept = {...sqlite.prepare('SELECT status,amount_cents,pricing,terms_accepted FROM orders WHERE id=?').get(o1)};
+  assert.deepEqual(kept, before, 'the payment is kept exactly as it was, with who collected it');
+  assert.equal(JSON.parse(kept.pricing).collectedBy, 'Coach Dana'); assert.equal(JSON.parse(kept.pricing).collectedByEmail, 'dana@example.test');
+  // The security log is not a pay record: the coach's account in it is replaced.
   assert.equal(sqlite.prepare("SELECT actor FROM security_events WHERE action='cash_received' AND target LIKE ?").get(o1 + '%').actor, 'former-coach-gone');
-  assert.ok(!JSON.stringify(sqlite.prepare("SELECT * FROM orders WHERE source='offline'").all()).includes('dana@example.test'));
 }
 
 console.log('Passed: pay cash at the academy for walk-ins and Friday Night Live: price from quotes.ts only; duplicates, eligibility, approval, card, consent form, past and excluded practices refused; checkout and cash exclusive; on the roster with the amount due and check-in allowed; Cash received once (coach own programs today, owner any) as an offline cash payment with who and when, audited; Payments, spreadsheet and books count it once; void (owner only) puts it back to due; owner list and cancel with a notice; family cancel before start; family home, export, late online payment, security log and coach cleanup.');

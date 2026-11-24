@@ -75,7 +75,7 @@ We use these companies to run the site. They process information on our behalf a
 
 [Decision: see the data retention draft. Summary to fill in: payment records X years; signed waivers until Y; attendance Z; messages and notices N; account and profile until you close your account, then removed within M days, except records we must keep.]
 
-**Coaches.** When the academy removes a coach permanently, it keeps their records (lessons, pay records, timesheets and time off, and signed documents such as their contract) for 3 years from that date, then deletes them. Records a family or the academy's accounts also rely on, such as a lesson a family paid for, are kept with the coach shown only as "Former coach".
+**Coaches.** When the academy removes a coach permanently, it keeps their pay records (approved hours, lessons families paid for, cash they collected, payments to them and whether the academy has their W-9) and their signed contract under their name, for the academy's tax and accounting records. Their other records (profile, time off, notices and invites) are kept for 3 years from that date, then deleted.
 
 ## Your choices and rights
 
