@@ -165,15 +165,12 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.equal(p.el('preview').innerHTML, W.coachCard({name: 'Lee Tran', bio: 'Line one\n\nLine two', specialties: ['Takedowns', 'Mat returns']}));
   assert.equal(p.el('previewNote').hidden, true);
   p.el('bio').value = '  '; p.run('preview()'); assert.equal(p.el('previewNote').hidden, false); assert.doesNotMatch(p.el('preview').innerHTML, /coach__bio/);
-  // The styles come from the same place as the team page's.
+  // The styles come from lib/website.ts (the team page that shared them was removed in #412).
   const route = file => { const module = {exports: {}}; vm.runInNewContext(ts.transpileModule(read(file), {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS}}).outputText, {module, exports: module.exports, require(name) {
     const path = resolve(dirname(file), name.replace(/\?raw$/, '')); return name.endsWith('?raw') ? {__esModule: true, default: read(path)} : load(path + '.ts'); }}); return module.exports; };
   const r = await route('app/coach-profile/route.ts').GET(request('/coach-profile', 'GET', null, 'owner'));
   assert.equal(r.status, 200); const html = await r.text();
   assert.ok(html.includes(W.COACH_CARD_CSS), 'the profile page has the team card styles'); assert.doesNotMatch(html, /<!--slot:/);
-  const team = W.renderTeam(read('app/team/screen.html'), {headline: 'x', intro: 'x', mission: '', coaches: [], achievements: [], alumni: [], address: '', email: ''}, [cases[0]], null);
-  assert.ok(team.includes(W.COACH_CARD_CSS) && team.includes(W.coachCard(cases[0])), 'the team page uses the same card and styles');
-  assert.doesNotMatch(read('app/team/screen.html'), /\.coach\{|\.mono\{/, 'the card styles live in one place');
 }
 
 // ---------- 6. One back link per page, and the list's Refresh button is gone ----------

@@ -112,7 +112,7 @@ console.log('page head ok');
 // and the rest of a longer intro behind "How this works", word for word.
 {
   const {pageHead, bandPage, titleRow, splitSentence} = module.exports;
-  for (const p of ['/welcome', '/team', '/calendar', '/login', '/coach-join', '/help', '/help/coach', '/help/owner']) assert.equal(bandPage(p), true, p + ' keeps the band');
+  for (const p of ['/welcome', '/calendar', '/login', '/coach-join', '/help', '/help/coach', '/help/owner']) assert.equal(bandPage(p), true, p + ' keeps the band');
   for (const p of ['/family', '/register', '/roster', '/payments', '/coach', '/pass', '/wrestler', '/inbox', '/membership-terms', '/scholarship', '/helpers', '']) assert.equal(bandPage(p), false, p + ' gets the title row');
   const wrap = (h, path = '/roster') => pageHead(`<html><body><main>${h}</main></body></html>`, path);
   assert.equal(wrap('<a href="/">← Back</a><h1>Roster</h1><p class="muted">Who paid.</p><section>x</section>'),

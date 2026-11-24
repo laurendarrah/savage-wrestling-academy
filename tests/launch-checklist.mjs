@@ -27,13 +27,13 @@ const by = list => Object.fromEntries(list.items.map(i => [i.key, i]));
 // A brand-new site: everything to do, payments closed and in test mode, email waiting on its setup.
 let r = await launchChecklist(DB, {}, today, now), i = by(r);
 assert.equal(r.ready, 1, 'only site health is ready on a new site');
-for (const k of ['programs', 'schedule', 'website', 'waiver', 'coaches', 'lessons', 'address', 'signin', 'stripe', 'backup']) assert.equal(i[k].status, 'todo', k);
+for (const k of ['programs', 'schedule', 'waiver', 'coaches', 'lessons', 'address', 'signin', 'stripe', 'backup']) assert.equal(i[k].status, 'todo', k);
 assert.equal(i.email.status, 'waiting'); assert.equal(i.checkout.status, 'info'); assert.equal(i.health.status, 'done');
 assert.match(i.address.detail, /site address is not set/);
 // Issue #252: with no programs published, the schedule is not "done" just because no program lacks times.
 assert.equal(i.schedule.detail, 'Publish the programs, then add weekly practices so families can see and book them');
-// Public website (#215): a to-do until the owner saves it, linking to its editor.
-assert.equal(i.website.href, '/website'); assert.match(i.website.detail, /^Write your public website/);
+// The public website item is gone with its editor (issue #412).
+assert.equal(i.website, undefined, 'no public website item');
 // Camps and events: for information, opening the dashboard's Camps & events section.
 assert.equal(i.events.status, 'info'); assert.equal(i.events.section, 'Camps & events'); assert.equal(i.events.href, undefined);
 assert.equal(i.events.detail, 'No upcoming camps, clinics or events. Add them under Camps & events');
@@ -94,7 +94,7 @@ assert.equal(i.schedule.detail, 'SWA Intermediate has no practice times yet. Add
   state.seasons.push({program: 'Intermediate', start: '2027-01-04', end: '2027-05-01', weekly: [{day: 'Tuesday'}]});
   save(state);
 }
-// Public website: done once saved with a headline (#215).
+// A website row left by the removed editor (#412) changes nothing on the checklist.
 sqlite.prepare("INSERT INTO academy_settings(id,payload,updated_at,updated_by) VALUES ('website',?,?,'owner')").run(JSON.stringify({headline: 'Train with Savage', intro: 'Wrestling K–12.', coaches: []}), at);
 // Camps and events: counts what the public calendar shows (not archived, not over).
 {
@@ -108,7 +108,7 @@ r = await launchChecklist(DB, settings, today, now); i = by(r);
 assert.equal(r.ready, r.total, JSON.stringify(r.items.filter(x => x.status === 'todo')));
 assert.match(i.programs.detail, /^2 programs listed, 1 with prices/); assert.equal(i.programs.action, undefined);
 assert.equal(i.schedule.status, 'done'); assert.equal(i.schedule.detail, 'Practice times for SWA Development and SWA Intermediate');
-assert.equal(i.website.status, 'done'); assert.equal(i.website.detail, 'Saved, with the headline “Train with Savage”');
+assert.equal(i.website, undefined);
 assert.equal(i.events.status, 'info'); assert.equal(i.events.detail, '1 camp and 2 clinics coming up');
 assert.equal(i.coaches.detail, '1 coach can sign in');
 assert.match(i.waiver.detail, /Participation waiver/);
@@ -162,11 +162,8 @@ assert.match(by(await launchChecklist(DB, {...settings, EMAIL_API_KEY: 're_must_
   assert.equal(by(await launchChecklist(DB, settings, today, now)).live.status, 'info');
   sqlite.exec("DELETE FROM integration_secrets WHERE id='stripe-live'");
 }
-// A saved website row without a headline (an unreadable restore) is still a to-do.
-sqlite.exec(`UPDATE academy_settings SET payload='{"headline":"  "}' WHERE id='website'`);
-assert.equal(by(await launchChecklist(DB, settings, today, now)).website.status, 'todo');
 sqlite.exec(`UPDATE academy_settings SET payload='not json' WHERE id='website'`);
-assert.equal(by(await launchChecklist(DB, settings, today, now)).website.status, 'todo');
+assert.equal(by(await launchChecklist(DB, settings, today, now)).website, undefined, 'an unreadable row breaks nothing');
 
 // Things that fall out of date: an old backup, a retired waiver, server errors.
 sqlite.exec("UPDATE security_events SET created_at='2026-10-01T00:00:00Z'");

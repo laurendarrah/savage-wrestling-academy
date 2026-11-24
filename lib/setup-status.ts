@@ -6,7 +6,7 @@ import {launchChecklist} from './launch-checklist';
 import {kindList} from './purchase-kinds';
 
 // Checklist items shown, in the dashboard's order. Anything not listed here stays off, including new items.
-export const SETUP_STEPS = ['programs', 'schedule', 'website', 'waiver', 'consent', 'coaches', 'contract', 'lessons', 'email', 'stripe', 'checkout', 'live', 'backup'] as const;
+export const SETUP_STEPS = ['programs', 'schedule', 'waiver', 'consent', 'coaches', 'contract', 'lessons', 'email', 'stripe', 'checkout', 'live', 'backup'] as const;
 
 type Settings = Parameters<typeof launchChecklist>[1];
 

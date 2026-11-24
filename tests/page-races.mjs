@@ -102,35 +102,6 @@ const submit = form => form.onsubmit({preventDefault() {}});
   assert.equal(p.el('profileFields').disabled, true); assert.equal(p.el('status').textContent, 'Coaches only.');
 }
 
-// ---------- Public website editor: disabled until the published site is in, and while it saves ----------
-{
-  const html = readFileSync('app/website/screen.html', 'utf8');
-  const fieldset = html.match(/<fieldset id="editor" disabled>([\s\S]*?)<\/fieldset>/);
-  assert.ok(fieldset, 'the editor starts disabled');
-  for (const id of ['headline', 'intro', 'mission', 'coachList', 'achList', 'alumList', 'address', 'email', 'saveButton']) assert.match(fieldset[1], new RegExp(`id="${id}"`), id + ' is inside the disabled editor');
-  assert.match(fieldset[1], /data-add="achievements"[\s\S]*data-add="alumni"[\s\S]*data-preview="team"/, 'the add and preview buttons wait too (listeners since #274, no inline handlers)');
-  const site = {headline: 'Built on the mat', intro: 'Wrestling.', mission: '', coaches: [], achievements: [], alumni: [], address: '', email: ''};
-  const net = server(() => HOLD);
-  const {el, run} = page('app/website/screen.html', net.fetch, {editor: {disabled: true}});
-  await settle();
-  assert.equal(el('editor').disabled, true); assert.equal(el('headline').value, '');
-  net.held[0].reply({site, updatedAt: '2026-11-07T15:00:00Z', coaches: []}); await settle();
-  assert.equal(el('editor').disabled, false); assert.equal(el('headline').value, 'Built on the mat'); assert.equal(el('status').textContent, '');
-  el('headline').value = 'Tough and coachable';
-  const saving = run('saveSite()'); await settle();
-  assert.equal(el('editor').disabled, true, 'disabled while saving');
-  assert.equal(net.held[1].body.site.headline, 'Tough and coachable'); assert.equal(net.held[1].body.updatedAt, '2026-11-07T15:00:00Z');
-  net.held[1].reply({site: {...site, headline: 'Tough and coachable'}, updatedAt: '2026-11-07T16:00:00Z'}); await saving;
-  assert.equal(el('editor').disabled, false); assert.match(el('status').textContent, /Saved and published/);
-  // A refused save gives the editor back with the reason.
-  const again = run('saveSite()'); await settle();
-  net.held[2].reply({error: 'The website was saved on another device.'}, 409); await again;
-  assert.equal(el('editor').disabled, false); assert.equal(el('status').textContent, 'The website was saved on another device.');
-  // If it cannot load, nothing can be edited or published.
-  const failed = server(() => HOLD), p = page('app/website/screen.html', failed.fetch, {editor: {disabled: true}});
-  failed.held[0].reply({error: 'Owner access required.'}, 403); await settle();
-  assert.equal(p.el('editor').disabled, true); assert.equal(p.el('status').textContent, 'Owner access required.');
-}
 
 // ---------- Payments: Check price waits for the latest choices; an older load cannot hide a checked price ----------
 {

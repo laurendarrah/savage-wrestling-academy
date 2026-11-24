@@ -70,7 +70,7 @@ assert.equal(nonceApplies(new Headers({'Cache-Control': 'private, no-store'}), '
 // --- Every signed-in page ---
 const PAGES = {
   owner: ['/', '/roster', '/payments', '/messages', '/cards', '/accounts', '/account-setup', '/approvals', '/scholarships', '/waivers', '/consent-forms', '/transfers',
-    '/practice-plans?date=2026-11-09&program=Elementary', '/curricula', '/website', '/staff', '/coach-openings?email=coach%40example.test', '/coach-profile?email=coach%40example.test',
+    '/practice-plans?date=2026-11-09&program=Elementary', '/curricula', '/staff', '/coach-openings?email=coach%40example.test', '/coach-profile?email=coach%40example.test',
     '/contracts', '/lesson-calendar', '/lesson-settings', '/timesheets', '/financials', '/coach-pay', '/payment-setup', '/backups', '/site-health', '/site-requests', '/data-requests', '/security-log', '/help/owner', '/security'],
   coach: ['/coach', '/coach-time', '/contract', '/help/coach'],
   family: ['/family', '/register', '/booking', '/lesson', '/inbox', '/pass', '/wrestler?id=w1', '/waiver', '/consent', '/scholarship', '/membership-terms'],
@@ -100,11 +100,11 @@ for (const [who, paths] of Object.entries(PAGES)) {
   }
 }
 assert.deepEqual([...new Set(without)].sort(), [...PENDING].sort(), 'exactly the pending pages lack the policy; remove a page from PENDING once its handlers are listeners, never add one');
-assert.ok(withNonce.includes('/website') && withNonce.includes('/roster') && withNonce.includes('/coach') && withNonce.includes('/practice-plans') && withNonce.includes('/coach-pay'), 'the pages converted in #274 have the policy');
-assert.ok(withNonce.length >= 35, withNonce.length + ' pages carry the nonce policy');
+assert.ok(withNonce.includes('/roster') && withNonce.includes('/coach') && withNonce.includes('/practice-plans') && withNonce.includes('/coach-pay'), 'the pages converted in #274 have the policy');
+assert.ok(withNonce.length >= 34, withNonce.length + ' pages carry the nonce policy');
 
 // --- Public pages keep their own policies and are never given a nonce (they are cacheable) ---
-for (const path of ['/calendar', '/welcome', '/team']) {
+for (const path of ['/calendar', '/welcome']) {
   const {status, headers} = await open(path, 'family');
   assert.equal(status, 200, path);
   assert.doesNotMatch(headers.get('Content-Security-Policy') ?? '', /nonce-/, path + ' is public and cacheable');
@@ -116,7 +116,4 @@ for (const path of ['/login', '/coach-join']) {
   const csp = headers.get('Content-Security-Policy') ?? '';
   assert.match(csp, /frame-ancestors 'none'/, path);
 }
-// The website editor shows a preview in a srcdoc iframe, which inherits the page's policy: its scripts get the nonce too.
-const site = readFileSync('app/website/screen.html', 'utf8');
-assert.match(site, /const NONCE=document\.currentScript\?\.nonce\|\|''/); assert.match(site, /srcdoc=withNonce\(d\.html\)/);
 console.log(`CSP nonce: ${withNonce.length} signed-in pages carry script-src 'nonce-…' 'strict-dynamic' with every script nonced; ${PENDING.length} pages pending their inline handlers; Permissions-Policy everywhere`);

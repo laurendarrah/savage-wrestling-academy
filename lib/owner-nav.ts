@@ -55,7 +55,6 @@ export const OWNER_NAV: OwnerNavGroup[] = [
     {href: '/#events', label: 'Camps & events', section: 'Camps & events', under: '/#programs'},
     {href: '/staff', label: 'Coaches & lessons', also: ['/coach-openings', '/coach-profile', '/lesson-calendar', '/lesson-settings', '/timesheets'], tabs: COACH_TABS},
     {href: '/financials', label: 'Money', also: ['/coach-pay'], tabs: MONEY_TABS},
-    {href: '/website', label: 'Public website'},
   ]},
   {label: 'Settings & records', folded: true, items: [
     {href: '/coach', label: 'Coach view', leaves: true},

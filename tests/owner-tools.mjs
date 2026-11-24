@@ -27,10 +27,10 @@ assert.deepEqual(OWNER_NAV.map(g => g.label), ['Today', 'Families', 'Academy', '
 assert.deepEqual(OWNER_NAV.map(g => g.items.filter(i => !i.under).map(i => i.label)), [
   ['Dashboard', 'Roster & check-in', 'Payments', 'Memberships', 'Messages'],
   ['Families', 'Cards & documents', 'Approvals & scholarships'],
-  ['Calendar & plans', 'Programs, schedules & events', 'Coaches & lessons', 'Money', 'Public website'],
+  ['Calendar & plans', 'Programs, schedules & events', 'Coaches & lessons', 'Money'],
   ['Coach view', 'Online payment setup', 'Backups', 'Site health', 'Request a site change', 'Data requests', 'Security activity', 'Owner guide'],
 ]);
-assert.equal(OWNER_NAV_SHOWN.filter(i => !OWNER_NAV.find(g => g.folded).items.includes(i) && !OWNER_NAV.find(g => g.folded).items.some(x => x.href === i.href)).length, 13, 'thirteen items before the fold (Memberships, #413)');
+assert.equal(OWNER_NAV_SHOWN.filter(i => !OWNER_NAV.find(g => g.folded).items.includes(i) && !OWNER_NAV.find(g => g.folded).items.some(x => x.href === i.href)).length, 12, 'twelve items before the fold (Memberships added in #413, Public website removed in #412)');
 assert.ok(OWNER_NAV.find(g => g.folded).label === 'Settings & records', 'settings stay folded');
 assert.equal(new Set(OWNER_NAV_ITEMS.map(i => i.href)).size, OWNER_NAV_ITEMS.length, 'each destination once');
 // Every destination is a real page or a dashboard section the page knows, and every page named in `also` or `tabs` exists.
@@ -45,10 +45,10 @@ for (const i of OWNER_NAV_ITEMS) {
 assert.equal(new Set(Object.values(OWNER_ICONS)).size, Object.keys(OWNER_ICONS).length, 'every destination has its own icon');
 
 // The pages inside the shell are exactly what they were before the fold (issue #261's list), plus Request a site
-// change (issue #361) and Memberships (issue #413).
+// change (issue #361) and Memberships (issue #413), without the Public website editor (issue #412).
 assert.deepEqual([...OWNER_SHELL_PAGES].sort(), ['/', '/account-setup', '/accounts', '/approvals', '/backups', '/cards', '/coach-openings', '/coach-pay', '/coach-profile', '/consent-forms', '/contracts',
   '/curricula', '/data-requests', '/financials', '/help/owner', '/lesson-calendar', '/lesson-settings', '/memberships', '/messages', '/payment-setup', '/payments', '/practice-plans', '/roster', '/scholarships', '/security', '/security-log',
-  '/site-health', '/site-requests', '/staff', '/timesheets', '/transfers', '/waivers', '/website']);
+  '/site-health', '/site-requests', '/staff', '/timesheets', '/transfers', '/waivers']);
 
 // ---------- Aliases: a merged page marks the item it lives under, and gets that item's switch ----------
 const marks = {'/waivers': '/cards', '/consent-forms': '/cards', '/contracts': '/cards', '/scholarships': '/approvals', '/transfers': '/approvals', '/account-setup': '/accounts',
@@ -90,7 +90,7 @@ assert.match(sideNav, /href="\/cards">[\s\S]*?<span class="os-badge" data-os-bad
 assert.doesNotMatch(sideNav, /data-os-badge="\/messages"/, 'zero shows nothing');
 const top = ownerTopbar('/payments', '/payments');
 const topLinks = [...top.matchAll(/href="([^"]+)"/g)].map(m => m[1]);
-assert.deepEqual(topLinks, ['/', '/welcome', '/team', '/calendar', '/security'], 'the header: the logo home (phones), what families see and Account security');
+assert.deepEqual(topLinks, ['/', '/welcome', '/calendar', '/security'], 'the header: the logo home (phones), what families see and Account security');
 for (const h of topLinks.slice(1)) assert.ok(!sideNav.includes(`href="${h}"`), h + ' is not also in the sidebar');
 assert.match(ownerTopbar('/', '/'), /<span id="swa-os-crumb">Dashboard<\/span>/);
 assert.match(ownerTopbar('/waivers', '/cards'), /<span id="swa-os-crumb">Families \/ Cards &amp; documents<\/span>/);
