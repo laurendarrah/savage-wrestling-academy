@@ -973,7 +973,7 @@ await step('the owner adds himself as a coach, opens Coach view and posts an ope
 await step('a visitor sees the fixed welcome, programs, sign-in and the academy\'s address; the team page and the website editor are gone', async () => {
   const visitor = await phoneAs(null);
   await visitor.goto(BASE + '/'); expect(new URL(visitor.url()).pathname === '/welcome', 'signed-out home is still /welcome');
-  await at(visitor, 'h1', /Savage Wrestling Academy/); await at(visitor, 'main', /Wrestling for kindergarten through 12th grade/);
+  await at(visitor, 'h1', /Savage Wrestling Academy/); await at(visitor, '.lede', /Wrestling for kindergarten through 12th grade/);
   await at(visitor, '#programs', /SWA Development/);
   expect(await visitor.isVisible('.actions a[href="/login"]'), 'sign in stays on the home page');
   await at(visitor, '#visit', /20 Railroad St, Huntington Station, NY 11746/);
@@ -1257,9 +1257,11 @@ await step('owner dashboard shows today\'s real numbers', async () => {
   await waitText(owner, '#monthBody', /Still owed to coaches/); await waitText(owner, '#comingBody', /Winter camp/);
   expect(await owner.locator('main .primary, main .button.primary').count() === 1, 'one red button on the dashboard: Open check-in');
   expect(await owner.locator('.os-nav a[href="/cards"] .os-badge').count() === 0 || /^\d+$/.test(await text(owner, '.os-nav a[href="/cards"] .os-badge')), 'the cards badge is a count or nothing');
-  // Launch checklist: by now the walkthrough has set programs, schedules, website, waiver, coach and lesson prices.
+  // Launch checklist: by now the walkthrough has set programs, schedules, waiver, coach and lesson prices (the public
+  // website item was removed with its editor in #412).
   await waitText(owner, '#launchCount', /\d+ of \d+ ready|Everything is set up/);
-  for (const k of ['programs', 'schedule', 'website', 'waiver', 'coaches', 'lessons', 'address', 'signin'])
+  expect(await owner.locator('[data-launch="website"]').count() === 0, 'no public website item');
+  for (const k of ['programs', 'schedule', 'waiver', 'coaches', 'lessons', 'address', 'signin'])
     expect(await owner.getAttribute(`[data-launch="${k}"]`, 'data-status') === 'done', `launch checklist: ${k} should be ready`);
   expect(await owner.getAttribute('[data-launch="email"]', 'data-status') === 'waiting', 'launch checklist: email waits on its setup');
   await at(owner, '[data-launch="events"]', /1 camp and 1 clinic coming up/); await at(owner, '[data-launch="live"]', /Switch to live when you’re ready/);
