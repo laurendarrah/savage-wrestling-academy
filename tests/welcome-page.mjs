@@ -55,8 +55,14 @@ w = await page(); assert.equal(w.status, 200); assert.match(w.html, /20 Railroad
 sqlite.prepare("UPDATE academy_settings SET payload=? WHERE id='website'").run(JSON.stringify({address: '<b>1 Main</b>', email: 'a@example.test'}));
 assert.match((await page()).html, /&lt;b&gt;1 Main&lt;\/b&gt;/);
 
+// Issue #417: the academy's name on one line. No 16-character cap, and a size that follows the screen; measured in
+// Chromium at 320, 360, 390, 768 and 1280px wide: one line, no sideways scrolling.
+{
+  const css = readFileSync('app/welcome/screen.html', 'utf8').match(/html body \.hero h1\{[^}]*\}/)[0];
+  assert.doesNotMatch(css, /max-width:16ch/); assert.match(css, /max-width:none/); assert.match(css, /text-wrap:nowrap/); assert.match(css, /font-size:clamp\(24px,7\.6vw,64px\)/);
+}
 // The coach card stays for the coach's own profile page ("What families see").
 assert.match(W.coachCard({name: 'Lee <Tran>', bio: 'One.\n\nTwo.', specialties: ['Takedowns']}), /<h3>Lee &lt;Tran&gt;<\/h3>[\s\S]*<li>Takedowns<\/li>[\s\S]*<p>One\.<\/p><p>Two\.<\/p>/);
 assert.match(readFileSync('app/coach-profile/route.ts', 'utf8'), /COACH_CARD_CSS/);
 
-console.log('Welcome page (#412): the team page, editor and API are gone and nothing links to them; the welcome page has the fixed welcome and the academy’s address and email (a saved one still wins, a damaged one falls back), no team section or names, escaped text, and the coach card stays for coach profiles.');
+console.log('Welcome page (#412): the team page, editor and API are gone and nothing links to them; the welcome page has the fixed welcome and the academy’s address and email (a saved one still wins, a damaged one falls back), no team section or names, escaped text, and the coach card stays for coach profiles; the name is on one line (#417).');
