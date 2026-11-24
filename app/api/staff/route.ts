@@ -1,7 +1,8 @@
 // Coaches (/staff), owner only (issue #190). Invite a coach (they get access when they accept), change programs,
 // add yourself as a coach, remove access, restore it, and permanently remove a coach who was already removed.
 // Removing never deletes past lessons, payments or pay history: those live in orders, coach_openings and the audit log.
-// A coach removed permanently has their records kept for 3 years, then deleted (issue #212, lib/coach-retention.ts).
+// A coach removed permanently keeps their pay records and signed contract under their name for good, and their other
+// records go after 3 years (issues #212 and #401, lib/coach-retention.ts). ?archive=<email> is a coach's pay archive.
 import {env} from 'cloudflare:workers';
 import {ownerIdentity,sameOrigin,accountReply,OWNER_EMAIL} from '../../../lib/account-auth';
 import {securityEvent} from '../../../lib/security-events';
@@ -11,6 +12,7 @@ import {academyToday} from '../../../lib/public-schedule';
 import {HOLD_MINUTES} from '../../../lib/capacity';
 import {recordRemoval,removedCoaches,RETENTION_YEARS} from '../../../lib/coach-retention';
 import {w9s,markW9,clearW9} from '../../../lib/coach-w9';
+import {coachArchive} from '../../../lib/coach-archive';
 import {withApi} from '../../../lib/api';
 export const dynamic='force-dynamic';
 type Staff={email:string;name:string;programs:string;active:number;updated_at:string;display_name:string|null;bio:string|null;specialties:string|null;phone:string|null};
@@ -24,6 +26,9 @@ async function upcomingBooked(){
 }
 export const GET = withApi(GET_); async function GET_(request:Request){
  const auth=await ownerIdentity(request);if(!auth.owner)return accountReply({error:'Owner sign-in required.'},403,auth.headers);
+ // A coach's pay archive (issue #401): pay, lesson shares, cash collected, payments, W-9 and signed contract.
+ const archive=new URL(request.url).searchParams.get('archive');
+ if(archive!==null){const a=await coachArchive(archive);return accountReply(a.status===200?{...a,status:undefined}:{error:a.error},a.status,auth.headers)}
  const rows=(await env.DB!.prepare('SELECT s.email,s.name,s.programs,s.active,s.updated_at,p.display_name,p.bio,p.specialties,p.phone FROM staff_access s LEFT JOIN coach_profiles p ON p.email=s.email ORDER BY COALESCE(p.display_name,s.name)').all<Staff>()).results;
  const upcoming=await upcomingBooked(),w9=await w9s();
  const view=(s:Staff)=>({email:s.email,name:s.name,displayName:s.display_name||s.name,programs:JSON.parse(s.programs),active:s.active===1,updatedAt:s.updated_at,
@@ -78,8 +83,8 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  }
  // Permanent removal (Justin's entry 15): only for a coach whose access was already removed, and never while they
  // have lessons booked. Their profile, future open times and unused invites go; their staff record goes, so they leave
- // the lists. Past lessons, payments (each order keeps the coach's name), pay settings and the audit log stay, for 3 years
-// from today (removed_coaches, #212); the daily job then deletes or anonymizes them.
+ // the lists. Their pay records and signed contract stay under their name for good (#401); their other records stay for
+// 3 years from today (removed_coaches, #212), then the daily job deletes them.
  if(input.action==='delete'){
   if(input.confirmed!==true)return reply({error:'Confirm permanent removal first.'},400);
   const row=await env.DB!.prepare('SELECT active FROM staff_access WHERE email=?').bind(email).first<{active:number}>();

@@ -1,19 +1,27 @@
-// Removed coaches' records (issue #212; Justin's decision in #197, Q18): when a coach is removed for good, all their
-// records are kept for 3 years from the removal date, then deleted. Runs in the daily scheduled job (build/worker.ts)
-// and again straight after a backup is restored (app/api/backups/route.ts).
+// Removed coaches' records (issue #212; Justin's decision in #197, Q18, changed by his decision of Nov 23 on #246, issue
+// #401). When a coach is removed for good:
 //
-// Records that only the coach has are deleted. Records that a family or the academy's books also depend on are kept,
-// with the coach's identity replaced by "former-coach-<id>" (the removed_coaches row's id) and the name "Former coach",
-// so a family's payment history, the books and pay totals for past months do not change. What happens to each table is
-// in STEPS below and in docs/policies/data-retention-draft.md.
+// - Their pay records and signed coach contract are an archive, kept under their real name and email for good, never
+//   anonymized or deleted: approved shifts, lesson payments that name them (and the lesson times those families booked),
+//   cash they collected, payments the academy made to them, their W-9 status, their pay share, and their signed contract
+//   with any request to sign it again. Contractor pay needs the real name for 1099s and audits. The owner sees the
+//   archive from Coaches (coachArchive below).
+// - Everything else is kept for 3 years from the removal date, then deleted: profile, invites, notices, time off,
+//   lesson times nobody booked and shifts never approved. Records a family or the academy also depend on that are not
+//   pay records (check-ins they made, practice plans they edited, the security log, recovery snapshots) are kept with the
+//   coach replaced by "former-coach-<id>" (the removed_coaches row's id).
+//
+// Runs in the daily scheduled job (build/worker.ts) and again straight after a backup is restored
+// (app/api/backups/route.ts). What happens to each table is in steps() below and in docs/policies/data-retention-draft.md.
 //
 // Safe to run any number of times: each step only matches rows that still carry the coach's email or account id, so a
 // second run changes nothing. Work is done in batches of BATCH rows and at most MAX_STATEMENTS statements per run; a
 // coach whose records are not all done yet stays "in progress" and the next run carries on.
 //
-// A restored backup can bring deleted rows back. removed_coaches keeps a hash of each coach's email after their email is
-// cleared, so every run (and every restore) looks for that hash among the coach emails in the data and cleans those
-// records again. A coach who is on Coaches again (staff_access) is never touched.
+// A restored backup can bring deleted rows back. removed_coaches keeps a hash of each coach's email (and, since #401, the
+// email and name too, as the archive's index; rows cleaned before #401 have only the hash), so every run (and every
+// restore) looks for that hash among the coach emails in the records that get cleaned and cleans them again. A coach
+// who is on Coaches again (staff_access) is never touched.
 import {env} from 'cloudflare:workers';
 import {academyToday} from './public-schedule';
 import {academyDay} from './datetime';
@@ -21,7 +29,7 @@ import {academyDay} from './datetime';
 export const RETENTION_YEARS = 3;
 export const FORMER_COACH = 'Former coach';
 export const BATCH = 500, MAX_STATEMENTS = 100;
-// A coach whose records are all done still takes one statement per step (19) plus the settings (4), so a run always
+// A coach whose records are all done still takes one statement per step (12) plus the settings (4), so a run always
 // has room to finish at least one coach.
 const MIN_STATEMENTS = 24;
 export const formerKey = (id: string) => 'former-coach-' + id;
@@ -68,12 +76,13 @@ export async function recordEarlierRemovals() {
   return added;
 }
 
-// Coaches removed for good whose records are still kept, for the owner's Coaches page.
+// Coaches removed for good, for the owner's Coaches page: when their other records go (keepUntil) or went (cleaned),
+// and their pay archive (#401). Coaches cleaned before #401 have no email left and are not listed.
 export async function removedCoaches() {
-  const rows = (await db().prepare(`SELECT email,name,removed_on FROM removed_coaches
-    WHERE cleaned_at IS NULL AND email IS NOT NULL AND email NOT IN (SELECT email FROM staff_access) ORDER BY removed_on DESC,email`)
-    .all<{email: string; name: string | null; removed_on: string}>()).results;
-  return rows.map(r => ({email: r.email, name: r.name || r.email, removedOn: r.removed_on, keepUntil: keepUntil(r.removed_on)}));
+  const rows = (await db().prepare(`SELECT email,name,removed_on,cleaned_at FROM removed_coaches
+    WHERE email IS NOT NULL AND email NOT IN (SELECT email FROM staff_access) ORDER BY removed_on DESC,email`)
+    .all<{email: string; name: string | null; removed_on: string; cleaned_at: string | null}>()).results;
+  return rows.map(r => ({email: r.email, name: r.name || r.email, removedOn: r.removed_on, keepUntil: keepUntil(r.removed_on), cleaned: !!r.cleaned_at}));
 }
 
 type Tomb = {id: string; email_hash: string; email: string | null; removed_on: string; cleaned_at: string | null};
@@ -86,6 +95,7 @@ const inList = (col: string) => `${col} IN (SELECT value FROM json_each(?))`;
 
 // Every step, in order. Steps that need the coach's account ids come before the rows those ids are read from are
 // deleted, and a run stops at the first step it could not finish, so an interrupted coach is picked up where it was.
+const UNPAID_SHIFT = 'approved_at IS NULL OR voided_at IS NOT NULL';
 function steps(email: string, key: string, accounts: string[]): Step[] {
   const ids = JSON.stringify(accounts);
   const coachOpening = `(coach_email=? OR (coach_email IS NULL AND ${inList('user_id')}))`;
@@ -102,32 +112,15 @@ function steps(email: string, key: string, accounts: string[]): Step[] {
     del('notifications', `kind LIKE 'coach_time_off%' AND EXISTS (SELECT 1 FROM coach_time_off t WHERE t.coach_email=?
       AND (notifications.dedupe_key='time-off-decided:'||t.id OR substr(notifications.dedupe_key,1,length(t.id)+15)='time-off-team:'||t.id||':'))`, [email]),
     del('notifications', 'user_id IS NULL AND lower(email)=?', [email]),
-    // A family's lesson payment stays exactly as paid; the coach on it becomes "Former coach".
-    set('orders', `pricing=json_set(pricing,'$.coachEmail',?,'$.coachName',?),
-      item_label=CASE WHEN json_extract(pricing,'$.coachName') IS NULL THEN item_label ELSE replace(item_label,' with '||json_extract(pricing,'$.coachName')||', ',' with '||?||', ') END`,
-      [key, FORMER_COACH, FORMER_COACH], `kind='lesson' AND lower(json_extract(pricing,'$.coachEmail'))=?`, [email]),
-    // Cash a coach collected at the door (issue #248): the family's payment stays exactly as paid; who collected it becomes
-    // "Former coach".
-    set('orders', "pricing=json_set(pricing,'$.recordedBy',?,'$.collectedBy',?,'$.collectedByEmail',?),terms_accepted=json_set(terms_accepted,'$.recordedBy',?)",
-      [key, FORMER_COACH, key, key], "source='offline' AND lower(json_extract(pricing,'$.collectedByEmail'))=?", [email]),
-    // Lesson times nobody booked go; booked ones stay (families' orders point at them) under the former-coach key.
+    // Kept as they are, under the coach's name (the pay archive, #401), so they have no step here: lesson payments that
+    // name the coach (orders) and the lesson times those families booked (coach_openings), cash they collected (orders),
+    // approved shifts (coach_time_entries), payments to them (coach_payments), their W-9 status (coach_w9), and their
+    // signed contract with any request to sign it again (waiver_signatures, signature_reissues).
+    // Lesson times nobody booked go.
     del('coach_openings', `${coachOpening} AND NOT EXISTS (SELECT 1 FROM orders x WHERE x.kind='lesson' AND x.item_id=coach_openings.id)`, [email, ids]),
-    set('coach_openings', 'coach_email=?,user_id=?', [key, key], coachOpening, [email, ids]),
-    // Approved shifts are the pay record for their month: kept with the minutes, rate and amount, without the coach,
-    // their notes or the change history. Shifts that were never approved, or were voided, are deleted.
-    set('coach_time_entries', "user_id=?,coach_email=?,coach_name=?,coach_note=NULL,owner_note=NULL,void_reason=NULL,history='[]'", [key, key, FORMER_COACH],
-      'coach_email=? AND approved_at IS NOT NULL AND voided_at IS NULL', [email]),
-    del('coach_time_entries', 'coach_email=?', [email]),
+    // Shifts that were never approved, or were voided, are not pay records: deleted.
+    del('coach_time_entries', `coach_email=? AND (${UNPAID_SHIFT})`, [email]),
     del('coach_time_off', 'coach_email=?', [email]),
-    // Payments the academy made to the coach (issue #370) are the academy's own money record: kept with the date,
-    // amount and how it was paid, without the coach or the note.
-    set('coach_payments', "coach_email=?,coach_name=?,note=''", [key, FORMER_COACH], 'coach_email=?', [email]),
-    // Whether the academy had their W-9 (issue #400): only the day it came in, under their email.
-    del('coach_w9', 'lower(email)=?', [email]),
-    // Their signed contract (the contract text itself stays: other coaches signed it too), and any request to sign it
-    // again (issue #239), whose reason is about the coach.
-    del('signature_reissues', "signature_id IN (SELECT s.id FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE v.kind='coach_contract' AND lower(s.email)=?)", [email]),
-    del('waiver_signatures', "lower(email)=? AND version_id IN (SELECT id FROM waiver_versions WHERE kind='coach_contract')", [email]),
     del('coach_profiles', 'email=?', [email]),
     del('coach_invites', 'lower(email)=?', [email]),
     // The last few recovery snapshots (copies of the lesson times taken before each restore) name the coach too.
@@ -137,17 +130,16 @@ function steps(email: string, key: string, accounts: string[]): Step[] {
 
 const changes = (r: any) => Number(r?.meta?.changes ?? r?.changes ?? 0);
 
-// Every coach email still found in the data, for matching cleaned coaches after a restore.
+// Every coach email still found in the records the cleanup deletes, for matching cleaned coaches after a restore. The
+// pay archive (#401) is left out: it keeps the coach's email for good, and finding it is no reason to run again.
 async function candidateEmails() {
   const rows = (await db().prepare(`SELECT DISTINCT lower(e) AS e FROM (
-      SELECT coach_email AS e FROM coach_openings UNION SELECT coach_email FROM coach_time_entries UNION SELECT coach_email FROM coach_time_off UNION SELECT coach_email FROM coach_payments UNION SELECT email FROM coach_w9
-      UNION SELECT email FROM coach_profiles UNION SELECT email FROM coach_invites UNION SELECT email FROM notifications WHERE user_id IS NULL
-      UNION SELECT s.email FROM waiver_signatures s JOIN waiver_versions v ON v.id=s.version_id WHERE v.kind='coach_contract'
-      UNION SELECT json_extract(pricing,'$.coachEmail') FROM orders WHERE kind='lesson'
-      UNION SELECT json_extract(pricing,'$.collectedByEmail') FROM orders WHERE source='offline')
+      SELECT coach_email AS e FROM coach_openings o WHERE NOT EXISTS (SELECT 1 FROM orders x WHERE x.kind='lesson' AND x.item_id=o.id)
+      UNION SELECT coach_email FROM coach_time_entries WHERE ${UNPAID_SHIFT} UNION SELECT coach_email FROM coach_time_off
+      UNION SELECT email FROM coach_profiles UNION SELECT email FROM coach_invites UNION SELECT email FROM notifications WHERE user_id IS NULL)
     WHERE e IS NOT NULL AND e NOT LIKE 'former-coach-%'`).all<{e: string}>()).results.map(r => r.e);
   const settings = await readSettings();
-  return [...new Set([...rows, ...Object.keys(settings.lessons?.splits ?? {}), ...(settings.website?.coaches ?? [])].map(e => String(e).toLowerCase()))];
+  return [...new Set([...rows, ...(settings.website?.coaches ?? [])].map(e => String(e).toLowerCase()))];
 }
 
 async function readSettings() {
@@ -157,8 +149,8 @@ async function readSettings() {
   return out;
 }
 
-// Owner settings that name the coach: their pay share moves to the former-coach key, so pay for past months still adds
-// up the same; they leave the public team page's coach list.
+// Owner settings that name the coach: they leave the public team page's coach list. Their lesson pay share stays under
+// their email (#401), beside the lesson payments that name them, so pay for past months adds up the same.
 async function settingsStep(email: string, key: string) {
   const rows = (await db().prepare("SELECT id,payload FROM academy_settings WHERE id IN ('lessons','website')").all<{id: string; payload: string}>()).results;
   let n = 0;
@@ -166,9 +158,6 @@ async function settingsStep(email: string, key: string) {
     let p: any;
     try { p = JSON.parse(r.payload); } catch { continue; }
     let changed = false;
-    if (r.id === 'lessons' && p?.splits && typeof p.splits === 'object') {
-      for (const k of Object.keys(p.splits)) if (k.toLowerCase() === email) { if (!(key in p.splits)) p.splits[key] = p.splits[k]; delete p.splits[k]; changed = true; }
-    }
     if (r.id === 'website' && Array.isArray(p?.coaches) && p.coaches.some((c: unknown) => String(c).toLowerCase() === email)) {
       p.coaches = p.coaches.filter((c: unknown) => String(c).toLowerCase() !== email); changed = true;
     }
@@ -221,7 +210,8 @@ export async function cleanupRemovedCoaches(opts: {today?: string; batch?: numbe
     if (done && left >= 4) { left -= 4; sum.anonymized += await settingsStep(email, key); } else done = false;
     if (!done) { sum.inProgress++; break; }
     if (!tomb.cleaned_at) {
-      await db().prepare('UPDATE removed_coaches SET email=NULL,name=NULL,cleaned_at=? WHERE id=? AND cleaned_at IS NULL').bind(new Date().toISOString(), tomb.id).run();
+      // The email and name stay: they index the pay archive (#401).
+      await db().prepare('UPDATE removed_coaches SET cleaned_at=? WHERE id=? AND cleaned_at IS NULL').bind(new Date().toISOString(), tomb.id).run();
       sum.finished++;
     }
   }

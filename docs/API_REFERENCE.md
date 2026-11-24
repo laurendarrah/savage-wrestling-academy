@@ -70,7 +70,7 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/payment-setup` | GET, POST | Connect the academy's Stripe account with a restricted key, test or live |
 | `/api/transfers` | GET, POST | Move a paid membership to another program |
 | `/api/messages` | GET, POST | Announcements and family threads; retry emails that didn't send |
-| `/api/staff` | GET, POST | Invite, change, remove and restore coaches; add yourself as a coach; mark a coach's W-9 received with the day, or take it off (#400) |
+| `/api/staff` | GET, POST | Invite, change, remove and restore coaches; add yourself as a coach; mark a coach's W-9 received with the day, or take it off (#400). `?archive=<email>` is a coach's pay archive: W-9, approved pay, lesson share, cash collected, payments, totals by year and signed contract (#401) |
 | `/api/coach-openings` | GET, POST | Manage any coach's lesson openings with the same rules as coach home |
 | `/api/lesson-settings` | GET, POST | Lesson prices per format and each coach's share |
 | `/api/coach-pay` | GET | Coach pay from lessons for a period, JSON or CSV |

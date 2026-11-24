@@ -51,7 +51,7 @@ To change the schema, edit `db/schema.ts`, then run `pnpm db:generate` to add a 
 | `coach_openings.hidden`, `coach_openings.share_code` | A Private lesson time (listed for no family, not on the public calendar) and the owner's link that books it (#390) |
 | `coach_w9` | That the owner has a coach's W-9, and the day it came in (#400). No tax ID, Social Security number or file: the W-9 stays with the owner or the accountant |
 | `coach_payments` | Payments the academy made to a coach, typed in by the owner: day paid, amount, how, the dates covered and a note (#370). Read by the books as money out |
-| `removed_coaches` | Coaches removed for good, whose records are deleted or anonymized after 3 years |
+| `removed_coaches` | Coaches removed for good: the index of their pay archive, kept for good (#401), and when their other records are deleted (3 years after removal, #212) |
 | `practice_plans`, `practice_curricula`, `practice_curriculum_groups` | Practice plans per program and date, and reusable curricula |
 | **Messages** | |
 | `announcements`, `announcement_recipients` | Owner announcements and who each one went to, with email status |
