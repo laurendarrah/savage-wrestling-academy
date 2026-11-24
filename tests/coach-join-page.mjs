@@ -41,7 +41,7 @@ function visit({store = {}, storage = 'ok', signedIn = null, invite = openInvite
   // Step 2 is not a dead end: the sign-in form is right there, with what to do.
   assert.deepEqual(v.shown(), ['signinForm']); assert.equal(v.step(), 'done,on,,'); assert.equal(v.el('intro').textContent, 'Your account is created, Coach Riley. One step left.');
   assert.equal(v.el('signinIntro').textContent, `Open the confirmation email we sent to ${EMAIL} and tap the button in it. It brings you to the last step. If it does not, come back to this page and sign in with the password you just made.`);
-  assert.equal(v.el('message').textContent, `Account created. Check ${EMAIL} for the confirmation email.`);
+  assert.equal(v.el('message').textContent, `Account created. Check ${EMAIL} for the confirmation email, and the Spam or Junk folder if it isn’t there in a few minutes.`);
   assert.deepEqual([v.el('resendConfirm').hidden, v.el('toSignup').hidden], [false, true], 'offers the email again, not a second account');
   assert.deepEqual([v.el('signupPassword').value, v.el('signupConfirm').value], ['', ''], 'the password does not stay on the page');
   assert.deepEqual(v.store, {'swa-coach-join-started': EMAIL}, 'this device remembers the account was created here, and nothing else');

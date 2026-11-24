@@ -40,7 +40,7 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  if(action==='signup'){
  const {error}=await auth.client.auth.signUp({email,password:input.password,options:{emailRedirectTo:appOrigin()+'/auth/confirm'}});
  if(error)return reply({error:error.code==='over_email_send_rate_limit'?'Email limit reached. Please wait before trying again.':'Account creation could not finish. Check your details or try signing in.'},400);
- return reply({message:'Check your email to confirm your account, then return here to sign in.'});
+ return reply({message:'Check your email to confirm your account, then return here to sign in. Not there in a few minutes? Check your Spam or Junk folder, or choose Didn’t get the confirmation email? on the sign-in page.'});
  }
  if(action==='login'){
  const {data,error}=await auth.client.auth.signInWithPassword({email,password:input.password});
@@ -64,7 +64,7 @@ export const POST = withApi(POST_); async function POST_(request:Request){
  if(action==='resend'){
  const {error}=await auth.client.auth.resend({type:'signup',email,options:{emailRedirectTo:appOrigin()+'/auth/confirm'}});
  if(error)return reply({error:error.status===429||error.code==='over_email_send_rate_limit'?'Email sending is temporarily limited. A new confirmation email could not be sent. Please try again later.':'Unable to request a confirmation email right now. Try again later.'},error.status===429||error.code==='over_email_send_rate_limit'?429:502);
- return reply({message:'If confirmation is needed, a confirmation email has been requested. Please check your inbox.'});
+ return reply({message:'If confirmation is needed, a confirmation email has been requested. Please check your inbox and your Spam or Junk folder.'});
  }
  const {data:{user},error}=await auth.client.auth.getUser();if(error||!user)return reply({error:'Open the password reset link from your email first.'},401);
  const result=await auth.client.auth.updateUser({password:input.password});if(result.error)return reply({error:'Password could not be changed. Use a different password or request a new reset link.'},400);
