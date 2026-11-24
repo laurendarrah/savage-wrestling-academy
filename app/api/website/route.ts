@@ -4,7 +4,7 @@
 import welcomeHtml from '../../welcome/screen.html?raw';
 import teamHtml from '../../team/screen.html?raw';
 import {ownerIdentity, sameOrigin, accountReply} from '../../../lib/account-auth';
-import {cleanWebsite, coachRows, loadWebsite, saveWebsite, publicCoaches, renderTeam, renderWelcome, siteOrigin, LIMITS} from '../../../lib/website';
+import {cleanWebsite, coachRows, loadWebsite, namedMap, namedWrestlers, permittedSite, saveWebsite, publicCoaches, renderTeam, renderWelcome, siteOrigin, LIMITS} from '../../../lib/website';
 import {decoratePage} from '../../../lib/page-chrome';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
@@ -16,7 +16,8 @@ export const GET = withApi(GET_); async function GET_(request: Request) {
   const {site, updatedAt} = await loadWebsite();
   // The owner chooses from everyone on Coaches. Whether a bio is written helps them choose; no phone is read.
   const coaches = (await coachRows()).map(r => ({email: r.email, name: r.display_name || r.name, active: r.active === 1, profileSaved: r.display_name !== null, hasBio: !!r.bio}));
-  return accountReply({site, updatedAt, coaches, limits: LIMITS}, 200, auth.headers);
+  // Wrestlers whose parents allow their name on the website (issue #403): the only ones an achievement can name.
+  return accountReply({site, updatedAt, coaches, wrestlers: await namedWrestlers(), limits: LIMITS}, 200, auth.headers);
 }
 
 export const POST = withApi(POST_); async function POST_(request: Request) {
@@ -29,11 +30,12 @@ export const POST = withApi(POST_); async function POST_(request: Request) {
   let input: any;
   try { input = JSON.parse(raw); } catch { return reply({error: 'Invalid request.'}, 400); }
   const rows = await coachRows();
-  const clean = cleanWebsite(input?.site, new Set(rows.map(r => r.email.toLowerCase())));
+  const named = namedMap(await namedWrestlers());
+  const clean = cleanWebsite(input?.site, new Set(rows.map(r => r.email.toLowerCase())), named);
   if ('error' in clean) return reply({error: clean.error}, 400);
   if (input.action === 'preview') {
-    const coaches = publicCoaches(clean.site.coaches, rows), origin = siteOrigin();
-    const page = input.page === 'team' ? decoratePage(renderTeam(teamHtml, clean.site, coaches, origin), '/team') : decoratePage(renderWelcome(welcomeHtml, clean.site, coaches, origin), '/welcome');
+    const coaches = publicCoaches(clean.site.coaches, rows), origin = siteOrigin(), shown = permittedSite(clean.site, named);
+    const page = input.page === 'team' ? decoratePage(renderTeam(teamHtml, shown, coaches, origin), '/team') : decoratePage(renderWelcome(welcomeHtml, shown, coaches, origin), '/welcome');
     return reply({html: page});
   }
   if (input.action !== 'save') return reply({error: 'Invalid request.'}, 400);

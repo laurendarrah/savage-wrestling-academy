@@ -11,6 +11,8 @@ html body p.empty{display:block;margin:0 0 var(--swa-s-12);padding:0}
 .rows{display:flex;flex-direction:column;gap:var(--swa-s-12);margin:0 0 var(--swa-s-12)}
 .row{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1.5fr) minmax(0,.8fr);gap:0 var(--swa-s-12);align-items:end;padding:var(--swa-s-12) var(--swa-s-16) var(--swa-s-16);border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface-2)}
 .row label{margin:0;font-size:var(--swa-t-13)}.row .n,.coach .order{font-family:var(--swa-display);font-weight:800;font-size:var(--swa-t-24);line-height:1;color:var(--swa-muted-2);text-align:center}.row .n{align-self:center}
+/* The alumni permission tick spans the row, under its fields (issue #403). */
+.row label.tick{grid-column:2/-1;display:flex;align-items:center;gap:var(--swa-s-8);margin-top:var(--swa-s-12);font-size:var(--swa-t-15);font-weight:600}html body .row label.tick input{width:22px;height:22px;margin:0;flex:none}.row select{width:100%}
 .tools{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:var(--swa-s-8);margin-top:var(--swa-s-12)}
 html body .tools button,html body .coach button{min-height:40px;padding:0 var(--swa-s-12);font-size:var(--swa-t-15)}
 .coach{display:flex;align-items:center;gap:var(--swa-s-12);flex-wrap:wrap;min-height:64px;padding:var(--swa-s-8) var(--swa-s-16);border:1px solid var(--swa-line);border-radius:var(--swa-r-control);background:var(--swa-surface-2);margin:0 0 var(--swa-s-8)}
@@ -35,8 +37,8 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 <label for="mission">Mission<span class="hint">Optional. Shown under “Our mission”. Leave a blank line between paragraphs. Leave it empty to hide the section.</span><textarea id="mission" maxlength="1500"></textarea></label>
 </section>
 <section class="card" aria-labelledby="coachesTitle"><h2 id="coachesTitle">Coaches</h2><p class="muted">Choose who appears on the team page, and in what order. Each coach’s name, bio and specialties come from their coach profile. Their email and phone are never shown.</p><div id="coachList"></div></section>
-<section class="card" aria-labelledby="achTitle"><h2 id="achTitle">Wrestler achievements</h2><p class="muted">The wrestler’s name, what they achieved and the season or year. The team page groups them by season, in this order.</p><div class="rows" id="achList"></div><button type="button" data-add="achievements">Add an achievement</button></section>
-<section class="card" aria-labelledby="alumTitle"><h2 id="alumTitle">Alumni</h2><p class="muted">Former wrestlers: their name, their years with the academy and where they went or what they did next.</p><div class="rows" id="alumList"></div><button type="button" data-add="alumni">Add an alumni entry</button></section>
+<section class="card" aria-labelledby="achTitle"><h2 id="achTitle">Wrestler achievements</h2><p class="muted">The wrestler, what they achieved and the season or year. The team page groups them by season, in this order. Only wrestlers whose parents allow their name on the website are listed; if a parent turns it off, the achievement leaves the team page at once.</p><div class="rows" id="achList"></div><button type="button" data-add="achievements">Add an achievement</button></section>
+<section class="card" aria-labelledby="alumTitle"><h2 id="alumTitle">Alumni</h2><p class="muted">Former wrestlers: their name, their years with the academy and where they went or what they did next. Tick that you have each person’s permission to show their name; without it, the entry is not shown.</p><div class="rows" id="alumList"></div><button type="button" data-add="alumni">Add an alumni entry</button></section>
 <section class="card" aria-labelledby="visitTitle"><h2 id="visitTitle">Visit details</h2><p class="muted">Optional. Shown at the bottom of both pages. Leave both empty to hide them.</p>
 <label for="address">Address<input id="address" maxlength="160" autocomplete="off" placeholder="Street, town, state and ZIP"></label>
 <label for="email">Contact email<input id="email" type="email" maxlength="120" autocomplete="off"></label>
@@ -49,19 +51,25 @@ fieldset{border:0;margin:0;padding:0;min-width:0}
 // tagged with the nonce the Worker gave this script before they are shown.
 const NONCE=document.currentScript?.nonce||'',withNonce=h=>NONCE?h.replace(/<(script)\b(?![^>]*\bnonce=)/gi,'<$1 nonce="'+NONCE+'"'):h;
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let site={headline:'',intro:'',mission:'',coaches:[],achievements:[],alumni:[],address:'',email:''},updatedAt=null,coaches=[];
+let site={headline:'',intro:'',mission:'',coaches:[],achievements:[],alumni:[],address:'',email:''},updatedAt=null,coaches=[],wrestlers=[];
 // Each list: its fields (key, label, length, placeholder) and what to say when it is empty.
 const LISTS={
  achievements:{box:'achList',one:'achievement',fields:[['name','Wrestler’s name',80,''],['achievement','Achievement',160,'For example: 1st place, state championship'],['season','Season or year',30,'For example: 2025–26']],
   empty:'No achievements yet, so the team page leaves this section out. Add one with the wrestler’s name, what they achieved and the season or year.'},
  alumni:{box:'alumList',one:'alumni entry',fields:[['name','Name',80,''],['next','Where they went or what they did',160,'For example: wrestles in college'],['years','Years with the academy',30,'For example: 2016–2022']],
   empty:'No alumni yet, so the team page leaves this section out. Add a former wrestler’s name, their years with the academy and where they went next.'}};
-const blank=kind=>Object.fromEntries(LISTS[kind].fields.map(f=>[f[0],'']));
+const blank=kind=>({...Object.fromEntries(LISTS[kind].fields.map(f=>[f[0],''])),...(kind==='achievements'?{wrestler:''}:{permission:false})});
+// Name and photo permission (issue #403). An achievement names a wrestler from the list of those whose parents allowed
+// their name; one chosen earlier whose permission was withdrawn (or saved before #403) shows as "choose again".
+function wrestlerPick(item,i){const known=wrestlers.some(w=>w.key===item.wrestler);
+ return '<label>Wrestler<select data-field="wrestler" aria-label="'+esc('Wrestler, achievement '+(i+1))+'"><option value="">'+(item.wrestler||item.name?esc((item.name||'This wrestler')+': choose again (no name permission)'):'Choose a wrestler')+'</option>'
+  +wrestlers.map(w=>'<option value="'+esc(w.key)+'"'+(known&&w.key===item.wrestler?' selected':'')+'>'+esc(w.name)+(w.photos?' (photos allowed too)':'')+'</option>').join('')+'</select></label>'}
+const permissionTick=(item,i)=>'<label class="tick"><input type="checkbox" data-field="permission"'+(item.permission===true?' checked':'')+' aria-label="'+esc('I have permission to show this name, alumni entry '+(i+1))+'">I have permission to show this name</label>';
 function moveItem(list,i,d){const j=i+d;if(j<0||j>=list.length)return list;const [x]=list.splice(i,1);list.splice(j,0,x);return list}
 function rowsHtml(kind){
  const L=LISTS[kind],list=site[kind];
  if(!list.length)return '<p class="empty">'+L.empty+'</p>';
- return list.map((item,i)=>'<div class="row" data-kind="'+kind+'" data-index="'+i+'"><span class="n" aria-hidden="true">'+(i+1)+'</span>'+L.fields.map(([key,label,max,ph])=>'<label>'+label+'<input maxlength="'+max+'" value="'+esc(item[key])+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+' aria-label="'+esc(label+', '+L.one+' '+(i+1))+'" data-field="'+key+'"></label>').join('')
+ return list.map((item,i)=>'<div class="row" data-kind="'+kind+'" data-index="'+i+'"><span class="n" aria-hidden="true">'+(i+1)+'</span>'+L.fields.map(([key,label,max,ph])=>kind==='achievements'&&key==='name'?wrestlerPick(item,i):'<label>'+label+'<input maxlength="'+max+'" value="'+esc(item[key])+'"'+(ph?' placeholder="'+esc(ph)+'"':'')+' aria-label="'+esc(label+', '+L.one+' '+(i+1))+'" data-field="'+key+'"></label>').join('')+(kind==='alumni'?permissionTick(item,i):'')
   +'<div class="tools"><button type="button" aria-label="Move '+L.one+' '+(i+1)+' up"'+(i?'':' disabled')+' data-move="-1">↑ Up</button><button type="button" aria-label="Move '+L.one+' '+(i+1)+' down"'+(i<list.length-1?'':' disabled')+' data-move="1">↓ Down</button><button type="button" aria-label="Remove '+L.one+' '+(i+1)+'" data-drop>Remove</button></div></div>').join('')}
 // Chosen coaches first, in their order, then the rest. Removed coaches cannot be chosen.
 function coachListHtml(){
@@ -85,13 +93,16 @@ $('editor').onclick=e=>{const t=e.target.closest?.('button');if(!t)return;
  if(t.id==='saveButton')return saveSite();if(t.dataset.preview)return showPreview(t.dataset.preview);if(t.dataset.add)return addRow(t.dataset.add);
  const row=t.closest('.row[data-kind]');if(row&&t.dataset.move)return moveRow(row.dataset.kind,+row.dataset.index,+t.dataset.move);if(row&&'drop' in t.dataset)return dropRow(row.dataset.kind,+row.dataset.index);
  const coach=t.closest('.coach[data-coach]');if(coach&&t.dataset.coachMove)return moveCoach(+coach.dataset.at,+t.dataset.coachMove)};
-$('editor').oninput=e=>{const f=e.target.closest?.('input[data-field]'),row=f?.closest('.row[data-kind]');if(row)setField(row.dataset.kind,+row.dataset.index,f.dataset.field,f.value)};
-$('editor').onchange=e=>{const c=e.target.closest?.('input[data-coach-toggle]'),coach=c?.closest('.coach[data-coach]');if(coach)toggleCoach(+coach.dataset.coach,c.checked)};
+$('editor').oninput=e=>{const f=e.target.closest?.('input[data-field]'),row=f?.closest('.row[data-kind]');if(row&&f.type!=='checkbox')setField(row.dataset.kind,+row.dataset.index,f.dataset.field,f.value)};
+$('editor').onchange=e=>{const c=e.target.closest?.('input[data-coach-toggle]'),coach=c?.closest('.coach[data-coach]');if(coach)return toggleCoach(+coach.dataset.coach,c.checked);
+ const f=e.target.closest?.('select[data-field],input[type=checkbox][data-field]'),row=f?.closest('.row[data-kind]');if(!row)return;
+ if(f.dataset.field==='permission')return setField(row.dataset.kind,+row.dataset.index,'permission',f.checked);
+ const w=wrestlers.find(x=>x.key===f.value);setField(row.dataset.kind,+row.dataset.index,'wrestler',f.value);setField(row.dataset.kind,+row.dataset.index,'name',w?w.name:'')};
 // What is sent: the text fields from the form, the lists from the page's state. Rows left completely empty are skipped.
 function payload(){
- const filled=kind=>site[kind].filter(r=>Object.values(r).some(v=>String(v).trim()));
+ const filled=kind=>site[kind].filter(r=>Object.values(r).some(v=>typeof v==='string'&&v.trim()));
  return {headline:$('headline').value,intro:$('intro').value,mission:$('mission').value,address:$('address').value,email:$('email').value,coaches:[...site.coaches],achievements:filled('achievements'),alumni:filled('alumni')}}
-function fill(d){site=JSON.parse(JSON.stringify(d.site));updatedAt=d.updatedAt??null;if(d.coaches)coaches=d.coaches;for(const k of ['headline','intro','mission','address','email'])$(k).value=site[k]||'';
+function fill(d){site=JSON.parse(JSON.stringify(d.site));updatedAt=d.updatedAt??null;if(d.coaches)coaches=d.coaches;if(d.wrestlers)wrestlers=d.wrestlers;for(const k of ['headline','intro','mission','address','email'])$(k).value=site[k]||'';
  $('savedAt').textContent=updatedAt?'Last published '+new Date(updatedAt).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Not published yet: visitors see the standard wording';render()}
 async function call(body){const r=await fetch('/api/website',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
 // The editor stays disabled until the published site is in, and while it saves, so nothing typed or added meanwhile is

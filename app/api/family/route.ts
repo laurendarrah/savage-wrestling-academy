@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { verifiedAccount, accountReply, sameOrigin } from '../../../lib/account-auth';
-import { validFamily, cleanFamily, emptyFamily, familyProblem, missingDetails, missingMessage } from '../../../lib/family-records';
+import { validFamily, cleanFamily, emptyFamily, familyProblem, missingDetails, missingMessage, permissionChanges } from '../../../lib/family-records';
+import { securityEvent } from '../../../lib/security-events';
 import { cardStatus, reviewSource, seasonOptions, CARD_RENEWAL_DAYS, type Review } from '../../../lib/usaw';
 import { checkChangedCards, familyLookup, lookupView, type LookupRow } from '../../../lib/usaw-check';
 import { noticeApprovalProfileChanged, quietly } from '../../../lib/notify';
@@ -52,6 +53,8 @@ export const PUT = withApi(PUT_); async function PUT_(request:Request){
  // A new or changed card number is checked on USA Wrestling's public verify page (issue #202). It never fails the save.
  let lookups:Record<string,string>={};
  const earlier=before?JSON.parse(before.payload):null;
+ // Name and photo permission (issue #403): each change is logged with the account that made it and when.
+ for(const c of permissionChanges(earlier,clean))await securityEvent(auth.user.id,'media_permission_changed',`${c.wrestlerId} ${c.what}:${c.on?'on':'off'}`);
  try{lookups=await checkChangedCards(request,auth.user.id,earlier,clean)}catch{}
  // The owner hears when a wrestler with a waiting SWA Advanced request changes grade or name (issue #271).
  if(earlier?.wrestlers)await quietly(()=>noticeApprovalProfileChanged(auth.user!.id,earlier.wrestlers,clean.wrestlers));

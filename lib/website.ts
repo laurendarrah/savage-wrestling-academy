@@ -4,6 +4,11 @@
 //   academy_state document or its revision. updated_at guards against two devices saving over each other.
 // - Wrestlers appear by name only: there is no photo or image field anywhere, and no link fields at all, so the
 //   pages never load anything from another site (the routes send img-src 'self').
+// - Name permission (issue #403; Justin's decision on #246): an achievement names a wrestler whose parent allowed their
+//   name (lib/family-records.ts showName), chosen by the owner from that list; the name shown is the wrestler's current
+//   one. The public pages check the permission every time, so a parent turning it off takes the wrestler off at once.
+//   An achievement saved before #403 names no wrestler and is no longer shown. An alumni entry is shown only once the
+//   owner confirms they have that person's permission.
 // - Coaches come from their real profiles (#190): display name, bio and specialties. Never the email or phone.
 // - The owner chooses which coaches appear and in what order. An empty list hides its section.
 // - Absolute addresses (canonical, og:url) use appOrigin(), so moving to savagewrestling.com (#43) needs no code change.
@@ -11,8 +16,11 @@ import {env} from 'cloudflare:workers';
 import {appOrigin} from './account-auth';
 
 export const ACADEMY = 'Savage Wrestling Academy';
-export type Achievement = {name: string; achievement: string; season: string};
-export type Alum = {name: string; years: string; next: string};
+export type Achievement = {name: string; achievement: string; season: string; wrestler?: string};
+export type Alum = {name: string; years: string; next: string; permission?: boolean};
+// A wrestler a parent allowed the academy to name, as the owner's editor lists them: key is "familyId/wrestlerId".
+export type NamedWrestler = {key: string; name: string; photos: boolean};
+const WRESTLER_KEY = /^[A-Za-z0-9_-]{1,80}\/[A-Za-z0-9-]{1,80}$/;
 export type Website = {headline: string; intro: string; mission: string; coaches: string[]; achievements: Achievement[]; alumni: Alum[]; address: string; email: string};
 export type PublicCoach = {name: string; bio: string; specialties: string[]};
 export type CoachRow = {email: string; name: string; active: number; display_name: string | null; bio: string | null; specialties: string | null};
@@ -48,7 +56,10 @@ function text(v: unknown, max: number, what: string): Check {
 
 // Checks everything the owner sends and keeps only the known fields (a photo or image field is dropped).
 // knownCoaches: emails on Coaches (staff_access); a coach who is not there cannot be shown.
-export function cleanWebsite(input: any, knownCoaches?: Set<string>): {site: Website} | {error: string} {
+// named: when the owner saves or previews, the wrestlers whose parents allowed their name (issue #403). Each achievement
+// must name one of them, and takes their current name; each alumni entry needs the owner's permission tick. Without it
+// (reading what is stored) the saved links and ticks are kept as they are.
+export function cleanWebsite(input: any, knownCoaches?: Set<string>, named?: Map<string, string>): {site: Website} | {error: string} {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return {error: 'Check the website content.'};
   const out: any = {};
   const fields: [keyof Website, Check][] = [
@@ -87,10 +98,27 @@ export function cleanWebsite(input: any, knownCoaches?: Set<string>): {site: Web
     }
     return rows;
   };
-  const achievements = list<Achievement>(input.achievements, 'achievements', 'Achievement', [['name', LIMITS.name, 'the wrestler’s name', true], ['achievement', LIMITS.achievement, 'what they achieved', true], ['season', LIMITS.season, 'the season or year', true]]);
+  const achievements = list<Achievement>(input.achievements, 'achievements', 'Achievement', [['name', LIMITS.name, 'the wrestler’s name', !named], ['achievement', LIMITS.achievement, 'what they achieved', true], ['season', LIMITS.season, 'the season or year', true]]);
   if ('error' in achievements) return achievements;
   const alumni = list<Alum>(input.alumni, 'alumni', 'Alumni entry', [['name', LIMITS.name, 'the name', true], ['years', LIMITS.years, 'the years', false], ['next', LIMITS.next, 'where they went or what they did', true]]);
   if ('error' in alumni) return alumni;
+  for (const [i, a] of achievements.entries()) {
+    const key = (input.achievements[i] as any).wrestler;
+    if (key !== undefined && key !== null && key !== '' && (typeof key !== 'string' || !WRESTLER_KEY.test(key))) return {error: `Achievement ${i + 1}: choose the wrestler again.`};
+    if (key) a.wrestler = key;
+    if (named) {
+      if (!key) return {error: `Achievement ${i + 1}: choose the wrestler from the list. Only wrestlers whose parents allow their name on the website are listed.`};
+      const name = named.get(key);
+      if (!name) return {error: `Achievement ${i + 1}: this wrestler’s parents no longer allow their name on the website. Choose another wrestler or remove the achievement.`};
+      a.name = name;
+    }
+  }
+  for (const [i, a] of alumni.entries()) {
+    const ok = (input.alumni[i] as any).permission;
+    if (ok !== undefined && ok !== null && typeof ok !== 'boolean') return {error: `Alumni entry ${i + 1}: check the permission box.`};
+    if (named && ok !== true) return {error: `Alumni entry ${i + 1}: tick that you have ${a.name}’s permission to show their name, or remove the entry.`};
+    if (ok === true) a.permission = true;
+  }
   out.achievements = achievements; out.alumni = alumni;
   return {site: out as Website};
 }
@@ -233,9 +261,35 @@ export async function coachRows() {
   return (await env.DB!.prepare('SELECT s.email,s.name,s.active,p.display_name,p.bio,p.specialties FROM staff_access s LEFT JOIN coach_profiles p ON p.email=s.email ORDER BY COALESCE(p.display_name,s.name)').all<CoachRow>()).results;
 }
 
+// Every wrestler whose parent allowed their name (issue #403), for the owner's editor. Owner only: it reads every family.
+export async function namedWrestlers(userIds?: string[]): Promise<NamedWrestler[]> {
+  const rows = userIds
+    ? (await env.DB!.prepare('SELECT user_id,payload FROM family_accounts WHERE user_id IN (SELECT value FROM json_each(?))').bind(JSON.stringify(userIds)).all<{user_id: string; payload: string}>()).results
+    : (await env.DB!.prepare('SELECT user_id,payload FROM family_accounts').all<{user_id: string; payload: string}>()).results;
+  const out: NamedWrestler[] = [];
+  for (const r of rows) {
+    let p: any = null;
+    try { p = JSON.parse(r.payload); } catch { continue; }
+    for (const w of Array.isArray(p?.wrestlers) ? p.wrestlers : [])
+      if (w?.showName === true && typeof w.id === 'string' && typeof w.name === 'string' && w.name.trim()) out.push({key: `${r.user_id}/${w.id}`, name: w.name.trim().slice(0, LIMITS.name), photos: w.showPhotos === true});
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name));
+}
+export const namedMap = (list: NamedWrestler[]) => new Map(list.map(w => [w.key, w.name]));
+
+// What visitors see: only achievements whose wrestler's parent allows their name today, under the current name, and
+// alumni the owner confirmed permission for (issue #403).
+export function permittedSite(site: Website, named: Map<string, string>): Website {
+  return {...site,
+    achievements: site.achievements.filter(a => a.wrestler && named.has(a.wrestler)).map(a => ({...a, name: named.get(a.wrestler!)!})),
+    alumni: site.alumni.filter(a => a.permission === true)};
+}
+
 export async function publicWebsite() {
   const {site} = await loadWebsite();
-  return {site, coaches: site.coaches.length ? publicCoaches(site.coaches, await coachRows()) : []};
+  const families = [...new Set(site.achievements.map(a => a.wrestler?.split('/')[0]).filter((x): x is string => !!x))];
+  const named = namedMap(families.length ? await namedWrestlers(families) : []);
+  return {site: permittedSite(site, named), coaches: site.coaches.length ? publicCoaches(site.coaches, await coachRows()) : []};
 }
 
 // Saves only if nobody else saved since the editor loaded (updatedAt), and records it in the security log.

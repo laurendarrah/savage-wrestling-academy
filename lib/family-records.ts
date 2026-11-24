@@ -4,7 +4,10 @@
 // Saving a profile requires them (missingDetails); stored profiles from before stay valid and readable, and the
 // family home asks them to finish. Profiles saved in ChatGPT Sites version 130 kept the whole address in homeAddress;
 // it stays as the street line.
-export type Wrestler={id:string;name:string;grade:string;usawNumber?:string;usawExpires?:string;birthDate?:string;allergies?:string};
+// Name and photo permission (issue #403; Justin's decision of Nov 9, confirmed Nov 23 on #246): a parent chooses, per
+// wrestler, whether the academy may show the wrestler's name, and separately photos, on the website and in academy
+// materials. Both are off until a parent turns them on; stored only when on. Every change is in the security log.
+export type Wrestler={id:string;name:string;grade:string;usawNumber?:string;usawExpires?:string;birthDate?:string;allergies?:string;showName?:boolean;showPhotos?:boolean};
 export type FamilyProfile={
  parentName:string;phone:string;wrestlers:Wrestler[];
  homeAddress?:string;homeCity?:string;homeState?:string;homeZip?:string;emergencyContactName?:string;emergencyContactPhone?:string;
@@ -16,6 +19,7 @@ const FAMILY_DETAILS=['homeAddress','homeCity','homeState','homeZip','emergencyC
 export const USAW_NUMBER=/^[A-Za-z0-9-]{4,24}$/;
 const cardDate=(d:unknown)=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&new Date(d+'T12:00:00Z').toISOString().slice(0,10)===d;
 const validCard=(w:any)=>(w.usawNumber===undefined||w.usawNumber===''||(typeof w.usawNumber==='string'&&USAW_NUMBER.test(w.usawNumber.trim())))&&(w.usawExpires===undefined||w.usawExpires===''||cardDate(w.usawExpires));
+const flag=(v:unknown)=>v===undefined||v===null||typeof v==='boolean';
 const optional=(v:unknown,max:number)=>v===undefined||v===null||(typeof v==='string'&&v.length<=max);
 export const emptyFamily=():FamilyProfile=>({parentName:'',phone:'',wrestlers:[]});
 // The shape and lengths of a stored profile. Backups are restored through this too, so it checks only what keeps the
@@ -26,7 +30,7 @@ export function validFamily(value:unknown):value is FamilyProfile{
  return typeof v.parentName==='string'&&v.parentName.length<=120&&typeof v.phone==='string'&&v.phone.length<=40&&
   FAMILY_DETAILS.every(k=>optional(v[k],DETAIL_LIMITS[k]))&&
   Array.isArray(v.wrestlers)&&v.wrestlers.length<=20&&new Set(v.wrestlers.map(w=>w?.id)).size===v.wrestlers.length&&v.wrestlers.every(w=>w&&typeof w.id==='string'&&/^[a-zA-Z0-9-]{1,80}$/.test(w.id)&&typeof w.name==='string'&&w.name.trim().length>0&&w.name.length<=120&&typeof w.grade==='string'&&['K',...Array.from({length:12},(_,i)=>String(i+1)),'Adult'].includes(w.grade)&&validCard(w)&&
-   optional(w.birthDate,DETAIL_LIMITS.birthDate)&&optional(w.allergies,DETAIL_LIMITS.allergies));
+   optional(w.birthDate,DETAIL_LIMITS.birthDate)&&optional(w.allergies,DETAIL_LIMITS.allergies)&&flag(w.showName)&&flag(w.showPhotos));
 }
 const text=(v:unknown)=>typeof v==='string'?v.trim():'';
 export const ZIP=/^\d{5}(?:-\d{4})?$/;
@@ -54,7 +58,7 @@ export function familyProblem(v:FamilyProfile,today:string):string|null{
 export function cleanFamily(value:FamilyProfile):FamilyProfile{
  const out:FamilyProfile={parentName:value.parentName.trim(),phone:value.phone.trim(),wrestlers:value.wrestlers.map(w=>{
   const birthDate=text(w.birthDate),allergies=text(w.allergies).replace(/\r\n/g,'\n');
-  return {id:w.id,name:w.name.trim(),grade:w.grade,usawNumber:(w.usawNumber||'').trim().toUpperCase(),usawExpires:w.usawExpires||'',...(birthDate?{birthDate}:{}),...(allergies?{allergies}:{})};
+  return {id:w.id,name:w.name.trim(),grade:w.grade,usawNumber:(w.usawNumber||'').trim().toUpperCase(),usawExpires:w.usawExpires||'',...(birthDate?{birthDate}:{}),...(allergies?{allergies}:{}),...(w.showName===true?{showName:true}:{}),...(w.showPhotos===true?{showPhotos:true}:{})};
  })};
  for(const k of FAMILY_DETAILS){const t=text(value[k]);if(t)out[k]=k==='homeState'&&t.length===2?t.toUpperCase():t}
  return out;
@@ -78,4 +82,14 @@ export function missingMessage(missing:string[]){
 export function addressLines(f:Partial<FamilyProfile>){
  const place=[text(f.homeCity),[text(f.homeState),text(f.homeZip)].filter(Boolean).join(' ')].filter(Boolean).join(', ');
  return [text(f.homeAddress),place].filter(Boolean);
+}
+
+// Name and photo permission changes between two saved profiles (issue #403), for the security log: who changed it is the
+// account that saved, when is the time of the log line. A wrestler added with a permission on counts as a change.
+export type PermissionChange={wrestlerId:string;name:string;what:'name'|'photos';on:boolean};
+export function permissionChanges(before:Partial<FamilyProfile>|null,after:FamilyProfile):PermissionChange[]{
+ const out:PermissionChange[]=[],old=new Map((before?.wrestlers??[]).map(w=>[w.id,w]));
+ for(const w of after.wrestlers){const was=old.get(w.id);
+  for(const [what,key] of [['name','showName'],['photos','showPhotos']] as const){const on=w[key]===true,had=was?.[key]===true;if(on!==had)out.push({wrestlerId:w.id,name:w.name,what,on})}}
+ return out;
 }

@@ -155,10 +155,20 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   assert.equal(tp.status, 200); assert.match(tp.html, /listed here soon/); assert.doesNotMatch(tp.html, /Lee Tran|Dana/, 'a coach appears only when the owner chooses them');
   assert.match(tp.headers.get('Content-Security-Policy'), /img-src 'self'/); assert.equal(tp.headers.get('X-Content-Type-Options'), 'nosniff');
 
+  // Name permission (issue #403): Sam's parent allows the name (and photos), Kit's parent allows nothing.
+  const family = (id, wrestlers) => sqlite.prepare('INSERT OR REPLACE INTO family_accounts(user_id,email,payload,revision,updated_at) VALUES (?,?,?,1,?)').run(id, id + '@example.test', JSON.stringify({parentName: 'Pat', phone: '555-0100', wrestlers}), 'x');
+  family('fam-1', [{id: 'w-sam', name: 'Sam Example', grade: '8', showName: true, showPhotos: true}, {id: 'w-kit', name: 'Kit Example', grade: '6'}]);
+  family('fam-2', [{id: 'w-ray', name: 'Ray Other', grade: '9', showName: true}]);
+  r = await get();
+  assert.deepEqual(r.body.wrestlers, [{key: 'fam-2/w-ray', name: 'Ray Other', photos: false}, {key: 'fam-1/w-sam', name: 'Sam Example', photos: true}], 'only wrestlers whose parents allowed their name');
   const site = {...base, mission: 'Build tough, coachable wrestlers.', coaches: ['dana@example.test', 'lee.tran@example.test', 'gone@example.test'],
-    achievements: [{name: 'Sam Example', achievement: 'NYS champion', season: '2025–26'}], alumni: [{name: 'Alex Moore', years: '2014–2020', next: 'Wrestled at Hofstra'}]};
+    achievements: [{name: 'whatever the page sent', wrestler: 'fam-1/w-sam', achievement: 'NYS champion', season: '2025–26'}], alumni: [{name: 'Alex Moore', years: '2014–2020', next: 'Wrestled at Hofstra', permission: true}]};
   assert.match((await post({action: 'save', site: {...site, coaches: ['ghost@example.test']}, updatedAt: null})).body.error, /no longer on Coaches/);
-  assert.match((await post({action: 'save', site: {...site, achievements: [{name: '', achievement: 'x', season: 'y'}]}, updatedAt: null})).body.error, /Achievement 1/);
+  assert.match((await post({action: 'save', site: {...site, achievements: [{name: '', achievement: 'x', season: 'y'}]}, updatedAt: null})).body.error, /^Achievement 1: choose the wrestler from the list\. Only wrestlers whose parents allow their name on the website are listed\.$/);
+  assert.match((await post({action: 'save', site: {...site, achievements: [{name: 'Kit Example', achievement: 'x', season: 'y'}]}, updatedAt: null})).body.error, /choose the wrestler from the list/, 'a typed name is not enough');
+  assert.match((await post({action: 'save', site: {...site, achievements: [{name: 'Kit', wrestler: 'fam-1/w-kit', achievement: 'x', season: 'y'}]}, updatedAt: null})).body.error, /no longer allow their name/, 'no permission, no name');
+  assert.match((await post({action: 'save', site: {...site, achievements: [{name: 'x', wrestler: '../../etc', achievement: 'x', season: 'y'}]}, updatedAt: null})).body.error, /choose the wrestler again/);
+  assert.match((await post({action: 'save', site: {...site, alumni: [{name: 'Alex Moore', years: '', next: 'Hofstra'}]}, updatedAt: null})).body.error, /^Alumni entry 1: tick that you have Alex Moore’s permission to show their name, or remove the entry\.$/);
   assert.equal((await post({action: 'publish', site, updatedAt: null})).status, 400);
 
   // Preview renders the unsaved content as the page, with the shared top bar, and saves nothing.
@@ -170,6 +180,7 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
 
   r = await post({action: 'save', site, updatedAt: null});
   assert.equal(r.status, 200); const first = r.body.updatedAt; assert.ok(first);
+  assert.equal(r.body.site.achievements[0].name, 'Sam Example', 'the name comes from the family profile, not the page');
   assert.equal(sqlite.prepare("SELECT count(*) n FROM security_events WHERE action='website_saved'").get().n, 1, 'saving is in the security log');
   assert.equal((await post({action: 'save', site, updatedAt: null})).status, 409, 'a second first-save loses');
   assert.equal((await post({action: 'save', site, updatedAt: '2020-01-01T00:00:00Z'})).status, 409, 'saved on another device since');
@@ -185,6 +196,17 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   w = await page(welcome);
   assert.match(w.html, /Build tough, coachable wrestlers/); assert.match(w.html, /2 coaches, 1 wrestler achievement and 1 alum/);
   assert.ok(!w.html.includes('@example.test') && !w.html.includes('555-0199'), 'no coach email or phone on the welcome page');
+  // The parent renames the wrestler: the team page shows the current name. The parent turns the name off: Sam leaves
+  // the team page and the welcome page's count at once, with nothing for the owner to do.
+  family('fam-1', [{id: 'w-sam', name: 'Samantha Example', grade: '8', showName: true}, {id: 'w-kit', name: 'Kit Example', grade: '6'}]);
+  tp = await page(team); assert.match(tp.html, /<b>Samantha Example<\/b><span>NYS champion<\/span>/);
+  family('fam-1', [{id: 'w-sam', name: 'Samantha Example', grade: '8'}, {id: 'w-kit', name: 'Kit Example', grade: '6'}]);
+  tp = await page(team); assert.doesNotMatch(tp.html, /Samantha|Sam Example|id="achievements"/);
+  w = await page(welcome); assert.match(w.html, /2 coaches and 1 alum/);
+  // An achievement saved before #403 names no wrestler, and an alumni entry without the tick: neither is shown.
+  sqlite.prepare("UPDATE academy_settings SET payload=? WHERE id='website'").run(JSON.stringify({...site, achievements: [{name: 'Old Name', achievement: 'Champion', season: '2024'}], alumni: [{name: 'Old Alum', years: '', next: 'College'}]}));
+  tp = await page(team); assert.doesNotMatch(tp.html, /Old Name|Old Alum|id="achievements"|id="alumni"/);
+  family('fam-1', [{id: 'w-sam', name: 'Sam Example', grade: '8', showName: true, showPhotos: true}, {id: 'w-kit', name: 'Kit Example', grade: '6'}]);
 
   // Emptying a list hides its section again.
   r = await post({action: 'save', site: {...site, achievements: [], alumni: [], coaches: []}, updatedAt: first});
@@ -202,9 +224,11 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   const nodes = new Map();
   const el = id => { if (!nodes.has(id)) nodes.set(id, {id, value: '', hidden: true, disabled: false, innerHTML: '', textContent: '', srcdoc: '', scrollIntoView() {}}); return nodes.get(id); };
   const calls = []; let next = null;
+  // Wrestlers whose parents allow their name (issue #403), as the API lists them.
+  const wrestlers = [{key: 'f-1/w-1', name: 'Sam "Slam" <b>', photos: true}, {key: 'f-2/w-2', name: 'Jo', photos: false}];
   const coaches = [{email: 'dana@example.test', name: 'Dana Ruiz', active: true, profileSaved: false, hasBio: false}, {email: 'gone@example.test', name: 'Gone Coach', active: false, profileSaved: true, hasBio: true}, {email: 'lee@example.test', name: 'Lee "The Hammer" Tran', active: true, profileSaved: true, hasBio: true}];
   const ctx = vm.createContext({JSON, Date, Intl, Object, Promise, console, document: {getElementById: el},
-    fetch: async (url, o) => { const body = o?.body ? JSON.parse(o.body) : null; calls.push({url, body}); const res = next ? next(body) : {status: 200, body: {site: {...base, coaches: ['lee@example.test']}, updatedAt: '2026-11-07T15:00:00Z', coaches}}; return {ok: res.status === 200, status: res.status, json: async () => res.body}; }});
+    fetch: async (url, o) => { const body = o?.body ? JSON.parse(o.body) : null; calls.push({url, body}); const res = next ? next(body) : {status: 200, body: {site: {...base, coaches: ['lee@example.test']}, updatedAt: '2026-11-07T15:00:00Z', coaches, wrestlers}}; return {ok: res.status === 200, status: res.status, json: async () => res.body}; }});
   const src = readFileSync('app/website/screen.html', 'utf8');
   vm.runInContext(src.match(/<script>([\s\S]*)<\/script>/)[1], ctx);
   const settle = async () => { for (let i = 0; i < 20; i++) await new Promise(r => setImmediate(r)); };
@@ -230,10 +254,23 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   run('site.coaches=[];render()'); assert.match(el('coachList').innerHTML, /No coaches chosen, so the team page leaves this section out/);
   // Rows: add, edit, move, remove; owner text is escaped in the fields.
   run("addRow('achievements');addRow('achievements');addRow('alumni')");
-  run(`setField('achievements',0,'name','Sam "Slam" <b>');setField('achievements',0,'achievement','NYS champion');setField('achievements',0,'season','2025–26')`);
-  run(`setField('achievements',1,'name','Jo');setField('achievements',1,'achievement','County 1st');setField('achievements',1,'season','2024–25')`);
-  assert.equal(run('site.achievements[0].name'), 'Sam "Slam" <b>', 'typing updates the list without redrawing the fields');
-  run('render()'); assert.match(el('achList').innerHTML, /value="Sam &quot;Slam&quot; &lt;b&gt;"/);
+  // Issue #403: the wrestler is chosen from the list (the select's change listener), which sets the key and the name.
+  const pick = (index, key) => el('editor').onchange({target: {closest: s => s === 'select[data-field],input[type=checkbox][data-field]' ? {dataset: {field: 'wrestler'}, value: key, closest: () => ({dataset: {kind: 'achievements', index: String(index)}})} : null}});
+  run('render()'); assert.match(el('achList').innerHTML, /<select data-field="wrestler" aria-label="Wrestler, achievement 1"><option value="">Choose a wrestler<\/option><option value="f-1\/w-1">Sam &quot;Slam&quot; &lt;b&gt; \(photos allowed too\)<\/option><option value="f-2\/w-2">Jo<\/option><\/select>/);
+  pick(0, 'f-1/w-1'); run(`setField('achievements',0,'achievement','NYS champion');setField('achievements',0,'season','2025–26')`);
+  pick(1, 'f-2/w-2'); run(`setField('achievements',1,'achievement','County 1st');setField('achievements',1,'season','2024–25')`);
+  assert.deepEqual([run('site.achievements[0].name'), run('site.achievements[0].wrestler')], ['Sam "Slam" <b>', 'f-1/w-1'], 'choosing updates the list without redrawing the fields');
+  run('render()'); assert.match(el('achList').innerHTML, /<option value="f-1\/w-1" selected>Sam &quot;Slam&quot; &lt;b&gt; \(photos allowed too\)<\/option>/);
+  // A wrestler whose permission was withdrawn (or an achievement from before #403) asks to be chosen again.
+  run(`site.achievements.push({name:'Old <i>',wrestler:'',achievement:'x',season:'y'});render()`);
+  assert.match(el('achList').innerHTML, /<option value="">Old &lt;i&gt;: choose again \(no name permission\)<\/option>/);
+  run("dropRow('achievements',2)");
+  // Alumni: the permission tick, through the same change listener.
+  assert.match(el('alumList').innerHTML, /<label class="tick"><input type="checkbox" data-field="permission" aria-label="I have permission to show this name, alumni entry 1">I have permission to show this name<\/label>/);
+  el('editor').onchange({target: {closest: s => s === 'select[data-field],input[type=checkbox][data-field]' ? {dataset: {field: 'permission'}, checked: true, closest: () => ({dataset: {kind: 'alumni', index: '0'}})} : null}});
+  assert.equal(run('site.alumni[0].permission'), true);
+  el('editor').oninput({target: {closest: s => s === 'input[data-field]' ? {type: 'checkbox', dataset: {field: 'permission'}, value: 'on', closest: () => ({dataset: {kind: 'alumni', index: '0'}})} : null}});
+  assert.equal(run('site.alumni[0].permission'), true, 'a tick is not typed text');
   assert.match(el('achList').innerHTML, /aria-label="Move achievement 1 up" disabled/);
   assert.match(el('achList').innerHTML, /<div class="row" data-kind="achievements" data-index="1">[\s\S]*?<button type="button" aria-label="Remove achievement 2" data-drop>Remove<\/button>/, 'buttons carry data attributes for the page\'s one click listener (issue #274), never inline handlers');
   assert.doesNotMatch(src, /\son[a-z]+=\\?"/, 'no inline event handlers anywhere on the page');
@@ -246,7 +283,7 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   click(inRow('achievements', 0, {move: '1'}));   // back to [Sam, Jo] for the checks below
   run("moveRow('achievements',0,1)"); assert.equal(run('site.achievements[0].name'), 'Jo');
   run("moveRow('achievements',1,1)"); assert.equal(run('site.achievements[1].name'), 'Sam "Slam" <b>', 'moving past the end does nothing');
-  assert.deepEqual(JSON.parse(JSON.stringify(run('payload()').alumni)), [], 'blank rows are not sent');
+  assert.deepEqual(JSON.parse(JSON.stringify(run('payload()').alumni)), [], 'blank rows are not sent, even with the tick');
   run("dropRow('alumni',0)"); assert.match(el('alumList').innerHTML, /No alumni yet/);
   // Saving sends the form and the lists with the version it loaded; a conflict shows the message.
   el('mission').value = 'Tough and coachable.'; el('email').value = 'swa@example.test';
@@ -255,7 +292,7 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
   const sent = calls.at(-1).body;
   assert.equal(sent.action, 'save'); assert.equal(sent.updatedAt, '2026-11-07T15:00:00Z');
   assert.equal(sent.site.mission, 'Tough and coachable.'); assert.equal(sent.site.email, 'swa@example.test');
-  assert.deepEqual(sent.site.achievements.map(a => a.name), ['Jo', 'Sam "Slam" <b>']);
+  assert.deepEqual(sent.site.achievements.map(a => [a.name, a.wrestler]), [['Jo', 'f-2/w-2'], ['Sam "Slam" <b>', 'f-1/w-1']]);
   assert.match(el('status').textContent, /Saved and published/); assert.equal(run('updatedAt'), '2026-11-07T16:00:00Z');
   next = () => ({status: 409, body: {error: 'The website was saved on another device. Reload the page to see the latest, then make your changes again.'}});
   await run('saveSite()'); assert.match(el('status').textContent, /saved on another device/); assert.equal(el('saveButton').disabled, false);
@@ -270,4 +307,4 @@ const bad = (input, re, known) => { const r = W.cleanWebsite(input, known); asse
 
 // The owner navigation (the shell's sidebar and the dashboard's tools, issue #261) links to the editor.
 assert.match(readFileSync('lib/owner-nav.ts', 'utf8'), /\{href: '\/website', label: 'Public website'\}/);
-console.log('Website tests passed: validation, escaping, empty sections hidden, coaches without phone or email, owner-only editing, publish and conflicts, SEO from appOrigin(), editor script');
+console.log('Website tests passed: validation, escaping, empty sections hidden, coaches without phone or email, owner-only editing, publish and conflicts, name permission (achievements only for permitted wrestlers, current names, withdrawn permission hides them, alumni need the owner’s tick), SEO from appOrigin(), editor script');
