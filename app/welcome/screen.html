@@ -13,7 +13,11 @@ body{margin:0;background:var(--swa-ground);color:var(--swa-ink)}
 .hero__media{display:none;min-height:320px;border-radius:var(--swa-r-card);background:rgba(255,255,255,.04);border:1px solid var(--swa-dark-line)}
 .hero__media.has-photo{display:block;background-size:cover;background-position:center}
 .eyebrow{color:var(--swa-silver);margin:0}
-html body .hero h1{margin:var(--swa-s-8) 0 var(--swa-s-12);color:#fff;font-size:clamp(40px,7vw,64px);overflow-wrap:anywhere;max-width:16ch}
+/* The academy's name on one line (issue #417): no width cap, and a size that follows the screen so the 24 letters fit
+   from a phone up; on the narrowest screens it may still wrap rather than run off the side. */
+html body .hero h1{margin:var(--swa-s-8) 0 var(--swa-s-12);color:#fff;font-size:clamp(24px,7.6vw,64px);overflow-wrap:anywhere;max-width:none;text-wrap:nowrap}
+@supports not (text-wrap:nowrap){html body .hero h1{white-space:nowrap}}
+@media(max-width:340px){html body .hero h1{text-wrap:balance;white-space:normal}}
 .hero p.lede{margin:0 0 var(--swa-s-24);color:#E4E7EB;font-size:var(--swa-t-20);max-width:44ch;line-height:1.4}
 .actions{display:flex;flex-wrap:wrap;gap:var(--swa-s-8) var(--swa-s-16);align-items:center}
 html body .actions a.button{min-height:var(--swa-h-big);padding:0 var(--swa-s-32);display:inline-flex;align-items:center;text-decoration:none}
