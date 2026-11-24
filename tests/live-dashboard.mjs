@@ -174,7 +174,7 @@ await vm.runInContext('loadLaunch()', ctx);
 assert.match(node('#launchBody').innerHTML, /<ul class="todo" id="launchItems"><\/ul><div class="prog done">[\s\S]*<span id="launchCount">Everything is set up ✓<\/span>/);
 
 // No preview modes: the owner shell's header (issue #261) links to what families really see.
-assert.match(readFileSync('lib/owner-shell.ts', 'utf8'), /const FAMILY_LINKS = '<a href="\/welcome">Welcome page<\/a> <a href="\/team">Team page<\/a> <a href="\/calendar">Calendar<\/a>';/);
+assert.match(readFileSync('lib/owner-shell.ts', 'utf8'), /const FAMILY_LINKS = '<a href="\/welcome">Welcome page<\/a> <a href="\/calendar">Calendar<\/a>';/);
 for (const gone of ['previewMenu', 'Preview what families see', 'Parent view', 'Wrestler view', 'setMode', 'liveWorkspace', 'sampleDashboard', 'admin-demo', 'attendance-demo', 'qr-preview.js'])
   assert.ok(!html.includes(gone), `portal still has ${gone}`);
 assert.ok(!html.includes('OWNER WORKSPACE'), 'the dashboard has no sample-preview banner (issue #133)');

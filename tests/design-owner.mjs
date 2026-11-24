@@ -29,7 +29,7 @@ assert.match(shell, /html body\[data-swa-shell\] \.swa-table:has\(tbody>tr:only-
 
 // ---------- Every owner page is on the design system: no font, color or button of its own ----------
 const pages = ['app/portal.html', 'app/payment-setup/screen.html', 'app/backups/screen.html', 'app/site-health/screen.html', 'app/site-requests/screen.html', 'app/data-requests/screen.html', 'app/transfers/screen.html',
-  'app/scholarships/screen.html', 'app/waivers/screen.html', 'app/approvals/screen.html', 'app/cards/screen.html', 'app/website/screen.html', 'app/help/owner/screen.html', 'app/accounts/route.ts', 'app/security-log/route.ts', 'app/account-setup/route.ts'];
+  'app/scholarships/screen.html', 'app/waivers/screen.html', 'app/approvals/screen.html', 'app/cards/screen.html', 'app/help/owner/screen.html', 'app/accounts/route.ts', 'app/security-log/route.ts', 'app/account-setup/route.ts'];
 for (const f of pages) {
   const css = styleOf(read(f));
   assert.ok(css.length > 200, f + ': has a stylesheet');
@@ -146,17 +146,6 @@ for (const [f, ids] of [['app/payment-setup/screen.html', ['setupTitle', 'modePi
   assert.doesNotMatch(read('app/scholarships/screen.html'), /style="/, 'no inline styles in the offer cards');
 }
 
-// ---------- The public website editor: cards, and the save result beside the Save button ----------
-{
-  const html = read('app/website/screen.html');
-  assert.equal((html.match(/<section class="card"/g) || []).length, 6, 'each part of the site is a card');
-  assert.match(html, /<span class="saved" id="savedAt"><\/span><span class="save-note" id="saveNote" role="status" aria-live="polite"><\/span><\/div>/, 'the save bar holds the result');
-  const s = scriptOf(html);
-  const el = dom(), ctx = {document: {getElementById: el}};
-  vm.runInNewContext('const $=id=>document.getElementById(id);' + s.slice(s.indexOf('function said('), s.indexOf('async function saveSite()')) + ';this.said=said', ctx);
-  ctx.said('Saved and published. Visitors see the changes within a minute.');
-  assert.equal(el('saveNote').textContent, 'Saved and published. Visitors see the changes within a minute.'); assert.equal(el('status').textContent, el('saveNote').textContent);
-}
 
 // ---------- No wall of zeros: tiles stay away when there is nothing to count ----------
 {
@@ -249,4 +238,4 @@ for (const [f, ids] of [['app/payment-setup/screen.html', ['setupTitle', 'modePi
   for (const [rows, hidden] of [[0, false], [2, true]]) { ctx.document.querySelectorAll = () => ({length: rows}); run('needsShown()'); assert.equal(none.hidden, hidden); }
 }
 
-console.log('Owner design pass: one left edge and empty tables as a sentence in the shell; owner pages on the design system’s tokens; Online payment setup, Backups, Program transfers, Data requests and the website editor say what a button did beside it; the dashboard’s dates, money, empty states, title rows, program cards and save notes');
+console.log('Owner design pass: one left edge and empty tables as a sentence in the shell; owner pages on the design system’s tokens; Online payment setup, Backups, Program transfers, Data requests say what a button did beside it; the dashboard’s dates, money, empty states, title rows, program cards and save notes');

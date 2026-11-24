@@ -185,28 +185,18 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.equal(el('announcementsBox').hidden, false); assert.match(el('announcements').innerHTML, /No announcements yet/);
 }
 
-// ---------- Welcome and team ----------
+// ---------- Welcome (the team page was removed in #412) ----------
 {
   const W = load('lib/website.ts');
-  const site = {headline: 'Built on the mat', intro: 'Wrestling.', mission: '', coaches: [], achievements: [], alumni: [], address: '', email: ''};
-  const coach = [{name: 'Lee Tran', bio: '', specialties: []}], ach = [{name: 'Sam', achievement: 'County champion', season: '2025–26'}], alum = [{name: 'Alex', years: '', next: 'College'}];
-  assert.equal(W.teamLinkText(site, coach), 'Meet our coaches →', 'only coaches: no "and wrestlers"');
-  assert.equal(W.teamLinkText({...site, achievements: ach}, []), 'Meet our wrestlers →');
-  assert.equal(W.teamLinkText({...site, alumni: alum}, []), 'Meet our wrestlers →');
-  assert.equal(W.teamLinkText({...site, achievements: ach}, coach), 'Meet our coaches and wrestlers →');
   const tpl = read('app/welcome/screen.html');
-  assert.match(W.renderWelcome(tpl, site, coach, null), /<a class="herolink" href="\/team">Meet our coaches →<\/a>/);
-  assert.doesNotMatch(W.renderWelcome(tpl, site, coach, null), /coaches and wrestlers/);
-
+  const page = W.renderWelcome(tpl, {address: '20 Railroad St', email: 'a@example.test'}, null);
+  assert.doesNotMatch(page, /href="\/team"|class="herolink"|class="teaser"/, 'no link or teaser to the removed team page');
   // A coach with no bio gets a compact card that keeps to its own height (the card's markup has no .coach__bio). The
   // rule is in the shared card styles, so the coach profile page's preview shows the same card (#223).
   assert.match(W.COACH_CARD_CSS, /\.coach:not\(:has\(\.coach__bio\)\)\{[^}]*align-self:start/);
-  const team = W.renderTeam(read('app/team/screen.html'), site, [{name: 'Lee Tran', bio: 'Ten years.', specialties: []}, {name: 'Justin', bio: '', specialties: []}], null);
-  assert.ok(team.includes(W.COACH_CARD_CSS), 'the team page carries the card styles');
-  assert.equal((team.match(/class="coach__bio"/g) || []).length, 1, 'only the coach with a bio has a bio block');
+  assert.doesNotMatch(W.coachCard({name: 'Justin', bio: '', specialties: []}), /coach__bio/, 'no bio, no bio block');
   // Shared width and page ground.
-  const teamCss = style(read('app/team/screen.html'));
-  for (const css of [teamCss, style(tpl)]) { assert.match(css, /max-width:var\(--swa-width-wide\)/); assert.match(css, /background:var\(--swa-ground\)/); assert.doesNotMatch(css, /#F4F5F7|1080px/i); }
+  const css = style(tpl); assert.match(css, /max-width:var\(--swa-width-wide\)/); assert.match(css, /background:var\(--swa-ground\)/); assert.doesNotMatch(css, /#F4F5F7|1080px/i);
   assert.doesNotMatch(style(tpl), /#C4222C/i, 'the welcome page takes red from the token');
 }
 // The welcome page's program cards: weekly times, or "Practice times coming soon" when nothing is published.
@@ -266,9 +256,9 @@ const json = body => ({ok: true, status: 200, json: async () => body});
   assert.match(style(html), /\.competition\{background:var\(--swa-prog-advance\)/, 'program colors from the shared tokens');
 }
 
-// ---------- The walkthrough checks /welcome and /team against the 390px phone screen ----------
+// ---------- The walkthrough checks /welcome against the 390px phone screen (the team page was removed in #412) ----------
 {
   const journey = read('scripts/e2e/journey.mjs');
-  for (const path of ['/welcome', '/team']) assert.match(journey, new RegExp(`scrollWidth - 390\\); expect\\(over <= 1, \`${path} scrolls sideways`), path);
+  for (const path of ['/welcome']) assert.match(journey, new RegExp(`scrollWidth - 390\\); expect\\(over <= 1, \`${path} scrolls sideways`), path);
 }
 console.log('Family and public polish (#231): buttons, quick nav, Paid pill, inbox order, team wording, practice times, register band, tap targets, plan buttons');

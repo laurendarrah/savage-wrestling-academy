@@ -70,10 +70,10 @@ for (const m of items(dashMenu)) assert.match(m[2], /class="os-item"/, m[3] + ' 
 assert.match(dashMenu[1], /onclick="closeOwnerTools\(\);reloadAcademy\(\)"/); assert.match(portal, /function closeOwnerTools\(\)/); assert.match(portal, /function reloadAcademy\(\)/);
 assert.match(shellCss, /html body \.os-panel\{position:absolute;/, 'it opens as a panel');
 assert.match(read('public/owner-shell.js'), /e\.key === 'Escape'\) \{ if \(!closeAccount\(true\)\)/, 'Escape closes it');
-// Every public page families see is one tap away, once: the welcome page, the team page (issue #215) and the calendar.
+// Every public page families see is one tap away, once: the welcome page and the calendar (the team page was removed in #412).
 const familyLinks = ownerTopbar('/', '/').match(/<nav class="os-family os-family-top"[\s\S]*?<\/nav>/)[0];
-assert.deepEqual([...familyLinks.matchAll(/href="([^"]+)"/g)].map(m => m[1]), ['/welcome', '/team', '/calendar']);
-for (const href of ['/welcome', '/team', '/calendar']) assert.ok(!ownerSidebar('/').match(/<nav class="os-nav"[\s\S]*?<\/nav>/)[0].includes(`href="${href}"`), href);
+assert.deepEqual([...familyLinks.matchAll(/href="([^"]+)"/g)].map(m => m[1]), ['/welcome', '/calendar']);
+for (const href of ['/welcome', '/calendar']) assert.ok(!ownerSidebar('/').match(/<nav class="os-nav"[\s\S]*?<\/nav>/)[0].includes(`href="${href}"`), href);
 
 // Phones: the header keeps the logo, a 44px Menu button and Account on one line; the breadcrumb and family links move
 // out of the way (the family links into the drawer).
@@ -86,7 +86,7 @@ assert.match(portal, /@media\(max-width:1000px\)\{[\s\S]*?html body \.todo \.but
 
 // ---------- No back link inside the owner shell (issue #261; one back link each before, issue #232) ----------
 const ownerPages = ['app/financials/screen.html', 'app/site-health/screen.html', 'app/messages/screen.html', 'app/cards/screen.html', 'app/payments/screen.html',
-  'app/coach-pay/screen.html', 'app/timesheets/screen.html', 'app/website/screen.html', 'app/approvals/screen.html', 'app/scholarships/screen.html',
+  'app/coach-pay/screen.html', 'app/timesheets/screen.html', 'app/approvals/screen.html', 'app/scholarships/screen.html',
   'app/waivers/screen.html', 'app/transfers/screen.html', 'app/lesson-settings/screen.html', 'app/data-requests/screen.html', 'app/site-requests/screen.html', 'app/payment-setup/screen.html', 'app/accounts/route.ts',
   'app/staff/screen.html', 'app/backups/screen.html', 'app/security-log/route.ts', 'app/account-setup/route.ts'];
 for (const f of ownerPages) {

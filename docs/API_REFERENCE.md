@@ -79,7 +79,6 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/timesheets` | GET, POST | Review, correct, remove (the shift is deleted and the coach is emailed) and approve coach hours per pay period (`?period=YYYY-MM-1` or `-2`; `?month=` shows a whole month); decide time off; a pay period's or month's file |
 | `/api/financials` | GET, POST | Income and expenses by month and year, CSV, and the owner's own entries |
 | `/api/practice-curricula` | GET, POST | Curriculum groups and their ordered lessons |
-| `/api/website` | GET, POST | Edit, preview and publish the public welcome and team pages |
 | `/api/backups` | GET, POST | Download the encrypted backup in batches; preview and restore a file |
 | `/api/site-health` | GET, POST | Recent server errors (with request ids and roles), alerts, emails that didn't send, the last reminder run, whether Supabase answers; send a test alert |
 | `/api/site-requests` | GET, POST | Owner only: the owner's requests for changes to the site itself (#361). GET lists them and says whether a new one will be emailed. POST `add` (words, optional where), `resend` (id) and `mark` (id, done). The address requests go to (`SITE_REQUESTS_TO`) is never returned |
@@ -91,7 +90,7 @@ Most pages are `screen.html` served by the route next to it; a few build their H
 
 | Who | Pages |
 |---|---|
-| Public | `/welcome` (signed-out home), `/team`, `/calendar`, `/help`, `/login`, `/membership-terms`, `/coach-join` (coach invite), `/auth/confirm` (Supabase email links), `/scholarship-signature-preview` (try the signature form with a fictional agreement; nothing is saved) |
+| Public | `/welcome` (signed-out home), `/calendar`, `/help`, `/login`, `/membership-terms`, `/coach-join` (coach invite), `/auth/confirm` (Supabase email links), `/scholarship-signature-preview` (try the signature form with a fictional agreement; nothing is saved) |
 | Everyone | `/` sends each person home: the owner's dashboard (`app/portal.html`), coach home, family home, or `/welcome` |
 | Families | `/family`, `/register`, `/booking`, `/lesson`, `/waiver`, `/consent`, `/pass`, `/wrestler`, `/inbox`, `/scholarship`, `/security` |
 | Coaches | `/coach`, `/coach-profile`, `/coach-time`, `/contract`, `/practice-plans`, `/roster`, `/help/coach` |

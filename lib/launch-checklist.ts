@@ -28,7 +28,6 @@ const READS = {
   coaches: 'SELECT COUNT(*) AS n FROM staff_access WHERE active=1',
   invites: 'SELECT COUNT(*) AS n, COALESCE(SUM(CASE WHEN expires_at<=? THEN 1 ELSE 0 END),0) AS expired FROM coach_invites WHERE used_at IS NULL AND revoked_at IS NULL',
   lessons: "SELECT payload FROM academy_settings WHERE id='lessons'",
-  website: "SELECT payload FROM academy_settings WHERE id='website'",
   stripeKey: "SELECT updated_at FROM integration_secrets WHERE id='stripe-test'",
   liveKey: "SELECT updated_at FROM integration_secrets WHERE id='stripe-live'",
   backup: "SELECT created_at FROM security_events WHERE action='backup_exported' ORDER BY created_at DESC LIMIT 1",
@@ -61,9 +60,6 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
   // Invites the owner sent from Coaches (#207) that are neither used nor canceled, as Coaches lists them.
   const pendingInvites = Number(r.invites?.n ?? 0), expiredInvites = Number(r.invites?.expired ?? 0);
   const lessons = json(r.lessons?.payload) ?? {};
-  // The owner's public website content (#215). Until it is saved, the welcome page shows the defaults.
-  const website = json(r.website?.payload);
-  const headline = typeof website?.headline === 'string' ? website.headline.trim() : '';
   const stripeKey = r.stripeKey as {updated_at: string} | null, liveKey = r.liveKey as {updated_at: string} | null;
   const backup = r.backup as {created_at: string} | null;
   const errors = Number(r.errors?.n ?? 0);
@@ -103,8 +99,6 @@ export async function launchChecklist(db: D1Database, settings: Settings, today:
         : `Practice times for ${andList(listed.map(p => nameOf(p.id)))}`},
     {key: 'events', group: 'Academy', label: 'Camps and events', section: 'Camps & events', status: 'info',
       detail: eventCounts.length ? `${andList(eventCounts.map(([t, n]) => plural(n, t.toLowerCase())))} coming up` : 'No upcoming camps, clinics or events. Add them under Camps & events'},
-    {key: 'website', group: 'Academy', label: 'Public website', href: '/website', status: headline ? 'done' : 'todo',
-      detail: headline ? `Saved, with the headline “${headline}”` : 'Write your public website: the welcome page headline, introduction and mission, and the team page'},
     {key: 'waiver', group: 'Academy', label: 'Waiver', href: '/waivers',
       status: waiver && !waiver.retired_at ? 'done' : 'todo', detail: waiver && !waiver.retired_at ? `“${waiver.title}” is published` : 'Publish the approved waiver. Families cannot book until they sign it'},
     // Decision Q15 on #197: families also sign the Parent Consent Form, which waits for the attorney's review (issue #195).

@@ -7,7 +7,7 @@ One line per feature, with where it lives and what still waits. Checked against 
 | Area | Status | Where | Waits on |
 |---|---|---|---|
 | **Public** | | | |
-| Welcome page, team page and calendar | Built. The owner edits the welcome and team pages on `/website` (#196); the calendar shows practices, days off, holidays, events and named practices | `/welcome`, `/team`, `/calendar`, `lib/public-schedule.ts`, `lib/website.ts` | Custom domain (#43) |
+| Welcome page and calendar | Built. The welcome page has a short fixed welcome and the academy's address and email; the team page and the `/website` editor were removed (#412, Justin's decision Nov 24, #197 Q22); the calendar shows practices, days off, holidays, events and named practices | `/welcome`, `/team`, `/calendar`, `lib/public-schedule.ts`, `lib/website.ts` | Custom domain (#43) |
 | Programs on a new site | No programs are public until the owner publishes them from the launch checklist; the defaults in `hydratePrograms()` are not public until saved | `app/portal.html`, `lib/workspace/` | Owner set-up (#16) |
 | Help pages | Built for families, coaches and the owner (#109) | `/help`, `/help/coach`, `/help/owner` | |
 | **Accounts** | | | |

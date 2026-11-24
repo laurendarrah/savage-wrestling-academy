@@ -57,7 +57,7 @@ const HEAD = ICONS + '<script src="/toast.js" defer></script><link rel="styleshe
 
 // The public pages open with the black header band (.swa-head, issue #146). Every other page is someone's workspace
 // and opens with a title row instead (issue #280): the brand lives in the top bar, the page gets to the point.
-const BAND_PAGES = new Set(['/welcome', '/team', '/calendar', '/login', '/coach-join', '/help']);
+const BAND_PAGES = new Set(['/welcome', '/calendar', '/login', '/coach-join', '/help']);
 export function bandPage(pathname: string) { return BAND_PAGES.has(pathname) || pathname.startsWith('/help/'); }
 
 // A page's opening: optional back links, an optional eyebrow line, the heading and an optional intro paragraph.
