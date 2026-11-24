@@ -87,7 +87,7 @@ $('toSignup').onclick=()=>{show('signupForm');say('');$('signupPassword').focus(
 $('signupForm').onsubmit=async e=>{e.preventDefault();if($('signupPassword').value!==$('signupConfirm').value){say('The passwords do not match.');return}
  $('signupButton').disabled=true;say('Please wait…');
  try{await post('/api/auth',{action:'signup',email:invite.email,password:$('signupPassword').value});$('signupPassword').value=$('signupConfirm').value='';markStarted(invite.email);$('intro').textContent='Your account is created, '+invite.name+'. One step left.';afterSignup();
-  say('Account created. Check '+invite.email+' for the confirmation email.')}
+  say('Account created. Check '+invite.email+' for the confirmation email, and the Spam or Junk folder if it isn’t there in a few minutes.')}
  catch(err){say(err.message)}finally{$('signupButton').disabled=false}};
 $('signinForm').onsubmit=async e=>{e.preventDefault();$('signinButton').disabled=true;say('Please wait…');
  try{await post('/api/auth',{action:'login',email:invite.email,password:$('signinPassword').value});$('signinPassword').value='';await acceptAndGo()}
