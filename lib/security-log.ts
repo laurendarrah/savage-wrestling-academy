@@ -53,6 +53,8 @@ const TITLES: Record<string, string> = {
   practice_plan_hidden: 'Practice plan hidden from coaches',
   coach_payment_recorded: 'Payment to a coach recorded',
   coach_payment_deleted: 'Payment to a coach deleted',
+  coach_w9_received: 'Coach W-9 marked received',
+  coach_w9_cleared: 'Coach W-9 mark taken off',
   coach_shift_removed: 'Coach removed one of their shifts',
   coach_shift_removed_by_owner: 'Coach shift removed by the academy',
   coach_access_granted: 'Coach access given',
@@ -134,6 +136,11 @@ export function describeSecurityEvent(row: SecurityRow, names: SecurityNames, no
       // times · reason". Lines written before that hold only the shift's id, which says nothing to a reader.
       const [email, ...words] = t.split(' · ');
       detail = /^[0-9a-f-]{36}$/i.test(t) ? '' : [names.coaches[email.toLowerCase()] ? `${names.coaches[email.toLowerCase()]} (${email})` : email, ...words].join(' · '); break;
+    }
+    case 'coach_w9_received': case 'coach_w9_cleared': {
+      // "coach email day" (issue #400): who, and the day the W-9 came in. Never a tax ID: the site has none.
+      const who = first.startsWith('former-coach-') ? 'A former coach' : names.coaches[first.toLowerCase()] ? `${names.coaches[first.toLowerCase()]} (${first})` : first;
+      detail = [who, rest[0] ? 'W-9 dated ' + rest[0] : ''].filter(Boolean).join(' · '); break;
     }
     case 'coach_records_deleted': {
       // Counts only (issue #212): "finished:1 in-progress:0 deleted:12 anonymized:4".

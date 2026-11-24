@@ -1,14 +1,22 @@
 // Payments to coaches (issue #370), owner only: every coach's balance and the payments recorded, recording a payment
-// and deleting one entered by mistake. The rules are in lib/coach-payments.ts.
+// and deleting one entered by mistake, and what each coach was paid in a year (issue #400). The rules are in
+// lib/coach-payments.ts.
 import {ownerIdentity, sameOrigin, accountReply} from '../../../lib/account-auth';
-import {payroll, addPayment, deletePayment} from '../../../lib/coach-payments';
+import {payroll, addPayment, deletePayment, yearTotals, yearCsv} from '../../../lib/coach-payments';
 import {withApi} from '../../../lib/api';
 export const dynamic = 'force-dynamic';
 
 export const GET = withApi(GET_); async function GET_(request: Request) {
   const auth = await ownerIdentity(request);
   if (!auth.owner) return accountReply({error: 'Owner sign-in required.'}, 403, auth.headers);
-  return accountReply(await payroll(), 200, auth.headers);
+  // ?year=YYYY: what each coach was paid that year, for the 1099s (issue #400); with format=csv, as a spreadsheet.
+  const q = new URL(request.url).searchParams, year = await yearTotals(q.get('year'));
+  if (q.get('format') === 'csv') {
+    auth.headers.set('Content-Type', 'text/csv; charset=utf-8');
+    auth.headers.set('Content-Disposition', `attachment; filename="savage-coach-payments-${year.year}.csv"`);
+    return new Response('\ufeff' + yearCsv(year), {headers: auth.headers});
+  }
+  return accountReply({...(await payroll()), year}, 200, auth.headers);
 }
 
 export const POST = withApi(POST_); async function POST_(request: Request) {

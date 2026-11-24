@@ -112,7 +112,7 @@ for (const who of ['', 'alice', 'dana']) {
 assert.equal((await api.POST(request('/api/coach-payments', 'POST', {action: 'delete', id: firstId}, 'owner', 'https://evil.test'))).status, 403, 'same origin only');
 assert.equal((await post(api, '/api/coach-payments', {action: 'pay-everyone'}, 'owner')).status, 400);
 r = await get(api, '/api/coach-payments', 'owner');
-assert.equal(r.status, 200); deq(Object.keys(r.body).sort(), ['coaches', 'methods', 'morePayments', 'payments', 'today', 'totals']);
+assert.equal(r.status, 200); deq(Object.keys(r.body).sort(), ['coaches', 'methods', 'morePayments', 'payments', 'today', 'totals', 'year']);
 assert.equal(r.body.coaches.find(c => c.email === DANA).paidCents, 6000);
 {
   const today = r.body.today, before = r.body.totals.paidCents;

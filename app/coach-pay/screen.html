@@ -6,6 +6,7 @@
 .rows .due{text-align:right;white-space:nowrap}.rows .due b{display:block;font-size:var(--swa-t-20);font-variant-numeric:tabular-nums}.rows .due small{color:var(--swa-muted);font-size:var(--swa-t-13)}
 #payForm{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}#payForm .wide{grid-column:span 2}#payForm .full{grid-column:1/-1}#payForm input,#payForm select{width:100%}
 #payForm .send{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:12px}#payNoteLine{margin:0;font-weight:600;font-size:var(--swa-t-15)}
+#payroll .year-row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}.pay-total{font-weight:700;margin:8px 0 0}
 @media(max-width:700px){#payForm{grid-template-columns:repeat(2,minmax(0,1fr))}.rows .due{text-align:left}}
 @media print{#payForm,#payroll button{display:none}}</style><link rel="stylesheet" href="/responsive.css"></head><body><main><h1>Coach pay</h1><p class="muted">What each coach has earned and what you have paid them. Record every payment you make to a coach here; it goes into <a href="/financials">Income &amp; expenses</a> as money out by itself, so don’t add it there as well. Earned is practice pay you have approved on <a href="/timesheets">Coach hours</a> plus the coach’s share of private lessons already taught. Practice hours you have not approved are shown as not approved yet and are not counted as owed. Below that: paid private lessons by lesson date, with each coach's share from <a href="/lesson-settings">lesson settings</a>. Each family pays for their own wrestler, so a partner or small-group lesson has one line per wrestler and the coach's share is of their total. Refunded and voided lessons are not counted. A lesson a family has paid for that is dated after today is marked Not taught yet; to pay only for lessons already taught, choose This month so far or Last 14 days.</p>
 <section id="payroll" aria-labelledby="payH"><h2 id="payH">Paying coaches</h2>
@@ -16,7 +17,10 @@
 <form id="payForm" aria-labelledby="payFormH"><label class="wide">Coach<select id="payCoach" required></select></label><label>Date you paid<input type="date" id="payDate" required></label><label>Amount<input id="payAmount" inputmode="decimal" autocomplete="off" placeholder="120.00" required></label>
 <label>How you paid<select id="payMethod" required></select></label><label>Covers from (optional)<input type="date" id="payFrom"></label><label>Covers to (optional)<input type="date" id="payTo"></label><label>Note (optional)<input id="payNote" maxlength="300" autocomplete="off" placeholder="For example: check 1042"></label>
 <div class="send"><button class="primary" id="paySend">Record payment</button><p id="payNoteLine" role="status" aria-live="polite"></p></div></form>
-<h3>Payments recorded</h3><ul class="rows" id="payments"><li class="muted">Loading…</li></ul><p id="payMore" class="muted" hidden>Showing the latest 200. Every payment is in Income &amp; expenses and its spreadsheet.</p></section>
+<h3>Payments recorded</h3><ul class="rows" id="payments"><li class="muted">Loading…</li></ul><p id="payMore" class="muted" hidden>Showing the latest 200. Every payment is in Income &amp; expenses and its spreadsheet.</p>
+<h3 id="yearH">Paid in a year, for 1099s</h3><div class="row year-row"><label>Year<select id="year"></select></label><a class="button" id="yearCsv" href="/api/coach-payments?format=csv">Download spreadsheet</a></div>
+<p id="yearW9" class="warn" hidden></p><ul class="rows" id="yearRows"><li class="muted">Loading…</li></ul><p id="yearTotal" class="pay-total"></p>
+<p class="swa-caption">Each coach’s total is the payments recorded above, by the day you paid. Mark each coach’s W-9 on <a href="/staff">Coaches</a>; the W-9 itself stays with you or your accountant, and the site never asks for a tax ID.</p></section>
 <h2 id="lessonsH">Private lesson shares</h2>
 <section><div class="row"><label>Period<select id="preset"><option value="this">This month</option><option value="sofar">This month so far</option><option value="two">Last 14 days</option><option value="last">Last month</option><option value="custom">Custom</option></select></label><label>From<input type="date" id="from"></label><label>To<input type="date" id="to"></label><button id="run" type="button">Show</button><a class="button" id="csv" href="#">Download spreadsheet</a><button type="button" id="printPay">Print</button></div></section>
 <p id="status" role="status" aria-live="polite">Loading…</p><p id="unset" class="warn" hidden>Some coaches have no pay share set, so their amount owed is blank. Set a share or a default on <a href="/lesson-settings">lesson settings</a>.</p>
@@ -73,20 +77,34 @@ function renderPay(d){pay=d;const t=d.totals;
  const chosen=$('payCoach').value;$('payCoach').innerHTML='<option value="">Choose a coach</option>'+d.coaches.map(b=>`<option value="${esc(b.email)}">${esc(b.name)}</option>`).join('');$('payCoach').value=d.coaches.some(b=>b.email===chosen)?chosen:'';
  if(!$('payMethod').innerHTML)$('payMethod').innerHTML=d.methods.map(m=>`<option value="${esc(m.value)}">${esc(m.label)}</option>`).join('');
  if(!$('payDate').value)$('payDate').value=d.today;$('payDate').max=d.today}
+// Paid in a year, for the 1099s (issue #400): one row per coach, with their W-9 status.
+function yearRowHtml(c,year){
+ const w9=c.w9?'W-9 received '+longDate(c.w9.receivedOn):'No W-9 on file';
+ return `<li><div class="who"><b>${esc(c.name)}</b><small>${esc(c.payments+' payment'+(c.payments===1?'':'s')+' in '+year+' · '+w9)}</small></div><div class="due"><b>${money(c.paidCents)}</b><small>paid in ${esc(year)}</small></div></li>`}
+function renderYear(y){if(!y)return;yearShown=y.year;
+ $('year').innerHTML=y.years.map(v=>`<option value="${v}"${v===y.year?' selected':''}>${v}</option>`).join('');$('year').value=String(y.year);
+ $('yearCsv').href='/api/coach-payments?format=csv&year='+y.year;
+ $('yearRows').innerHTML=y.coaches.map(c=>yearRowHtml(c,y.year)).join('')||`<li class="muted">No payments to coaches recorded in ${esc(y.year)}.</li>`;
+ $('yearTotal').textContent=y.coaches.length?'Total paid to coaches in '+y.year+': '+money(y.totalCents):'';
+ $('yearW9').hidden=!y.noW9;$('yearW9').textContent=y.noW9?(y.noW9===1?'1 coach paid in '+y.year+' has':y.noW9+' coaches paid in '+y.year+' have')+' no W-9 on file. Mark it on Coaches when you have it.':''}
+let yearShown=null;
 async function payCall(body){const r=await fetch('/api/coach-payments',body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Something went wrong. Please try again.');return d}
 const paySay=text=>{$('payNoteLine').textContent=text};
 // The form's fields as the request the server checks; null when the amount is not a number of dollars and cents.
 function payBody(){const amountCents=toCents($('payAmount').value);return amountCents===null||amountCents<1?null:{action:'add',coach:$('payCoach').value,paidOn:$('payDate').value,amountCents,method:$('payMethod').value,periodFrom:$('payFrom').value||null,periodTo:$('payTo').value||null,note:$('payNote').value}}
 async function recordPayment(){const body=payBody();if(!body){paySay('Enter the amount you paid, like 120 or 120.50.');return false}
  $('paySend').disabled=true;paySay('Saving…');
- try{const d=await payCall(body);renderPay(d);for(const id of ['payAmount','payNote','payFrom','payTo'])$(id).value='';paySay('Recorded: '+money(body.amountCents)+' to '+d.payment.coach+'. It is in Income & expenses too.');return true}
+ try{const d=await payCall(body);renderPay(d);for(const id of ['payAmount','payNote','payFrom','payTo'])$(id).value='';paySay('Recorded: '+money(body.amountCents)+' to '+d.payment.coach+'. It is in Income & expenses too.');await loadYear(yearShown);return true}
  catch(e){paySay(e.message);return false}finally{$('paySend').disabled=false}}
-async function deletePaymentById(id){try{renderPay(await payCall({action:'delete',id}));paySay('Payment deleted.')}catch(e){paySay(e.message)}}
+async function deletePaymentById(id){try{renderPay(await payCall({action:'delete',id}));paySay('Payment deleted.');await loadYear(yearShown)}catch(e){paySay(e.message)}}
+// The year's totals again (after a payment is recorded or deleted, or another year is chosen).
+async function loadYear(year){try{const r=await fetch('/api/coach-payments'+(year?'?year='+encodeURIComponent(year):''),{cache:'no-store'}),d=await r.json();if(r.ok)renderYear(d.year)}catch{}}
 // "Record a payment" on a coach's row fills the form with that coach and what is still owed, ready to check and send.
 function startPayment(email,owedCents){$('payCoach').value=email;if(owedCents>0)$('payAmount').value=(owedCents/100).toFixed(2);paySay('');if($('payAmount').focus)$('payAmount').focus()}
 $('payForm').onsubmit=e=>{e.preventDefault();recordPayment()};
 $('balances').onclick=e=>{const b=e.target.closest('[data-pay]');if(b)startPayment(b.dataset.pay,Number(b.dataset.owed))};
 $('payments').onclick=e=>{const b=e.target.closest('[data-del]');if(b&&confirm('Delete this payment? Use this only for a payment entered by mistake. The coach’s balance goes back up.'))deletePaymentById(b.dataset.del)};
-(async()=>{try{renderPay(await payCall())}catch(e){$('balances').innerHTML='<li class="muted">'+esc(e.message)+'</li>';$('payments').innerHTML=''}})();
+$('year').onchange=()=>loadYear($('year').value);
+(async()=>{try{const d=await payCall();renderPay(d);renderYear(d.year)}catch(e){$('balances').innerHTML='<li class="muted">'+esc(e.message)+'</li>';$('payments').innerHTML=''}})();
 $('preset').onchange=()=>{setPreset();run()};['from','to'].forEach(id=>$(id).onchange=()=>{$('preset').value='custom'});$('run').onclick=run;$('printPay').onclick=()=>print();setPreset();run();
 </script></body></html>

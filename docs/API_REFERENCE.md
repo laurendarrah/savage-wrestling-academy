@@ -70,12 +70,12 @@ Access: **Public** (anyone), **Family** (any verified account, for its own recor
 | `/api/payment-setup` | GET, POST | Connect the academy's Stripe account with a restricted key, test or live |
 | `/api/transfers` | GET, POST | Move a paid membership to another program |
 | `/api/messages` | GET, POST | Announcements and family threads; retry emails that didn't send |
-| `/api/staff` | GET, POST | Invite, change, remove and restore coaches; add yourself as a coach |
+| `/api/staff` | GET, POST | Invite, change, remove and restore coaches; add yourself as a coach; mark a coach's W-9 received with the day, or take it off (#400) |
 | `/api/coach-openings` | GET, POST | Manage any coach's lesson openings with the same rules as coach home |
 | `/api/lesson-settings` | GET, POST | Lesson prices per format and each coach's share |
 | `/api/coach-pay` | GET | Coach pay from lessons for a period, JSON or CSV |
 | `/api/lesson-calendar` | GET, POST | Every coach's lesson times in a month; make a time Public or Private; the link to send parents (#390) |
-| `/api/coach-payments` | GET, POST | Each coach's balance (earned, paid, still owed) and the payments made to coaches; record a payment or delete one entered by mistake (#370) |
+| `/api/coach-payments` | GET, POST | Each coach's balance (earned, paid, still owed) and the payments made to coaches; record a payment or delete one entered by mistake (#370). `?year=YYYY` adds what each coach was paid that calendar year with their W-9 status, and `&format=csv` downloads it (#400) |
 | `/api/timesheets` | GET, POST | Review, correct, remove (the shift is deleted and the coach is emailed) and approve coach hours per pay period (`?period=YYYY-MM-1` or `-2`; `?month=` shows a whole month); decide time off; a pay period's or month's file |
 | `/api/financials` | GET, POST | Income and expenses by month and year, CSV, and the owner's own entries |
 | `/api/practice-curricula` | GET, POST | Curriculum groups and their ordered lessons |

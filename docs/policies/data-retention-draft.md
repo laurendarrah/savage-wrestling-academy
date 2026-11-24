@@ -53,6 +53,8 @@ What the cleanup does with each kind of record. Anything a family or the academy
 | Lesson payments | `orders` | Kept exactly as paid (amount, status, dates). The coach's name and email in the price record and the item's name become "Former coach" |
 | Approved shifts (the pay record for that month) | `coach_time_entries` | Kept with the date, minutes, role, rate and amount; the coach, their notes and the change history are removed |
 | Shifts never approved, or voided | `coach_time_entries` | Deleted |
+| Payments the academy made to them (#370) | `coach_payments` | Kept with the date, amount and how it was paid; the coach becomes "Former coach" and the note is removed |
+| Whether the academy had their W-9 (#400) | `coach_w9` | Deleted. Only the day it came in is ever stored, never a tax ID |
 | Time off | `coach_time_off` | Deleted, with the notices about it to the coach and to the coaches covering |
 | Signed contract | `waiver_signatures` (coach contract), and `signature_reissues` for any request to sign it again | Deleted. The contract text stays, because other coaches signed it |
 | Notices to the coach | `notifications` | Deleted |
